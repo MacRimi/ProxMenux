@@ -178,6 +178,8 @@ def _valid(device):
         if device.get('container_path') != '/dev/bus/usb' or 'usb' in device or 'serial_link' in device:
             raise ValueError(translate('The USB device record is not valid'))
         return
+    if device.get('reconnect', True) not in (True, False):
+        raise ValueError(translate('The USB device record is not valid'))
     usb = device.get('usb') or {}
     if not (HEX4.fullmatch(str(usb.get('vendor', ''))) and HEX4.fullmatch(str(usb.get('product', '')))
             and PORT.fullmatch(str(usb.get('port', '')))
@@ -252,6 +254,10 @@ def rules(vmid, deployment):
             match.append(f'{attr}{{serial}}=="{usb["serial"]}"')
         head = 'SUBSYSTEM=="tty"' if 'serial_link' in device else 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device"'
         text.append(', '.join([head, *match, 'MODE="0666"']))
+        # A device that comes back on its own as part of its work, as a Coral
+        # loading its firmware, is not a reconnection.
+        if device.get('reconnect') is False:
+            continue
         # The device coming back while the container runs: the application
         # gets it again with a restart of the container.
         run = (f'/usr/bin/systemd-run --no-block --quiet --collect --unit=proxmenux-usb-reconnect-{int(vmid)} '

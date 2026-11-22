@@ -369,8 +369,8 @@ class CatalogTabTests(unittest.TestCase):
             expected = snapshot(legacy)
             actual = snapshot(current)
             self.assertEqual(actual, expected)
-            vm = [item for item in actual[1] if item["section"] == "Create VM from template or script" and item["browse"]]
-            self.assertEqual(len(vm), 5)
+            vm = [item for item in actual[1] if item["section"] == "Create VM and LXC from template or script" and item["browse"]]
+            self.assertEqual(len(vm), 6)
             self.assertTrue(all(item["action"][1].endswith("/menus/create_vm_menu.sh") for item in vm))
             self.assertFalse(any("plain_lxc" in str(item["action"]) for item in actual[1]))
             for effect in (run, popen, execute, download):
@@ -382,7 +382,7 @@ class CatalogTabTests(unittest.TestCase):
 
         entry = next(item for item in self.placed()
                      if item["english"] == "Create VM System NAS")
-        self.assertEqual(entry["section"], "Create VM from template or script")
+        self.assertEqual(entry["section"], "Create VM and LXC from template or script")
         self.assertTrue(entry["browse"])
         with unittest.mock.patch.dict(os.environ), \
              unittest.mock.patch("sys.argv", ["search_menu.py", "--run", self.search.option_key(entry["id"])]), \
@@ -395,7 +395,7 @@ class CatalogTabTests(unittest.TestCase):
 
     def test_section_reader_accepts_only_the_known_cleanup_and_never_executes_it(self):
         text = '\n'.join([
-            '3 "$(translate "Create VM from template or script")"',
+            '3 "$(translate "Create VM and LXC from template or script")"',
             '4 "$(translate "Disk Manager")"',
             '9 "$(translate "Unrecognized composite command")"',
             '3) rm -f "$TEMP_FILE"; exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;',
@@ -406,7 +406,7 @@ class CatalogTabTests(unittest.TestCase):
              unittest.mock.patch.object(self.search.subprocess, "run") as run, \
              unittest.mock.patch.object(self.search.os, "execvp") as execute:
             self.assertEqual(self.search.main_sections(), [
-                ("Create VM from template or script", "menus/create_vm_menu.sh"),
+                ("Create VM and LXC from template or script", "menus/create_vm_menu.sh"),
                 ("Disk Manager", "menus/storage_menu.sh"),
             ])
             run.assert_not_called()
@@ -429,7 +429,7 @@ class CatalogTabTests(unittest.TestCase):
     def test_the_sections_are_the_main_menu_without_its_settings_and_catalogs(self):
         names = [section["name"] for section in self.search.catalog_sections()]
         self.assertEqual(names[:3], ["Settings post-install Proxmox", "Hardware: GPUs and Coral-TPU",
-                                     "Create VM from template or script"])
+                                     "Create VM and LXC from template or script"])
         self.assertTrue({"Community Scripts", "OCI manager Apps (Technology Preview)", "Settings"}.isdisjoint(names))
         self.assertIn("Help and Info Commands", names)
 
@@ -444,7 +444,7 @@ class CatalogTabTests(unittest.TestCase):
                          key=lambda item: item["order"])
         self.assertEqual(network[0]["english"], "Real-time network usage (iftop)")
         create = [item["english"] for item in sorted((item for item in self.placed()
-                  if item["section"] == "Create VM from template or script" and item["browse"]), key=lambda item: item["order"])]
+                  if item["section"] == "Create VM and LXC from template or script" and item["browse"]), key=lambda item: item["order"])]
         self.assertEqual(create[0], "Create VM System NAS")
         self.assertNotIn("ZimaOS", create)
 
@@ -466,7 +466,7 @@ class CatalogTabTests(unittest.TestCase):
         placed = self.placed()
         external = {section["name"]: section["external"] for section in self.search.catalog_sections(placed)}
         macos = next(item for item in placed if item.get("english") == "Create VM System macOS (OSX-PROXMOX)")
-        self.assertEqual(external["Create VM from template or script"],
+        self.assertEqual(external["Create VM and LXC from template or script"],
                          [f"pmx:{self.search.option_key(macos['id'])}", "cs:haos-vm", "cs:docker-vm", "cs:nextcloud-vm"])
         others = next(item for item in placed if item.get("english") == "Create VM System Others (based Linux)")
         self.assertTrue(others["apart"])

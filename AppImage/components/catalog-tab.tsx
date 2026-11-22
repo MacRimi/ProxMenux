@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import { Button } from "./ui/button"
 import { Switch } from "./ui/switch"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { PlainLxcCreate } from "./plain-lxc-wizard"
 
 type Kind = "oci" | "cs" | "pmx"
 type Group = "app" | "tool"
@@ -51,6 +52,9 @@ interface CatalogItem {
   // a script that is not in the ProxMenux repository.
   apart?: boolean
   third_party?: Maintainer | null
+  // Opened at once instead of its sheet: in the terminal, or with the LXC
+  // wizard of VMs & LXCs.
+  opens?: "terminal" | "plain-lxc" | ""
   // The first screenshot of an application, for the featured banner.
   shot?: string
   // Who publishes the image of an OCI application, and how many LXC its
@@ -954,9 +958,20 @@ export function CatalogTab() {
   const [view, setView] = useState<View | null>(null)
   const [open, setOpen] = useState<CatalogItem | null>(null)
   const [run, setRun] = useState<{ item: CatalogItem; advanced: boolean } | null>(null)
+  const [lxcWizard, setLxcWizard] = useState(false)
+  const { capabilities } = useAccess()
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [showSettings, setShowSettings] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
+
+  // A menu option that is itself a menu opens at once, as in the console; the
+  // LXC wizard opens the Monitor's own. Without the rights to run either,
+  // its sheet still describes it.
+  function openItem(item: CatalogItem) {
+    if (item.opens === "plain-lxc" && capabilities.admin) setLxcWizard(true)
+    else if (item.opens === "terminal" && capabilities.execute) setRun({ item, advanced: false })
+    else setOpen(item)
+  }
 
   useEffect(() => { setSettings(readSettings()) }, [])
   const updateSettings = (next: Settings) => { setSettings(next); writeSettings(next) }
@@ -1081,7 +1096,7 @@ export function CatalogTab() {
 
   const grid = (list: CatalogItem[]) => (
     <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-      {list.map(item => <ItemCard key={item.key} item={item} onOpen={() => setOpen(item)} />)}
+      {list.map(item => <ItemCard key={item.key} item={item} onOpen={() => openItem(item)} />)}
     </div>
   )
 
@@ -1162,7 +1177,7 @@ export function CatalogTab() {
 
       {items && !results && !view && (
         <>
-          <Featured items={featured} onOpen={setOpen} />
+          <Featured items={featured} onOpen={openItem} />
           <section className="grid gap-3">
             <h2 className="m-0 text-lg font-semibold">{t("catalog.toolsPmx")}</h2>
             <div className="grid gap-3 grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -1223,6 +1238,8 @@ export function CatalogTab() {
 
       {open && <Sheet key={open.key} item={open} onClose={() => setOpen(null)} onRun={advanced => { setRun({ item: open, advanced }); setOpen(null) }}
         related={(sameApp.get(sameKey(open)) || []).filter(other => other.key !== open.key)} onOpenOther={setOpen} />}
+
+      {lxcWizard && <PlainLxcCreate open onOpenChange={setLxcWizard} onCreated={() => {}} />}
 
       {run && (
         <ScriptTerminalModal

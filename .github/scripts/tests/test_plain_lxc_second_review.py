@@ -197,20 +197,26 @@ class HardwareContractTests(unittest.TestCase):
             self.call('create',**payload)
         self.assertEqual(self.api.writes,[])
 
-    def test_amd_compute_requires_kfd_and_topology_and_rejects_overlapping_profiles(self):
-        row=intel(44);row.update(profile='amd-drm',vendor='0x1002',name='AMD GPU',gfx_target=100300)
-        devices={row['path']:row}
-        with patch.object(shared,'amd_gfx_target',return_value=100300):
-            self.assertEqual(len(resources.profiles(devices)),1)
-            devices['/dev/kfd']={**intel(109),'path':'/dev/kfd','name':'AMD compute'}
-            devices['/dev/kfd'].pop('profile')
-            candidates=resources.profiles(devices)
-        compute=next(item for item in candidates.values() if item['profile']=='amd-rocm')
-        self.assertEqual([d['path'] for d in compute['devices']],['/dev/dri/renderD128','/dev/kfd'])
-        self.assertEqual(compute['devices'][1]['gid'],109)
+    def test_a_gpu_is_given_whole_and_amd_gpus_share_the_compute_interface(self):
+        def amd(render, card, pci):
+            row={**intel(44),'path':render,'profile':'amd-drm','vendor':'0x1002','name':'AMD GPU · '+pci,
+                 'pci_path':'/sys/devices/'+pci,'gfx_target':100300}
+            return {render:row, card:{**row,'path':card,'drm_card':True,'profile':None}}
+        devices={**amd('/dev/dri/renderD128','/dev/dri/card0','0000:03:00.0'),
+                 **amd('/dev/dri/renderD129','/dev/dri/card1','0000:04:00.0')}
+        devices['/dev/kfd']={**intel(109),'path':'/dev/kfd','name':'AMD compute interface'}
+        devices['/dev/kfd'].pop('profile')
+        candidates=resources.profiles(devices)
+        self.assertEqual(len(candidates),2)
+        first=next(item for item in candidates.values() if item['name'].endswith('03:00.0'))
+        self.assertEqual([d['path'] for d in first['devices']],['/dev/dri/renderD128','/dev/dri/card0','/dev/kfd'])
+        self.assertEqual(first['devices'][2]['gid'],109)
         selections=[{'profile':item['profile'],'selection_id':item['selection_id']} for item in candidates.values()]
-        with self.assertRaisesRegex(LxcError,'invalid_field'):
-            resources.selected_hardware(selections,candidates)
+        self.assertEqual(len(resources.selected_hardware(selections,candidates)),2)
+        # Without the compute interface, an AMD GPU is its card and render nodes.
+        del devices['/dev/kfd']
+        only=next(item for item in resources.profiles(devices).values() if item['name'].endswith('04:00.0'))
+        self.assertEqual([d['path'] for d in only['devices']],['/dev/dri/renderD129','/dev/dri/card1'])
 
     def test_arbitrary_lxc_directive_cannot_install_hook(self):
         selection=self.nvidia_selection()

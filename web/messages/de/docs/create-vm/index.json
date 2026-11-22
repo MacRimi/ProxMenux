@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Öffnen des Menüs",
-    "body": "Wählen Sie im ProxMenux-Hauptmenü <strong>VM aus Vorlage oder Skript erstellen</strong>. Es erscheint:",
+    "body": "Wählen Sie im ProxMenux-Hauptmenü <strong>VM und LXC aus einer Vorlage oder einem Skript erstellen</strong>. Es erscheint:",
     "imageAlt": "Menü zur VM-Erstellung mit drei ProxMenux-Optionen (NAS/Windows/Linux) und Externe Skripte darunter (macOS/Andere)"
   },
   "families": {

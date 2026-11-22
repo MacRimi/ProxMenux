@@ -47,15 +47,17 @@ For static IPv4, pass `ipv4: {"mode":"static","cidr":"192.0.2.10/24"}` and an
 optional `gateway`. The optional `dns` object accepts `nameservers` and
 `search_domains` lists. Resource overrides are `rootfs.size_gib`,
 `cpu.cores`, `memory.ram_mib` and `memory.swap_mib`. `onboot` and
-`start_after_create`, `prepare_system` and `nesting` default to false.
-Enabling nesting keeps the container unprivileged but exposes additional
-host procfs/sysfs information; the reviewed plan requires explicit acceptance
-of `nesting_enabled`. The native bridge permits only `nesting=0` or `nesting=1`,
+`start_after_create` and `prepare_system` default to false. `nesting` defaults
+to true, as in the Proxmox interface for unprivileged containers: systemd 255
+and later need it inside the container. Nesting keeps the container
+unprivileged but exposes additional host procfs/sysfs information; the
+reviewed plan requires explicit acceptance of `nesting_enabled`. The native bridge permits only `nesting=0` or `nesting=1`,
 not arbitrary feature strings. No guest service is silently disabled or masked.
 
 Operation replies retain `task_warnings` and per-phase `task_warning_phases`
 across creation and start, including a failed start. These describe Proxmox
-task results, not OS health. Both original task logs remain available.
+task results, not OS health. `task_warning_messages` keeps, per phase, up to
+five `WARN:` lines of the task log. Both original task logs remain available.
 
 By default, creation uses native PVE template setup without the optional
 ProxMenux first-boot modifications.
@@ -158,20 +160,26 @@ Choose a profile and selection_id returned by context.hardware, for example:
 }}
 ```
 
-The profiles are intel-drm, amd-drm, amd-rocm, nvidia-runtime, coral, npu and
-usb. The engine resolves them to exact native nodes, UID 0, each host node's
-GID and mode 0660. NVIDIA preserves the host device permissions of its
+The profiles are intel-drm, amd-drm, nvidia-runtime, coral, npu and usb. The
+engine resolves them to exact native nodes, UID 0, each host node's GID and
+mode 0660. NVIDIA preserves the host device permissions of its
 existing OCI runtime profile. The wizard never asks for numeric permissions.
 A host GID is a number, not a promise that the system template gives its group
 the same name or that an application user belongs to it.
 
-Intel/AMD render nodes are identified by sysfs vendor and PCI identity. AMD
-compute adds /dev/kfd only with a matching KFD render-minor topology. It does
-not install ROCm or import catalog application disk-size limits or overrides.
-USB uses the shared named inventory, tty for serial peripherals, and records
-vendor/product/serial/port/sysfs identity. Reconnection can change paths:
-a changed device requires a fresh reviewed plan. GPU sharing and exclusive
-USB/TPU/NPU ownership guards also cover existing LXC/QEMU assignments.
+An Intel or AMD GPU is given whole, as add_gpu_lxc.sh gives it: its render
+node and the card node of the same PCI device, identified by sysfs vendor and
+PCI identity. An AMD GPU also gets /dev/kfd when the host has a working KFD
+topology, shared by every AMD GPU of the container. It does not install ROCm
+or import catalog application disk-size limits or overrides.
+USB uses the shared named inventory, tty for serial peripherals, and is passed
+by its identity with OCI manager Apps' oci_usb_passthrough module: the
+container gets the USB tree (or the serial adapter's stable link) and a udev
+rule lets it write to that device only, so it survives a reboot or a
+renumbering; the container restarts when the device is reconnected. A Coral
+USB Accelerator is let in under both of its identities and is not restarted
+when it loads its firmware. GPU sharing and exclusive USB/TPU/NPU ownership
+guards also cover existing LXC/QEMU assignments.
 
 NVIDIA requires an already working driver and Container Toolkit. The entire
 existing unprivileged OCI runtime profile covers all host NVIDIA GPUs, native

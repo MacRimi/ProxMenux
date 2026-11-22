@@ -3469,7 +3469,8 @@ export function VirtualMachines() {
               <Server className="h-6 w-6" />
               {t("vmLxc.listTitle")}
             </CardTitle>
-            {capabilities.admin && !isPbs && <PlainLxcCreate onCreated={() => void mutate()} />}
+            {capabilities.admin && !isPbs && <PlainLxcCreate onCreated={() => void mutate()}
+              onOpenTerminal={capabilities.terminal ? openLxcTerminal : undefined} />}
           </div>
           <VmListToolbar
             actions={

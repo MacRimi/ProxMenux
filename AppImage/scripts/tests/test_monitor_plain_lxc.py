@@ -93,7 +93,7 @@ class PlainLxcMonitorTests(unittest.TestCase):
         return {"check": checked["check"], "confirmed": True, "password": PASSWORD,
                 "accepted_warnings": checked["warnings"], **changes}
 
-    ROUTES = [("context", None), ("plan", {}), ("create", {}), ("status", None),
+    ROUTES = [("context", None), ("plan", {}), ("create", {}), ("status", None), ("log?phase=create", None),
               ("download/plan", {}), ("download", {})]
 
     def test_every_route_rejects_unsigned_or_observer_before_running_the_engine(self):
@@ -123,6 +123,21 @@ class PlainLxcMonitorTests(unittest.TestCase):
         self.mode = "password"
         self.assertEqual(self.request("status", receipt=checked["receipt"]).status_code, 403)
         self.assertEqual([action for action, _ in self.api.writes], ["create"])
+
+    def test_mount_points_and_hardware_reach_the_plan_as_the_console_sends_them(self):
+        context = self.request("context").json
+        self.assertGreater(context["capabilities"]["mount_points"], 0)
+        self.assertIsInstance(context["hardware"], list)
+        self.assertIs(context["hardware_errors"], False)
+        self.spec["mounts"] = [{"type": "volume", "storage": "local-lvm", "size_gib": 4, "path": "/data",
+                                "read_only": False, "backup": True}]
+        self.spec["hardware"] = []
+        checked = self.checked()
+        self.assertEqual(checked["summary"]["mounts"][0]["path"], "/data")
+        self.assertEqual(checked["summary"]["hardware"], [])
+        self.spec["hardware"] = [{"profile": "usb", "selection_id": "not-on-this-host"}]
+        self.assertEqual(self.request("plan", data={"spec": self.spec}).json["error"], "resource_unavailable")
+        self.assertEqual(self.api.writes, [])
 
     def test_context_and_planning_admit_only_downloaded_official_system_templates(self):
         response = self.request("context")
@@ -236,6 +251,27 @@ class PlainLxcMonitorTests(unittest.TestCase):
         self.assertEqual([call["action"] for call in self.calls if "secret" in call], ["create", "create"])
         self.assertNotIn(PASSWORD, self.store.path.read_bytes().decode(errors="replace"))
         self.assertNotIn(PASSWORD, json.dumps(checked))
+
+    def test_progress_names_each_task_and_its_log_follows_the_receipt(self):
+        self.spec.update(start_after_create=True)
+        checked = self.checked()
+        awaiting = self.request("status", receipt=checked["receipt"]).json
+        self.assertEqual((awaiting["steps"], awaiting["warned"]), (["create"], []))
+        self.assertEqual(self.request("log?phase=create", receipt=checked["receipt"]).status_code, 404)
+        created = self.request("create", data=self.confirm(checked)).json
+        self.assertEqual((created["status"], created["steps"], created["preparing"], created["warned"]),
+                         ("succeeded", ["create", "start"], False, []))
+        self.assertEqual(created["warning_lines"], {})
+        create = next(task for task in self.api.tasks if ":vzcreate:" in task)
+        self.api.logs[create] = ["extracting archive"] * 50 + ["TASK OK"]
+        first = self.request("log?phase=create", receipt=checked["receipt"])
+        self.assertEqual((first.status_code, len(first.json["lines"]), first.json["next_offset"]), (200, 50, 50))
+        last = self.request("log?phase=create&offset=50", receipt=checked["receipt"]).json
+        self.assertEqual(last, {"lines": ["TASK OK"], "next_offset": None})
+        for query in ("log", "log?phase=download", "log?phase=create&offset=-1", "log?phase=create&offset=%C2%B2"):
+            self.assertEqual(self.request(query, receipt=checked["receipt"]).status_code, 422, query)
+        self.assertEqual(self.request("log?phase=create", receipt=checked["receipt"], token="other-fixture").status_code, 403)
+        self.assertEqual(self.request("log?phase=create", receipt="forged").status_code, 403)
 
     def test_changed_archive_cannot_reach_create_side_effect(self):
         checked = self.checked()

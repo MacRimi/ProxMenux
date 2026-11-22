@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from hashlib import sha256
 import json
+import re
 import subprocess
 from uuid import uuid4
 
@@ -22,7 +23,7 @@ CREATE_TIMEOUT = 240
 RECEIPT_AGE = 7 * 24 * 3600
 SPEC_FIELDS = {
     "node", "vmid", "hostname", "template", "access", "rootfs", "cpu", "memory",
-    "network", "dns", "nesting", "onboot", "start_after_create", "prepare_system",
+    "network", "dns", "nesting", "onboot", "start_after_create", "prepare_system", "mounts", "hardware",
 }
 REJECTED = {
     "architecture_unsupported", "bridge_unavailable", "catalog_unavailable",
@@ -30,6 +31,7 @@ REJECTED = {
     "node_not_local", "plan_changed", "request_conflict", "storage_unavailable",
     "target_operation_pending", "template_architecture_mismatch", "template_checksum_mismatch",
     "template_already_present", "template_unverified", "vmid_in_use", "warnings_unaccepted",
+    "resource_unavailable", "resource_unsupported", "resource_in_use",
 }
 
 
@@ -135,6 +137,13 @@ def context(_actor):
                                      if "vztmpl" in storage["content"]),
             storages=sorted(name for name, storage in data["storages"].items() if "rootdir" in storage["content"]),
             bridges=data["bridges"],
+            # What the console wizard offers as well: mount points up to the
+            # node's limit, and the verified devices of the host by name.
+            capabilities=data["capabilities"],
+            hardware=[{"id": key, "profile": item["profile"], "name": item["name"],
+                       "paths": [device["path"] for device in item["devices"]]}
+                      for key, item in sorted(data["hardware"].items())],
+            hardware_errors=bool(data.get("hardware_errors")),
         )
     except EngineError as error:
         return _engine_failure(error)
@@ -168,7 +177,8 @@ def plan(actor):
         normalized = canonical["spec"]
         operation = {"actor": actor, "node": normalized["node"], "vmid": normalized["vmid"],
                      "id": uuid4().hex}
-        summary = {**normalized, "access": {"mode": normalized["access"]["mode"]}}
+        summary = {**normalized, "access": {"mode": normalized["access"]["mode"]},
+                   "hardware": [item["name"] for item in canonical["resources"]["attachments"].get("hardware", [])]}
         return jsonify(
             summary=summary, warnings=canonical["warnings"],
             check=_ticket("plan").dumps({**operation, "plan": canonical, "hash": checked["plan_hash"]}),
@@ -195,9 +205,29 @@ def _operation_status(result, operation):
             or state not in ("running", "unknown", "succeeded", "failed", "partial")
             or phase not in phases):
         return _error("engine_unavailable", 503)
+    # The share of a template download the engine read from its task log.
+    progress = result.get("progress")
+    if type(progress) is not int or not 0 <= progress <= 100 or target["action"] != "download_template":
+        progress = None
+    # The native tasks of a creation, in order, and which of them warned.
+    steps = result.get("steps", [phase])
+    if (type(steps) is not list or not steps or len(set(steps)) != len(steps)
+            or any(step not in phases for step in steps) or phase not in steps):
+        return _error("engine_unavailable", 503)
+    warned = result.get("task_warning_phases", {})
+    if type(warned) is not dict or any(key not in phases or type(value) is not bool for key, value in warned.items()):
+        return _error("engine_unavailable", 503)
+    # What each task warned about, as Proxmox wrote it.
+    messages = result.get("task_warning_messages", {})
+    if (type(messages) is not dict or any(key not in phases or type(lines) is not list
+                                          or any(type(line) is not str for line in lines)
+                                          for key, lines in messages.items())):
+        return _error("engine_unavailable", 503)
     return jsonify(
         **target, status=state, phase=phase,
-        reason=result.get("reason"), task_warnings=result.get("task_warnings", False),
+        reason=result.get("reason"), task_warnings=result.get("task_warnings", False), progress=progress,
+        steps=steps, preparing=result.get("preparing") is True, warned=sorted(key for key, value in warned.items() if value),
+        warning_lines={key: lines[:5] for key, lines in messages.items() if lines},
     )
 
 
@@ -305,5 +335,34 @@ def status(actor):
             state = "awaiting" if age.total_seconds() <= PLAN_AGE + CREATE_TIMEOUT else "not_submitted"
             target = _operation_target(operation)
             phase = "download" if target["action"] == "download_template" else "create"
-            return jsonify(**target, status=state, phase=phase, task_warnings=False)
+            return jsonify(**target, status=state, phase=phase, task_warnings=False,
+                           steps=[phase], preparing=False, warned=[], warning_lines={})
         return _engine_failure(error)
+
+
+@plain_lxc_bp.get("/log")
+@require_admin_scope
+@_admin
+def log(actor):
+    # The native task log of one step of a creation, a page at a time.
+    try:
+        operation = _decode("operation", request.headers.get("X-ProxMenux-LXC-Receipt"), actor, RECEIPT_AGE)
+    except BadData:
+        return _error("receipt_invalid", 403)
+    phase, offset = request.args.get("phase"), request.args.get("offset", "0")
+    if (operation.get("action") == "download_template" or phase not in ("create", "prepare", "start")
+            or re.fullmatch(r"[0-9]{1,7}", offset or "") is None):
+        return _error("invalid_field", 422)
+    try:
+        result = _engine("task_log", request_id=operation["id"], phase=phase, offset=int(offset))
+        lines, following = result["lines"], result["next_offset"]
+        if (type(lines) is not list or any(type(line) is not str for line in lines)
+                or not (following is None or type(following) is int)):
+            return _error("engine_unavailable", 503)
+        return jsonify(lines=lines, next_offset=following)
+    except EngineError as error:
+        if str(error) in ("task_log_unavailable", "request_not_found"):
+            return _error("task_log_unavailable", 404)
+        return _engine_failure(error)
+    except (KeyError, TypeError):
+        return _error("engine_unavailable", 503)

@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Opening the menu",
-    "body": "From ProxMenux's main menu, select <strong>Create VM from template or script</strong>. You will see this:",
+    "body": "From ProxMenux's main menu, select <strong>Create VM and LXC from template or script</strong>. You will see this:",
     "imageAlt": "Create VM dispatcher with 3 ProxMenux options (NAS / Windows / Linux) followed by the External Scripts section (macOS / Others)"
   },
   "families": {

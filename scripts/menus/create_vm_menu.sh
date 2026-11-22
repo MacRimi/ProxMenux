@@ -160,7 +160,7 @@ while true; do
       1 "$(translate "Create VM System NAS")" \
       2 "$(translate "Create VM System Windows")" \
       3 "$(translate "Create VM System Linux")" \
-      4 "$(translate "Create a plain LXC")" \
+      4 "$(translate "Create LXC from template")" \
       ""          "" \
       ""  "\Z4───────────────── $(translate "External Scripts") ─────────────────\Zn" \
       ""          "" \

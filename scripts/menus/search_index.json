@@ -24,8 +24,8 @@
     "keywords": ""
   },
   {
-    "title": "Create VM from template or script",
-    "menu": "Create VM from template or script",
+    "title": "Create VM and LXC from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "",
     "docs": "create-vm/index"
@@ -259,11 +259,12 @@
   },
   {
     "title": "Create VM System NAS",
-    "menu": "Create VM from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "vm virtual nas omv fygonas fnos",
     "argument": "1",
-    "docs": "create-vm/system-nas/index"
+    "docs": "create-vm/system-nas/index",
+    "catalog_opens": "terminal"
   },
   {
     "title": "TrueNAS SCALE",
@@ -461,11 +462,12 @@
   },
   {
     "title": "Create VM System Windows",
-    "menu": "Create VM from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "vm virtual windows windows win10 win11 10 11 server",
     "argument": "2",
-    "docs": "create-vm/system-windows"
+    "docs": "create-vm/system-windows",
+    "catalog_opens": "terminal"
   },
   {
     "title": "Windows (UUP Dump)",
@@ -531,11 +533,21 @@
   },
   {
     "title": "Create VM System Linux",
-    "menu": "Create VM from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "vm virtual linux linux cloud-init iso popos",
     "argument": "3",
-    "docs": "create-vm/system-linux"
+    "docs": "create-vm/system-linux",
+    "catalog_opens": "terminal"
+  },
+  {
+    "title": "Create LXC from template",
+    "menu": "Create VM and LXC from template or script",
+    "script": "menus/create_vm_menu.sh",
+    "keywords": "lxc ct container contenedor plantilla template debian ubuntu alpine",
+    "argument": "plain-lxc",
+    "catalog_opens": "plain-lxc",
+    "summary": "Creates an LXC container in Proxmox VE from an official template: system, access, resources and network, with a review of the whole plan before it is created."
   },
   {
     "title": "Ubuntu",
@@ -1236,7 +1248,7 @@
   },
   {
     "title": "Create VM System macOS (OSX-PROXMOX)",
-    "menu": "Create VM from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "vm virtual macos osx",
     "argument": "4",
@@ -1260,7 +1272,7 @@
   },
   {
     "title": "Create VM System Others (based Linux)",
-    "menu": "Create VM from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "menus/create_vm_menu.sh",
     "keywords": "vm virtual",
     "argument": "5",
@@ -1271,7 +1283,7 @@
     "screenshots": [
       "https://raw.githubusercontent.com/IceWhaleTech/ZimaOS/main/assets/20250926-154629.png"
     ],
-    "menu": "Create VM from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "vm/zimaos.sh",
     "keywords": "zima nas vm",
     "docs": "create-vm/system-nas/system-nas-others",
@@ -1294,7 +1306,7 @@
   },
   {
     "title": "Synology DSM",
-    "menu": "Create VM from template or script",
+    "menu": "Create VM and LXC from template or script",
     "script": "vm/synology.sh",
     "keywords": "synology dsm nas loader vm",
     "docs": "create-vm/system-nas/synology",

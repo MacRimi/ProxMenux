@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Öppna menyn",
-    "body": "Välj <strong>Create VM from template or script</strong> i ProxMenux huvudmeny. Du ser då:",
+    "body": "Välj <strong>Skapa VM och LXC från mall eller skript</strong> i ProxMenux huvudmeny. Du ser då:",
     "imageAlt": "Menyn Skapa VM med tre ProxMenux-val (NAS/Windows/Linux) följda av Externa skript (macOS/Övriga)"
   },
   "families": {

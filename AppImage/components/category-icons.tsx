@@ -56,7 +56,7 @@ const ICON_BY_CATEGORY: Record<string, string> = {
   // Sections of the main menu of ProxMenux, by the name of their menu.
   "__section_Settings post-install Proxmox": "rocket-launch",
   "__section_Hardware: GPUs and Coral-TPU": "cpu",
-  "__section_Create VM from template or script": "monitor",
+  "__section_Create VM and LXC from template or script": "monitor",
   "__section_Disk Manager": "hard-drives",
   "__section_Storage & Share Manager": "share-network",
   "__section_Network Management": "network",

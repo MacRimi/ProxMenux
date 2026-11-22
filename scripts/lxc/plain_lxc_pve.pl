@@ -86,7 +86,7 @@ sub hardware_config {
         input => encode_json({hardware=>$hardware, lxc=>$lxc, devices=>\@devices}),
         timeout => 180, outfunc => sub { $output .= $_[0]; }, errfunc => sub {});
     my $entries = decode_json($output);
-    die unless ref($entries) eq 'ARRAY' && @$entries <= 3;
+    die unless ref($entries) eq 'ARRAY' && @$entries <= 32;
     return $entries;
 }
 
@@ -165,6 +165,32 @@ sub check_resources {
     hardware_config($config,$resources,$vmid,0) if exists($resources->{hardware}) || @{$config->{lxc} // []};
 }
 
+sub image_layout {
+    # OCI and Docker image archives are plain tar files whose first members
+    # describe an image, never a root filesystem.
+    my ($path) = @_;
+    open(my $fh, '<:raw', $path) or return 0;
+    my $found = 0;
+    for (1 .. 16) {
+        my $header;
+        last unless (read($fh, $header, 512) // 0) == 512;
+        last if $header =~ /\A\0*\z/ || ord(substr($header, 124, 1)) & 0x80;
+        my ($name) = unpack('Z100', $header);
+        my $type = substr($header, 156, 1);
+        my ($digits) = unpack('Z12', substr($header, 124, 12)) =~ /([0-7]+)/;
+        $name =~ s{\A\./}{};
+        if ($type ne 'x' && $type ne 'g'
+            && $name =~ m{\A(?:oci-layout|index\.json|manifest\.json|repositories|blobs/)}) {
+            $found = 1;
+            last;
+        }
+        my $size = oct('0' . ($digits // '0'));
+        seek($fh, int(($size + 511) / 512) * 512, 1) or last;
+    }
+    close($fh);
+    return $found;
+}
+
 sub storage_inventory {
     my ($node) = @_;
     require PVE::Storage;
@@ -190,6 +216,11 @@ sub storage_inventory {
         my $volumes = $scfg->{content}->{vztmpl}
             ? $plugin->list_volumes($storage, $scfg, undef, ['vztmpl'])
             : [];
+        for my $volume (@$volumes) {
+            next unless ($volume->{format} // '') eq 'tar';
+            my ($path) = eval { PVE::Storage::path($cfg, $volume->{volid}) };
+            $volume->{image_layout} = 1 if defined($path) && !ref($path) && -f $path && image_layout($path);
+        }
         push @result, { storage => $storage, state => 'available', type => $type, content => \@content,
             avail => int($avail), templates => $volumes };
     }
@@ -385,7 +416,7 @@ sub dispatch {
         die unless "$prepare_system" =~ /\A[01]\z/;
         my $prepare_hardware = ref($expected->{resources}) eq 'HASH'
             && ref($expected->{resources}->{hardware}) eq 'ARRAY'
-            && grep { ref($_) eq 'HASH' && ref($_->{runtime}) eq 'HASH' } @{$expected->{resources}->{hardware}};
+            && grep { ref($_) eq 'HASH' && (ref($_->{runtime}) eq 'HASH' || ref($_->{usb}) eq 'ARRAY') } @{$expected->{resources}->{hardware}};
         die if $action eq 'prepare' && !$prepare_system && !$prepare_hardware;
         my %identity = %$expected;
         delete @identity{qw(prepare_system resources arch)};

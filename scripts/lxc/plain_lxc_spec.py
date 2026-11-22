@@ -40,7 +40,9 @@ DEFAULTS = {
     "ipv4": {"mode": "dhcp"},
     "onboot": False,
     "start_after_create": False,
-    "nesting": False,
+    # As the Proxmox interface does for unprivileged containers: systemd 255
+    # and later need it inside the container.
+    "nesting": True,
     "prepare_system": False,
 }
 
@@ -230,7 +232,7 @@ def normalize_hardware(items):
     result = []
     for item in items:
         fields(item,'profile selection_id',field='hardware')
-        profile = string(item['profile'], r'intel-drm|amd-drm|amd-rocm|nvidia-runtime|coral|npu|usb',32,'hardware.profile')
+        profile = string(item['profile'], r'intel-drm|amd-drm|nvidia-runtime|coral|npu|usb',32,'hardware.profile')
         selection = string(item['selection_id'],r'[a-zA-Z0-9_-]+',64,'hardware.selection_id')
         if any(row['selection_id'] == selection for row in result):
             raise LxcError('invalid_field','hardware')

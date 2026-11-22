@@ -362,7 +362,7 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(params["net0"], "name=eth0,type=veth,bridge=vmbr0,ip=192.0.2.10/24,gw=192.0.2.1,tag=200")
         self.assertEqual((params["rootfs"], params["memory"], params["swap"]), ("local-lvm:8", 512, 512))
         self.assertEqual((params["onboot"], params["start"], params["unprivileged"], params["features"]),
-                         (1, 0, 1, "nesting=0"))
+                         (1, 0, 1, "nesting=1"))
         self.assertEqual((params["nameserver"], params["searchdomain"]), ("192.0.2.53", "lan.example"))
         self.assertEqual(params["password"], PASSWORD)
         self.assertNotIn(PASSWORD, repr(self.api.calls))
@@ -371,6 +371,37 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(self.call("create", **payload), result)
         self.assertEqual(self.call("status", request_id=REQUEST_ID), result)
         self.assertEqual(len(self.api.writes), 2)
+
+    def test_a_task_that_warns_keeps_what_proxmox_wrote(self):
+        self.api.task_running = True
+        self.call("create", **self.create_body(start_after_create=True, prepare_system=False))
+        create = upid("vzcreate", VMID)
+        self.api.logs[create] = ["extracting archive", "WARN: Systemd 255 detected. You may need to enable nesting.",
+                                 "  WARNING: thin pool notice", "WARN: Systemd 255 detected. You may need to enable nesting.",
+                                 "TASK WARNINGS: 1"]
+        self.api.tasks[create].update(status="stopped", exitstatus="WARNINGS: 1")
+        result = self.call("status", request_id=REQUEST_ID)
+        self.assertEqual(result["task_warning_messages"],
+                         {"create": ["Systemd 255 detected. You may need to enable nesting."]})
+
+    def test_nesting_is_on_unless_turned_off(self):
+        self.assertTrue(self.call("context")["defaults"]["nesting"])
+        spec = {key: value for key, value in self.spec.items() if key != "nesting"}
+        self.assertTrue(self.call("plan", spec=spec)["plan"]["nesting"])
+        self.assertFalse(self.call("plan", spec={**spec, "nesting": False})["plan"]["nesting"])
+
+    def test_a_creation_lists_its_native_tasks_in_order(self):
+        cases = (({"prepare_system": False}, ["create"], False),
+                 ({"start_after_create": True, "prepare_system": False}, ["create", "start"], False),
+                 ({"prepare_system": True}, ["create", "prepare"], True),
+                 ({"start_after_create": True, "prepare_system": True}, ["create", "start"], True))
+        for spec, steps, preparing in cases:
+            with self.subTest(spec=spec):
+                self.setUp()
+                result = self.call("create", **self.create_body(**spec))
+                self.assertEqual((result["steps"], result["preparing"]), (steps, preparing))
+                self.assertEqual(self.call("status", request_id=REQUEST_ID)["steps"], steps)
+                self.assertNotIn("start_after_create", result)
 
     def test_task_log_is_paginated_and_only_reads_the_recorded_task(self):
         self.call("create", **self.create_body(start_after_create=True))
@@ -606,9 +637,11 @@ class EngineTests(unittest.TestCase):
         self.assertEqual([action for action, _ in self.api.writes], ["create", "start"])
 
     def test_nesting_is_explicit_boolean_and_requires_warning_acceptance(self):
+        # On by default, as in the Proxmox interface; turning it off is a choice.
         default = self.call("plan", spec=self.spec)
-        self.assertFalse(default["plan"]["nesting"])
-        self.assertFalse(default["plan"]["spec"]["nesting"])
+        self.assertTrue(default["plan"]["nesting"])
+        self.assertTrue(default["plan"]["spec"]["nesting"])
+        self.assertNotIn("nesting_enabled", self.call("plan", spec={**self.spec, "nesting": False})["plan"]["warnings"])
         for invalid in (1, "true", None, [], {}):
             self.assert_rejected("invalid_field", "plan", spec={**self.spec, "nesting": invalid})
         payload = self.create_body(nesting=True, start_after_create=True)
@@ -714,7 +747,7 @@ class ScriptedDialog:
         self.steps.append(step)
         if prompt.endswith("Choose what to do next."):
             self.review = prompt
-            return "create" if "create" in dict(choices) else "close"
+            return "close"
         if choices[0][0] == "close":
             self.messages.append(prompt)
             selection = next(self.task_choices, "close")
@@ -723,16 +756,19 @@ class ScriptedDialog:
         if prompt == "Select a system template" and self.download:
             self.download = False
             return "download"
-        expected = {1: choices[0][0], 2: "password", 3: "local-lvm",
+        first = next(key for key, _ in choices if key not in ("download", ""))
+        expected = {1: first, 2: "password", 3: "local-lvm",
                     4: "dhcp" if prompt == "Choose IPv4 configuration" else "bridge:vmbr0"}[step]
         assert expected in dict(choices)
         return expected
 
+    def review_plan(self, step, text):
+        self.steps.append(step)
+        self.review = text
+        return "create" if self.accept_create else "close"
+
     def confirm(self, step, text, *, default=False):
         self.steps.append(step)
-        if text.endswith("Create this container?"):
-            self.confirmation = text
-            return self.accept_create
         if text == "Start this container after creation?":
             return self.start
         if text.startswith('Prepare the system for its first boot?'):
@@ -750,6 +786,31 @@ class ScriptedDialog:
     def progress(self, step, text, **options):
         self.messages.append(text)
         yield self.messages.append
+
+
+class DownloadProgressTests(unittest.TestCase):
+    """The share of a template download comes from wget's lines in the task log."""
+
+    def progress(self, rows, error=False):
+        import plain_lxc
+
+        class API:
+            def read(self, path, **params):
+                if error:
+                    raise LxcError("pve_output_invalid")
+                return rows
+        return plain_lxc.download_progress(API(), "pve", "UPID:pve:1:2:3:download:t:root@pam:")
+
+    def test_the_last_reported_share_is_used(self):
+        rows = [{"n": 1, "t": "Length: 145902106 (139M) [application/octet-stream]"},
+                {"n": 2, "t": "     0K ........ ........ ........ ........ 22% 41.0M 3s"},
+                {"n": 3, "t": " 32768K ........ ........ ........ ........ 45% 43.2M 2s"}]
+        self.assertEqual(self.progress(rows), 45)
+
+    def test_no_share_yet_or_an_unreadable_log_gives_none(self):
+        self.assertIsNone(self.progress([{"n": 1, "t": "downloading http://download.proxmox.com/x.tar.zst"}]))
+        self.assertIsNone(self.progress(None))
+        self.assertIsNone(self.progress([], error=True))
 
 
 class WizardTests(unittest.TestCase):
@@ -1119,6 +1180,11 @@ class EditingDialog(ScriptedDialog):
         self.summaries = []
         self.defaults = []
 
+    def review_plan(self, step, text):
+        self.summaries.append((text, {"create": "", "modify": ""}))
+        self.editing, self.changes = next(self.edits, ("close", {}))
+        return self.editing if self.editing in ("create", "close") else "modify"
+
     def choose(self, step, prompt, choices, default=""):
         if prompt.endswith("Choose what to do next."):
             self.summaries.append((prompt, dict(choices)))
@@ -1126,6 +1192,9 @@ class EditingDialog(ScriptedDialog):
             self.editing, self.changes = action
             self.assert_valid_choice = self.editing in dict(choices)
             assert self.assert_valid_choice
+            return self.editing
+        if prompt == "Choose what to modify":
+            assert self.editing in dict(choices)
             return self.editing
         if self.editing:
             self.defaults.append((prompt, default))
@@ -1147,7 +1216,7 @@ class EditingDialog(ScriptedDialog):
         return super().input(step, prompt, default, hidden)
 
     def confirm(self, step, text, *, default=False):
-        if self.editing and not text.endswith("Create this container?"):
+        if self.editing:
             return self.changes.get(text, default)
         return super().confirm(step, text, default=default)
 
@@ -1179,7 +1248,7 @@ class ReviewEditingTests(unittest.TestCase):
                 for path in ('/tmp', '/run/lock', '/dev/mqueue', '/proc', '/sys'):
                     self.assertIn(path, ui.notice)
                 self.assertIn('Niektoré šablóny' if language=='sk' else 'Some templates', ui.notice)
-                self.assertFalse(ui.default)
+                self.assertTrue(ui.default)
                 self.assertEqual([r['action'] for r in calls], ['context'])
                 self.assertEqual(api.writes, [])
                 self.assertFalse(store.directory.exists())
@@ -1207,7 +1276,7 @@ class ReviewEditingTests(unittest.TestCase):
             self.assertEqual(api.writes, [])
             self.assertFalse(store.directory.exists())
 
-    def test_back_from_nesting_notice_keeps_hostname_and_default_no(self):
+    def test_back_from_nesting_notice_keeps_hostname_and_default_yes(self):
         class BackOnce(ScriptedDialog):
             def __init__(self):
                 super().__init__(accept_create=False)
@@ -1230,9 +1299,10 @@ class ReviewEditingTests(unittest.TestCase):
             with self.simulate_engine(api, store) as calls:
                 wizard.wizard(ui)
             self.assertEqual(ui.names[-1], 'retained-name')
-            self.assertEqual(ui.defaults, [False, False])
+            self.assertEqual(ui.defaults, [True, True])
             self.assertEqual([r['action'] for r in calls], ['context', 'plan'])
             self.assertEqual(calls[-1]['spec']['hostname'], 'retained-name')
+            # Offered on; this dialog answers no.
             self.assertFalse(calls[-1]['spec']['nesting'])
             self.assertEqual(api.writes, [])
             self.assertFalse(store.directory.exists())
@@ -1493,7 +1563,8 @@ class MenuTests(unittest.TestCase):
             call.args[0].value for call in ast.walk(parsed)
             if isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == "N_"
         }
-        texts.update(("Create VM and LXC", "Create VM", "Create a plain LXC"))
+        texts.update(("Create VM and LXC", "Create VM", "Create LXC from template",
+                      "Create VM and LXC from template or script"))
         self.assertEqual([key for key in sorted(texts) if not language.get(key)], [])
 
 

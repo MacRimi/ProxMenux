@@ -799,6 +799,9 @@ def _option_item(option: dict, language: str = "en") -> dict:
         "apart": bool(option.get("apart")),
         "third_party": _maintainer(option.get("third_party")),
         "terms": option.get("terms") or "",
+        # Opened at once instead of its sheet: in the terminal, or with the
+        # Monitor's own LXC wizard.
+        "opens": option.get("catalog_opens") if option.get("catalog_opens") in ("terminal", "plain-lxc") else "",
     }
 
 

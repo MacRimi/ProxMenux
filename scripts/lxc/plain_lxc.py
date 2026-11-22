@@ -155,7 +155,14 @@ def task_id(raw, node, kind, identity):
 def reply(operation, **changes):
     private = {"fingerprint", "sha512", "deadline", "start_after_create", "prepare_expected", "start_expected",
                "submission", "admitted_at", "recovery_checked_at", "hardware_preparation"}
-    return {key: value for key, value in {**operation, **changes}.items() if key not in private}
+    merged = {**operation, **changes}
+    public = {key: value for key, value in merged.items() if key not in private}
+    if merged.get("action") == "create" and "start_after_create" in merged:
+        # The native tasks this request runs, in order. A start also prepares
+        # the container first when preparation was asked for.
+        follow = "start" if merged["start_after_create"] else "prepare" if "prepare_expected" in merged else None
+        public.update(steps=["create"] + ([follow] if follow else []), preparing="prepare_expected" in merged)
+    return public
 
 
 def task_log(api, operation, phase, offset):
@@ -183,6 +190,38 @@ def task_log(api, operation, phase, offset):
     next_offset = offset + TASK_LOG_PAGE_SIZE
     return {"upid": upid, "phase": phase, "lines": lines,
             "next_offset": next_offset if len(rows) > TASK_LOG_PAGE_SIZE and next_offset <= TASK_LOG_MAX_OFFSET else None}
+
+
+def warning_lines(api, node, upid):
+    """What a native task warned about, as Proxmox wrote it in its log."""
+    try:
+        rows = api.read(f"/nodes/{node}/tasks/{upid}/log", start=0, limit=1000)
+    except LxcError:
+        return []
+    if type(rows) is not list:
+        return []
+    lines = []
+    for row in rows:
+        text = row.get("t") if isinstance(row, dict) else None
+        if isinstance(text, str) and text.startswith("WARN: "):
+            line = "".join(char if char.isprintable() else " " for char in text[6:306]).strip()
+            if line and line not in lines:
+                lines.append(line)
+    return lines[:5]
+
+
+def download_progress(api, node, upid):
+    """The share of the template wget has reported in the task log so far, or
+    None before it reports any."""
+    try:
+        rows = api.read(f"/nodes/{node}/tasks/{upid}/log", start=0, limit=1000)
+    except LxcError:
+        return None
+    if type(rows) is not list:
+        return None
+    shares = [int(found) for row in rows if isinstance(row, dict) and isinstance(row.get("t"), str)
+              for found in re.findall(r"\s([0-9]{1,3})%", row["t"])]
+    return min(shares[-1], 100) if shares else None
 
 
 def marker_matches(api, operation):
@@ -215,6 +254,8 @@ def observe(api, operation):
         if type(task) is not dict or task.get("upid") != upid:
             raise LxcError("task_status_unavailable")
         if task.get("status") == "running":
+            if operation["action"] == "download_template":
+                return reply(operation, status="running", progress=download_progress(api, node, upid))
             return reply(operation, status="running")
         exit_status = task.get("exitstatus")
         if (task.get("status") != "stopped" or type(exit_status) is not str or not exit_status
@@ -226,6 +267,9 @@ def observe(api, operation):
         warning_phases = {**operation.get("task_warning_phases", {}), phase: warnings}
         operation = {**operation, "task_warning_phases": warning_phases,
                      "task_warnings": any(warning_phases.values())}
+        if warnings and phase not in operation.get("task_warning_messages", {}):
+            operation["task_warning_messages"] = {**operation.get("task_warning_messages", {}),
+                                                  phase: warning_lines(api, node, upid)}
         if exit_status != "OK" and not warnings:
             if phase == "create":
                 existing = operation["vmid"] in occupied_ids(api.read("/cluster/resources", type="vm"))
@@ -281,7 +325,8 @@ def run_operation(api, store, operation, action, params, kind, identity, wait_se
         result = observe(api, operation)
         if result.get("reason") in ("awaiting_start", "awaiting_preparation"):
             operation.update(task_warning_phases=result["task_warning_phases"],
-                             task_warnings=result["task_warnings"])
+                             task_warnings=result["task_warnings"],
+                             task_warning_messages=result.get("task_warning_messages", {}))
             phase = "start" if operation["start_after_create"] else "prepare"
             operation.update(phase=phase, create_upid=operation["upid"], created=True, upid=None,
                              deadline=time.time() + SUBMIT_SECONDS, submission='not_started')
@@ -509,7 +554,9 @@ def execute(request, api, store, wait_seconds=TASK_WAIT_SECONDS, on_phase=None):
             expected['resources'] = attachments
         expected['arch'] = params['arch']
         details["start_expected"] = expected
-        hardware_preparation = any(item.get('runtime') for item in attachments.get('hardware',[]))
+        # NVIDIA's runtime hook and the udev rule of USB devices are written
+        # before the first start, under the container's lock.
+        hardware_preparation = any(item.get('runtime') or item.get('usb') for item in attachments.get('hardware',[]))
         if spec["prepare_system"] or hardware_preparation:
             details["prepare_expected"] = expected
         if hardware_preparation:

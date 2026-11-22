@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Apertura del menu",
-    "body": "Nel menu principale di ProxMenux seleziona <strong>Crea VM da template o script</strong>. Vedrai:",
+    "body": "Nel menu principale di ProxMenux seleziona <strong>Crea VM e LXC da modello o script</strong>. Vedrai:",
     "imageAlt": "Menu Crea VM con tre opzioni ProxMenux (NAS/Windows/Linux) e la sezione Script esterni sotto (macOS/Altri)"
   },
   "families": {

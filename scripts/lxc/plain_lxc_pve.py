@@ -220,7 +220,8 @@ def inventory(api, node, vmid=None, *, raw=None):
                 raise LxcError("pve_output_invalid")
             volumes.add(volume)
             basename = volume.split("/", 1)[1]
-            if not re.fullmatch(ARCHIVE, basename) or len(volume) > 255 or is_oci_archive(basename):
+            if (not re.fullmatch(ARCHIVE, basename) or len(volume) > 255 or is_oci_archive(basename)
+                    or item.get("image_layout") == 1):
                 continue
             if basename in catalog:
                 templates[volume] = {**catalog[basename], "volume_id": volume, "storage": name,
@@ -333,7 +334,11 @@ def checked_plan(api, spec, context):
     if spec.get('hardware') and not context['capabilities']['devices']:
         raise LxcError('resource_unsupported')
     chosen = selected_hardware(spec['hardware'], context['hardware']) if 'hardware' in spec else []
-    devices = [device for item in chosen for device in item['devices']] if 'hardware' in spec else spec['devices']
+    # Two AMD GPUs share the compute interface; it is attached once. A USB
+    # device goes by its identity (configuration lines and a udev rule), never
+    # as a device entry that names its current bus number.
+    devices = list({device['path']:device for item in chosen if not item.get('usb')
+                    for device in item['devices']}.values()) if 'hardware' in spec else spec['devices']
     attachments = {'mounts':[], 'devices':[]}
     if chosen:
         attachments['hardware'] = deepcopy(chosen)
@@ -354,9 +359,12 @@ def checked_plan(api, spec, context):
         if type(candidate) is not dict or candidate.get('path') != device['path'] or type(candidate.get('identity')) is not dict:
             raise LxcError('resource_unavailable', 'devices.path')
         attachments['devices'].append({**device, 'identity':deepcopy(checked_identity(candidate['identity']))})
-    if devices:
+    if devices or chosen:
         warnings.append('device_passthrough')
-    assignments = api.device_assignments([item['path'] for item in devices], spec['vmid'])
+    # Whether another guest already has any of them, USB devices included.
+    owned = list(dict.fromkeys([item['path'] for item in devices] +
+                               [device['path'] for item in chosen if item.get('usb') for device in item['devices']]))
+    assignments = api.device_assignments(owned, spec['vmid'])
     for name, size in allocations.items():
         target = context['storages'][name]
         overcommit = size*GIB > target['available_bytes']

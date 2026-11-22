@@ -491,7 +491,34 @@ class DevicePolicyTests(unittest.TestCase):
                 (vm/'250.conf').write_text('usb0: '+raw+'\n')
                 with self.assertRaisesRegex(fixture.LxcError,'^resource_unavailable$'): check([usb])
 
-    def test_bind_symlinks_and_regular_files_are_rejected_without_modifying_them(self):
+    def test_a_usb_tree_given_by_identity_holds_only_the_devices_its_rule_names(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); ct=root/'lxc'; vm=root/'qemu'; rules=root/'rules'
+            for directory in (ct,vm,rules): directory.mkdir()
+            usb='/dev/bus/usb/001/004'
+            def check(found):
+                with patch.object(resources,'usb_identifiers',return_value=found):
+                    return resources.device_assignments([usb],240,ct,vm,root,rules)
+            bluetooth={'id':'0bda:b85b','port':'1-3','serial':'00e04c000001'}
+            audio={'id':'0573:1573','port':'3-3','serial':'A34004801402'}
+            (ct/'108.conf').write_text('lxc.cgroup2.devices.allow: c 189:* rwm\n'
+                                       'lxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir\n')
+            # Without a rule the whole tree is held.
+            with self.assertRaisesRegex(fixture.LxcError,'^resource_in_use$'): check(audio)
+            (rules/'99-proxmenux-oci-108.rules').write_text(
+                '# ProxMenux OCI 108: USB devices passed to the container\n'
+                'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="0bda", ATTR{idProduct}=="b85b", ATTR{serial}=="00e04c000001", MODE="0666"\n'
+                'ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="0bda", ATTR{idProduct}=="b85b", ATTR{serial}=="00e04c000001", RUN+="/bin/true"\n')
+            self.assertEqual(check(audio),{usb:[]})
+            with self.assertRaisesRegex(fixture.LxcError,'^resource_in_use$'): check(bluetooth)
+            # Another unit of that model, with no serial, is not the one named.
+            self.assertEqual(check({**bluetooth,'serial':None,'port':'2-1'}),{usb:[]})
+            # A rule without a serial, as a Coral's, holds every device of that model.
+            (rules/'99-proxmenux-oci-108.rules').write_text(
+                'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="0573", ATTR{idProduct}=="1573", MODE="0666"\n')
+            with self.assertRaisesRegex(fixture.LxcError,'^resource_in_use$'): check(audio)
+            self.assertEqual(check(bluetooth),{usb:[]})
+
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); source=root/'data'; source.mkdir(); sentinel=source/'sentinel'; sentinel.write_bytes(b'unchanged')
             alias=root/'alias'; alias.symlink_to(source)
@@ -590,7 +617,8 @@ class WizardNavigationTests(unittest.TestCase):
             def input(self, step, prompt, default='', hidden=False):
                 self.events.append(('input',prompt,default)); return default
             def choose(self, step, prompt, choices, default=''):
-                self.events.append(('choose',prompt,default)); return choices[0][0]
+                self.events.append(('choose',prompt,default))
+                return next(key for key, _ in choices if key not in ('download', ''))
         context = fixture.EngineTests.call(self, 'context')
         for hostname, expected in (('', 'debian-13'), ('my-server','my-server')):
             ui = UI(False); ui.events = []
@@ -606,7 +634,6 @@ class WizardNavigationTests(unittest.TestCase):
         with self.simulate_engine(self.api, self.store) as calls:
             fixture.wizard.wizard(ui)
         self.assertIn('VMID: 240', ui.review)
-        self.assertEqual(ui.confirmation, 'Create this container?')
         self.assertNotIn(fixture.PASSWORD, ui.review)
         self.assertEqual([item['action'] for item in calls], ['context','plan'])
         self.assertEqual(self.api.writes, [])

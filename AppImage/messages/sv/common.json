@@ -8575,22 +8575,12 @@
   },
   "plainLxc": {
     "downloadStatus": {
-      "awaiting": "Väntar på att nedladdningen ska visas.",
       "running": "Laddar ned mallen...",
-      "unknown": "Nedladdningsresultatet är osäkert.Kontrollerar den ursprungliga driften.",
       "succeeded": "Mallen har laddats ner.",
-      "failed": "Nedladdning misslyckades.",
-      "partial": "Nedladdningen kunde inte verifieras.",
-      "not_submitted": "Ingen nedladdning skickades."
+      "partial": "Nedladdningen kunde inte verifieras."
     },
     "status": {
-      "awaiting": "Väntar på att begäran ska visas.",
-      "running": "Skapandet pågår.",
-      "unknown": "Resultatet är osäkert.Kontrollerar den ursprungliga driften.",
-      "succeeded": "Behållare skapad.",
-      "failed": "Skapandet misslyckades.",
-      "partial": "Operationen avslutades delvis.",
-      "not_submitted": "Ingen åtgärd skickades."
+      "succeeded": "Behållare skapad."
     },
     "warning": {
       "no_network": "Behållaren kommer inte att ha något nätverksgränssnitt.",

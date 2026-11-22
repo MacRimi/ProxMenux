@@ -8575,22 +8575,12 @@
   },
   "plainLxc": {
     "downloadStatus": {
-      "awaiting": "in attesa che venga visualizzato il download.",
       "running": "download del modello…",
-      "unknown": "il risultato del download è incerto.Controllo del funzionamento originale.",
       "succeeded": "modello scaricato.",
-      "failed": "download non riuscito.",
-      "partial": "impossibile verificare il download.",
-      "not_submitted": "non è stato inviato alcun download."
+      "partial": "impossibile verificare il download."
     },
     "status": {
-      "awaiting": "in attesa che venga visualizzata la richiesta.",
-      "running": "La creazione è in corso.",
-      "unknown": "Il risultato è incerto.Controllo del funzionamento originale.",
-      "succeeded": "contenitore creato.",
-      "failed": "Creazione fallita.",
-      "partial": "L'operazione è terminata parzialmente.",
-      "not_submitted": "non è stata inviata alcuna operazione."
+      "succeeded": "contenitore creato."
     },
     "warning": {
       "no_network": "il contenitore non avrà un'interfaccia di rete.",

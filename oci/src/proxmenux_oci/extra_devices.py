@@ -110,7 +110,7 @@ def ask_extra_devices(ui, devices, unprivileged, allow_coral=False, kinds=('gpu'
         if any(device_node(item) == path for item in result):
             raise ValueError(translate('This device is already attached'))
         if kind == 'usb' and '/bus/usb/' in path:
-            ui.info(translate('USB bus numbers can change after reconnecting or rebooting.'))
+            ui.info(translate('USB devices are passed by their identity: the container keeps them after a reboot, and restarts when one is reconnected.'))
         result.append({'id': 'manual-' + path.removeprefix('/dev/').replace('/', '-'),
                        'kind': 'character-device', 'host_path': path, 'container_path': path,
                        'mode': '0660', 'deny_write': False,

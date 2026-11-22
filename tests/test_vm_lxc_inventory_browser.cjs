@@ -12,7 +12,8 @@ const version = require(path.join(app, "package.json")).version
 const origin = "http://inventory.fixture.invalid"
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "vm-lxc-inventory-"))
 const browser = spawn(process.env.CHROMIUM_BIN || "chromium", [
-  "--headless", "--disable-gpu", "--disable-background-networking", "--no-first-run",
+  "--headless", "--disable-gpu", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows",
+  "--disable-background-timer-throttling", "--disable-background-networking", "--no-first-run",
   "--remote-debugging-pipe", "--user-data-dir=" + profile,
   ...(process.env.CHROMIUM_NO_SANDBOX === "1" ? ["--no-sandbox"] : []),
 ], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] })
@@ -66,6 +67,7 @@ async function respond({ requestId, request }) {
       templates: lxcDownloaded ? [lxcTemplate, downloadedTemplate] : [lxcTemplate],
       catalog: [catalogTemplate], catalog_state: "available", template_storages: ["local"],
       storages: ["local-lvm"], bridges: { vmbr0: { vlan_supported: true } }, limits: { cores: 8, ram_mib: 8192 },
+      capabilities: { mount_points: 256, devices: 32 }, hardware: [], hardware_errors: false,
       defaults: { rootfs: { size_gib: 8 }, cpu: { cores: 1 }, memory: { ram_mib: 512, swap_mib: 512 },
         nesting: false, onboot: false, start_after_create: false, prepare_system: false },
     })
@@ -222,20 +224,18 @@ async function verifyPlainLxcWizard() {
     if (submit) {
       await fill("Container hostname", "input", "chosen-name")
       await advance("Download an official template")
-      await waitFor(`Boolean(${control("Official template", "select")})`)
-      await fill("Official template", "select", catalogTemplate)
+      await waitFor(`Boolean(${button(catalogTemplate, dialog)})`)
+      await click(button(catalogTemplate, dialog))
       await waitFor(`!(${button("Confirm download", dialog)}).disabled`)
       await assertDialogFits()
       await evaluate(`(() => { const download = ${button("Confirm download", dialog)}; download.click(); download.click(); })()`)
-      await waitFor(`${dialog}?.textContent.includes('Template downloaded.')`)
-      await advance("Use this template")
-      await waitFor(`Boolean(${control("System template", "select")})`)
-      assert.equal(await evaluate(`${control("System template", "select")}.value`), downloadedTemplate)
+      // A finished download returns to System with that template chosen.
+      await waitFor(`${control("System template", "select")}?.value === ${JSON.stringify(downloadedTemplate)}`)
       assert.equal(await evaluate(`${control("Container hostname", "input")}.value`), "chosen-name")
     } else {
       await advance("Download an official template")
-      await waitFor(`Boolean(${control("Official template", "select")})`)
-      await fill("Official template", "select", catalogTemplate)
+      await waitFor(`Boolean(${button(catalogTemplate, dialog)})`)
+      await click(button(catalogTemplate, dialog))
       await advance("Download an official template")
       assert.equal(lxcRequests.filter(call => call.action.startsWith("download")).length, 0)
       await fill("System template", "select", lxcTemplate)
@@ -247,26 +247,30 @@ async function verifyPlainLxcWizard() {
     await advance("Next")
     await fill("Network bridge", "select", "")
     await advance("Next")
-    await advance("Check configuration")
+    // Review checks the plan on its own; its warnings are notices that the
+    // confirmation accepts.
     const confirm = button("Confirm creation", dialog)
     await waitFor(`Boolean(${confirm})`)
-    assert.equal(await evaluate(`(${confirm}).disabled`), true)
+    assert.ok(await evaluate(`${dialog}.textContent.includes('The container will have no network interface.')`))
+    assert.equal(await evaluate(`(${confirm}).disabled`), false)
     if (!submit) {
       await advance("Cancel")
       await waitFor(`!${dialog}`)
       assert.equal(lxcRequests.filter(call => call.action === "create").length, 0)
       continue
     }
-    await evaluate(`[...${dialog}.querySelectorAll('label')].find(el => el.textContent.includes('no network interface')).querySelector('input').click()`)
     await evaluate(`(() => { const confirm = ${confirm}; confirm.click(); confirm.click(); })()`)
-    await waitFor(`${dialog}?.textContent.includes('Creation is in progress.')`)
+    // The view follows each native task: the request reached Proxmox and the
+    // container is being created.
+    await waitFor(`${dialog}?.textContent.includes('Create the container') && !${dialog}.textContent.includes('Confirm creation')`)
+    assert.ok(await evaluate(`${dialog}.textContent.includes('LXC 241 · chosen-name')`))
   }
   await advance("Close")
   await waitFor(`!${dialog}`)
   await send("Page.reload")
   await openInventory()
   await click(button("Create LXC"))
-  await waitFor(`${dialog}?.textContent.includes('LXC 241 · Creation is in progress.')`)
+  await waitFor(`${dialog}?.textContent.includes('LXC 241') && ${dialog}.textContent.includes('Create the container')`)
   assert.equal(lxcRequests.filter(call => call.action === "create").length, 1)
   lxcCreateStatus = "succeeded"
   await waitFor(`${dialog}?.textContent.includes('Container created.')`)
@@ -280,7 +284,9 @@ async function verifyPlainLxcWizard() {
     await click(button("Create LXC"))
     await waitFor(`Boolean(${dialog} && ${control("System template", "select")})`)
     assert.equal(await evaluate(`${control("Container ID (VMID)", "input")}.value`), "242")
-    assert.equal(await evaluate(`${control("System template", "select")}.value`), "")
+    // The hidden native select of the Monitor's Select shows its first option;
+    // what the user sees is the trigger, still asking for a template.
+    assert.equal(await evaluate(`${control("System template", "[role=combobox]")}.textContent`), "Select a template")
     assert.equal(await evaluate(`${control("Container hostname", "input")}.value`), "")
     assert.equal(lxcRequests.filter(call => call.action === "status").length, statusChecks)
     await advance("Cancel")

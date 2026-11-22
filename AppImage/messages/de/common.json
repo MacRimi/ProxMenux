@@ -8575,22 +8575,12 @@
   },
   "plainLxc": {
     "downloadStatus": {
-      "awaiting": "Warten auf das Erscheinen des Downloads.",
       "running": "Vorlage wird heruntergeladen…",
-      "unknown": "Das Download-Ergebnis ist ungewiss.Überprüfung des ursprünglichen Vorgangs.",
       "succeeded": "Vorlage heruntergeladen.",
-      "failed": "Download fehlgeschlagen.",
-      "partial": "Der Download konnte nicht überprüft werden.",
-      "not_submitted": "Es wurde kein Download übermittelt."
+      "partial": "Der Download konnte nicht überprüft werden."
     },
     "status": {
-      "awaiting": "Warten auf das Erscheinen der Anfrage.",
-      "running": "Die Erstellung ist im Gange.",
-      "unknown": "Das Ergebnis ist ungewiss.Überprüfung des ursprünglichen Vorgangs.",
-      "succeeded": "Container erstellt.",
-      "failed": "Erstellung fehlgeschlagen.",
-      "partial": "Der Vorgang wurde teilweise abgeschlossen.",
-      "not_submitted": "Es wurde kein Vorgang übermittelt."
+      "succeeded": "Container erstellt."
     },
     "warning": {
       "no_network": "Der Container verfügt über keine Netzwerkschnittstelle.",

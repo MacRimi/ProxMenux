@@ -39,6 +39,7 @@ def N_(text):
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 ENGINE = SCRIPTS / "lxc" / "plain_lxc.py"
+SEPARATOR = ("", "")
 TITLES = (N_("System"), N_("Access"), N_("Resources"), N_("Network and DNS"), N_("Review"))
 ERRORS = {
     "hardware_requires_v2": N_("Hardware selection requires a fresh plan from the current wizard."),
@@ -115,7 +116,7 @@ PLAN_WARNINGS = {
     'custom_template': N_("This is a local template supplied by the administrator. Its checksum identifies the selected file; it does not certify its publisher or contents."),
     'storage_overcommit': N_("The logical disk limit exceeds current free space. Thin storage allocates data as it is written; extraction or later writes can fail if the pool fills up."),
     'bind_mount': N_("Bind mounts expose host data and are not included in container backups. Permissions are kept unchanged; an unprivileged container may need existing UID/GID permissions."),
-    'device_passthrough': N_("Device passthrough uses the existing host drivers and shares the selected device nodes. Required software inside the container is not installed automatically. USB device paths can change after reconnecting."),
+    'device_passthrough': N_("Device passthrough uses the existing host drivers and shares the selected device nodes. Required software inside the container is not installed automatically."),
 }
 
 
@@ -398,6 +399,18 @@ class Dialog:
             raise Cancelled()
         return choice
 
+    def review_plan(self, step, text):
+        """The checked plan with its two actions: create it, or modify a part."""
+        title = f"{step}/5  {self.t(TITLES[step - 1])}"
+        result = subprocess.run(["dialog", "--clear", "--backtitle", "ProxMenux", "--title", title,
+                                 "--yes-label", self.t(N_("Create")), "--no-label", self.t(N_("Cancel")),
+                                 "--extra-button", "--extra-label", self.t(N_("Modify")),
+                                 "--yesno", text, *self.dimensions(text, detail=True)],
+                                env=self.paint_environment())
+        if result.returncode not in (0, 1, 3, 255):
+            raise WizardError("dialog_error")
+        return {0: "create", 3: "modify"}.get(result.returncode, "close")
+
     def confirm(self, step, text, *, default=False):
         # A new mutation requires an intentional Yes. Enter defaults to No.
         title = f"{step}/5  {self.t(TITLES[step - 1])}"
@@ -562,13 +575,17 @@ def select_template(ui, context, default=""):
         choices = [(volume, "") for volume in sorted(templates)]
         stores = [name for name, storage in context["storages"].items() if "vztmpl" in storage["content"]]
         if context["catalog"] and stores:
-            choices.append(("download", ui.t(N_("Download an official template"))))
+            # The download comes first, apart from the templates already here.
+            choices = [("download", ui.t(N_("Download an official template")))] + (
+                [SEPARATOR] + choices if choices else [])
         if not choices:
             if context["catalog_state"] == "unavailable":
                 raise WizardError("catalog_unavailable")
             ui.message(1, ui.t(N_("No verified template choices are available on this node.")))
             raise Cancelled()
         choice = ui.choose(1, N_("Select a system template"), choices, default=default)
+        if choice == SEPARATOR[0]:
+            continue
         if choice != "download":
             return choice, context
         form = FormNavigation(ui)
@@ -576,7 +593,7 @@ def select_template(ui, context, default=""):
             name = form.choose(1, N_("Select a template to download"), [(name, "") for name in sorted(context["catalog"])])
             storage = form.choose(1, N_("Select template storage"), [(name, "") for name in sorted(stores)])
             question = ui.t(N_("Download this template?")) + f"\n\n{name}\n{context['node']} / {storage}"
-            return name, storage, form.confirm(1, question)
+            return name, storage, form.confirm(1, question, default=True)
         try:
             name, storage, confirmed = form.run(download_fields)
         except Back:
@@ -588,6 +605,10 @@ def select_template(ui, context, default=""):
                 raise Cancelled()
             context = call("context")
             default = storage + ':vztmpl/' + name
+            # The template just downloaded is the one wanted: use it instead
+            # of asking for it again.
+            if default in context["templates"]:
+                return default, context
 
 
 def access_fields(ui, current=None):
@@ -649,36 +670,44 @@ def summary(ui, plan):
     spec = plan["spec"]
     rootfs, network = spec["rootfs"], spec["network"]
     yes_no = {True: ui.t(N_("Yes")), False: ui.t(N_("No"))}
-    items = [
+    system = [
         (N_("Node"), spec["node"]), ("VMID", spec["vmid"]), (N_("Container hostname"), spec["hostname"]),
         (N_("Template"), spec["template"]["volume_id"]),
         (N_("Template architecture"), plan['resources']['template']['architecture']),
-        (N_("Access"), ui.t(ACCESS[spec["access"]["mode"]])),
-        (N_("SSH public keys"), len(spec["access"]["ssh_public_keys"])),
         (N_("Unprivileged"), yes_no[plan["unprivileged"]]), (N_("Nesting"), yes_no[plan["nesting"]]),
+    ]
+    access = [(N_("Access"), ui.t(ACCESS[spec["access"]["mode"]])),
+              (N_("SSH public keys"), len(spec["access"]["ssh_public_keys"]))]
+    resources = [
         (N_("Root disk"), f'{rootfs["storage"]} / {rootfs["size_gib"]} GiB'),
         (N_("CPU cores"), spec["cpu"]["cores"]),
         (N_("RAM / swap"), f'{spec["memory"]["ram_mib"]} / {spec["memory"]["swap_mib"]} MiB'),
-        (N_("Start on boot"), yes_no[spec["onboot"]]),
-        (N_("Start after creation"), yes_no[spec["start_after_create"]]),
-        (N_("Prepare the system for its first boot"), yes_no[spec['prepare_system']]),
     ]
+    for index, mount in enumerate(spec['mounts']):
+        source = f"{mount['storage']} / {mount['size_gib']} GiB" if mount['type'] == 'volume' else mount['source']
+        resources.append((ui.t(N_('Mount point')) + f' {index+1}',
+                          f"{source} → {mount['path']} / {ui.t(N_('Read only'))}: {yes_no[mount['read_only']]} / {ui.t(N_('Backup'))}: {yes_no[mount['backup']]}"))
+    for device in plan['resources']['attachments'].get('hardware', []):
+        resources.append((N_('Hardware'), hardware_label(ui,device)))
     if network is None:
-        items.append((N_("Network"), ui.t(N_("No network interface"))))
+        networking = [(N_("Network"), ui.t(N_("No network interface")))]
     else:
-        items += [(N_("Bridge"), network["bridge"]), ("IPv4", network["ipv4"].get("cidr", "DHCP"))]
+        networking = [(N_("Bridge"), network["bridge"]), ("IPv4", network["ipv4"].get("cidr", "DHCP"))]
         for name, value in ((N_("IPv4 gateway"), network["ipv4"].get("gateway")), (N_("VLAN tag"), network.get("vlan_tag")),
                             (N_("DNS servers"), " ".join(spec["dns"]["nameservers"])),
                             (N_("DNS search domains"), " ".join(spec["dns"]["search_domains"]))):
             if value:
-                items.append((name, value))
-    for index, mount in enumerate(spec['mounts']):
-        source = f"{mount['storage']} / {mount['size_gib']} GiB" if mount['type'] == 'volume' else mount['source']
-        items.append((ui.t(N_('Mount point')) + f' {index+1}',
-                      f"{source} → {mount['path']} / {ui.t(N_('Read only'))}: {yes_no[mount['read_only']]} / {ui.t(N_('Backup'))}: {yes_no[mount['backup']]}"))
-    for device in plan['resources']['attachments'].get('hardware', []):
-        items.append((N_('Hardware'), hardware_label(ui,device)))
-    text = "\n".join(f"{ui.t(label)}: {value}" for label, value in items)
+                networking.append((name, value))
+    startup = [
+        (N_("Start on boot"), yes_no[spec["onboot"]]),
+        (N_("Start after creation"), yes_no[spec["start_after_create"]]),
+        (N_("Prepare the system for its first boot"), yes_no[spec['prepare_system']]),
+    ]
+    # One block per step of the wizard, in the order it asked them.
+    blocks = ((TITLES[0], system), (TITLES[1], access), (TITLES[2], resources),
+              (TITLES[3], networking), (N_("Start options"), startup))
+    text = "\n\n".join(ui.t(title) + "\n" + "\n".join(f"  {ui.t(label)}: {value}" for label, value in rows)
+                       for title, rows in blocks)
     if not plan['nesting']:
         text += '\n\n' + ui.t(NESTING_COMPATIBILITY_NOTICE)
         text += '\n' + ui.t(N_("To change nesting, open System."))
@@ -719,7 +748,7 @@ def mount_fields(ui, spec, context):
 
 HARDWARE_LABELS = {
     'intel-drm': N_('Intel GPU'), 'amd-drm': N_('AMD GPU'),
-    'amd-rocm': N_('AMD GPU (ROCm)'), 'nvidia-runtime': N_('NVIDIA GPU (all host NVIDIA GPUs)'),
+    'nvidia-runtime': N_('NVIDIA GPU (all host NVIDIA GPUs)'),
     'coral': N_('Coral TPU'), 'npu': N_('NPU'), 'usb': N_('USB or serial device'),
 }
 
@@ -728,7 +757,7 @@ def hardware_label(ui, item):
     label = ui.t(HARDWARE_LABELS[item['profile']])
     if item['profile'] == 'nvidia-runtime':
         return label
-    if item['profile'] in ('intel-drm','amd-drm','amd-rocm'):
+    if item['profile'] in ('intel-drm','amd-drm'):
         pci = next(row['pci_path'] for row in item['evidence'].values() if 'pci_path' in row)
         return label+' · '+Path(pci).name
     return label+' · '+item['name']
@@ -745,8 +774,9 @@ def device_fields(ui, spec, context):
     if not selected and not ui.confirm(3,ui.t(N_('Add hardware passthrough?'))):
         return []
     while True:
+        # The AMD compute interface is shared by every AMD GPU.
         occupied = {device['path'] for selection in selected
-                    for device in available.get(selection['selection_id'],{}).get('devices',[])}
+                    for device in available.get(selection['selection_id'],{}).get('devices',[])} - {'/dev/kfd'}
         choices = NamedChoices([('done',ui.t(N_('Continue')))])
         choices += [(key,hardware_label(ui,item)) for key,item in sorted(available.items())
                     if not occupied.intersection(d['path'] for d in item['devices'])]
@@ -762,8 +792,8 @@ def device_fields(ui, spec, context):
         item = available[choice]
         if item['profile'] == 'nvidia-runtime':
             ui.message(3,ui.t(N_('NVIDIA includes all host GPUs and their driver runtime. The host driver and NVIDIA Container Toolkit must already work.')))
-        if item['profile'] in ('usb','coral') and any('/bus/usb/' in row['path'] for row in item['devices']):
-            ui.message(3,ui.t(N_('USB bus numbers can change after reconnecting or rebooting.')))
+        if item.get('usb'):
+            ui.message(3,ui.t(N_('USB devices are passed by their identity: the container keeps them after a reboot, and restarts when one is reconnected.')))
         selected.append({'profile':item['profile'],'selection_id':choice})
 
 
@@ -838,13 +868,21 @@ def _edit_group(ui, group, spec, secret, context):
 
 
 def review_choice(ui, text, valid):
-    choices = [("create", ui.t(N_("Continue to creation confirmation")))] if valid else [
-        ("retry", ui.t(N_("Check the configuration again")))]
     labels = {'mounts':N_('Mount points'), 'devices':N_('Hardware')}
-    choices += [(key, ui.t(labels.get(key, TITLES[step - 1] if step < 5 else N_("Start options"))))
-                for key, step in EDIT_GROUPS]
-    choices.append(("close", ui.t(N_("Cancel"))))
-    return ui.choose(5, text + "\n\n" + ui.t(N_("Choose what to do next.")), choices, default=choices[0][0])
+    groups = [(key, ui.t(labels.get(key, TITLES[step - 1] if step < 5 else N_("Start options"))))
+              for key, step in EDIT_GROUPS]
+    if not valid:
+        choices = [("retry", ui.t(N_("Check the configuration again")))] + groups + [("close", ui.t(N_("Cancel")))]
+        return ui.choose(5, text + "\n\n" + ui.t(N_("Choose what to do next.")), choices, default=choices[0][0])
+    while True:
+        action = ui.review_plan(5, text)
+        if action != "modify":
+            return action
+        try:
+            return ui.choose(5, N_("Choose what to modify"), groups, default=groups[0][0])
+        except (Back, Cancelled):
+            # Leaving the list returns to the same review.
+            continue
 
 
 def load_context(ui):
@@ -894,9 +932,9 @@ def wizard(ui):
             # Invalid drafts never carry a previously checked plan to an action.
             if checked is None:
                 continue
+            # Choosing it next to the review is the confirmation.
             try:
-                if ui.confirm(5, ui.t(N_("Create this container?"))):
-                    operation(ui, 5, "create", **checked, accepted_warnings=plan["warnings"], **secret)
+                operation(ui, 5, "create", **checked, accepted_warnings=plan["warnings"], **secret)
             except Back:
                 continue
             return

@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Abrir o menu",
-    "body": "No menu principal do ProxMenux, selecione <strong>Criar VM a partir de template ou script</strong>. Você verá isto:",
+    "body": "No menu principal do ProxMenux, selecione <strong>Criar VM e LXC a partir de modelo ou script</strong>. Você verá isto:",
     "imageAlt": "Crie o expedidor VM com opções 3 ProxMenux (NAS / Windows / Linux) seguido da seção Scripts externos (macOS / Outros)"
   },
   "families": {

@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Abrir el menú",
-    "body": "Desde el menú principal de ProxMenux, selecciona <strong>Crear VM desde plantilla o script</strong>. Verás esto:",
+    "body": "Desde el menú principal de ProxMenux, selecciona <strong>Crear VM y LXC a partir de una plantilla o script</strong>. Verás esto:",
     "imageAlt": "Dispatcher de Crear VM con 3 opciones de ProxMenux (NAS / Windows / Linux) seguidas de la sección Scripts externos (macOS / Others)"
   },
   "families": {

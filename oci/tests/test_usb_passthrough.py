@@ -142,6 +142,14 @@ class ConfigurationTests(unittest.TestCase):
                       f'ATTRS{{serial}}=="DE2141544", {run}', rule)
         self.assertEqual(usb._pairs(rule), {('usb', '0463', 'ffff'), ('tty', '1cf1', '0030')})
 
+    def test_a_device_that_comes_back_by_itself_gets_its_rule_without_a_restart(self):
+        coral = {**UPS, 'id': 'coral', 'reconnect': False, 'usb': {'vendor': '18d1', 'product': '9302', 'port': '2-1'}}
+        rule = usb.rules(122, {'devices': [coral]})
+        self.assertIn('ATTR{idVendor}=="18d1", ATTR{idProduct}=="9302", MODE="0666"', rule)
+        self.assertNotIn('RUN+=', rule)
+        with self.assertRaises(ValueError):
+            usb.rules(122, {'devices': [{**coral, 'reconnect': 'no'}]})
+
     def test_the_whole_usb_tree_has_no_rule(self):
         tree = usb.tree_entry('usb')
         self.assertEqual(usb.lines({'devices': [tree]}), [usb.USB_ALLOW, usb.USB_MOUNT])

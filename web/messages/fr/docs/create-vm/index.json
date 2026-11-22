@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Ouverture du menu",
-    "body": "Dans le menu principal de ProxMenux, sélectionnez <strong>Create VM from template or script</strong>. Vous verrez ceci :",
+    "body": "Dans le menu principal de ProxMenux, sélectionnez <strong>Créer une VM et un LXC à partir d'un modèle ou d'un script</strong>. Vous verrez ceci :",
     "imageAlt": "Créer un répartiteur VM avec les options 3 ProxMenux (NAS / Windows / Linux) suivi de la section Scripts communautaires (macOS / Autres)"
   },
   "families": {

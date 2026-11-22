@@ -115,7 +115,10 @@ def returns_to_a_menu(script):
 
 # What the Monitor's Catalog tab shows of an option: a VM it creates is an
 # application, with its logo and category.
-CATALOG_FIELDS = ('name', 'group', 'type', 'icon', 'category', 'via', 'resources', 'links', 'screenshots')
+# What the Catalog tab opens for an option, when not its sheet: "terminal"
+# runs it at once, "plain-lxc" opens the Monitor's own LXC wizard.
+CATALOG_FIELDS = ('name', 'group', 'type', 'icon', 'category', 'via', 'resources', 'links', 'screenshots',
+                  'catalog_opens')
 # Scripts that are not in the ProxMenux repository and that the menus run,
 # whole or in one of their steps: who maintains each and where its scripts
 # are downloaded from. An option of the index names the one it is
@@ -150,10 +153,10 @@ CATALOG_OUTSIDE = {'Community Scripts', 'OCI manager Apps (Technology Preview)',
 SUBMENUS = {
     'Customizable post-installation script': 'Settings post-install Proxmox',
     'System Utilities Installer': 'Utilities and Tools',
-    'Create VM System NAS': 'Create VM from template or script',
-    'Create VM System Windows': 'Create VM from template or script',
-    'Create VM System Linux': 'Create VM from template or script',
-    'Create VM System Others (based Linux)': 'Create VM from template or script',
+    'Create VM System NAS': 'Create VM and LXC from template or script',
+    'Create VM System Windows': 'Create VM and LXC from template or script',
+    'Create VM System Linux': 'Create VM and LXC from template or script',
+    'Create VM System Others (based Linux)': 'Create VM and LXC from template or script',
 }
 
 

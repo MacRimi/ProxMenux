@@ -8575,22 +8575,12 @@
   },
   "plainLxc": {
     "downloadStatus": {
-      "awaiting": "aguardando o download aparecer.",
       "running": "Baixando o modelo…",
-      "unknown": "O resultado do download é incerto.Verificando a operação original.",
       "succeeded": "Modelo baixado.",
-      "failed": "Falha no download.",
-      "partial": "O download não pôde ser verificado.",
-      "not_submitted": "Nenhum download foi enviado."
+      "partial": "O download não pôde ser verificado."
     },
     "status": {
-      "awaiting": "Aguardando a solicitação aparecer.",
-      "running": "A criação está em andamento.",
-      "unknown": "O resultado é incerto.Verificando a operação original.",
-      "succeeded": "Container criado.",
-      "failed": "A criação falhou.",
-      "partial": "A operação foi parcialmente concluída.",
-      "not_submitted": "Nenhuma operação foi enviada."
+      "succeeded": "Container criado."
     },
     "warning": {
       "no_network": "O contêiner não terá interface de rede.",

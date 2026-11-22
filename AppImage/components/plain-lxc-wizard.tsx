@@ -1,12 +1,15 @@
 "use client"
 
 import { useEffect, useImperativeHandle, useRef, useState, type ComponentProps, type FormEvent, type ReactNode, type Ref } from "react"
-import { ArrowLeft, ArrowRight, ClipboardCheck, Download, HardDrive, KeyRound, Network, Plus, Server } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronRight, Circle, ClipboardCheck, Download, HardDrive, Info, KeyRound, Network, Loader2, Plus, Server, SquareTerminal, TriangleAlert, X } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 import { Button } from "./ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Input } from "./ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { Switch } from "./ui/switch"
+import { Progress } from "./ui/progress"
 import { Textarea } from "./ui/textarea"
 
 const API = "/api/plain-lxc/v1"
@@ -18,13 +21,35 @@ const groups = [
   { key: "network", icon: Network },
   { key: "review", icon: ClipboardCheck },
 ]
-const selectClass = "min-h-9 w-full rounded-md border border-input bg-background px-3 text-base sm:text-sm"
+const primary = "bg-blue-500 hover:bg-blue-600 text-white"
+const switchClass = "data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-input border border-border"
+// The Monitor's select. An empty choice, which the list itself cannot hold,
+// travels as NONE.
+const NONE = "__none__"
+function Choice({ value, onChange, options, placeholder, empty, label }: {
+  value: string
+  onChange: (value: string) => void
+  options: { value: string; label?: string }[]
+  placeholder?: string
+  empty?: string
+  label?: string
+}) {
+  const known = value === "" ? (empty ? NONE : "") : options.some(option => option.value === value) ? value : ""
+  return <Select value={known} onValueChange={next => onChange(next === NONE ? "" : next)}>
+    <SelectTrigger className="w-full min-w-0 [&>span]:truncate" aria-label={label}><SelectValue placeholder={placeholder} /></SelectTrigger>
+    <SelectContent>
+      {empty && <SelectItem value={NONE}>{empty}</SelectItem>}
+      {options.map(option => <SelectItem key={option.value} value={option.value}>{option.label ?? option.value}</SelectItem>)}
+    </SelectContent>
+  </Select>
+}
 const finalStates = new Set(["succeeded", "failed", "partial", "not_submitted"])
 const rejected = new Set(["confirmation_required", "plan_changed", "warnings_unaccepted", "invalid_field",
   "invalid_ssh_key", "architecture_unsupported", "bridge_unavailable", "catalog_unavailable",
   "disk_space_insufficient", "node_capacity_exceeded", "node_not_local", "request_conflict",
   "storage_unavailable", "target_operation_pending", "template_architecture_mismatch",
-  "template_already_present", "template_checksum_mismatch", "template_unverified", "vmid_in_use"])
+  "template_already_present", "template_checksum_mismatch", "template_unverified", "vmid_in_use",
+  "resource_unavailable", "resource_unsupported", "resource_in_use"])
 
 type Access = "password" | "ssh_key" | "both"
 type Context = {
@@ -38,17 +63,26 @@ type Context = {
   storages: string[]
   bridges: Record<string, { vlan_supported: boolean }>
   limits: { cores: number; ram_mib: number }
+  capabilities: { mount_points: number; devices: number }
+  hardware: Hardware[]
+  hardware_errors: boolean
   defaults: {
     cpu: { cores: number }; memory: { ram_mib: number; swap_mib: number }
     rootfs: { size_gib: number }; nesting: boolean; onboot: boolean
     start_after_create: boolean; prepare_system: boolean
   }
 }
+type Hardware = { id: string; profile: string; name: string; paths: string[] }
+type Mount = {
+  type: "volume" | "bind"; storage: string; size: string; source: string; path: string
+  read_only: boolean; backup: boolean
+}
 type Draft = {
   vmid: string; hostname: string; template: string; access: Access; keys: string
   storage: string; disk: string; cores: string; ram: string; swap: string
   bridge: string; vlan: string; staticIp: boolean; cidr: string; gateway: string; dns: string; domains: string
   nesting: boolean; onboot: boolean; start: boolean; prepare: boolean
+  mounts: Mount[]; hardware: string[]
 }
 type Summary = {
   node: string; vmid: number; hostname: string; template: { volume_id: string }
@@ -57,13 +91,17 @@ type Summary = {
   network: null | { bridge: string; vlan_tag?: number; ipv4: { mode: string; cidr?: string; gateway?: string } }
   dns: { nameservers: string[]; search_domains: string[] }
   nesting: boolean; onboot: boolean; start_after_create: boolean; prepare_system: boolean
+  mounts: { type: "volume" | "bind"; storage?: string; size_gib?: number; source?: string; path: string; read_only: boolean }[]
+  hardware: string[]
 }
 type Checked = { check: string; receipt: string }
 type Plan = Checked & { summary: Summary; warnings: string[] }
 type Action = "create" | "download_template"
-type Receipt = { ticket: string; action: Action }
+// What is being made travels with the receipt, so a reopened view still names it.
+type Receipt = { ticket: string; action: Action; title?: string; detail?: string }
 type Operation = ({ action: "create"; vmid: number } | { action: "download_template"; volume_id: string }) &
-  { status: string; phase: string; reason?: string; task_warnings: boolean }
+  { status: string; phase: string; reason?: string; task_warnings: boolean; progress?: number | null
+    steps?: string[]; preparing?: boolean; warned?: string[]; warning_lines?: Record<string, string[]> }
 type WizardHandle = { dismissSuccessfulCreate: () => void }
 
 function initialDraft(context: Context): Draft {
@@ -74,6 +112,7 @@ function initialDraft(context: Context): Draft {
     cores: String(defaults.cpu.cores), ram: String(defaults.memory.ram_mib), swap: String(defaults.memory.swap_mib),
     bridge: "", vlan: "", staticIp: false, cidr: "", gateway: "", dns: "", domains: "",
     nesting: defaults.nesting, onboot: defaults.onboot, start: defaults.start_after_create, prepare: defaults.prepare_system,
+    mounts: [], hardware: [],
   }
 }
 
@@ -94,7 +133,108 @@ function specFor(context: Context, draft: Draft) {
     } : null,
     dns: draft.bridge ? { nameservers: draft.dns.split(/\s+/).filter(Boolean), search_domains: draft.domains.split(/\s+/).filter(Boolean) } : {},
     nesting: draft.nesting, onboot: draft.onboot, start_after_create: draft.start, prepare_system: draft.prepare,
+    mounts: draft.mounts.map(mount => mount.type === "volume"
+      ? { type: "volume", storage: mount.storage, size_gib: Number(mount.size), path: mount.path.trim(),
+        read_only: mount.read_only, backup: mount.backup }
+      : { type: "bind", source: mount.source.trim(), path: mount.path.trim(), read_only: mount.read_only, backup: false }),
+    hardware: draft.hardware.flatMap(id => {
+      const item = context.hardware.find(candidate => candidate.id === id)
+      return item ? [{ profile: item.profile, selection_id: item.id }] : []
+    }),
   }
+}
+
+// Mount points, as the console wizard offers them: a new volume on a
+// container storage, or an existing host directory.
+function MountPoints({ context, mounts, onChange, t }: {
+  context: Context; mounts: Mount[]; onChange: (mounts: Mount[]) => void; t: (key: string) => string
+}) {
+  const blank = (): Mount => ({ type: "volume", storage: context.storages[0] ?? "", size: "8", source: "", path: "/data",
+    read_only: false, backup: true })
+  const [adding, setAdding] = useState<Mount | null>(null)
+  const full = mounts.length >= context.capabilities.mount_points
+  const valid = adding && adding.path.trim().startsWith("/") && (adding.type === "bind"
+    ? adding.source.trim().startsWith("/") : Boolean(adding.storage) && Number(adding.size) >= 1)
+  const edit = (patch: Partial<Mount>) => setAdding(current => current && { ...current, ...patch })
+
+  return <section className="space-y-2">
+    <h3 className="text-sm font-semibold">{t("mounts")}</h3>
+    {mounts.map((mount, index) => <div key={index} className="flex items-center justify-between gap-2 rounded-md border bg-card p-2 text-sm">
+      <span className="min-w-0 [overflow-wrap:anywhere]">
+        {mount.type === "volume" ? `${mount.storage} · ${mount.size} GiB` : mount.source} → {mount.path}
+        {mount.read_only && <span className="text-muted-foreground"> · {t("readOnly")}</span>}
+      </span>
+      <Button type="button" size="sm" variant="ghost" onClick={() => onChange(mounts.filter((_, other) => other !== index))}>
+        {t("remove")}
+      </Button>
+    </div>)}
+    {adding ? <div className="space-y-3 rounded-md border bg-card p-3">
+      <label className="block space-y-1 text-sm"><span>{t("mountType")}</span>
+        <Choice value={adding.type} label={t("mountType")} onChange={value => edit(value === "bind"
+          ? { type: "bind", read_only: true, backup: false } : { type: "volume", read_only: false, backup: true })}
+          options={[{ value: "volume", label: t("mountVolume") }, { value: "bind", label: t("mountBind") }]} />
+      </label>
+      {adding.type === "volume"
+        ? <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1 text-sm"><span>{t("mountStorage")}</span>
+            <Choice value={adding.storage} label={t("mountStorage")} onChange={value => edit({ storage: value })}
+              options={context.storages.map(storage => ({ value: storage }))} />
+          </label>
+          <label className="block space-y-1 text-sm"><span>{t("mountSize")}</span>
+            <Input type="number" min={1} max={65536} value={adding.size} onChange={event => edit({ size: event.target.value })} />
+          </label>
+        </div>
+        : <label className="block space-y-1 text-sm"><span>{t("mountSource")}</span>
+          <Input value={adding.source} placeholder="/mnt/data" onChange={event => edit({ source: event.target.value })} />
+        </label>}
+      <label className="block space-y-1 text-sm"><span>{t("mountPath")}</span>
+        <Input value={adding.path} onChange={event => edit({ path: event.target.value })} />
+      </label>
+      <label className="flex items-center gap-3 text-sm">
+        <Switch className={switchClass} checked={adding.read_only} onCheckedChange={checked => edit({ read_only: checked })} />{t("readOnly")}
+      </label>
+      {adding.type === "volume" && <label className="flex items-center gap-3 text-sm">
+        <Switch className={switchClass} checked={adding.backup} onCheckedChange={checked => edit({ backup: checked })} />{t("backupVolume")}
+      </label>}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={() => setAdding(null)}>{t("cancel")}</Button>
+        <Button type="button" className={primary} disabled={!valid}
+          onClick={() => { onChange([...mounts, adding]); setAdding(null) }}>{t("add")}</Button>
+      </div>
+    </div>
+      : <Button type="button" variant="outline" size="sm" disabled={full} onClick={() => setAdding(blank())}>
+        <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />{t("addMount")}
+      </Button>}
+  </section>
+}
+
+// The verified devices of the host. Two choices that share a device node,
+// as a GPU and its ROCm profile, cannot be taken together.
+function HardwareChoice({ context, selected, onChange, t }: {
+  context: Context; selected: string[]; onChange: (selected: string[]) => void; t: (key: string) => string
+}) {
+  // The AMD compute interface is shared by every AMD GPU.
+  const taken = new Set(context.hardware.filter(item => selected.includes(item.id)).flatMap(item => item.paths)
+    .filter(path => path !== "/dev/kfd"))
+  const chosen = context.hardware.filter(item => selected.includes(item.id))
+  return <section className="space-y-2">
+    <h3 className="text-sm font-semibold">{t("hardware")}</h3>
+    {context.hardware_errors && <p className="text-sm text-muted-foreground">{t("hardwareErrors")}</p>}
+    {!context.hardware.length
+      ? <p className="text-sm text-muted-foreground">{t("noHardware")}</p>
+      : context.hardware.map(item => {
+        const on = selected.includes(item.id)
+        const blocked = !on && (item.paths.some(path => taken.has(path)) || selected.length >= context.capabilities.devices)
+        return <label key={item.id} className={`flex items-center gap-3 rounded-md border bg-card p-2 text-sm ${blocked ? "opacity-50" : ""}`}>
+          <Switch className={switchClass} checked={on} disabled={blocked}
+            onCheckedChange={checked => onChange(checked ? [...selected, item.id] : selected.filter(id => id !== item.id))} />
+          <span className="min-w-0 [overflow-wrap:anywhere]">{item.name}</span>
+        </label>
+      })}
+    {chosen.some(item => item.profile === "nvidia-runtime") && <p className="text-sm text-muted-foreground">{t("nvidiaNote")}</p>}
+    {chosen.some(item => item.paths.some(path => /^\/dev\/(bus\/usb\/|ttyUSB|ttyACM)/.test(path))) &&
+      <p className="text-sm text-muted-foreground">{t("usbNote")}</p>}
+  </section>
 }
 
 function errorCode(error: unknown) {
@@ -134,22 +274,27 @@ function TemplateDownload({ context, onDownload, busy, t }: {
     {open && <div className="mt-3 space-y-3">
       <Input type="search" value={query} aria-label={t("searchTemplates")} placeholder={t("searchTemplates")}
         onChange={event => setQuery(event.target.value)} />
-      <label className="block space-y-1 text-sm">
-        <span>{t("officialTemplate")}</span>
-        <select className={selectClass} value={available.includes(template) ? template : ""}
-          onChange={event => setTemplate(event.target.value)}>
-          <option value="">{t(available.length ? "selectTemplate" : "noMatchingTemplates")}</option>
-          {available.map(name => <option key={name}>{name}</option>)}
-        </select>
-      </label>
+      {/* The search narrows this list; a template is chosen from it. */}
+      <div className="space-y-1 text-sm">
+        <span id="official-templates">{t("officialTemplate")}</span>
+        {available.length
+          ? <div role="listbox" aria-labelledby="official-templates" className="max-h-56 space-y-1 overflow-y-auto rounded-md border border-border p-1">
+            {available.map(name => <button key={name} type="button" role="option" aria-selected={name === template}
+              onClick={() => setTemplate(name)}
+              className={`block w-full rounded px-2 py-1.5 text-left [overflow-wrap:anywhere] ${name === template
+                ? "border border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400" : "border border-transparent bg-card hover:bg-muted"}`}>
+              {name}
+            </button>)}
+          </div>
+          : <p className="text-muted-foreground">{t("noMatchingTemplates")}</p>}
+      </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="min-w-0 flex-1 space-y-1 text-sm">
           <span>{t("templateStorage")}</span>
-          <select className={selectClass} value={storage} onChange={event => setStorage(event.target.value)}>
-            {context.template_storages.map(name => <option key={name}>{name}</option>)}
-          </select>
+          <Choice value={storage} onChange={setStorage} label={t("templateStorage")}
+            options={context.template_storages.map(name => ({ value: name }))} />
         </label>
-        <Button type="button" disabled={busy || !storage || !available.includes(template)}
+        <Button type="button" className={primary} disabled={busy || !storage || !available.includes(template)}
           onClick={() => onDownload(template, storage)}>
           <Download className="mr-2 h-4 w-4" aria-hidden="true" />{t("confirmDownload")}
         </Button>
@@ -158,35 +303,195 @@ function TemplateDownload({ context, onDownload, busy, t }: {
   </div>
 }
 
-export function PlainLxcCreate({ onCreated }: { onCreated: () => void }) {
+type StepState = "pending" | "running" | "done" | "warned" | "failed" | "uncertain"
+// The engine reports these while a created container waits for its next task.
+const AWAITING_NEXT = new Set(["awaiting_start", "awaiting_preparation"])
+const NEXT_NOT_SENT = new Set(["start_not_submitted", "preparation_not_submitted"])
+const LOGGED = new Set(["create", "prepare", "start"])
+
+// Each native task of the request, and where it stands.
+function stepStates(operation: Operation | null, action: Action): { phase: string; state: StepState }[] {
+  const status = operation?.status ?? "awaiting"
+  const sent: StepState = status === "awaiting" ? "running" : status === "not_submitted" ? "failed" : "done"
+  if (!operation || sent !== "done") {
+    return [{ phase: "submit", state: sent }, { phase: action === "create" ? "create" : "download", state: "pending" }]
+  }
+  const steps = operation.steps?.length ? operation.steps : [operation.phase]
+  let current = Math.max(0, steps.indexOf(operation.phase))
+  let state: StepState = status === "succeeded" ? "done" : status === "running" ? "running"
+    : status === "unknown" ? "uncertain" : "failed"
+  if (status === "running" && AWAITING_NEXT.has(operation.reason ?? "")) current += 1
+  if (status === "partial" && NEXT_NOT_SENT.has(operation.reason ?? "")) {
+    current += 1
+    state = "failed"
+  }
+  return [{ phase: "submit", state: "done" }, ...steps.map((phase, index) => {
+    const finished: StepState = operation.warned?.includes(phase) ? "warned" : "done"
+    if (index < current) return { phase, state: finished }
+    if (index > current) return { phase, state: "pending" as StepState }
+    return { phase, state: state === "done" ? finished : state }
+  })]
+}
+
+function clock(ms: number) {
+  const seconds = Math.max(0, Math.round(ms / 1000))
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
+}
+
+// The native Proxmox task log of one step, followed while the step runs.
+function TaskLog({ ticket, phase, live, t }: { ticket: string; phase: string; live: boolean; t: (key: string) => string }) {
+  const [lines, setLines] = useState<string[]>([])
+  const [missing, setMissing] = useState(false)
+  const view = useRef<HTMLPreElement>(null)
+  // Lines already shown; a step that finishes goes on from there.
+  const shown = useRef(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    async function read() {
+      try {
+        for (;;) {
+          const page = await fetchApi<{ lines: string[]; next_offset: number | null }>(
+            `${API}/log?phase=${phase}&offset=${shown.current}`,
+            { headers: { "X-ProxMenux-LXC-Receipt": ticket }, signal: controller.signal })
+          if (controller.signal.aborted) return
+          shown.current += page.lines.length
+          if (page.lines.length) setLines(current => [...current, ...page.lines])
+          setMissing(false)
+          if (page.next_offset === null) break
+        }
+      } catch {
+        if (controller.signal.aborted) return
+        setMissing(true)
+      }
+      if (live) timer = setTimeout(read, 2000)
+    }
+    void read()
+    return () => { controller.abort(); clearTimeout(timer) }
+  }, [ticket, phase, live])
+  useEffect(() => {
+    if (view.current) view.current.scrollTop = view.current.scrollHeight
+  }, [lines])
+  if (!lines.length) return missing || !live
+    ? <p className="text-xs text-muted-foreground">{t("logUnavailable")}</p>
+    : <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-hidden="true" />
+  return <pre ref={view} className="max-h-56 overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-background p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+    {lines.join("\n")}
+  </pre>
+}
+
+function OperationProgress({ receipt, operation, t }: {
+  receipt: Receipt; operation: Operation | null; t: (key: string) => string
+}) {
+  const steps = stepStates(operation, receipt.action)
+  const [open, setOpen] = useState<Record<string, boolean>>({})
+  const [now, setNow] = useState(() => Date.now())
+  // When this view saw each step start and end; steps already finished when
+  // it opened carry no time.
+  const times = useRef<Record<string, { from?: number; to?: number }>>({})
+  const seen = Date.now()
+  for (const { phase, state } of steps) {
+    const time = times.current[phase] ??= {}
+    if (state === "running" && time.from === undefined) time.from = seen
+    if (state !== "running" && state !== "pending" && time.from !== undefined && time.to === undefined) time.to = seen
+  }
+  const running = steps.some(step => step.state === "running")
+  useEffect(() => {
+    if (!running) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [running])
+  const label = (phase: string) => t("phase." + (phase === "start" && operation?.preparing ? "prepareStart" : phase))
+  const icon = (state: StepState) => ({
+    pending: <Circle className="h-4 w-4 text-muted-foreground/50" />,
+    running: <Loader2 className="h-4 w-4 animate-spin text-blue-500" />,
+    uncertain: <Loader2 className="h-4 w-4 animate-spin text-amber-500" />,
+    done: <Check className="h-4 w-4 text-green-500" />,
+    warned: <TriangleAlert className="h-4 w-4 text-amber-500" />,
+    failed: <X className="h-4 w-4 text-destructive" />,
+  })[state]
+  return <ol className="space-y-1" aria-label={t("steps")}>
+    {steps.map(({ phase, state }) => {
+      const time = times.current[phase]
+      const elapsed = time?.from !== undefined ? clock((time.to ?? now) - time.from) : ""
+      const logged = LOGGED.has(phase) && state !== "pending" && operation?.action === "create"
+      const shown = open[phase] ?? state === "failed"
+      return <li key={phase} className="rounded-md px-2 py-1.5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">{icon(state)}</span>
+          <span className={`min-w-0 flex-1 text-sm ${state === "pending" ? "text-muted-foreground" : state === "failed" ? "text-destructive" : ""}`}>
+            {label(phase)}
+          </span>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{elapsed}</span>
+        </div>
+        {phase === "download" && state === "running" && <div className="ml-8 mt-2 flex items-center gap-3">
+          {typeof operation?.progress === "number"
+            ? <Progress value={operation.progress} className="h-2 [&>div]:bg-blue-500" aria-label={label(phase)} />
+            : <div className="h-2 w-full overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-blue-500" />
+            </div>}
+          <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+            {typeof operation?.progress === "number" ? `${operation.progress}%` : ""}
+          </span>
+        </div>}
+        {state === "warned" && operation?.warning_lines?.[phase]?.map(line =>
+          <p key={line} className="ml-8 mt-1 text-xs text-amber-600 [overflow-wrap:anywhere] dark:text-amber-400">{line}</p>)}
+        {logged && <div className="ml-8 mt-1 space-y-1">
+          <button type="button" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            aria-expanded={shown} onClick={() => setOpen(current => ({ ...current, [phase]: !shown }))}>
+            {shown ? <ChevronDown className="h-3 w-3" aria-hidden="true" /> : <ChevronRight className="h-3 w-3" aria-hidden="true" />}
+            {t(shown ? "hideLog" : "showLog")}
+          </button>
+          {shown && <TaskLog ticket={receipt.ticket} phase={phase} live={state === "running" || state === "uncertain"} t={t} />}
+        </div>}
+      </li>
+    })}
+  </ol>
+}
+
+// Opened by its own button, or by a caller that holds `open` (the Catalog tab).
+export function PlainLxcCreate({ onCreated, open: held, onOpenChange, onOpenTerminal }: {
+  onCreated: () => void; open?: boolean; onOpenChange?: (open: boolean) => void
+  onOpenTerminal?: (vmid: number, name: string) => void
+}) {
   const t = useT()
-  const [open, setOpen] = useState(false)
+  const [own, setOwn] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const open = held ?? own
   const wizard = useRef<WizardHandle>(null)
 
   function changeOpen(nextOpen: boolean) {
     if (!nextOpen) wizard.current?.dismissSuccessfulCreate()
-    setOpen(nextOpen)
+    if (held === undefined) setOwn(nextOpen)
+    onOpenChange?.(nextOpen)
   }
 
   return <Dialog open={open} onOpenChange={changeOpen}>
-    <DialogTrigger asChild>
+    {held === undefined && <DialogTrigger asChild>
       <Button className="w-full shrink-0 sm:w-auto" size="sm" variant="secondary">
         <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />{t("plainLxc.create")}
       </Button>
-    </DialogTrigger>
-    <DialogContent className="max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-y-auto p-4 sm:p-6">
+    </DialogTrigger>}
+    {/* Until Review the dialog is a form being edited: brighter behind, the
+        fields sunken (the project's edit-mode contrast). */}
+    <DialogContent className={`max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-y-auto p-4 sm:p-6 ${editing
+      ? "bg-accent [&_input:not([readonly])]:bg-background [&_textarea]:bg-background [&_[role=combobox]]:bg-background" : ""}`}>
       <DialogHeader className="pr-6">
         <DialogTitle className="flex items-center gap-2">
           <Server className="h-5 w-5 shrink-0 text-blue-500" aria-hidden="true" />{t("plainLxc.create")}
         </DialogTitle>
         <DialogDescription>{t("plainLxc.description")}</DialogDescription>
       </DialogHeader>
-      {open && <PlainLxcWizard ref={wizard} onCreated={onCreated} />}
+      {open && <PlainLxcWizard ref={wizard} onCreated={onCreated} onEditing={setEditing}
+        onOpenTerminal={onOpenTerminal && ((vmid, name) => { changeOpen(false); onOpenTerminal(vmid, name) })} />}
     </DialogContent>
   </Dialog>
 }
 
-function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated: () => void }) {
+function PlainLxcWizard({ ref, onCreated, onEditing, onOpenTerminal }: {
+  ref: Ref<WizardHandle>; onCreated: () => void; onEditing?: (editing: boolean) => void
+  onOpenTerminal?: (vmid: number, name: string) => void
+}) {
   const translate = useT()
   const t = (key: string) => translate("plainLxc." + key)
   const [context, setContext] = useState<Context | null>(null)
@@ -195,7 +500,6 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
   const [password, setPassword] = useState("")
   const [confirmation, setConfirmation] = useState("")
   const [plan, setPlan] = useState<Plan | null>(null)
-  const [accepted, setAccepted] = useState<string[]>([])
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const [operation, setOperation] = useState<Operation | null>(null)
   const [busy, setBusy] = useState(false)
@@ -233,6 +537,14 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
   }, [refresh])
 
   const state = operation?.status
+  const lastPlan = useRef<Plan | null>(null)
+  if (plan) lastPlan.current = plan
+  const editing = Boolean(context && draft && !receipt && step < 4)
+  useEffect(() => { onEditing?.(editing) }, [editing, onEditing])
+  useEffect(() => {
+    if (step === 4 && !plan && !busy && !error && !receipt && context && draft) void checkPlan()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, plan, busy, error, receipt, context, draft])
   useImperativeHandle(ref, () => ({
     dismissSuccessfulCreate() {
       if (operation?.action === "create" && state === "succeeded") {
@@ -242,8 +554,10 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
   }), [operation?.action, state])
 
   useEffect(() => {
-    if (!receipt || busy || (state && finalStates.has(state))) return
-    const { ticket } = receipt
+    // The request stays open while Proxmox works; each step, and the share of
+    // a download, is read meanwhile.
+    if (!receipt || (state && finalStates.has(state))) return
+    const { ticket, action } = receipt
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout>
     async function status() {
@@ -254,7 +568,7 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
         if (controller.signal.aborted) return
         setOperation(data)
         setError("")
-        if (!finalStates.has(data.status)) timer = setTimeout(status, 2500)
+        if (!finalStates.has(data.status)) timer = setTimeout(status, action === "download_template" ? 1000 : 1500)
       } catch (error) {
         if (controller.signal.aborted) return
         const code = errorCode(error)
@@ -264,7 +578,13 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
     }
     void status()
     return () => { controller.abort(); clearTimeout(timer) }
-  }, [receipt, busy, state])
+  }, [receipt, state])
+
+  // A template downloaded here is the one wanted: back to System with it chosen.
+  useEffect(() => {
+    if (operation?.action === "download_template" && state === "succeeded") void returnFromDownload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operation?.action, state])
 
   useEffect(() => {
     if (operation?.action === "create" && (state === "succeeded" || state === "partial") && !notified.current) {
@@ -276,7 +596,6 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
   function invalidate() {
     draftRevision.current++
     setPlan(null)
-    setAccepted([])
     setError("")
   }
 
@@ -299,11 +618,22 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
       setError("invalid_ssh_key")
       return
     }
+    if ((step === 0 && !draft.template) || (step === 2 && !draft.storage)) {
+      setError("invalid_field")
+      return
+    }
     if (step < 4) {
       setError("")
       setStep(step + 1)
       return
     }
+    await checkPlan()
+  }
+
+  // Review shows the checked plan as soon as it opens, and again after any
+  // change made there.
+  async function checkPlan() {
+    if (busy || !context || !draft) return
     invalidate()
     const revision = draftRevision.current
     setBusy(true)
@@ -319,15 +649,16 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
     }
   }
 
-  async function submit(action: Action, prepare: () => Promise<{ ticket: string; body: unknown }>) {
+  async function submit(action: Action, prepare: () => Promise<{ ticket: string; body: unknown; label?: { title: string; detail: string } }>,
+    present?: () => void) {
     if (busy || submitting.current) return
     submitting.current = true
     setBusy(true)
     setError("")
     try {
-      const { ticket, body } = await prepare()
+      const { ticket, body, label } = await prepare()
       if (!mounted.current) return
-      const pending = { ticket, action }
+      const pending: Receipt = { ticket, action, ...label }
       try {
         sessionStorage.setItem(RECEIPT, JSON.stringify(pending))
       } catch {
@@ -341,6 +672,12 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
     } catch (error) {
       if (!mounted.current) return
       const code = errorCode(error)
+      if (code === "template_already_present" && present) {
+        sessionStorage.removeItem(RECEIPT)
+        setReceipt(null)
+        present()
+        return
+      }
       if (rejected.has(code)) {
         sessionStorage.removeItem(RECEIPT)
         setReceipt(null)
@@ -358,22 +695,50 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
   }
 
   function create() {
-    if (!plan || !plan.warnings.every(warning => accepted.includes(warning))) return
+    if (!plan) return
+    const summary = plan.summary
+    const label = {
+      title: `LXC ${summary.vmid} · ${summary.hostname}`,
+      detail: [summary.template.volume_id.split("/").pop(), `${summary.rootfs.storage} · ${summary.rootfs.size_gib} GiB`,
+        `${summary.cpu.cores} CPU · ${summary.memory.ram_mib} MiB`, ...summary.hardware].join(" · "),
+    }
     void submit("create", async () => ({
-      ticket: plan.receipt,
+      ticket: plan.receipt, label,
       body: { check: plan.check, confirmed: true, accepted_warnings: plan.warnings,
         ...(plan.summary.access.mode !== "ssh_key" && { password }) },
     }))
   }
 
+  // Choose a template that is on the node, reading the node again when this
+  // view does not list it yet.
+  async function chooseTemplate(volume: string) {
+    if (context?.templates.includes(volume)) {
+      update(selectTemplate(draft!, volume))
+      return
+    }
+    try {
+      const fresh = await fetchApi<Context>(API + "/context")
+      setContext(fresh)
+      if (fresh.templates.includes(volume)) setDraft(current => current && selectTemplate(current, volume))
+      else setError("template_unverified")
+    } catch (error) {
+      setError(errorCode(error))
+    }
+  }
+
   function download(template: string, storage: string) {
     if (!context) return
+    const volume = `${storage}:vztmpl/${template}`
+    if (context.templates.includes(volume)) {
+      void chooseTemplate(volume)
+      return
+    }
     void submit("download_template", async () => {
       const checked = await fetchApi<Checked>(API + "/download/plan", {
         method: "POST", body: JSON.stringify({ node: context.node, catalog_id: template, template_storage: storage }),
       })
       return { ticket: checked.receipt, body: { check: checked.check, confirmed: true } }
-    })
+    }, () => void chooseTemplate(volume))
   }
 
   async function returnFromDownload() {
@@ -432,30 +797,54 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
     {t(["password_mismatch", "plan_changed", "vmid_in_use", "template_unverified", "template_checksum_mismatch",
       "disk_space_insufficient", "bridge_unavailable", "storage_unavailable_browser", "receipt_invalid",
       "target_operation_pending", "invalid_field", "invalid_ssh_key", "catalog_unavailable",
-      "template_already_present", "storage_unavailable"].includes(error) ? "error." + error : "error.unavailable")}
+      "template_already_present", "storage_unavailable", "resource_unavailable", "resource_unsupported",
+      "resource_in_use"].includes(error) ? "error." + error : "error.unavailable")}
   </p>
   const downloading = receipt?.action === "download_template"
-  if (receipt) return <div className="space-y-3">
-    <div className="rounded-lg border border-border bg-card p-4">
-      {operation?.action === "download_template" &&
-        <p className="mb-1 break-all text-sm text-muted-foreground">{operation.volume_id}</p>}
-      <p role="status" className="font-semibold">
-        {operation?.action === "create" && `LXC ${operation.vmid} · `}
-        {t((downloading ? "downloadStatus." : "status.") + (state ?? "awaiting"))}
-      </p>
+  if (receipt) {
+    const created = operation?.action === "create" ? operation : null
+    const final = Boolean(state && finalStates.has(state))
+    const outcome = state && state !== "running" && state !== "awaiting" && (operation?.reason && !AWAITING_NEXT.has(operation.reason)
+      && ["create_failed", "start_failed", "preparation_failed", "start_not_submitted", "preparation_not_submitted",
+        "download_failed", "template_checksum_mismatch"].includes(operation.reason)
+      ? t("reason." + operation.reason) : t((downloading ? "downloadStatus." : "status.") + state))
+    const tone = state === "succeeded" ? "border-green-500/40 text-green-600 dark:text-green-400"
+      : state === "failed" || state === "not_submitted" ? "border-destructive/40 text-destructive"
+        : state === "partial" ? "border-amber-500/40 text-amber-600 dark:text-amber-400" : "border-border text-muted-foreground"
+    const title = receipt.title ?? (created ? `LXC ${created.vmid}` : operation?.action === "download_template" ? operation.volume_id : "")
+    return <div className="space-y-3">
+      <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
+        {title && <div className="mb-3 border-b border-border pb-3">
+          <p className="break-all font-semibold">{title}</p>
+          {receipt.detail && <p className="text-xs text-muted-foreground">
+            {receipt.detail.split(" · ").map((part, index) => <span key={index}>
+              {index > 0 && " · "}<span className="inline-block max-w-full break-all align-bottom">{part}</span>
+            </span>)}
+          </p>}
+        </div>}
+        <OperationProgress receipt={receipt} operation={operation} t={t} />
+      </div>
+      {outcome && <p role="status" className={`rounded-md border p-2 text-sm ${tone}`}>{outcome}</p>}
+      {operation?.task_warnings && <p className="text-sm text-muted-foreground">{t("taskWarnings")}</p>}
+      {!downloading && state === "partial" && <p className="text-sm text-muted-foreground">{t("partialHelp")}</p>}
+      {errorMessage}
+      <div className="flex flex-wrap justify-end gap-2">
+        <DialogClose asChild><Button type="button" variant="outline">{t("close")}</Button></DialogClose>
+        {created && state === "succeeded" && created.steps?.includes("start") && onOpenTerminal &&
+          <Button type="button" variant="outline" onClick={() => {
+            sessionStorage.removeItem(RECEIPT)
+            onOpenTerminal(created.vmid, receipt.title?.split(" · ")[1] ?? `LXC ${created.vmid}`)
+          }}>
+            <SquareTerminal className="mr-1.5 h-4 w-4" aria-hidden="true" />{t("openTerminal")}
+          </Button>}
+        {(final || error === "receipt_invalid") && (downloading
+          ? <Button type="button" className={primary} disabled={busy} onClick={() => void returnFromDownload()}>
+            {t(state === "succeeded" ? "useTemplate" : "returnToSystem")}
+          </Button>
+          : <Button type="button" className={primary} onClick={clearResult}>{t("newDraft")}</Button>)}
+      </div>
     </div>
-    {operation?.task_warnings && <p className="text-sm text-muted-foreground">{t("taskWarnings")}</p>}
-    {!downloading && operation?.status === "partial" && <p className="text-sm text-muted-foreground">{t("partialHelp")}</p>}
-    {errorMessage}
-    <div className="flex flex-wrap justify-end gap-2">
-      <DialogClose asChild><Button type="button" variant="outline">{t("close")}</Button></DialogClose>
-      {((state && finalStates.has(state)) || error === "receipt_invalid") && (downloading
-        ? <Button type="button" disabled={busy} onClick={() => void returnFromDownload()}>
-          {t(state === "succeeded" ? "useTemplate" : "returnToSystem")}
-        </Button>
-        : <Button type="button" onClick={clearResult}>{t("newDraft")}</Button>)}
-    </div>
-  </div>
+  }
 
   if (!context || !draft) return <div className="space-y-3">
     {errorMessage || <p role="status" className="text-sm text-muted-foreground">{t("loading")}</p>}
@@ -469,19 +858,23 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
     label: string, options: ComponentProps<typeof Input> = {}) =>
     field(label, <Input value={draft[name]} onChange={event => update({ [name]: event.target.value })} {...options} />)
   const check = (key: "nesting" | "onboot" | "start" | "prepare" | "staticIp", label: string) =>
-    <label className="flex items-center gap-2 text-sm">
-      <input type="checkbox" checked={draft[key]} onChange={event => update({ [key]: event.target.checked })} />
+    <label className="flex items-center gap-3 text-sm">
+      <Switch className={switchClass} checked={draft[key]} onCheckedChange={checked => update({ [key]: checked })} />
       {t(label)}
     </label>
   const number = (min: number, max: number) => ({ type: "number", min, max, step: 1, required: true })
-  const summary = plan?.summary
+  // While Review checks again, the last result stays in view, dimmed.
+  const shown = plan ?? (busy ? lastPlan.current : null)
+  const summary = shown?.summary
   const yesNo = (enabled: boolean) => t(enabled ? "yes" : "no")
   const rows = summary ? [
     [t("system"), `${summary.node} · LXC ${summary.vmid} · ${summary.hostname}`, summary.template.volume_id,
       `${t("nesting")} · ${yesNo(summary.nesting)} / ${t("onboot")} · ${yesNo(summary.onboot)}`],
     [t("access"), t("access_" + summary.access.mode)],
     [t("resources"), `${summary.rootfs.storage} · ${summary.rootfs.size_gib} GiB`,
-      `${t("cores")} · ${summary.cpu.cores} / RAM · ${summary.memory.ram_mib} MiB / Swap · ${summary.memory.swap_mib} MiB`],
+      `${t("cores")} · ${summary.cpu.cores} / RAM · ${summary.memory.ram_mib} MiB / Swap · ${summary.memory.swap_mib} MiB`,
+      ...summary.mounts.map(mount => `${t("mounts")} · ${mount.type === "volume" ? `${mount.storage} · ${mount.size_gib} GiB` : mount.source} → ${mount.path}${mount.read_only ? ` · ${t("readOnly")}` : ""}`),
+      ...summary.hardware.map(name => `${t("hardware")} · ${name}`)],
     [t("network"), summary.network ? [summary.network.bridge, summary.network.vlan_tag && `VLAN ${summary.network.vlan_tag}`,
       summary.network.ipv4.cidr ?? "DHCP", summary.network.ipv4.gateway].filter(Boolean).join(" · ") : t("noNetwork"),
       ...(summary.network ? [`DNS · ${summary.dns.nameservers.join(", ") || t("hostDns")}`, summary.dns.search_domains.join(", ")] : [])],
@@ -502,26 +895,21 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
             {field("node", <Input readOnly value={context.node} />)}
             {input("vmid", "vmid", number(100, 999999999))}
           </div>
-          {field("template", <select className={selectClass} required value={draft.template} onChange={event => {
-            const value = event.target.value
-            update(selectTemplate(draft, value))
-          }}>
-            <option value="">{t("selectTemplate")}</option>
-            {context.templates.map(template => <option key={template}>{template}</option>)}
-          </select>)}
+          {field("template", <Choice value={draft.template} onChange={value => update(selectTemplate(draft, value))}
+            label={t("template")} placeholder={t("selectTemplate")} options={context.templates.map(template => ({ value: template }))} />)}
           {!context.templates.length && <p role="status" className="text-sm text-muted-foreground">{t("noTemplates")}</p>}
-          <TemplateDownload context={context} busy={busy} onDownload={download} t={t} />
+          <TemplateDownload key={draft.template} context={context} busy={busy} onDownload={download} t={t} />
           {input("hostname", "hostname", { required: true, maxLength: 253 })}
           <details><summary className="cursor-pointer text-sm">{t("advanced")}</summary>
             <div className="mt-2 space-y-2">{check("nesting", "nesting")}{check("onboot", "onboot")}</div>
           </details>
         </>}
         {step === 1 && <>
-          {field("access", <select className={selectClass} value={draft.access} onChange={event => {
+          {field("access", <Choice value={draft.access} label={t("access")} onChange={value => {
             setPassword("")
             setConfirmation("")
-            update({ access: event.target.value as Access })
-          }}>{(["password", "ssh_key", "both"] as const).map(mode => <option key={mode} value={mode}>{t("access_" + mode)}</option>)}</select>)}
+            update({ access: value as Access })
+          }} options={(["password", "ssh_key", "both"] as const).map(mode => ({ value: mode, label: t("access_" + mode) }))} />)}
           {draft.access !== "ssh_key" && <div className="grid gap-3 sm:grid-cols-2">
             {field("password", <Input type="password" autoComplete="new-password" required minLength={5} maxLength={256}
               value={password} onChange={event => { invalidate(); setPassword(event.target.value) }} />)}
@@ -538,21 +926,20 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
           </>}
         </>}
         {step === 2 && <div className="grid gap-3 sm:grid-cols-2">
-          {field("storage", <select className={selectClass} required value={draft.storage} onChange={event => update({ storage: event.target.value })}>
-            <option value="">{t("selectStorage")}</option>
-            {context.storages.map(storage => <option key={storage}>{storage}</option>)}
-          </select>)}
+          {field("storage", <Choice value={draft.storage} onChange={value => update({ storage: value })} label={t("storage")}
+            placeholder={t("selectStorage")} options={context.storages.map(storage => ({ value: storage }))} />)}
           {input("disk", "disk", number(1, 65536))}
           {input("cores", "cores", number(1, Math.min(8192, context.limits.cores)))}
           {input("ram", "ram", number(16, Math.min(4194304, context.limits.ram_mib)))}
           {input("swap", "swap", number(0, 4194304))}
+          <div className="space-y-4 border-t pt-3 sm:col-span-2">
+            <MountPoints context={context} mounts={draft.mounts} onChange={mounts => update({ mounts })} t={t} />
+            <HardwareChoice context={context} selected={draft.hardware} onChange={hardware => update({ hardware })} t={t} />
+          </div>
         </div>}
         {step === 3 && <>
-          {field("bridge", <select className={selectClass} value={draft.bridge}
-            onChange={event => update({ bridge: event.target.value, vlan: "" })}>
-            <option value="">{t("noNetwork")}</option>
-            {Object.keys(context.bridges).map(bridge => <option key={bridge}>{bridge}</option>)}
-          </select>)}
+          {field("bridge", <Choice value={draft.bridge} onChange={value => update({ bridge: value, vlan: "" })} label={t("bridge")}
+            empty={t("noNetwork")} options={Object.keys(context.bridges).map(bridge => ({ value: bridge }))} />)}
           {draft.bridge && <>
             {context.bridges[draft.bridge]?.vlan_supported && input("vlan", "vlan", { ...number(1, 4094), required: false })}
             {check("staticIp", "staticIp")}
@@ -568,7 +955,10 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
         </>}
         {step === 4 && <>
           {check("start", "start")}{check("prepare", "prepare")}
-          {summary && <div className="space-y-2">
+          {!summary && busy && <p role="status" className="flex items-center gap-2 rounded-md border bg-card p-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t("checking")}
+          </p>}
+          {summary && shown && <div className={`space-y-2 transition-opacity ${plan ? "" : "opacity-60"}`}>
             {rows.map(([label, ...values], index) => <section key={label} className="rounded-md border p-2">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">{label}</h3>
@@ -577,11 +967,10 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
               </div>
               {values.filter(Boolean).map((value, valueIndex) => <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]" key={valueIndex}>{value}</p>)}
             </section>)}
-            {plan.warnings.map(warning => <label key={warning} className="flex items-start gap-2 rounded-md border p-2 text-sm">
-              <input type="checkbox" className="mt-1" checked={accepted.includes(warning)}
-                onChange={event => setAccepted(current => event.target.checked ? [...current, warning] : current.filter(value => value !== warning))} />
-              {t("warning." + warning)}
-            </label>)}
+            {shown.warnings.map(warning => <p key={warning} role="note"
+              className="flex items-start gap-2 rounded-md border border-blue-500/40 bg-blue-500/10 p-2 text-sm text-blue-700 dark:text-blue-300">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{t("warning." + warning)}
+            </p>)}
           </div>}
         </>}
       </fieldset>
@@ -591,11 +980,11 @@ function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated:
         <div className="flex flex-wrap justify-end gap-2">
           {step > 0 && <Button type="button" variant="outline" disabled={busy}
             onClick={() => { invalidate(); setStep(step - 1) }}><ArrowLeft className="mr-1 h-4 w-4" />{t("back")}</Button>}
-          {step < 4 && <Button type="submit" disabled={busy || (step === 0 && !context.templates.length)}>
+          {step < 4 && <Button type="submit" className={primary} disabled={busy || (step === 0 && !context.templates.length)}>
             {t("next")}<ArrowRight className="ml-1 h-4 w-4" />
           </Button>}
-          {step === 4 && !plan && <Button type="submit" disabled={busy}>{t(busy ? "checking" : "check")}</Button>}
-          {step === 4 && plan && <Button type="button" disabled={busy || !plan.warnings.every(warning => accepted.includes(warning))}
+          {step === 4 && !plan && <Button type="submit" className={primary} disabled={busy}>{t(busy ? "checking" : "check")}</Button>}
+          {step === 4 && plan && <Button type="button" className={primary} disabled={busy}
             onClick={() => void create()}>{t("confirmCreate")}</Button>}
         </div>
       </div>

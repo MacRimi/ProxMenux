@@ -19,7 +19,7 @@
   },
   "opening": {
     "heading": "Otvorenie menu",
-    "body": "V hlavnej ponuke ProxMenux vyberte <strong>Create VM from template or script</strong>. Zobrazí sa:",
+    "body": "V hlavnej ponuke ProxMenux vyberte <strong>Vytvoriť VM a LXC zo šablóny alebo skriptu</strong>. Zobrazí sa:",
     "imageAlt": "Ponuka Vytvoriť VM s tromi možnosťami ProxMenux (NAS/Windows/Linux) a časťou Externé skripty pod nimi (macOS/Ostatné)"
   },
   "families": {

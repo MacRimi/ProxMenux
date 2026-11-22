@@ -66,22 +66,12 @@
     "partialHelp": "Pred ďalším pokusom skontrolujte kontajner a jeho úlohu v Proxmoxe.",
     "taskWarnings": "Úloha Proxmoxu skončila s upozorneniami.",
     "downloadStatus": {
-      "awaiting": "Čaká sa na záznam o sťahovaní.",
       "running": "Šablóna sa sťahuje…",
-      "unknown": "Výsledok sťahovania zatiaľ nie je istý. Kontroluje sa pôvodná operácia.",
       "succeeded": "Šablóna bola stiahnutá.",
-      "failed": "Stiahnutie zlyhalo.",
-      "partial": "Stiahnutú šablónu sa nepodarilo overiť.",
-      "not_submitted": "Sťahovanie sa nespustilo."
+      "partial": "Stiahnutú šablónu sa nepodarilo overiť."
     },
     "status": {
-      "awaiting": "Čaká sa na záznam o požiadavke.",
-      "running": "Kontajner sa vytvára.",
-      "unknown": "Výsledok zatiaľ nie je istý. Kontroluje sa pôvodná operácia.",
-      "succeeded": "Kontajner bol vytvorený.",
-      "failed": "Vytvorenie kontajnera zlyhalo.",
-      "partial": "Operácia sa dokončila len čiastočne.",
-      "not_submitted": "Operácia sa neodoslala."
+      "succeeded": "Kontajner bol vytvorený."
     },
     "warning": {
       "no_network": "Kontajner bude bez sieťového rozhrania.",
