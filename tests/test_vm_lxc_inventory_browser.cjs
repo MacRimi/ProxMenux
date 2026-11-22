@@ -23,6 +23,8 @@ const rejectedWrites = []
 const errors = []
 const lxcRequests = []
 const removalRequests = []
+const startRequests = []
+const startTask = "UPID:fixture:0000000A:0000000B:0000000C:vzstart:302:root@pam:"
 const removalTask = "UPID:fixture:0000000A:0000000B:0000000C:vzdestroy:300:root@pam:"
 let removalState = "awaiting"
 let rejectPreviousRemoval
@@ -98,6 +100,18 @@ async function respond({ requestId, request }) {
       assert.equal(receipt, check)
       return json({state: removalState, task: removalTask, ...(removalState === "unknown" ? {reason: "task_status_unavailable"} : {})})
     }
+  }
+  if (url.origin === origin && url.pathname === "/api/vms/302/control" && request.method === "POST") {
+    assert.deepEqual(JSON.parse(request.postData), {action: "start"})
+    startRequests.push("POST")
+    return reply(200, JSON.stringify({success: true, task: startTask}), "application/json")
+  }
+  if (url.origin === origin && request.method === "GET"
+      && decodeURIComponent(url.pathname) === "/api/vms/302/control-task/" + startTask) {
+    startRequests.push("GET")
+    guests.find(guest => guest.vmid === 302).status = "running"
+    return reply(200, JSON.stringify({status: "stopped", guest_status: "running",
+      exitstatus: "WARNINGS: 1", warning_count: 1}), "application/json")
   }
   if (url.origin === origin && url.pathname.startsWith(lxcBase)) {
     const action = url.pathname.slice(lxcBase.length)
@@ -186,6 +200,9 @@ browser.stdio[4].on("data", data => {
       respond(message.params).catch(error => errors.push(error.message))
     } else if (message.method === "Runtime.exceptionThrown") {
       errors.push(message.params.exceptionDetails.text)
+    } else if (message.method === "Page.javascriptDialogOpening") {
+      errors.push("Unexpected browser dialog: " + message.params.message)
+      send("Page.handleJavaScriptDialog", {accept: true}).catch(error => errors.push(error.message))
     }
   }
 })
@@ -386,18 +403,16 @@ async function verifyLxcRemoval() {
   const button = label => `[...(${dialog})?.querySelectorAll('button') ?? []].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
   const key = label => send("Input.dispatchKeyEvent", {type: "rawKeyDown", key: label, code: label,
     windowsVirtualKeyCode: label === "Escape" ? 27 : 13})
-  const item = "[...document.querySelectorAll('[role=menuitem]')].find(el => el.textContent.trim() === 'Remove LXC')"
-  const openMenu = async name => {
+  const item = "[...document.querySelectorAll('[role=dialog] button')].find(el => el.textContent.trim() === 'Remove LXC')"
+  const openGuest = async name => {
     const guest = `${guestTargets("View details for ")}.find(el => el.getAttribute('aria-label').endsWith(${JSON.stringify(name)}))`
     await waitFor(`Boolean(${guest})`)
     await click(guest)
-    await waitFor(`Boolean(${labelled("Additional actions")})`)
-    await evaluate(`(${labelled("Additional actions")}).focus()`)
-    await key("Enter")
-    await waitFor(`Boolean(${item})`)
+    await waitFor(`Boolean(document.querySelector('[role=dialog] h2')?.textContent.includes(${JSON.stringify(name)}))`)
   }
   const open = async name => {
-    await openMenu(name)
+    await openGuest(name)
+    await waitFor(`!(${item})?.disabled && Boolean(${item})`)
     await click(item)
     await waitFor(`Boolean(${dialog})`)
   }
@@ -407,14 +422,18 @@ async function verifyLxcRemoval() {
     if (await evaluate("Boolean(document.querySelector('[role=dialog]'))")) await key("Escape")
     await waitFor("!document.querySelector('[role=dialog]')")
   }
-  await openMenu(guests[0].name)
-  await waitFor("document.querySelector('[role=menu]')?.textContent.includes('Shut it down before removing it.')")
-  assert.equal(await evaluate(`(${item}).getAttribute('aria-disabled')`), "true")
+  await openGuest(guests[0].name)
+  await waitFor(`(${item})?.disabled`)
+  assert.match(await evaluate(`document.getElementById((${item}).getAttribute('aria-describedby'))?.textContent`),
+    /Shut it down before removing it/)
+  await evaluate(`(${item}).click()`)
   assert.equal(await evaluate(`Boolean(${dialog})`), false)
   assert.equal(removalRequests.length, 0)
   await key("Escape")
-  await waitFor("!document.querySelector('[role=menu]')")
-  if (await evaluate("Boolean(document.querySelector('[role=dialog]'))")) await key("Escape")
+  await waitFor("!document.querySelector('[role=dialog]')")
+  await openGuest(guests[1].name)
+  assert.equal(await evaluate(`Boolean(${item})`), false, "VMs do not offer LXC removal")
+  await key("Escape")
   await waitFor("!document.querySelector('[role=dialog]')")
 
   guests.push({ ...guests[0], vmid: 300, name: "removal-fixture-first", status: "stopped" },
@@ -493,7 +512,16 @@ async function verifyLxcRemoval() {
   assert.deepEqual(await optionStates(), ["false", "false"])
   await fill("302")
   await waitFor(`!(${confirm}).disabled`)
-  await close()
+  await click(button("Cancel"))
+  await waitFor(`!(${dialog})`)
+  const start = "document.querySelector('[role=dialog] button[title=Start]')"
+  await waitFor(`Boolean(${start}) && !(${start}).disabled`)
+  await click(start)
+  await waitFor("Boolean([...document.querySelectorAll('[role=dialog] [role=status]')].find(el => el.textContent.includes('completed the action with warnings (1)')))")
+  await waitFor(`(${item})?.disabled && Boolean((${start})?.closest('[aria-busy=false]'))`)
+  assert.deepEqual(startRequests, ["POST", "GET"])
+  await key("Escape")
+  await waitFor("!document.querySelector('[role=dialog]')")
   assert.deepEqual(removalRequests.filter(([, , method]) => method !== "GET"),
     [[300, "remove", "POST"], [301, "remove", "POST"]])
   assert.ok(removalRequests.filter(([, action]) => action === "remove-operation").length >= 2)
@@ -501,7 +529,7 @@ async function verifyLxcRemoval() {
   guests.splice(guests.findIndex(guest => guest.vmid === 302), 1)
   await send("Page.reload")
   await openInventory()
-  console.log("LXC removal: running menu guard, immediate target, exact ID, both native options, mobile, task recovery, stale rejection and cancel")
+  console.log("LXC removal: direct button, running guard and hint, exact ID, native options, mobile, task recovery, and cancel then start with warnings")
 }
 
 async function run() {
@@ -784,6 +812,18 @@ async function run() {
   await tap(card(testLxc))
   await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
   assert.match(await evaluate("document.querySelector('[role=dialog]').textContent"), /Sieť I\/O/)
+  for (const width of [320, 390, 1024, 1440, 1920]) {
+    await send("Emulation.setDeviceMetricsOverride", {width, height: 860, deviceScaleFactor: 1, mobile: width < 640})
+    await waitFor(`innerWidth === ${width}`)
+    assert.ok(await evaluate(`(() => {
+      const buttons = [...document.querySelectorAll('[role=dialog] button')];
+      const terminal = buttons.find(el => el.textContent.trim() === 'Otvoriť terminál');
+      const remove = buttons.find(el => el.textContent.trim() === 'Odstrániť LXC');
+      const footer = terminal.closest('[aria-busy]');
+      return [terminal, remove].every(button => button.querySelector('svg')?.getBoundingClientRect().width >= 15)
+        && remove.disabled && footer.scrollWidth <= footer.clientWidth + 1;
+    })()`), `Slovak terminal and removal controls must fit at ${width}px`)
+  }
   console.log("Optional metrics, legacy settings, tag colors, transfer scales, sorting and persisted column settings passed")
   assert.deepEqual(rejectedWrites, [])
   assert.deepEqual(errors, [])

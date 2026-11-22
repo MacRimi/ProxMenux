@@ -8,7 +8,7 @@ export async function waitForVmControlTask(vmid: number, action: string, task: s
   const deadline = Date.now() + 180_000
   let readFailures = 0
   while (Date.now() < deadline) {
-    let result: { status?: string; exitstatus?: string; guest_status?: string }
+    let result: { status?: string; exitstatus?: string; guest_status?: string; warning_count?: number }
     try {
       result = await fetchApi(`/api/vms/${vmid}/control-task/${encodeURIComponent(task)}`, {
         signal: AbortSignal.timeout(10_000),
@@ -21,7 +21,7 @@ export async function waitForVmControlTask(vmid: number, action: string, task: s
     }
     if (result?.status === 'stopped') {
       if (!result.exitstatus) throw new Error('controlNotConfirmed')
-      if (result.exitstatus !== 'OK') throw new Error(result.exitstatus)
+      if (result.exitstatus !== 'OK' && result.warning_count === undefined) throw new Error(result.exitstatus)
       if (result.guest_status === expected) return result
     } else if (result?.status !== 'running') {
       throw new Error('controlNotConfirmed')

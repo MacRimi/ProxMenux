@@ -12,8 +12,8 @@ const dialog = fs.readFileSync(path.join(root, 'components/lxc-remove-dialog.tsx
 const vmPage = fs.readFileSync(path.join(root, 'components/virtual-machines.tsx'), 'utf8')
 
 assert.match(vmPage, /capabilities\.admin && selectedVM\?\.type === "lxc"/, 'only administrators see the LXC action')
-assert.match(vmPage, /disabled=\{selectedVM\?\.status !== "stopped" \|\| controlLoading\}\s+onSelect=\{\(\) => setRemoveLxcOpen\(true\)\}/,
-  'the menu opens a review dialog; it does not submit a remove request')
+assert.match(vmPage, /disabled=\{selectedVM\?\.status !== "stopped" \|\| controlLoading\}\s+aria-describedby=\{showRemovalHint \? removalHintId : undefined\}\s+onClick=\{\(\) => setRemoveLxcOpen\(true\)\}/,
+  'the direct button explains the running restriction and opens only the review dialog')
 assert.match(dialog, /typedVmid === String\(preview\.target\.vmid\)/, 'the exact VMID gates the submit button')
 assert.match(dialog, /const \[purge, setPurge\] = useState\(false\)/, 'purging job configuration defaults to off')
 assert.match(dialog, /const \[destroyUnreferenced, setDestroyUnreferenced\] = useState\(false\)/,

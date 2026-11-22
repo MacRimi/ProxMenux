@@ -16628,8 +16628,11 @@ def api_vm_control_task(vmid, task):
         status = json.loads(result.stdout)
         if not isinstance(status, dict) or status.get('status') not in ('running', 'stopped'):
             return jsonify({'error': 'Invalid control task status'}), 502
-        payload = {'status': status['status'], 'exitstatus': status.get('exitstatus')}
-        if status['status'] == 'stopped' and status.get('exitstatus') == 'OK':
+        exitstatus = status.get('exitstatus')
+        payload = {'status': status['status'], 'exitstatus': exitstatus}
+        # Proxmox considers both OK and WARNINGS: <count> non-error results.
+        warnings = re.fullmatch(r'WARNINGS: ([0-9]+)', exitstatus) if isinstance(exitstatus, str) else None
+        if status['status'] == 'stopped' and (exitstatus == 'OK' or warnings):
             current = subprocess.run(['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/status/current',
                                       '--output-format', 'json'],
                                      capture_output=True, text=True, timeout=5)
@@ -16639,6 +16642,8 @@ def api_vm_control_task(vmid, task):
             if not isinstance(guest, dict) or guest.get('status') not in ('running', 'stopped'):
                 return jsonify({'error': 'Invalid guest status'}), 502
             payload['guest_status'] = guest['status']
+            if warnings:
+                payload['warning_count'] = int(warnings.group(1))
             _pvesh_cache['cluster_resources_vm_time'] = 0
             _vm_cache_invalidate(vmid)
         return jsonify(payload)

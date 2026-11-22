@@ -1597,6 +1597,7 @@
       "backupStartFailed": "Zálohu sa nepodarilo spustiť: {message}",
       "controlFailed": "Akcia {action} pre VM {vmid} zlyhala: {message}",
       "controlNotConfirmed": "Dokončenie operácie sa zatiaľ nepodarilo potvrdiť. Pred ďalším pokusom skontrolujte stav VM alebo LXC.",
+      "controlWarning": "Proxmox dokončil akciu s upozorneniami ({count}). Podrobnosti nájdete v protokole úlohy v Proxmoxe.",
       "saveNotesFailed": "Poznámky sa nepodarilo uložiť. Skúste to znova.",
       "appNotFound": "Táto aplikácia už nie je dostupná. Obnovte stránku a skúste to znova.",
       "saveCustomCommandFailed": "Vlastný príkaz na aktualizáciu sa nepodarilo uložiť: {message}",

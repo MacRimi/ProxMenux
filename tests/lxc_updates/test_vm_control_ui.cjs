@@ -34,7 +34,9 @@ function buttons(node) {
     const context = {
       exports: {}, console: { error() {} }, selectedVM: { vmid: 100, status: action === 'start' ? 'stopped' : 'running', type: 'lxc' },
       selectedVMRef: { current: { vmid: 100 } }, controlRequestRef: { current: false },
-      controlLoading: false, controlAction: null, posts: 0, alerts: [],
+      capabilities: { guests: true, terminal: true, admin: true }, removalHintId: 'removal-hint',
+      controlLoading: false, controlAction: null, controlWarning: null, posts: 0, alerts: [],
+      setControlWarning(value) { context.controlWarning = value },
       setControlLoading(value) { context.controlLoading = value },
       setControlAction(value) { context.controlAction = value },
       setSelectedVM(value) { context.selectedVM = typeof value === 'function' ? value(context.selectedVM) : value },
@@ -55,7 +57,7 @@ function buttons(node) {
       t: key => key, alert: text => context.alerts.push(text),
       require: () => ({ jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) }),
     }
-    for (const name of ['Button','Terminal','Play','Power','RotateCcw','StopCircle','Loader2']) context[name] = name
+    for (const name of ['Button','Terminal','Play','Power','RotateCcw','StopCircle','Loader2','Trash2']) context[name] = name
     const ui = compile(`const ${handler}; exports.control = handleVMControl; exports.footer = () => (${footer});`, context)
     const run = ui.control(100, action)
     assert.equal(context.controlLoading, true, 'busy starts before the POST')
@@ -66,12 +68,14 @@ function buttons(node) {
     assert(buttons(ui.footer()).filter(b => b.props.title).every(b => b.props.disabled), 'all power buttons stay disabled')
     await ui.control(100, action)
     assert.equal(context.posts, 1, 'a double click never submits a second operation')
-    completion.resolve({ guest_status: action === 'shutdown' || action === 'stop' ? 'stopped' : 'running' })
+    completion.resolve({ guest_status: action === 'shutdown' || action === 'stop' ? 'stopped' : 'running',
+      warning_count: action === 'start' ? 1 : undefined })
     await run
     assert.equal(context.controlLoading, false)
     assert.equal(context.controlRequestRef.current, false)
     assert.equal(context.selectedVM.status, action === 'shutdown' || action === 'stop' ? 'stopped' : 'running')
     assert.equal(context.alerts.length, 0)
+    assert.equal(context.controlWarning?.count, action === 'start' ? 1 : undefined)
     assert.equal(context.controlAction, null)
     assert.equal(context.publications, 1)
     assert.equal(context.rows[0].status, action === 'shutdown' || action === 'stop' ? 'stopped' : 'running')
@@ -83,15 +87,17 @@ function buttons(node) {
     await failureRun
     assert.equal(context.controlLoading, false)
     assert.equal(context.alerts.length, 1, 'a task error cannot look like completion')
+    assert.equal(context.controlWarning, null, 'a new action clears a previous warning')
     const switched = deferred()
     context.waitForVmControlTask = () => switched.promise
     const switchRun = ui.control(100, action)
     context.selectedVMRef.current = { vmid: 200 }
     context.selectedVM = { vmid: 200, status: 'stopped' }
-    switched.resolve({ guest_status: 'running' })
+    switched.resolve({ guest_status: 'running', warning_count: 1 })
     await switchRun
     assert.equal(context.selectedVM.vmid, 200)
     assert.equal(context.selectedVM.status, 'stopped', 'completion cannot overwrite another guest')
+    assert.equal(context.controlWarning, null, 'another guest cannot display the warning')
     assert.equal(buttons(ui.footer()).filter(b => b.props.title).some(b => /Pending/.test(b.props.title)), false)
   }
   const polls = [], sequence = []
@@ -116,11 +122,16 @@ function buttons(node) {
     assert(polls.every(([url, options]) => url === '/api/vms/100/control-task/UPID%3Atest' && !options.method),
       'polling only reads the accepted task; no second POST or package check')
   }
-  for (const response of [null, {}, { status:'stopped' }, { status:'stopped', exitstatus:'failed' }]) {
+  sequence.push({ status: 'stopped', exitstatus: 'WARNINGS: 1', warning_count: 1, guest_status: 'stopped' },
+    { status: 'stopped', exitstatus: 'WARNINGS: 1', warning_count: 1, guest_status: 'running' })
+  polls.length = 0
+  assert.equal((await helper.waitForVmControlTask(100, 'start', 'UPID:test')).warning_count, 1)
+  assert.equal(polls.length, 2, 'a warning alone cannot confirm actual guest state')
+  for (const response of [null, {}, { status:'stopped' }, { status:'stopped', exitstatus:'failed' }, { status:'stopped', exitstatus:'WARNINGS: format invalid' }]) {
     sequence.push(response)
     // null must reach the helper, rather than the fake's default running state.
     if (response === null) sequence[sequence.length - 1] = { status: null }
-    await assert.rejects(helper.waitForVmControlTask(100, 'reboot', 'task'), /controlNotConfirmed|failed/)
+    await assert.rejects(helper.waitForVmControlTask(100, 'reboot', 'task'), /controlNotConfirmed|failed|format invalid/)
   }
   clock = 0; polls.length = 0
   await assert.rejects(helper.waitForVmControlTask(100, 'reboot', 'task'), /controlNotConfirmed/)
