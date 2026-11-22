@@ -100,7 +100,8 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
     setDestroyUnreferenced(false)
     try {
       const result = await fetchApi<RemovalPreview>(`/api/vms/${target.vmid}/remove-preview`, {
-        signal: AbortSignal.timeout(10_000),
+        // A protected LXC can require separate reads for its config, root disk and pending changes.
+        signal: AbortSignal.timeout(40_000),
       })
       if (previewRequest.current === request) setPreview(result)
     } catch (error) {
@@ -119,7 +120,7 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
     try {
       const { protection } = await fetchApi<{ protection: boolean }>(`/api/vms/${target.vmid}/disable-removal-protection`, {
         method: "POST",
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(55_000),
         body: JSON.stringify({ check: preview.protection_check }),
       })
       if (protection !== false) throw new Error("protection_change_unconfirmed")

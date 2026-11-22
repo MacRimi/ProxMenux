@@ -3,8 +3,9 @@
 This deliberately does not try to be a generic ``pct destroy`` wrapper.  The
 route accepts only a locally hosted, stopped ordinary LXC with an owned rootfs
 and no extra configured volumes, OCI identity, lock or pending changes.
-Archive browsing is independent of removal. The lightweight preview binds
-the target, and confirmation checks dependencies under the shared LXC lock.
+Archive browsing is independent of removal. The preview binds the target
+and checks whether protection is the only blocker before offering to disable it.
+Confirmation checks dependencies under the shared LXC lock.
 """
 
 from __future__ import annotations
@@ -241,13 +242,13 @@ def _check_jobs(node, vmid, reasons):
         reasons.append("replication_configured")
 
 
-def _check_dependencies(preflight, purge):
+def _check_dependencies(preflight, *, include_jobs):
     target, disk = preflight["target"], preflight["disk"]
     node, vmid = target["node"], target["vmid"]
     reasons = preflight["reasons"]
     if not _root_volume_exists(node, vmid, disk["volume"]):
         reasons.append("rootfs_ambiguous")
-    if not purge:
+    if include_jobs:
         _check_jobs(node, vmid, reasons)
     pending = _pvesh_json(["get", f"/nodes/{node}/lxc/{vmid}/pending"])
     if not isinstance(pending, list) or any(
@@ -385,6 +386,8 @@ def preview(actor: str, vmid: int):
     try:
         preflight = _preflight(vmid)
         guard = preflight.pop("guard")
+        if preflight["reasons"] == ["container_protected"]:
+            _check_dependencies(preflight, include_jobs=False)
         review = {
             "actor": actor, "vmid": vmid, "guard": guard, "node": preflight["target"]["node"],
             "volume": preflight["disk"]["volume"], "operation": uuid4().hex, "expires": time.time() + CHECK_AGE,
@@ -417,6 +420,9 @@ def disable_removal_protection(actor: str, vmid: int):
             current = _preflight(vmid)
             if (current["guard"] != check["guard"] or current["target"]["node"] != check["node"]
                     or current["reasons"] != ["container_protected"]):
+                raise RemovalError("target_changed")
+            _check_dependencies(current, include_jobs=False)
+            if current["reasons"] != ["container_protected"]:
                 raise RemovalError("target_changed")
             if time.time() >= check["expires"]:
                 raise RemovalError("check_expired")
@@ -465,7 +471,7 @@ def remove(actor: str, vmid: int):
                     or check["volume"] != preflight["disk"]["volume"]):
                 return jsonify(error="target_changed", preview=preflight), 409
             if preflight["eligible"]:
-                _check_dependencies(preflight, purge)
+                _check_dependencies(preflight, include_jobs=not purge)
             if not preflight["eligible"]:
                 return jsonify(error="removal_blocked", preview=preflight), 409
 

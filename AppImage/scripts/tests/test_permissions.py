@@ -133,6 +133,7 @@ class RouteClassification(unittest.TestCase):
         for rule, method, need in (
                 ("/api/vms/<int:vmid>", "GET", "view"),
                 ("/api/vms/<int:vmid>/control", "POST", "guests"),
+                ("/api/vms/<int:vmid>/disable-removal-protection", "POST", "admin"),
                 ("/api/vms/<int:vmid>/backup", "POST", "backup"),
                 ("/api/vms/<int:vmid>/backups/delete", "POST", "backup"),
                 ("/api/vms/<int:vmid>/bulk-update/plan", "POST", "update"),

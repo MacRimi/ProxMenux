@@ -59,6 +59,7 @@ function send(method, params = {}, targetSession = sessionId) {
 }
 
 let protectedLxc = true
+let pendingProtectedLxc = true
 
 async function respond({ requestId, request }) {
   const url = new URL(request.url)
@@ -74,11 +75,14 @@ async function respond({ requestId, request }) {
     const json = (value, status = 200) => reply(status, JSON.stringify(value), "application/json")
     const check = "fixture-removal-" + vmid
     if (action === "remove-preview" && request.method === "GET") {
+      const protection = vmid === 302 && protectedLxc
+      const pending = protection && pendingProtectedLxc
       const preview = {
-        eligible: vmid !== 100 && !(vmid === 302 && protectedLxc),
-        reasons: vmid === 100 ? ["container_running"] : vmid === 302 && protectedLxc ? ["container_protected"] : [],
-        check: vmid === 100 || (vmid === 302 && protectedLxc) ? null : check,
-        ...(vmid === 302 && protectedLxc ? { protection_check: "fixture-protection-302" } : {}),
+        eligible: vmid !== 100 && !protection,
+        reasons: vmid === 100 ? ["container_running"]
+          : pending ? ["container_protected", "pending_changes"] : protection ? ["container_protected"] : [],
+        check: vmid === 100 || protection ? null : check,
+        ...(protection && !pending ? { protection_check: "fixture-protection-302" } : {}),
         target: { vmid, name: guests.find(guest => guest.vmid === vmid)?.name, node: "fixture", status: vmid === 100 ? "running" : "stopped" },
         disk: {storage: "local-lvm", volume: "local-lvm:subvol-" + vmid + "-disk-0", size: "8G"},
       }
@@ -519,6 +523,12 @@ async function verifyLxcRemoval() {
   assert.equal(typeof rejectPreviousRemoval, "function")
   await rejectPreviousRemoval()
   await waitFor("!sessionStorage.getItem('proxmenux.lxc-removal.301')")
+  await waitFor(`(${dialog}).textContent.includes('The container has pending configuration changes.')`)
+  assert.equal(await evaluate(`Boolean(${button("Disable protection…")})`), false)
+  assert.equal(await evaluate(`Boolean(${confirm})`), false)
+  assert.equal(removalRequests.filter(([, action]) => action === "disable-removal-protection").length, 0)
+  pendingProtectedLxc = false
+  await click(button("Check again"))
   await waitFor(`Boolean(${button("Disable protection…")})`)
   await click(button("Disable protection…"))
   await click(button("Cancel"))

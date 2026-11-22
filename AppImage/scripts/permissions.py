@@ -214,6 +214,7 @@ _ACTION = {
     "/api/oci/deploy": "execute",
     # VMs, LXC and their apps.
     "/api/vms/<int:vmid>/remove": "admin",
+    "/api/vms/<int:vmid>/disable-removal-protection": "admin",
     "/api/vms/<int:vmid>/": "guests",
     "/api/lxc/<int:vmid>/": "guests",
     "/api/oci/installed/": "guests",

@@ -195,6 +195,8 @@ class LxcRemoveTests(unittest.TestCase):
 
     def test_protection_confirmation_changes_only_protection_and_needs_a_new_remove_review(self):
         self.write_config("protection: 1\n")
+        self.ha = [{"sid": f"ct:{VMID}"}]
+        self.replication = [replication_job(VMID)]
         preview = self.preview()
         self.assertEqual(preview["reasons"], ["container_protected"])
         self.assertIsNone(preview["check"])
@@ -210,15 +212,66 @@ class LxcRemoveTests(unittest.TestCase):
         self.assertIsNotNone(self.preview()["check"])
         self.assertEqual(self.call("POST", path, {"check": token}).status_code, 409)
         self.assertEqual(len(self.protection_calls), 1)
+        checked_paths = [call.args[0][2] for call in self.run.call_args_list
+                         if call.args[0][0] == "pvesh"]
+        self.assertNotIn("/cluster/ha/resources", checked_paths)
+        self.assertNotIn("/cluster/replication", checked_paths)
+
+    def test_protection_cannot_be_disabled_with_pending_changes_or_a_missing_root_volume(self):
+        path = f"/api/vms/{VMID}/disable-removal-protection"
+        for case, reason in (("pending", "pending_changes"), ("root", "rootfs_ambiguous")):
+            with self.subTest(case=case):
+                self.write_config("protection: 1\n")
+                self.pending = current_lxc_options()
+                self.storage_content["local-lvm"] = [{"volid": VOLUME, "vmid": VMID, "content": "rootdir"}]
+                config_path = self.conf / f"{VMID}.conf"
+                original_config = config_path.read_bytes()
+                token = self.preview()["protection_check"]
+                if case == "pending":
+                    self.pending.append({"key": "description", "pending": ""})
+                else:
+                    self.storage_content["local-lvm"] = []
+                preview = self.preview()
+                response = self.call("POST", path, {"check": token})
+                self.assertEqual(config_path.read_bytes(), original_config)
+                self.assertEqual(self.protection_calls, [])
+                self.assertEqual(self.delete_calls, [])
+                self.assertEqual(response.status_code, 409, response.json)
+                self.assertEqual(preview["reasons"], ["container_protected", reason])
+                self.assertNotIn("protection_check", preview)
+                self.assertIsNone(preview["check"])
+
+    def test_protection_confirmation_fails_closed_when_dependencies_cannot_be_read(self):
+        path = f"/api/vms/{VMID}/disable-removal-protection"
+        preview_path = f"/api/vms/{VMID}/remove-preview"
+        for case in ("pending", "root"):
+            with self.subTest(case=case):
+                self.write_config("protection: 1\n")
+                self.pending = current_lxc_options()
+                self.storage_content["local-lvm"] = [{"volid": VOLUME, "vmid": VMID, "content": "rootdir"}]
+                token = self.preview()["protection_check"]
+                if case == "pending":
+                    self.pending = {"unexpected": "pending response"}
+                else:
+                    self.storage_content["local-lvm"][0]["vmid"] = VMID + 1
+                response = self.call("POST", path, {"check": token})
+                preview = self.call("GET", preview_path)
+                self.assertEqual(self.protection_calls, [])
+                self.assertEqual(self.delete_calls, [])
+                self.assertEqual(response.status_code, 503, response.json)
+                self.assertEqual(preview.status_code, 503, preview.json)
+                self.assertNotIn("protection_check", preview.json)
 
     def test_replacement_or_another_blocker_cannot_use_the_protection_confirmation(self):
         self.write_config("protection: 1\n")
         path = f"/api/vms/{VMID}/disable-removal-protection"
         token = self.preview()["protection_check"]
         self.write_generation(5)
+        self.run.reset_mock()
         self.assertEqual(self.call("POST", path, {"check": token}).status_code, 409)
         self.resources[0]["status"] = "running"
         self.assertNotIn("protection_check", self.preview())
+        self.assertEqual([call.args[0][2] for call in self.run.call_args_list], ["/cluster/resources"] * 2)
         self.assertFalse(self.protection_calls)
         self.assertFalse(self.delete_calls)
 
