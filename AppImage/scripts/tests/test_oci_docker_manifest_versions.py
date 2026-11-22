@@ -9,6 +9,8 @@ from unittest.mock import patch
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import lxc_apps
+sys.path.insert(0, str(SCRIPTS.parents[1] / "oci" / "remote"))
+from oci_installation_state import same_image
 
 ARCHIVE = "sha256:" + "a1" * 32
 INDEX = "sha256:" + "b2" * 32
@@ -32,9 +34,10 @@ class Registry:
 
 
 class DockerManifestVersionTests(unittest.TestCase):
-    def versions(self, registry, registry_digest=INDEX, known=None):
+    def versions(self, registry, registry_digest=INDEX, known=None, installed_image=None):
         meta = {"image_reference": "jellyfin/jellyfin:latest", "installed_digest": ARCHIVE,
-                "registry_digest": registry_digest, "architecture": "amd64", "repository": None}
+                "registry_digest": registry_digest, "architecture": "amd64", "repository": None,
+                "installed_image": installed_image}
         with patch.object(lxc_apps, "_oci_operation_running", return_value=False), \
                 patch.object(lxc_apps, "_oci_instance_meta", return_value=meta), \
                 patch.object(lxc_apps, "_oci_state_module", return_value=registry), \
@@ -72,6 +75,55 @@ class DockerManifestVersionTests(unittest.TestCase):
         result = self.versions(registry, registry_digest=None)
         self.assertEqual(registry.asked[0], "jellyfin/jellyfin@" + ARCHIVE)
         self.assertEqual(result["error"], "registry unreachable")
+
+
+class ImageIdentityTests(unittest.TestCase):
+    versions = DockerManifestVersionTests.versions
+    build_date = "2026-09-15T01:13:55Z"
+    installed = {"manifest_digest": ARCHIVE, "layers": ["sha256:" + "e5" * 32], "created": build_date}
+
+    class RegistryWithLayers(Registry):
+        same_image = staticmethod(same_image)
+
+        def __init__(self, layers, created):
+            super().__init__(tag=NEWER)
+            self.layers, self.created = layers, created
+            self.cached = []
+
+        def resolve_candidate(self, reference, architecture):
+            candidate = super().resolve_candidate(reference, architecture)
+            if "@" not in reference:
+                candidate.update(layers=self.layers, created=self.created, version="12.1")
+            return candidate
+
+        def resolve_candidate_metadata(self, reference, architecture, known):
+            self.cached.append(known)
+            return {key: val for key, val in known.items() if key != "layers"}
+
+    def test_different_manifest_with_same_content_is_not_an_update_even_with_an_old_cache(self):
+        registry = self.RegistryWithLayers(self.installed["layers"], self.build_date)
+        old_cache = {"installed_digest": ARCHIVE, "installed_registry_digest": PLATFORM,
+                     "installed_version": "12.1", "image_reference": "jellyfin/jellyfin:latest",
+                     "latest_digest": NEWER, "latest_image_created": self.build_date, "update_available": True}
+        result = self.versions(registry, known=old_cache, installed_image=self.installed)
+        self.assertFalse(result["update_available"])
+        self.assertEqual(registry.cached, [])
+        self.assertEqual(result["latest_layers"], self.installed["layers"])
+
+        refreshed = self.versions(registry, known=result, installed_image=self.installed)
+        self.assertFalse(refreshed["update_available"])
+        self.assertEqual(registry.cached[0]["layers"], self.installed["layers"])
+
+    def test_changed_layers_or_build_date_still_indicate_an_update_at_the_same_version(self):
+        for layers, created in [
+            (["sha256:" + "f6" * 32], self.build_date),
+            (self.installed["layers"], "2026-11-22T00:00:00Z"),
+        ]:
+            with self.subTest(layers=layers, created=created):
+                registry = self.RegistryWithLayers(layers, created)
+                result = self.versions(registry, installed_image=self.installed)
+                self.assertEqual(result["latest_version"], result["installed_version"])
+                self.assertTrue(result["update_available"])
 
 
 class Silent(Registry):
