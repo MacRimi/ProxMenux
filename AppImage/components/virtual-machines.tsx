@@ -7832,7 +7832,7 @@ export function VirtualMachines() {
                           onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                         >
                           <Terminal className="size-4 shrink-0" aria-hidden="true" />
-                          <span>{t("vmLxc.openTerminal")}</span>
+                          <span>{t("navigation.terminal")}</span>
                         </Button>
                       )}
                       {controls && (<>
@@ -7891,7 +7891,7 @@ export function VirtualMachines() {
                           onClick={() => setRemoveLxcOpen(true)}
                         >
                           <Trash2 className="size-4 shrink-0" aria-hidden="true" />
-                          <span>{t("vmLxc.remove.action")}</span>
+                          <span>{t("actions.remove")}</span>
                         </Button>
                       )}
                     </div>

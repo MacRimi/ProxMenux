@@ -403,7 +403,7 @@ async function verifyLxcRemoval() {
   const button = label => `[...(${dialog})?.querySelectorAll('button') ?? []].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
   const key = label => send("Input.dispatchKeyEvent", {type: "rawKeyDown", key: label, code: label,
     windowsVirtualKeyCode: label === "Escape" ? 27 : 13})
-  const item = "[...document.querySelectorAll('[role=dialog] button')].find(el => el.textContent.trim() === 'Remove LXC')"
+  const item = "[...document.querySelectorAll('[role=dialog] button')].find(el => el.textContent.trim() === 'Remove')"
   const openGuest = async name => {
     const guest = `${guestTargets("View details for ")}.find(el => el.getAttribute('aria-label').endsWith(${JSON.stringify(name)}))`
     await waitFor(`Boolean(${guest})`)
@@ -817,10 +817,16 @@ async function run() {
     await waitFor(`innerWidth === ${width}`)
     assert.ok(await evaluate(`(() => {
       const buttons = [...document.querySelectorAll('[role=dialog] button')];
-      const terminal = buttons.find(el => el.textContent.trim() === 'Otvoriť terminál');
-      const remove = buttons.find(el => el.textContent.trim() === 'Odstrániť LXC');
+      const terminal = buttons.find(el => el.textContent.trim() === 'Terminál');
+      const remove = buttons.find(el => el.textContent.trim() === 'Odstrániť');
       const footer = terminal.closest('[aria-busy]');
-      return [terminal, remove].every(button => button.querySelector('svg')?.getBoundingClientRect().width >= 15)
+      const oneLineWithIcon = button => {
+        const label = document.createRange();
+        label.selectNodeContents(button.querySelector('span'));
+        return label.getClientRects().length === 1 && button.querySelector('svg')?.getBoundingClientRect().width >= 15;
+      };
+      const equalWidths = Math.abs(terminal.offsetWidth - remove.offsetWidth) <= 1;
+      return [terminal, remove].every(oneLineWithIcon) && equalWidths
         && remove.disabled && footer.scrollWidth <= footer.clientWidth + 1;
     })()`), `Slovak terminal and removal controls must fit at ${width}px`)
   }
