@@ -3806,32 +3806,34 @@
     "secureGateway": {
       "title": "Secure Gateway",
       "learnMore": "Más información",
-      "noNetworkDetected": "No se detectó ninguna red",
-      "noNetworksDetected": "No se detectaron redes.",
+      "noNetworkDetected": "No se ha detectado ninguna red",
+      "noNetworksDetected": "No se han detectado redes.",
       "recommended": "Recomendado",
       "retry": "Reintentar",
       "errors": {
-        "loadWizardFailed": "No se pudo cargar la configuración de Secure Gateway",
-        "updateFailed": "No se pudo actualizar Secure Gateway",
+        "loadWizardFailed": "No se ha podido cargar la configuración de Secure Gateway",
+        "updateFailed": "No se ha podido actualizar Secure Gateway",
         "networkUpdateFailed": "Error de red al actualizar Secure Gateway",
-        "fieldRequired": "Se requiere {field}.",
-        "deploymentFailed": "Error en la implementación",
-        "ociRequiresPve": "Secure Gateway utiliza LXC estándar y debería funcionar en este host Proxmox. Si esto sigue sucediendo, consulta los registros del backend.",
+        "fieldRequired": "{field} es obligatorio.",
+        "deploymentFailed": "No se ha podido desplegar",
+        "ociRequiresPve": "Secure Gateway usa un LXC estándar y debería funcionar en este host Proxmox. Si sigue pasando, revisa los registros del Monitor.",
         "authKeyRequired": "Introduce una clave de autenticación de Tailscale.",
-        "updateAuthKeyFailed": "No se pudo actualizar la clave de autenticación",
-        "couldNotLoadSetupData": "No se pudieron cargar los datos de configuración."
+        "updateAuthKeyFailed": "No se ha podido actualizar la clave de autenticación",
+        "couldNotLoadSetupData": "No se han podido cargar los datos de configuración.",
+        "packageInstallFailed": "No se ha podido instalar Tailscale en el contenedor de la puerta de enlace: {detail}. El contenedor se ha eliminado. Suele deberse a que no recibe dirección o salida a Internet en su puente; compruébalo y vuelve a intentarlo.",
+        "packageInstallFailedKept": "No se ha podido instalar Tailscale en el contenedor de la puerta de enlace: {detail}. Elimina el contenedor {vmid} antes de volver a intentarlo. Suele deberse a que no recibe dirección o salida a Internet en su puente."
       },
       "messages": {
-        "updateApplied": "Se aplicó la actualización.",
-        "preparingDeployment": "Preparando el despliegue...",
-        "creatingLxc": "Creando contenedor LXC...",
-        "gatewayDeployed": "Secure Gateway implementado."
+        "updateApplied": "Actualización aplicada.",
+        "preparingDeployment": "Preparando el despliegue…",
+        "creatingLxc": "Creando el contenedor LXC…",
+        "gatewayDeployed": "Secure Gateway desplegado."
       },
       "logs": {
         "empty": "No hay registros disponibles.",
-        "failed": "No se pudieron cargar los registros.",
-        "title": "Secure Gateway registros",
-        "description": "Salida de servicio reciente del contenedor de puerta de enlace."
+        "failed": "No se han podido cargar los registros.",
+        "title": "Registros de Secure Gateway",
+        "description": "Salida reciente del servicio en el contenedor de la puerta de enlace."
       },
       "values": {
         "never": "nunca",
@@ -3842,36 +3844,36 @@
       "wizard": {
         "introTitle": "Acceso remoto seguro con Tailscale",
         "introDescription": "Despliega una pequeña puerta de enlace LXC para que tus dispositivos lleguen a ProxMenux, a Proxmox y a las redes locales seleccionadas a través de tu red privada de Tailscale.",
-        "whatYouGet": "lo que obtienes",
+        "whatYouGet": "Qué obtienes",
         "benefitMonitorAnywhere": "Abre el Monitor desde cualquier lugar de tu tailnet.",
         "benefitProxmoxUi": "Accede a la interfaz web de Proxmox sin exponer el puerto 8006.",
         "benefitVmLxc": "Accede a las redes de VM y LXC seleccionadas cuando haga falta.",
         "benefitEncryption": "El tráfico permanece cifrado a través de Tailscale.",
-        "benefitNoPorts": "No se requiere reenvío de puerto público.",
-        "tailscaleAccountBefore": "Necesita una cuenta de Tailscale y una clave de autenticación previa de",
-        "reviewDeploy": "Revisar e implementar",
-        "reviewDescription": "Comprueba la configuración final antes de crear la puerta de enlace LXC.",
+        "benefitNoPorts": "No hace falta abrir puertos públicos.",
+        "tailscaleAccountBefore": "Necesitas una cuenta de Tailscale y una clave de autenticación previa de",
+        "reviewDeploy": "Revisar y desplegar",
+        "reviewDescription": "Comprueba la configuración final antes de crear el LXC de la puerta de enlace.",
         "storageLocation": "Ubicación de almacenamiento",
-        "storageDescription": "Elige dónde almacenar el contenedor de puerta de enlace.",
-        "gbAvailable": "{amount}GB disponibles",
+        "storageDescription": "Elige dónde guardar el contenedor de la puerta de enlace.",
+        "gbAvailable": "{amount} GB disponibles",
         "configurationSummary": "Resumen de configuración",
         "hostname": "Nombre de host",
         "storage": "Almacenamiento",
         "accessMode": "Modo de acceso",
         "accessModes": {
-          "hostOnly": "Sólo Proxmox",
+          "hostOnly": "Solo Proxmox",
           "proxmoxNetwork": "Red local completa",
           "customNetworks": "Redes personalizadas"
         },
-        "hostAccess": "Acceso de host",
+        "hostAccess": "Acceso al host",
         "networks": "Redes",
         "exitNode": "Nodo de salida",
         "acceptRoutes": "Aceptar rutas",
         "important": "Importante",
-        "approvalRequired": "Después de la implementación, apruebe las rutas de subred anunciadas en Tailscale Admin.",
-        "exitNodeApprovalRequired": "Salir del modo Nodo también necesita aprobación allí.",
-        "showAfterDeploy": "Mostraremos los pasos de aprobación exactos después de la implementación.",
-        "setupTitle": "Secure Gateway configuración"
+        "approvalRequired": "Después del despliegue, aprueba las rutas de subred anunciadas en Tailscale Admin.",
+        "exitNodeApprovalRequired": "El nodo de salida también necesita aprobación allí.",
+        "showAfterDeploy": "Al terminar el despliegue se muestran los pasos exactos para aprobarlas.",
+        "setupTitle": "Configuración de Secure Gateway"
       },
       "steps": {
         "intro": {
@@ -3884,15 +3886,15 @@
         },
         "access": {
           "title": "Alcance del acceso",
-          "description": "Elige a qué se debe acceder a través de esta puerta de enlace"
+          "description": "Elige qué se podrá alcanzar a través de esta puerta de enlace"
         },
         "options": {
           "title": "Opciones avanzadas",
-          "description": "Configuraciones de enrutamiento adicionales"
+          "description": "Ajustes de enrutamiento adicionales"
         },
         "deploy": {
-          "title": "Implementar puerta de enlace",
-          "description": "Revisar e implementar"
+          "title": "Desplegar la puerta de enlace",
+          "description": "Revisar y desplegar"
         }
       },
       "status": {
@@ -3901,86 +3903,86 @@
         "error": "Error"
       },
       "installed": {
-        "description": "Secure Gateway es implementado y administrado por el Monitor.",
-        "uptime": "tiempo de actividad"
+        "description": "Secure Gateway está desplegado y lo gestiona el Monitor.",
+        "uptime": "Tiempo en marcha"
       },
       "actions": {
         "start": "Iniciar",
         "stop": "Detener",
-        "restart": "Reanudar",
+        "restart": "Reiniciar",
         "logs": "Registros",
         "remove": "Eliminar",
         "back": "Atrás",
         "continue": "Continuar",
-        "deploying": "Implementando...",
-        "deployGateway": "Implementar puerta de enlace"
+        "deploying": "Desplegando…",
+        "deployGateway": "Desplegar la puerta de enlace"
       },
       "updates": {
         "lastChecked": "Última comprobación",
         "tailscaleAvailable": "Tailscale {version} disponible",
         "updating": "Actualizando...",
         "updateToVersion": "Actualizar a {version}",
-        "otherPackagesPending": "+ {count} otros paquetes pendientes",
+        "otherPackagesPending": "+ {count} paquetes más pendientes",
         "noneAvailable": "No hay actualizaciones disponibles"
       },
       "authKey": {
         "update": "Actualizar clave de autenticación",
-        "description": "Utiliza una nueva clave de autenticación de Tailscale si la actual expiró o fue revocada.",
+        "description": "Usa una clave de autenticación de Tailscale nueva si la actual ha caducado o se ha revocado.",
         "newKey": "Nueva clave de autenticación",
-        "generateAt": "Generarlo en",
+        "generateAt": "Genérala en",
         "adminKeys": "Tailscale Admin → Claves",
-        "updateKey": "Clave de actualización"
+        "updateKey": "Actualizar la clave"
       },
       "tailscale": {
         "openAdmin": "Abrir Tailscale Admin"
       },
       "remove": {
-        "title": "¿Quitar Secure Gateway?",
-        "description": "Esto detiene y elimina el contenedor de puerta de enlace. El estado de Tailscale puede permanecer en los datos guardados si el backend los conserva."
+        "title": "¿Eliminar Secure Gateway?",
+        "description": "Se detiene y se elimina el contenedor de la puerta de enlace. El estado de Tailscale puede quedarse en los datos guardados si el backend los conserva."
       },
       "postDeploy": {
         "title": "Finalizar la configuración en Tailscale Admin",
-        "description": "La puerta de enlace está implementada. Aún se necesita un paso de aprobación antes de que los dispositivos remotos puedan utilizar las rutas anunciadas.",
+        "description": "La puerta de enlace está desplegada. Falta aprobarla para que los dispositivos remotos puedan usar las rutas anunciadas.",
         "nextStep": "Siguiente paso",
-        "approveDescription": "Apruebe las rutas de subred anunciadas para esta puerta de enlace.",
+        "approveDescription": "Aprueba las rutas de subred anunciadas para esta puerta de enlace.",
         "subnetRoutes": "Rutas de subred",
-        "exitNode": "Salir del nodo",
-        "routeAllTraffic": "Aprovéchelo si desea que los dispositivos dirijan todo el tráfico de Internet a través de esta puerta de enlace.",
-        "howToApprove": "como aprobarlo",
+        "exitNode": "Nodo de salida",
+        "routeAllTraffic": "Apruébalo si quieres que los dispositivos envíen todo su tráfico de Internet a través de esta puerta de enlace.",
+        "howToApprove": "Cómo aprobarlo",
         "stepOpenAdmin": "Abre la consola de Tailscale Admin.",
         "stepFindBefore": "Encuentra la máquina llamada",
         "stepFindAfter": "en la lista de Máquinas.",
         "stepOpenDetails": "Abre sus detalles.",
         "stepSubnetsBefore": "En",
-        "stepSubnetsMiddle": "hacer clic",
-        "stepSubnetsAfter": "y aprobar las rutas anunciadas.",
-        "stepRoutingBefore": "Para salir del nodo, abre",
-        "stepRoutingMiddle": "y aprobar",
-        "accessAfterApproval": "Después de la aprobación, puede abrir",
+        "stepSubnetsMiddle": "pulsa",
+        "stepSubnetsAfter": "y aprueba las rutas anunciadas.",
+        "stepRoutingBefore": "Para el nodo de salida, abre",
+        "stepRoutingMiddle": "y aprueba",
+        "accessAfterApproval": "Después de aprobarlo, puedes abrir",
         "or": "o",
         "fromAnyDevice": "desde cualquier dispositivo de tu tailnet.",
-        "doLater": "haré esto más tarde"
+        "doLater": "Lo haré más tarde"
       },
       "notInstalled": {
-        "subtitle": "La puerta de enlace Tailscale aún no está implementada.",
-        "description": "Despliégalo para llegar a ProxMenux y a Proxmox de forma segura desde tu tailnet sin abrir puertos públicos.",
-        "deploy": "Implementar Secure Gateway"
+        "subtitle": "La puerta de enlace de Tailscale aún no está desplegada.",
+        "description": "Despliégala para llegar a ProxMenux y a Proxmox de forma segura desde tu tailnet sin abrir puertos públicos.",
+        "deploy": "Desplegar Secure Gateway"
       },
       "schema": {
         "auth_key": {
           "label": "Clave de autenticación de Tailscale",
-          "description": "Clave de autenticación previa desde la consola de administración de Tailscale. Genere uno en el siguiente enlace.",
+          "description": "Clave de autenticación previa de la consola de administración de Tailscale. Genera una en el enlace de abajo.",
           "placeholder": "tskey-auth-xxxxx",
           "helpText": "Generar clave de autenticación"
         },
         "hostname": {
           "label": "Nombre de host del dispositivo",
           "description": "Nombre que se muestra en la consola de administración de Tailscale.",
-          "placeholder": "puerta de enlace proxmox"
+          "placeholder": "proxmox-gateway"
         },
         "access_mode": {
           "label": "Alcance del acceso",
-          "description": "Lo que debería ser accesible a través de esta puerta de enlace.",
+          "description": "Qué se podrá alcanzar a través de esta puerta de enlace.",
           "options": {
             "host_only": {
               "label": "Sólo Proxmox",
@@ -3998,12 +4000,12 @@
         },
         "advertise_routes": {
           "label": "Redes anunciadas",
-          "description": "Selecciona redes a las que se debería poder acceder a través de la VPN."
+          "description": "Elige las redes que se podrán alcanzar a través de la VPN."
         },
         "exit_node": {
-          "label": "Salir del nodo",
-          "description": "Utiliza esta puerta de enlace como punto de salida de Internet cuando estés fuera de casa.",
-          "warning": "Requiere aprobación en Tailscale Admin. Cuando está habilitado en tu dispositivo, todo el tráfico de Internet pasa por tu servidor Proxmox."
+          "label": "Nodo de salida",
+          "description": "Usa esta puerta de enlace como salida a Internet cuando estés fuera de casa.",
+          "warning": "Necesita aprobación en Tailscale Admin. Cuando lo activas en tu dispositivo, todo el tráfico de Internet pasa por tu servidor Proxmox."
         },
         "accept_routes": {
           "label": "Aceptar rutas",

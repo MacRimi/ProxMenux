@@ -401,7 +401,13 @@ export function SecureGatewaySetup() {
       }, 2000)
 
     } catch (err: any) {
-      setDeployError(err.message || sg("errors.deploymentFailed"))
+      const body = err?.body
+      // The container could not install its packages, usually because it
+      // could not reach the package mirror. The half-made container is removed.
+      setDeployError(body?.code === "package_install_failed"
+        ? sg(body.removed ? "errors.packageInstallFailed" : "errors.packageInstallFailedKept",
+          { detail: String(body.detail ?? ""), vmid: String(body.vmid ?? "") })
+        : err.message || sg("errors.deploymentFailed"))
       setDeploying(false)
     }
   }

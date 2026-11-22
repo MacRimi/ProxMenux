@@ -503,32 +503,60 @@ def _find_alpine_template(storage: Optional[str] = None, auto_download: bool = T
     return None
 
 
-def _install_packages_in_lxc(vmid: int, packages: List[str], install_method: str = "apk") -> bool:
-    """Install packages inside an LXC container."""
+INDEX_WAIT_SECONDS = 90
+
+
+def _last_error_line(text: str) -> str:
+    lines = [line.strip() for line in text.splitlines()
+             if re.match(r"\s*(ERROR|WARNING|E:|W:|Err:)", line)]
+    return (lines[-1] if lines else text.strip().splitlines()[-1] if text.strip() else "")[:300]
+
+
+def _refresh_package_index(vmid: int, install_method: str) -> str:
+    """Read the package index once every repository answers. A container
+    that has just started may not resolve names yet. Returns the last
+    error, or an empty string."""
+    command = ["apk", "update"] if install_method == "apk" else ["apt-get", "update"]
+    deadline = time.monotonic() + INDEX_WAIT_SECONDS
+    while True:
+        rc, out, err = _run_pve_cmd(["pct", "exec", str(vmid), "--", *command], timeout=120)
+        text = f"{out}\n{err}"
+        failed = rc != 0 or (re.search(r"^WARNING:", text, re.M) if install_method == "apk"
+                             else re.search(r"^(Err:|W: Failed|E:)", text, re.M))
+        if not failed:
+            return ""
+        if time.monotonic() >= deadline:
+            return _last_error_line(text)
+        time.sleep(3)
+
+
+def _install_packages_in_lxc(vmid: int, packages: List[str], install_method: str = "apk") -> str:
+    """Install packages inside an LXC container. Returns the reason it
+    failed, or an empty string."""
     if not packages:
-        return True
-    
-    print(f"[*] Installing packages: {', '.join(packages)}")
-    
-    if install_method == "apk":
-        # Alpine Linux
-        cmd = ["pct", "exec", str(vmid), "--", "apk", "add"] + packages
-    elif install_method == "apt":
-        # Debian/Ubuntu
-        _run_pve_cmd(["pct", "exec", str(vmid), "--", "apt-get", "update"], timeout=120)
-        cmd = ["pct", "exec", str(vmid), "--", "apt-get", "install", "-y"] + packages
-    else:
+        return ""
+    if install_method not in ("apk", "apt"):
         logger.error(f"Unknown install method: {install_method}")
-        return False
-    
+        return f"unknown install method {install_method}"
+
+    print(f"[*] Installing packages: {', '.join(packages)}")
+    failure = _refresh_package_index(vmid, install_method)
+    if failure:
+        logger.error(f"Package index unavailable in CT {vmid}: {failure}")
+        return failure
+
+    if install_method == "apk":
+        cmd = ["pct", "exec", str(vmid), "--", "apk", "add"] + packages
+    else:
+        cmd = ["pct", "exec", str(vmid), "--", "apt-get", "install", "-y"] + packages
     rc, out, err = _run_pve_cmd(cmd, timeout=300)
-    
     if rc != 0:
-        logger.error(f"Failed to install packages: {err}")
-        return False
-    
+        failure = _last_error_line(f"{out}\n{err}") or "package installation failed"
+        logger.error(f"Failed to install packages in CT {vmid}: {err}")
+        return failure
+
     print(f"[OK] Packages installed")
-    return True
+    return ""
 
 
 def _enable_services_in_lxc(vmid: int, services: List[str], install_method: str = "apk") -> bool:
@@ -1042,8 +1070,17 @@ def deploy_app(app_id: str, config: Dict[str, Any], installed_by: str = "web") -
         install_method = container_def.get("install_method", "apk")
         
         if packages:
-            if not _install_packages_in_lxc(vmid, packages, install_method):
-                result["message"] = "Container created but package installation failed"
+            failure = _install_packages_in_lxc(vmid, packages, install_method)
+            if failure:
+                # The container was created by this deploy moments ago and
+                # holds nothing yet; leaving it would make every retry add
+                # another one the Monitor does not track.
+                _run_pve_cmd(["pct", "stop", str(vmid)], timeout=60)
+                rc, _, err = _run_pve_cmd(["pct", "destroy", str(vmid), "--purge"], timeout=120)
+                if rc != 0:
+                    logger.warning(f"Could not remove CT {vmid} after the failed installation: {err}")
+                result.update(code="package_install_failed", detail=failure, removed=rc == 0,
+                              message=f"The packages could not be installed in the container: {failure}")
                 return result
         
         services = container_def.get("services", [])
