@@ -8724,6 +8724,7 @@
     "openTerminal": "Apri il terminale",
     "showLog": "Mostra il registro",
     "hideLog": "Nascondi il registro",
-    "logUnavailable": "Il registro non è ancora disponibile."
+    "logUnavailable": "Il registro non è ancora disponibile.",
+    "prepareHelp": "prima del primo avvio, vengono modificate due unità systemd note del modello: il certificato viene rigenerato dopo ssl-cert e l'attesa della rete viene saltata quando il contenitore non ha rete.Niente è installato o eseguito all'interno del contenitore."
   }
 }

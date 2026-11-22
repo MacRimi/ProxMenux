@@ -8724,6 +8724,7 @@
     "openTerminal": "Ouvrir le terminal",
     "showLog": "Afficher le journal",
     "hideLog": "Masquer le journal",
-    "logUnavailable": "Le journal n'est pas encore disponible."
+    "logUnavailable": "Le journal n'est pas encore disponible.",
+    "prepareHelp": "Avant le premier démarrage, deux unités systemd connues du modèle sont ajustées : le certificat est régénéré après ssl-cert et l'attente du réseau est ignorée lorsque le conteneur n'a pas de réseau.Rien n'est installé ou exécuté à l'intérieur du conteneur."
   }
 }

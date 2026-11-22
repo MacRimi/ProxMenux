@@ -8724,6 +8724,7 @@
     "openTerminal": "Öppna terminalen",
     "showLog": "Visa logg",
     "hideLog": "Dölj logg",
-    "logUnavailable": "Loggen är inte tillgänglig ännu."
+    "logUnavailable": "Loggen är inte tillgänglig ännu.",
+    "prepareHelp": "Innan den första starten justeras två kända systemenheter i mallen: certifikatet regenereras efter ssl-cert, och väntan på nätverket hoppas över när behållaren inte har något nätverk.Inget är installerat eller kört inuti behållaren."
   }
 }

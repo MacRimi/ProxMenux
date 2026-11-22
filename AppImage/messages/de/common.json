@@ -8724,6 +8724,7 @@
     "openTerminal": "Terminal öffnen",
     "showLog": "Protokoll anzeigen",
     "hideLog": "Protokoll ausblenden",
-    "logUnavailable": "Das Protokoll ist noch nicht verfügbar."
+    "logUnavailable": "Das Protokoll ist noch nicht verfügbar.",
+    "prepareHelp": "Vor dem ersten Start werden zwei bekannte Systemd-Einheiten der Vorlage angepasst: Das Zertifikat wird nach SSL-Zertifikat neu generiert und das Warten auf das Netzwerk wird übersprungen, wenn der Container kein Netzwerk hat.Im Container wird nichts installiert oder ausgeführt."
   }
 }

@@ -148,7 +148,8 @@
     "openTerminal": "Otvorte terminál",
     "showLog": "Zobraziť denník",
     "hideLog": "Skryť denník",
-    "logUnavailable": "Denník zatiaľ nie je k dispozícii."
+    "logUnavailable": "Denník zatiaľ nie je k dispozícii.",
+    "prepareHelp": "Pred prvým spustením sa upravia dve známe systémové jednotky šablóny: certifikát sa vygeneruje po ssl-cert a čakanie na sieť sa preskočí, keď kontajner nemá žiadnu sieť.V kontajneri nie je nič nainštalované ani spustené."
   },
   "catalog": {
     "searchPlaceholder": "Hľadať aplikácie a nástroje…",
