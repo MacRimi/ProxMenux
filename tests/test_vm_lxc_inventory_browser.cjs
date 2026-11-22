@@ -16,6 +16,7 @@ const browser = spawn(process.env.CHROMIUM_BIN || "chromium", [
   "--remote-debugging-pipe", "--user-data-dir=" + profile,
   ...(process.env.CHROMIUM_NO_SANDBOX === "1" ? ["--no-sandbox"] : []),
 ], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] })
+const browserClosed = new Promise(resolve => browser.once("close", resolve))
 const pending = new Map()
 const rejectedWrites = []
 const errors = []
@@ -40,9 +41,10 @@ const guests = [
   { vmid: 202, type: "qemu", name: "demo-running-vm", status: "running", uptime: 42, netin: 0, netout: 72 * 1024 ** 3, diskread: null, diskwrite: 5 * 1024 ** 3 },
 ].map(guest => ({ cpu: 0, mem: 0, maxmem: 1024, disk: 0, maxdisk: 1024, uptime: 0, ...guest }))
 
-function send(method, params = {}) {
+function send(method, params = {}, targetSession = sessionId) {
   return new Promise((resolve, reject) => {
-    const message = { id: ++id, method, params, sessionId }
+    const message = { id: ++id, method, params }
+    if (targetSession) message.sessionId = targetSession
     pending.set(id, { resolve, reject })
     browser.stdio[3].write(JSON.stringify(message) + "\0")
   })
@@ -123,7 +125,7 @@ browser.stdio[4].on("error", () => {})
 browser.on("error", error => { for (const reply of pending.values()) reply.reject(error) })
 browser.on("exit", () => {
   for (const reply of pending.values()) reply.reject(Error("Chromium exited"))
-  fs.rmSync(profile, { recursive: true, force: true })
+  pending.clear()
 })
 browser.stdio[4].on("data", data => {
   buffer += data.toString()
@@ -617,7 +619,22 @@ const deadline = setTimeout(() => {
   process.exitCode = 1
   browser.kill()
 }, 120000)
-run().catch(error => { console.error(error); process.exitCode = 1 }).finally(() => {
+async function cleanup() {
   clearTimeout(deadline)
-  browser.kill()
-})
+  const forceClose = setTimeout(() => browser.kill("SIGKILL"), 5000)
+  try {
+    if (browser.exitCode === null && browser.signalCode === null) {
+      // Let Chromium finish writing the profile before removing it.
+      void send("Browser.close", {}, null).catch(() => browser.kill())
+    }
+    await browserClosed
+    await fs.promises.rm(profile, { recursive: true, force: true, maxRetries: 5 })
+  } finally {
+    clearTimeout(forceClose)
+  }
+}
+
+run()
+  .catch(error => { console.error(error); process.exitCode = 1 })
+  .finally(cleanup)
+  .catch(error => { console.error(error); process.exitCode = 1 })
