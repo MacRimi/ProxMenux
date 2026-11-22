@@ -110,6 +110,7 @@ _READING = {
     "/api/health/reboot-context": "update",
     "/api/plain-lxc/v1/context": "admin",
     "/api/plain-lxc/v1/status": "admin",
+    "/api/plain-lxc/v1/log": "admin",
     "/api/vms/<int:vmid>/backups/delete-status": "backup",
     "/api/host-backups/archives/<path:archive_id>/download": "backup",
     "/api/host-backups/pbs-encryption/download-keyfile": "backup",
