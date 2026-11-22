@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Análise de bridges e reparação guiada | Documentação ProxMenux",
-    "description": "Deteta bridges vmbrX com portas físicas em falta ou inválidas, tipicamente após a reenumeração PCI. Apresenta-os com sugestões de comandos de shell e propõe uma reparação guiada em 5 passos com cópia de segurança obrigatória.",
+    "description": "Detecta bridges vmbrX com portas físicas ausentes ou inválidas, tipicamente após a reenumeração PCI. Apresenta-os com sugestões de comandos de shell e propõe uma reparação guiada em 5 passos com backup obrigatória.",
     "ogTitle": "Análise de bridges e reparação guiada | Documentação ProxMenux",
     "ogDescription": "Verifique e repare portas de bridges Proxmox após alterações de hardware, com um procedimento guiado que permite reverter em segurança."
   },
   "header": {
     "title": "Análise de ponte e reparo guiado",
-    "description": "Verifica cada bridge vmbrX declarado em /etc/network/interfaces e se as suas portas físicas existem. Caso faltem, propõe uma reparação passo a passo. A análise é só de leitura; a reparação exige confirmação, apresenta uma pré-visualização e cria uma cópia de segurança.",
+    "description": "Verifica cada bridge vmbrX declarado em /etc/network/interfaces e se suas portas físicas existem. Caso faltem, propõe uma reparação passo a passo. A análise é somente leitura; a reparação exige confirmação, apresenta uma pré-visualização e cria um backup.",
     "section": "Rede"
   },
   "intro": {
@@ -42,7 +42,7 @@
       "arrowLabel": "aplicar com backup",
       "nodes": {
         "sourceLabel": "Reparação guiada",
-        "sourceDetail": "1. Cópia de Segurança\n2. Mostrar actual\n3. Antevisão das alterações\n4. Aplicar\n5. Verificar",
+        "sourceDetail": "1. Backup\n2. Mostrar atual\n3. Pré-visualização das alterações\n4. Aplicar\n5. Verificar",
         "targetLabel": "/etc/network/interfaces (novo)",
         "targetDetail": "auto vmbr0\niface vmbr0 inet static\n  bridge-ports eno1"
       }
@@ -65,13 +65,13 @@
     "intro": "Só se inicia se aceitar a proposta no fim da análise. Cada passo mostra o que vai acontecer e pede confirmação antes de continuar.",
     "steps": [
       {
-        "title": "1. Cópia de segurança",
+        "title": "1. Backup",
         "body": "Copia <code>/etc/network/interfaces</code> para <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. A janela antes da cópia mostra um nome indicativo; o caminho exato do arquivo criado é mostrado depois da cópia, com o comando rollback.",
         "tone": "blue"
       },
       {
-        "title": "2. Rever a configuração actual",
-        "body": "Abre o <code>/etc/network/interfaces</code> ao vivo numa janela de rolagem para que possa ver exactamente o que está prestes a ser alterado.",
+        "title": "2. Rever a configuração atual",
+        "body": "Abre o <code>/etc/network/interfaces</code> ao vivo em uma janela de rolagem para que possa ver exatamente o que está prestes a ser alterado.",
         "tone": "blue"
       },
       {
@@ -81,17 +81,17 @@
       },
       {
         "title": "4. Aplicar alterações",
-        "body": "Para cada ponte afetada, executa <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contra <code>/etc/network/interfaces</code>. O novo valor de <code>bridge-ports</code> mantém apenas as portas que ainda existem, portanto uma porta inválida ao lado de uma válida é simplesmente removida. Se não restar nenhuma porta válida, usa a primeira NIC física detetada; se o host não tiver nenhuma, a linha é escrita vazia. A etapa 5 relata o resultado.",
+        "body": "Para cada ponte afetada, executa <code>sed -i \"/iface $bridge/,/bridge-ports/ s/bridge-ports.*/bridge-ports $new_ports/\"</code> contra <code>/etc/network/interfaces</code>. O novo valor de <code>bridge-ports</code> mantém apenas as portas que ainda existem, portanto uma porta inválida ao lado de uma válida é simplesmente removida. Se não restar nenhuma porta válida, usa a primeira NIC física detectada; se o host não tiver nenhuma, a linha é escrita vazia. A etapa 5 relata o resultado.",
         "tone": "amber"
       },
       {
         "title": "5. Verificação",
-        "body": "Lê novamente o ficheiro e confirma a existência da nova porta de cada bridge. Mostra o comando para reverter (<code>cp &lt;backup&gt; /etc/network/interfaces</code>). Por fim propõe <strong>Reiniciar a rede</strong> — aceite apenas se tiver acesso de reserva à consola.",
+        "body": "Lê novamente o arquivo e confirma a existência da nova porta de cada bridge. Mostra o comando para reverter (<code>cp &lt;backup&gt; /etc/network/interfaces</code>). Por fim propõe <strong>Reiniciar a rede</strong> — aceite apenas se tiver acesso de reserva ao console.",
         "tone": "emerald"
       }
     ],
     "restartTitle": "Reiniciar a rede ≠ anular sem risco",
-    "restartBody": "A reparação é gravada no disco mesmo que não reinicie o serviço. <code>systemctl restart networking</code> aplica a alteração <em>agora</em> e pode interromper a sessão SSH se a nova porta estiver errada. Se recusar, a alteração entra na mesma em vigor no próximo arranque — confirme primeiro a configuração ou reverta com o comando apresentado."
+    "restartBody": "A reparação é gravada no disco mesmo que não reinicie o serviço. <code>systemctl restart networking</code> aplica a alteração <em>agora</em> e pode interromper a sessão SSH se a nova porta estiver errada. Se recusar, a alteração entra na mesma em vigor na próxima inicialização — confirme primeiro a configuração ou reverta com o comando apresentado."
   },
   "edits": {
     "heading": "O que é editado (exatamente)",
@@ -100,9 +100,9 @@
   "troubleshoot": {
     "heading": "Resolução de Problemas",
     "unsupportedTitle": "A análise para com «Pilha de rede não suportada»",
-    "unsupportedBody": "O host usa netplan, systemd-networkd ou NetworkManager. A ferramenta só suporta <code>/etc/network/interfaces</code>. Mude primeiro o host para a pilha clássica ou altere a configuração com as ferramentas nativas do gestor (por exemplo <code>netplan apply</code>).",
+    "unsupportedBody": "O host usa netplan, systemd-networkd ou NetworkManager. A ferramenta só suporta <code>/etc/network/interfaces</code>. Mude primeiro o host para a pilha clássica ou altere a configuração com as ferramentas nativas do gerenciador (por exemplo <code>netplan apply</code>).",
     "noSuggestTitle": "Nenhuma sugestão é impressa para uma porta inválida",
-    "noSuggestBody": "O ProxMenux não detetou nenhuma interface física (a lista só filtra nomes virtuais como <code>vmbr</code>, <code>bond</code>, <code>veth</code> ou <code>tap</code>; não verifica se uma NIC já está noutra ponte). A análise remonta a sugerir <code>bridge-ports none</code> para que a ponte possa pelo menos subir sem um porto. Adicionar um NIC ou migrar portas entre pontes manualmente antes de repetir.",
+    "noSuggestBody": "O ProxMenux não detectou nenhuma interface física (a lista só filtra nomes virtuais como <code>vmbr</code>, <code>bond</code>, <code>veth</code> ou <code>tap</code>; não verifica se uma NIC já está em outra ponte). A análise remonta a sugerir <code>bridge-ports none</code> para que a ponte possa pelo menos subir sem um porto. Adicionar um NIC ou migrar portas entre pontes manualmente antes de repetir.",
     "stillDownTitle": "O reparo completa, mas a ponte ainda está em baixo",
     "stillDownBody": "<code>sed</code> atualizou o arquivo, mas <code>systemctl restart networking</code> foi recusado. Execute-o manualmente assim que a nova configuração for verificada, ou reinicie. Se o reinício foi aceito e a ponte ainda estiver baixa, execute <code>ip link show</code> para confirmar a nova porta existe, em seguida, verifique <code>journalctl -u networking</code> para o erro real (cabo desconectado, link não negociado, porto já um membro de outra ponte).",
     "lostSshTitle": "Perdi o acesso SSH logo após reiniciar a rede",
@@ -123,7 +123,7 @@
         "tailRich": " — para os blocos <code>iface</code> órfãos (a outra metade do mesmo problema)."
       },
       {
-        "label": "Cópia de segurança e reinício das interfaces",
+        "label": "Backup e reinício das interfaces",
         "href": "/docs/network/backup-restore",
         "tail": " — instantâneos manuais e o navegador de restauração."
       }

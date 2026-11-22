@@ -1,16 +1,16 @@
 {
   "meta": {
-    "title": "Glossário — Cópia de segurança e restauração ProxMenux",
+    "title": "Glossário — Backup e restauração ProxMenux",
     "description": "Termos do sistema de backup e restauração ProxMenux: criptografia, arquivo de chaves, frase-senha, envelope de recuperação, PBS, blocos, rootfs, manifesto, executor e hidratação entre versões do kernel.",
-    "ogTitle": "Glossário das cópias de segurança e do restauro | ProxMenux",
-    "ogDescription": "Definições claras dos termos usados na documentação de backup e restauração ProxMenux.",
-    "twitterTitle": "Glossário das cópias de segurança e do restauro | ProxMenux",
+    "ogTitle": "Glossário dos backups e da restauração | ProxMenux",
+    "ogDescription": "Configurações claras dos termos usados na documentação de backup e restauração ProxMenux.",
+    "twitterTitle": "Glossário dos backups e da restauração | ProxMenux",
     "twitterDescription": "Senha, arquivo de chaves, envelope de recuperação, rootfs, manifesto, PBS, blocos — todos definidos em um só lugar."
   },
   "header": {
     "title": "Glossário",
     "description": "Termos usados através da documentação de backup e restauração, com sua definição.",
-    "section": "Cópias de segurança e restauro"
+    "section": "Backups e restauração"
   },
   "intro": {
     "body": "Os termos são agrupados por tema. Cada entrada dá o termo e uma definição curta."
@@ -18,12 +18,12 @@
   "groups": [
     {
       "title": "Criptografia e recuperação de chaves",
-      "intro": "Vocabulário para o bloco de criptografia PBS. Envolve dois segredos distintos: um arquivo binário e uma frase-passe escrita.",
+      "intro": "Vocabulário para o bloco de criptografia PBS. Envolve dois segredos distintos: um arquivo binário e uma frase secreta escrita.",
       "entries": [
         {
           "id": "passphrase-recuperacion",
           "term": "Senha de recuperação",
-          "def": "Senha de texto que o usuário escolhe para proteger o <a href=\"#sobre-recuperacion\">envelope de recuperação</a>. Ele é solicitado duas vezes com uma verificação de correspondência, e só é usado para criptografar o envelope e para decifrá-lo se o arquivo de chaves alguma vez precisa ser recuperado. <strong>Não é a frase-passe que desbloqueia o próprio arquivo de chaves</strong>, e nunca é enviado para PBS. Durante um backup normal, ele nunca deixa o hospedeiro."
+          "def": "Senha de texto que o usuário escolhe para proteger o <a href=\"#sobre-recuperacion\">envelope de recuperação</a>. Ele é solicitado duas vezes com uma verificação de correspondência, e só é usado para criptografar o envelope e para decifrá-lo se o arquivo de chaves alguma vez precisa ser recuperado. <strong>Não é a frase secreta que desbloqueia o próprio arquivo de chaves</strong>, e nunca é enviado para PBS. Durante um backup normal, ele nunca deixa o host."
         },
         {
           "id": "clave-cifrado",
@@ -32,18 +32,18 @@
         },
         {
           "id": "contrasena-keyfile",
-          "term": "Frase- senha do ficheiro de chaves (frase- senha do KDF)",
-          "def": "Senha opcional que o próprio arquivo de chaves pode carregar, distinta da frase-passe <a href=\"#passphrase-recuperacion\">de recuperação</a>. Ele só existe quando o arquivo de chaves foi criado com <code>--kdf scrypt</code> (normalmente um arquivo de chaves importadas). Sem ele, o arquivo de chaves não pode ser desbloqueado para uso. ProxMenux persiste em forma criptografada no host para que os backups agendados possam ser executados sem um prompt interativo."
+          "term": "Frase- senha do arquivo de chaves (frase- senha do KDF)",
+          "def": "Senha opcional que o próprio arquivo de chaves pode carregar, distinta da frase secreta <a href=\"#passphrase-recuperacion\">de recuperação</a>. Ele só existe quando o arquivo de chaves foi criado com <code>--kdf scrypt</code> (normalmente um arquivo de chaves importadas). Sem ele, o arquivo de chaves não pode ser desbloqueado para uso. ProxMenux persiste em forma criptografada no host para que os backups agendados possam ser executados sem um prompt interativo."
         },
         {
           "id": "sobre-recuperacion",
           "term": "Envelope de recuperação",
-          "def": "O <a href=\"#clave-cifrado\">ficheiro de chaves</a> protegido por uma camada adicional: é encriptado com a <a href=\"#passphrase-recuperacion\">frase-passe de recuperação</a> através de <a href=\"#aes-256-cbc\">AES-256-CBC</a> e <a href=\"#pbkdf2\">PBKDF2</a> antes de sair do host. É esta versão protegida que é enviada para o PBS no grupo <code>-keyrecovery</code>. Sem a frase-passe, o conteúdo permanece inacessível: descarregá-lo do PBS não revela o ficheiro de chaves."
+          "def": "O <a href=\"#clave-cifrado\">arquivo de chaves</a> protegido por uma camada adicional: é criptografado com a <a href=\"#passphrase-recuperacion\">frase secreta de recuperação</a> através de <a href=\"#aes-256-cbc\">AES-256-CBC</a> e <a href=\"#pbkdf2\">PBKDF2</a> antes de sair do host. É esta versão protegida que é enviada para o PBS no grupo <code>-keyrecovery</code>. Sem a frase secreta, o conteúdo permanece inacessível: baixá-lo do PBS não revela o arquivo de chaves."
         },
         {
-          "id": "cifrado-cliente",
+          "id": "criptografado-cliente",
           "term": "Criptografia do lado do cliente",
-          "def": "Modelo de criptografia em que os dados são criptografados na máquina de origem antes de serem enviados. O PBS só recebe e armazena texto cifrado; nem mesmo um administrador PBS com acesso a datastore pode lê-lo sem o arquivo de chaves. O ProxMenux baseia-se neste modelo e adiciona o <a href=\"#sobre-recuperacion\">envelope de recuperação</a> no topo."
+          "def": "Modelo de criptografia em que os dados são criptografados na máquina de origem antes de serem enviados. O PBS só recebe e armazena texto criptografado; nem mesmo um administrador PBS com acesso a datastore pode lê-lo sem o arquivo de chaves. O ProxMenux baseia-se neste modelo e adiciona o <a href=\"#sobre-recuperacion\">envelope de recuperação</a> no topo."
         },
         {
           "id": "kdf-none",
@@ -53,7 +53,7 @@
         {
           "id": "kdf-scrypt",
           "term": "--kdf scrypt",
-          "def": "Opção para <code>proxmox-backup-client key create</code> que produz um arquivo de chaves protegido por uma <a href=\"#contrasena-keyfile\">frase-senha do arquivo de chave</a>. Cada uso do arquivo de chaves requer desbloqueá-lo com essa frase-passe. O ProxMenux aceita este estilo de arquivo de chaves na importação e armazena a frase-passe criptografada para que os backups agendados ainda possam ser executados sem acompanhamento."
+          "def": "Opção para <code>proxmox-backup-client key create</code> que produz um arquivo de chaves protegido por uma <a href=\"#contrasena-keyfile\">frase-senha do arquivo de chave</a>. Cada uso do arquivo de chaves requer desbloqueá-lo com essa frase secreta. O ProxMenux aceita este estilo de arquivo de chaves na importação e armazena a frase secreta criptografada para que os backups agendados ainda possam ser executados sem acompanhamento."
         },
         {
           "id": "aes-256-cbc",
@@ -63,7 +63,7 @@
         {
           "id": "pbkdf2",
           "term": "PBKDF2",
-          "def": "Função criptográfica que transforma uma frase-passe tipo humano em uma chave binária adequada para criptografia. Atrasa as tentativas de força bruta aplicando muitas iterações. ProxMenux usa-o com iterações 600 000 e um sal aleatório ao criptografar o envelope de recuperação."
+          "def": "Função criptográfica que transforma uma frase secreta tipo humano em uma chave binária adequada para criptografia. Atrasa as tentativas de força bruta aplicando muitas iterações. ProxMenux usa-o com iterações 600 000 e um sal aleatório ao criptografar o envelope de recuperação."
         }
       ]
     },
@@ -73,7 +73,7 @@
       "entries": [
         {
           "id": "rootfs",
-          "term": "rootfs / sistema de ficheiros root",
+          "term": "rootfs / sistema de arquivos root",
           "def": "Uma cópia plana do sistema de arquivos do host fonte, produzido pela <code>rsync</code> sobre o perfil <a href=\"#perfil-defecto\">default</a> mais qualquer caminho <a href=\"#rutas-personalizadas\">custom</a>. Não é uma imagem de disco inteiro: apenas caminhos que contêm configuração ou estado Proxmox não pode regenerar por conta própria são copiados."
         },
         {
@@ -100,7 +100,7 @@
     },
     {
       "title": "Destinos e armazenagem",
-      "intro": "Termos ligados ao local onde o backup chega — servidor PBS, arquivo local ou repositório Borg — e como o PBS organiza os dados.",
+      "intro": "Termos vinculados ao local onde o backup chega — servidor PBS, arquivo local ou repositório Borg — e como o PBS organiza os dados.",
       "entries": [
         {
           "id": "repositorio-pbs",
@@ -120,7 +120,7 @@
         {
           "id": "fingerprint",
           "term": "Impressão digital",
-          "def": "Impressões digitais criptográficas do certificado PBS do servidor TLS. Permite ao cliente verificar se está a falar com o servidor pretendido sem depender de uma autoridade pública de certificação. ProxMenux passa para <code>proxmox-backup-client</code> através da variável de ambiente <code>PBS_FINGERPRINT</code>."
+          "def": "Impressões digitais criptográficas do certificado PBS do servidor TLS. Permite ao cliente verificar se está falando com o servidor pretendido sem depender de uma autoridade pública de certificação. ProxMenux passa para <code>proxmox-backup-client</code> através da variável de ambiente <code>PBS_FINGERPRINT</code>."
         },
         {
           "id": "grupo-copia",
@@ -151,7 +151,7 @@
         {
           "id": "trabajo-programado",
           "term": "Trabalho agendado",
-          "def": "Configuração persistente de uma cópia de segurança recorrente. Mantém o destino, credenciais, criptografia, programação e retenção. Vive em <code>/var/lib/proxmenux/backup-jobs/&lt;id&gt;.env</code>."
+          "def": "Configuração persistente de um backup recorrente. Mantém o destino, credenciais, criptografia, programação e retenção. Vive em <code>/var/lib/proxmenux/backup-jobs/&lt;id&gt;.env</code>."
         },
         {
           "id": "modo-adjunto",
@@ -182,7 +182,7 @@
         {
           "id": "hidratacion",
           "term": "Hidratação entre versões do kernel",
-          "def": "Etapa de restauração que combina as configurações do usuário na origem (parâmetros IOMMU, IDs VFIO, ajustes específicos e chaves GRUB) com a configuração nova de inicialização do destino, sem copiar literalmente arquivos ligados ao kernel de origem. Executa quando o kernel de destino é mais novo que o do backup."
+          "def": "Etapa de restauração que combina as configurações do usuário na origem (parâmetros IOMMU, IDs VFIO, ajustes específicos e chaves GRUB) com a configuração nova de inicialização do destino, sem copiar literalmente arquivos vinculados ao kernel de origem. Executa quando o kernel de destino é mais novo que o do backup."
         },
         {
           "id": "cross-kernel",
@@ -192,7 +192,7 @@
         {
           "id": "instalador-postboot",
           "term": "Instalador pós-inicial",
-          "def": "Componentes reinstalados após a primeira inicialização do host restaurado ( drivers NVIDIA, drivers Coral TPU, ferramentas AMD GPU, ferramentas Intel GPU). Cada instalador corre contra o kernel do alvo, então o host restaurado não depende do kernel da fonte estar presente."
+          "def": "Componentes reinstalados após a primeira inicialização do host restaurado ( drivers NVIDIA, drivers Coral TPU, ferramentas AMD GPU, ferramentas Intel GPU). Cada instalador roda contra o kernel do alvo, então o host restaurado não depende do kernel da fonte estar presente."
         },
         {
           "id": "compatibility-check",
@@ -213,12 +213,12 @@
       {
         "label": "Como funciona",
         "href": "/docs/backup-restore/how-it-works",
-        "tail": " — quando o rootfs, o manifesto e o inventário da aplicação se encaixam num backup."
+        "tail": " — quando o rootfs, o manifesto e o inventário da aplicação se encaixam em um backup."
       },
       {
         "label": "Destino Proxmox Backup Server",
         "href": "/docs/backup-restore/destinations/pbs",
-        "tail": " — quando a criptografia do lado do cliente, o arquivo de chaves, a frase-passe de recuperação e o envelope são documentados em profundidade."
+        "tail": " — quando a criptografia do lado do cliente, o arquivo de chaves, a frase secreta de recuperação e o envelope são documentados em profundidade."
       },
       {
         "label": "Restauração",

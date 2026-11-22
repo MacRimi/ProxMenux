@@ -1,8 +1,8 @@
 {
   "meta": {
     "title": "Destino de arquivo local — tar.zst em um sistema de arquivos ou unidade USB | ProxMenux",
-    "description": "O destino de backup local escreve um único arquivo .tar.zst para qualquer diretório com permissão de gravação: um disco interno, um ponto de montagem Proxmox, uma partilha NFS, ou uma unidade USB. Documenta o fluxo de configuração, a lógica de detecção e montagem USB, a verificação de segurança contra a gravação do arquivo em um caminho que está sendo feito backup, e o sidecar JSON que identifica o arquivo.",
-    "ogTitle": "Cópia de segurança do ProxMenux — Destino do arquivo local",
+    "description": "O destino de backup local escreve um único arquivo .tar.zst para qualquer diretório com permissão de gravação: um disco interno, um ponto de montagem Proxmox, um compartilhamento NFS, ou uma unidade USB. Documenta o fluxo de configuração, a lógica de detecção e montagem USB, a verificação de segurança contra a gravação do arquivo em um caminho que está sendo feito backup, e o sidecar JSON que identifica o arquivo.",
+    "ogTitle": "Backup do ProxMenux — Destino do arquivo local",
     "ogDescription": "Como ProxMenux escreve backups locais como arquivos .tar.zst e como configurar o diretório de destino ou unidade USB.",
     "twitterTitle": "Destino de backup local | ProxMenux",
     "twitterDescription": "Como ProxMenux escreve backups locais como arquivos .tar.zst em um sistema de arquivos ou unidade USB."
@@ -10,7 +10,7 @@
   "header": {
     "title": "Arquivo local",
     "description": "O destino local escreve um único arquivo de tar comprimido para qualquer diretório com permissão de gravação no host: um disco interno, uma montagem NFS ou SMB, ou uma unidade USB.",
-    "section": "Cópias de segurança e restauro"
+    "section": "Backups e restauração"
   },
   "intro": {
     "title": "Um arquivo, auto-suficiente",
@@ -21,7 +21,7 @@
     "intro": "O destino local é um <strong>único diretório de destino salvo de forma persistente</strong> — não uma lista. ProxMenux armazena a escolha do operador em <code>/usr/local/share/proxmenux/local-target.conf</code> e lê essa escolha em cada backup. Quando nenhum alvo foi configurado, o <code>HB_LOCAL_TARGET_DEFAULT = /var/lib/vz/dump</code> padrão é usado (o mesmo diretório que o Proxmox usa para suas próprias saídas <code>vzdump</code>). O alvo é configurado a partir de <em>Configure backup destinations → Local archive targets → Manage local backup target</em>:",
     "options": [
       "<strong>Use o padrão (<code>/var/lib/vz/dump</code>).</strong> O armazenamento local Proxmox. Presente em cada instalação do Proxmox; o arquivo fica ao lado das saídas vzdump e é captado automaticamente pela aba Backups do Monitor.",
-      "<strong>Use um caminho personalizado.</strong> Qualquer caminho absoluto do sistema de arquivos pode ser usado: uma montagem NFS, uma partilha SMB montada via <code>fstab</code>, um conjunto de dados dedicado ZFS, um segundo disco interno. ProxMenux valida que o caminho existe e é um diretório antes de persisti-lo.",
+      "<strong>Use um caminho personalizado.</strong> Qualquer caminho absoluto do sistema de arquivos pode ser usado: uma montagem NFS, um compartilhamento SMB montado via <code>fstab</code>, um conjunto de dados dedicado ZFS, um segundo disco interno. ProxMenux valida que o caminho existe e é um diretório antes de persisti-lo.",
       "<strong>Use um disco USB.</strong> Abre o submenu USB (abaixo), que detecta dispositivos removíveis e oferece para montar ou formatar um."
     ]
   },
@@ -38,7 +38,7 @@
       {
         "state": "desmontado",
         "shown": "Tamanho · etiqueta · [fstype] · (não montado — será montado)",
-        "action": "Um sistema de ficheiros está presente mas não está montado. Na confirmação, o ProxMenux executa o <code>hb_mount_usb_partition</code>: cria o <code>/mnt/proxmenux-backup-LABEL</code> (UUID ou nome do dispositivo, se não houver rótulo), monta a partição e persiste o ponto de montagem como alvo local."
+        "action": "Um sistema de arquivos está presente mas não está montado. Na confirmação, o ProxMenux executa o <code>hb_mount_usb_partition</code>: cria o <code>/mnt/proxmenux-backup-LABEL</code> (UUID ou nome do dispositivo, se não houver rótulo), monta a partição e persiste o ponto de montagem como alvo local."
       },
       {
         "state": "vazia",
@@ -46,7 +46,7 @@
         "action": "O dispositivo não tem sistema de arquivos. Essa operação destrutiva exige duas confirmações. Primeiro, uma janela Sim/Não explica que o disco será apagado. Depois, um campo exige que o usuário <strong>digite o caminho exato do dispositivo</strong> (por exemplo <code>/dev/sdb</code>) antes de o ProxMenux criar uma nova tabela GPT com uma partição ext4 e montá-la."
       }
     ],
-    "notMountedFallback": "Quando nenhum dispositivo USB é detectado, o submenu cai de volta para uma caixa de entrada simples. O operador pode indicar uma localização arbitrária do ponto de montagem; se a localização não for um ponto de montagem registado, uma janela de confirmação avisa antes de prosseguir."
+    "notMountedFallback": "Quando nenhum dispositivo USB é detectado, o submenu cai de volta para uma caixa de entrada simples. O operador pode indicar uma localização arbitrária do ponto de montagem; se a localização não for um ponto de montagem registrado, uma janela de confirmação avisa antes de prosseguir."
   },
   "safetyCheck": {
     "heading": "Verificação de segurança — destino dentro de um caminho de backup",

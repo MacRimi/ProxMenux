@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Criar VM: outros sistemas NAS | Documentação ProxMenux",
-    "description": "Crie VM TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS e FygoOS no Proxmox VE com o ProxMenux. Configuração predefinida ou avançada, plano de armazenamento, passthrough GPU opcional e recursos aconselhados para cada sistema.",
+    "description": "Crie VM TrueNAS SCALE, TrueNAS CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS e FygoOS no Proxmox VE com o ProxMenux. Configuração padrão ou avançada, plano de armazenamento, passthrough GPU opcional e recursos aconselhados para cada sistema.",
     "ogTitle": "Criar VM: outros sistemas NAS | Documentação ProxMenux",
     "ogDescription": "Criar TrueNAS SCALE / CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS e FygoOS VMs em Proxmox VE com ProxMenux.",
     "ogImageAlt": "Selector NAS ProxMenux"
@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Como estes sistemas são criados",
-    "bodyRich": "Os sete sistemas usam o assistente ProxMenux. O seletor NAS escolhe o instalador, detetando a versão estável mais recente para TrueNAS, OMV, XigmaNAS, Rockstor e FygoOS, e passa ao configurador comum da VM e ao plano de armazenamento. O ZimaOS tem um instalador próprio (<code>vm/zimaos.sh</code>), com a mesma sequência de CPU, RAM, armazenamento e GPU opcional."
+    "bodyRich": "Os sete sistemas usam o assistente ProxMenux. O seletor NAS escolhe o instalador, detectando a versão estável mais recente para TrueNAS, OMV, XigmaNAS, Rockstor e FygoOS, e passa ao configurador comum da VM e ao plano de armazenamento. O ZimaOS tem um instalador próprio (<code>vm/zimaos.sh</code>), com a mesma sequência de CPU, RAM, armazenamento e GPU opcional."
   },
   "config": {
     "heading": "Configuração padrão vs avançada",
@@ -106,22 +106,22 @@
     "virtualItemsRich": [
       "Lista os volumes de armazenamento Proxmox disponíveis na máquina.",
       "Você escolhe o armazenamento de destino e o tamanho em GB.",
-      "O disco utiliza o bus escolhido: SCSI (predefinido), SATA, VirtIO ou IDE (ZimaOS: SCSI ou SATA). SATA tem seis posições numeradas de 0 a 5: <code>sata0</code>, <code>sata1</code>, …."
+      "O disco utiliza o bus escolhido: SCSI (padrão), SATA, VirtIO ou IDE (ZimaOS: SCSI ou SATA). SATA tem seis posições numeradas de 0 a 5: <code>sata0</code>, <code>sata1</code>, …."
     ],
     "importHeading": "b. Adicionar disco de importação",
     "importItemsRich": [
       "Detecta discos físicos que são seguros de importar (sistema e discos protegidos estão escondidos).",
       "Você seleciona um ou mais discos através de uma lista de verificação.",
-      "Os discos importados utilizam o bus escolhido e são ligados através de <code>qm set</code>."
+      "Os discos importados utilizam o bus escolhido e são anexados através de <code>qm set</code>."
     ],
     "pciHeading": "c. Adicionar Controlador ou NVMe (passagem PCI)",
     "pciItemsRich": [
-      "Deteta HBA SATA/SAS e dispositivos NVMe e permite atribuir um <em>controlador completo</em> à VM. O IOMMU tem de estar ativo; o script oferece a ativação e um reinício se necessário.",
+      "Detecta HBA SATA/SAS e dispositivos NVMe e permite atribuir um <em>controlador completo</em> à VM. O IOMMU tem de estar ativo; o script oferece a ativação e um reinício se necessário.",
       "Um passo de confirmação avisa sobre o risco de todo o controlador (o cartão inteiro, incluindo cada disco nele, deixa o host).",
       "Os dispositivos PCI são atribuídos com comandos como <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Substitua VMID e PCI_ADDRESS pelo ID da VM e endereço PCI e utilize um índice hostpci livre para cada dispositivo."
     ],
-    "resetCalloutTitle": "Repor e terminar",
-    "resetCalloutBodyRich": "O menu oferece <strong>r</strong> para repor a seleção e recomeçar e <strong>d</strong> para terminar e continuar. Não é possível terminar com um plano vazio."
+    "resetCalloutTitle": "Redefinir e terminar",
+    "resetCalloutBodyRich": "O menu oferece <strong>r</strong> para redefinir a seleção e recomeçar e <strong>d</strong> para terminar e continuar. Não é possível terminar com um plano vazio."
   },
   "gpu": {
     "heading": "Passagem de GPU opcional",
@@ -141,10 +141,10 @@
     "itemsRich": [
       "Detecta e baixa a ISO estável mais recente (ou usa a versão de retrocesso se o upstream for inacessível).",
       "Aplica o padrão ou avançado CPU / RAM / BIOS / tipo de máquina.",
-      "Abre o plano de armazenamento e liga os discos virtuais selecionados, discos importados e dispositivos PCI.",
+      "Abre o plano de armazenamento e anexa os discos virtuais selecionados, discos importados e dispositivos PCI.",
       "Cria um disco EFI se o UEFI estiver selecionado.",
       "Monta a instalação ISO em <code>ide2</code>.",
-      "Define a ordem de arranque: primeiro disco, depois ISO.",
+      "Define a ordem de inicialização: primeiro disco, depois ISO.",
       "Habilita o canal QEMU Guest Agent.",
       "Opcionalmente executa o assistente de passagem GPU.",
       "Gera uma descrição HTML com estilo anexada ao VM.",
@@ -163,7 +163,7 @@
       "icon": "Database",
       "officialName": "TrueNAS SCALE",
       "officialUrl": "https://www.truenas.com/truenas-scale/",
-      "description": "TrueNAS baseado em Debian com aplicações Docker nas versões atuais, Linux KVM e ZFS como sistema de ficheiros principal. As versões antigas SCALE usavam Kubernetes. Combina armazenamento ZFS e um ecossistema de contentores.",
+      "description": "TrueNAS baseado em Debian com aplicações Docker nas versões atuais, Linux KVM e ZFS como sistema de arquivos principal. As versões antigas SCALE usavam Kubernetes. Combina armazenamento ZFS e um ecossistema de contêineres.",
       "specs": [
         "Interface aconselhada: SATA ou SCSI, ambas com suporte de discard/TRIM",
         "RAM: 8 GB (16 GB+ recomendado para cargas de trabalho reais)",
@@ -235,7 +235,7 @@
       "icon": "HardDrive",
       "officialName": "rockstor.com",
       "officialUrl": "https://rockstor.com",
-      "description": "NAS baseado em openSUSE Leap e construído em torno de Btrfs. Snapshots, subvolumes e plataforma Rock-on com aplicações Docker para multimédia, partilha e cópias de segurança.",
+      "description": "NAS baseado em openSUSE Leap e construído em torno de Btrfs. Snapshots, subvolumes e plataforma Rock-on com aplicações Docker para multimédia, compartilhamento e backups.",
       "specs": [
         "Interface recomendada: SATA ou VirtIO",
         "Mínimo de RAM: 2 GB (4 GB ou mais aconselhados)",
@@ -254,12 +254,12 @@
       "icon": "MonitorIcon",
       "officialName": "zimaspace.com",
       "officialUrl": "https://www.zimaspace.com/zimaos",
-      "description": "Sistema NAS/servidor doméstico leve construído com Buildroot, evoluído do CasaOS, para multimédia, aplicações Docker e domótica. O instalador ProxMenux próprio (vm/zimaos.sh) transfere uma imagem pronta e oferece configuração de CPU, RAM e armazenamento.",
+      "description": "Sistema NAS/servidor doméstico leve construído com Buildroot, evoluído do CasaOS, para multimédia, aplicações Docker e domótica. O instalador ProxMenux próprio (vm/zimaos.sh) baixa uma imagem pronta e oferece configuração de CPU, RAM e armazenamento.",
       "specs": [
         "Interface recomendada: SATA ou VirtIO",
         "RAM padrão: 4 GB (suficiente para aplicativos de mídia/self-hosted)",
         "Núcleos mínimos CPU: 2",
-        "Arranque UEFI (OVMF)",
+        "Inicialização UEFI (OVMF)",
         "Adaptador de rede VirtIO para melhor rendimento"
       ]
     },
@@ -269,7 +269,7 @@
       "icon": "Server",
       "officialName": "fygonas.com",
       "officialUrl": "https://fygonas.com",
-      "description": "Edição internacional do fnOS, um NAS baseado em Debian. O ProxMenux transfere a ISO mais recente de fygonas.com e monta-a na VM. O sistema ocupa um disco; o espaço restante pode alojar volumes para aplicações e ficheiros. Após instalar, a consola mostra a interface web na porta 5666, para onde a porta 80 redireciona. Abra-a para dar nome ao dispositivo e criar a conta de administrador.",
+      "description": "Edição internacional do fnOS, um NAS baseado em Debian. O ProxMenux baixa a ISO mais recente de fygonas.com e monta-a na VM. O sistema ocupa um disco; o espaço restante pode alojar volumes para aplicações e arquivos. Após instalar, o console mostra a interface web na porta 5666, para onde a porta 80 redireciona. Abra-a para dar nome ao dispositivo e criar a conta de administrador.",
       "specs": [
         "Disco do sistema: FygoOS propõe uma partição do sistema 64 GB, que pode ser menor em um VM",
         "Instalação: Graphical Install, ou Rescuing Install se o modo gráfico falhar",

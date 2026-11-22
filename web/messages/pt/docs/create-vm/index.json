@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Criar VM no Proxmox VE: assistentes Synology, Windows, Linux e NAS | ProxMenux",
-    "description": "Crie e configure VM no Proxmox VE com o ProxMenux. Assistentes para NAS (Synology DSM, TrueNAS, OpenMediaVault, XigmaNAS, etc.), Windows, distribuições Linux e um instalador macOS externo. Predefinições adequadas para hardware, armazenamento e rede.",
+    "description": "Crie e configure VM no Proxmox VE com o ProxMenux. Assistentes para NAS (Synology DSM, TrueNAS, OpenMediaVault, XigmaNAS, etc.), Windows, distribuições Linux e um instalador macOS externo. Padrões adequadas para hardware, armazenamento e rede.",
     "ogTitle": "Crie VMs em Proxmox VE — Synology, Windows, Linux, Assistentes NAS",
     "ogDescription": "Assistentes ProxMenux para criar VM Synology DSM, TrueNAS, OMV, XigmaNAS, Windows e Linux no Proxmox VE.",
     "ogImageAlt": "ProxMenux Criar o Menu VM",
@@ -10,12 +10,12 @@
   },
   "header": {
     "title": "Criar VM",
-    "description": "O ProxMenux reúne a criação de VM num menu interativo. Escolha a família do sistema operativo e o assistente trata da ISO, CPU, RAM, BIOS, rede, armazenamento e passthrough GPU opcional.",
+    "description": "O ProxMenux reúne a criação de VM em um menu interativo. Escolha a família do sistema operacional e o assistente trata da ISO, CPU, RAM, BIOS, rede, armazenamento e passthrough GPU opcional.",
     "section": "Máquinas Virtuais"
   },
   "intro": {
     "title": "Para que serve este menu",
-    "body": "O menu Criar VM encaminha para vários assistentes. Pergunta a família do sistema operativo e carrega o seletor ISO e configurador adequados. O modo predefinido usa definições apropriadas; o avançado apresenta as opções disponíveis antes da criação."
+    "body": "O menu Criar VM encaminha para vários assistentes. Pergunta a família do sistema operacional e carrega o seletor ISO e configurador adequados. O modo padrão usa configurações apropriadas; o avançado apresenta as opções disponíveis antes da criação."
   },
   "opening": {
     "heading": "Abrir o menu",
@@ -54,7 +54,7 @@
           "UUP Dump para ISOs atualizadas",
           "Ou uma ISO local de qualquer armazenamento ISO do Proxmox",
           "TPM 2.0 adicionado automaticamente",
-          "VirtIO Controladores ISO ligados ao ide3",
+          "VirtIO Controladores ISO anexados ao ide3",
           "Canal de agente convidado habilitado"
         ]
       },
@@ -78,7 +78,7 @@
   },
   "community": {
     "title": "Programas comunitários (não documentados aqui)",
-    "intro": "As duas entradas abaixo do separador <em>Scripts externos</em> executam código que <strong>não faz parte do ProxMenux</strong> e ficam, por isso, fora desta documentação:",
+    "intro": "As duas entradas abaixo da aba <em>Scripts externos</em> executam código que <strong>não faz parte do ProxMenux</strong> e ficam, por isso, fora desta documentação:",
     "macosRich": "<strong>System macOS</strong> — executa o instalador externo <osxLink>OSX-PROXMOX</osxLink>. Ele clona o repositório upstream, prepara o host e o <strong> reinicia automaticamente quando terminado</strong>. Consulte a documentação do próprio projeto.",
     "othersRich": "<strong>Outros sistemas (baseados em Linux)</strong>: carrega uma lista curta de VMs Linux pré-construídas pela comunidade: Home Assistant OS, uma VM Docker (Debian + SSH + Docker) e Nextcloud. Cada script da comunidade é mantido fora do ProxMenux."
   },
@@ -86,9 +86,9 @@
     "heading": "O que acontece depois de escolher um SO",
     "intro": "Após selecionar a ISO, o menu segue o mesmo percurso para cada família de sistemas:",
     "items": [
-      "<strong>Predefinido ou avançado.</strong> Um diálogo permite aceitar as predefinições ProxMenux ou abrir o configurador completo: modelo e núcleos CPU, RAM, BIOS/UEFI, placa de rede e tipo de máquina.",
+      "<strong>Padrão ou avançado.</strong> Um diálogo permite aceitar os padrões do ProxMenux ou abrir o configurador completo: modelo e núcleos CPU, RAM, BIOS/UEFI, placa de rede e tipo de máquina.",
       "<strong>Plano de armazenamento.</strong> Você combina um ou vários discos virtuais, discos importados e dispositivos de passagem PCI (controlador inteiro / NVMe) no mesmo VM.",
-      "<strong>Passthrough GPU opcional.</strong> Se detetar uma GPU compatível, o ProxMenux oferece o assistente GPU após criar a VM. Pode ser necessário reiniciar.",
+      "<strong>Passthrough GPU opcional.</strong> Se detectar uma GPU compatível, o ProxMenux oferece o assistente GPU após criar a VM. Pode ser necessário reiniciar.",
       "<strong>Criação da VM.</strong> A VM é criada, recebe etiquetas e uma descrição HTML formatada para consulta rápida no Proxmox."
     ],
     "tipTitle": "Preferir Avançado para VMs que pretende manter",
@@ -96,7 +96,7 @@
   },
   "scripts": {
     "heading": "Programas envolvidos",
-    "intro": "O menu carrega através de source vários scripts partilhados sem página própria. Estão listados como referência. Cada subpágina liga ao script principal do respetivo processo.",
+    "intro": "O menu carrega através de source vários scripts compartilhados sem página própria. Estão listados como referência. Cada subpágina leva ao script principal do respectivo processo.",
     "headerScript": "Script",
     "headerRole": "Papel",
     "rows": [
@@ -122,7 +122,7 @@
       },
       {
         "path": "vm/zimaos.sh",
-        "role": "Fluxo ZimaOS: baixa a imagem e a liga à definição VM."
+        "role": "Fluxo ZimaOS: baixa a imagem e a anexa à definição da VM."
       },
       {
         "path": "vm/vm_configurator.sh",
@@ -134,7 +134,7 @@
       },
       {
         "path": "vm/vm_creator.sh",
-        "role": "Criação final do VM: aplica a configuração, liga o armazenamento, escreve a descrição HTML."
+        "role": "Criação final do VM: aplica a configuração, anexa o armazenamento, escreve a descrição HTML."
       },
       {
         "path": "vm/guest_agent_config.sh",
@@ -153,12 +153,12 @@
       {
         "href": "/docs/utils/UUp-Dump-ISO-Creator",
         "label": "Criador de ISO do UUP Dump",
-        "tail": " — crie ISO de instalação Windows prontas como suporte de arranque."
+        "tail": " — crie ISO de instalação Windows prontas como suporte de inicialização."
       },
       {
         "href": "/docs/utils/import-vm",
         "label": "Importar VM de OVA / OVF",
-        "tail": " — introduzir as MV pré-construídas das exportações VMware / VirtualBox / ProxMenux."
+        "tail": " — inserir as MV pré-construídas das exportações VMware / VirtualBox / ProxMenux."
       },
       {
         "href": "/docs/hardware/gpu-vm-passthrough",

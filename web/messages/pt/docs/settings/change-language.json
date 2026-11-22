@@ -1,22 +1,22 @@
 {
   "meta": {
     "title": "Alterar idioma | Documentação do ProxMenux",
-    "description": "Escolha entre oito idiomas para a interface do ProxMenux. Todas as instalações incluem catálogos JSON de traduções pré-gerados; o anfitrião não necessita de serviços de tradução nem de um ambiente Python. O menu é recarregado automaticamente.",
+    "description": "Escolha entre oito idiomas para a interface do ProxMenux. Todas as instalações incluem catálogos JSON de traduções pré-gerados; o host não necessita de serviços de tradução nem de um ambiente Python. O menu é recarregado automaticamente.",
     "ogTitle": "Alterar idioma | Documentação do ProxMenux",
     "ogDescription": "Escolha um dos oito idiomas do ProxMenux nas Configurações. Disponível em todas as instalações."
   },
   "header": {
     "title": "Alterar idioma",
-    "description": "Alterne a interface do ProxMenux entre oito idiomas suportados. A escolha é guardada em config.json e o menu é reiniciado no novo idioma. Todas as instalações incluem os catálogos de traduções.",
+    "description": "Alterne a interface do ProxMenux entre oito idiomas suportados. A escolha é salva em config.json e o menu é reiniciado no novo idioma. Todas as instalações incluem os catálogos de traduções.",
     "section": "Configurações"
   },
   "intro": {
     "title": "O que é isto?",
-    "body": "Um diálogo lista os oito idiomas suportados. O ProxMenux guarda a sua escolha em <code>config.json</code> como <code>.language</code> e reinicia <code>config_menu.sh</code> para a aplicar imediatamente."
+    "body": "Um diálogo lista os oito idiomas suportados. O ProxMenux salva sua escolha em <code>config.json</code> como <code>.language</code> e reinicia <code>config_menu.sh</code> para a aplicar imediatamente."
   },
   "warn": {
     "title": "Disponível em todas as instalações",
-    "body": "As Configurações mostram sempre Alterar idioma. Os catálogos são instalados em <code>/usr/local/share/proxmenux/lang/</code> <em>e</em> o idioma escolhido é guardado em <code>config.json</code>. O antigo ambiente Python de tradução não é necessário."
+    "body": "As Configurações mostram sempre Alterar idioma. Os catálogos são instalados em <code>/usr/local/share/proxmenux/lang/</code> <em>e</em> o idioma escolhido é salvo em <code>config.json</code>. O antigo ambiente Python de tradução não é necessário."
   },
   "supported": {
     "heading": "Idiomas suportados",
@@ -68,7 +68,7 @@
   },
   "englishTip": {
     "title": "Inglês é o mais preciso",
-    "body": "Os textos noutros idiomas provêm dos catálogos JSON pré-gerados incluídos no ProxMenux. As traduções em falta usam o inglês; o anfitrião não faz chamadas de tradução em direto. O inglês continua a ser a referência em caso de tradução duvidosa."
+    "body": "Os textos em outros idiomas provêm dos catálogos JSON pré-gerados incluídos no ProxMenux. As traduções ausentes usam o inglês; o host não faz chamadas de tradução em tempo real. O inglês continua sendo a referência em caso de tradução duvidosa."
   },
   "underHood": {
     "heading": "Como funciona sob o capô",
@@ -96,7 +96,7 @@
       {
         "href": "/docs/settings/show-version-information",
         "label": "Mostrar informações da versão",
-        "tail": " — confirma o canal de lançamento, os ficheiros de tradução e o idioma atual."
+        "tail": " — confirma o canal de lançamento, os arquivos de tradução e o idioma atual."
       },
       {
         "href": "/docs/settings",

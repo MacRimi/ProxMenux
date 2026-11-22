@@ -46,7 +46,7 @@
         "why": "Os UIDs CT não privilegiados (100000+) aparecem como \"outros\" do host, então o world-rwx lhes dá acesso."
       },
       {
-        "bit": "ACL (predefinidas)",
+        "bit": "ACL (padrão)",
         "effect": "Herdado em cada arquivo / subdir recém-criado.",
         "why": "O novo conteúdo herda as ACLs padrão sem executar o script novamente. Os aplicativos ainda podem solicitar modos restritivos ou alterar as permissões depois."
       }
@@ -80,8 +80,8 @@
     "heading": "Resolução de Problemas",
     "mkdirTitle": "\"Failed to create directory\"",
     "mkdirBody": "Normalmente um problema do sistema de arquivos: <code>/mnt</code> está em um sistema de arquivos somente leitura, o caminho contém um componente que não é um diretório (por exemplo, você digitou <code>/etc/passwd/sub</code>), ou o disco está cheio. Verifique com <code>df -h /mnt</code> e <code>mount | grep /mnt</code>.",
-    "writeTitle": "O recipiente não pode escrever apesar das permissões abertas",
-    "writeBody": "Verifique novamente se o CT está realmente usando a montagem de ligação (<code>pct config &lt;ctid&gt; | grep ^mp</code>). Dentro do CT, execute <code>touch /mnt/data/test-$(date +%s)</code> — se isso falhar com a permissão negada, a montagem pode estar em um sistema de arquivos host que não honra ACLs (algumas montagens mais antigas de <code>ext3</code> ou <code>vfat</code>). Mova o diretório compartilhado para um ext4 / xfs / btrfs / zfs de suporte.",
+    "writeTitle": "O contêiner não pode escrever apesar das permissões abertas",
+    "writeBody": "Verifique novamente se o CT está realmente usando a montagem de conexão (<code>pct config &lt;ctid&gt; | grep ^mp</code>). Dentro do CT, execute <code>touch /mnt/data/test-$(date +%s)</code> — se isso falhar com a permissão negada, a montagem pode estar em um sistema de arquivos host que não honra ACLs (algumas montagens mais antigas de <code>ext3</code> ou <code>vfat</code>). Mova o diretório compartilhado para um ext4 / xfs / btrfs / zfs de suporte.",
     "aclTitle": "Comandos ACL silenciosamente indisponíveis",
     "aclBody": "Em uma instalação Proxmox mínima <code>setfacl</code> / <code>getfacl</code> podem não estar instalados. O script cai de volta graciosamente (<code>command -v setfacl</code> check) e aplica apenas permissões POSIX — que é muitas vezes suficiente, mas novos arquivos não herdarão automaticamente o perfil permissivo. Instale <code>acl</code> com <code>apt-get install -y acl</code> e execute novamente o script no diretório."
   },
@@ -91,7 +91,7 @@
       {
         "href": "/docs/storage-share/lxc-mount-points",
         "label": "Gerenciador de montagem LXC",
-        "tail": " — a etapa natural seguinte: ligar esta pasta num ou mais recipientes."
+        "tail": " — a etapa natural seguinte: vincular esta pasta em um ou mais contêineres."
       },
       {
         "href": "/docs/storage-share/host-local-disk",

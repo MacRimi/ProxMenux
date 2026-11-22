@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Instalar uma imagem fora do catálogo | ProxMenux",
-    "description": "Adapte uma imagem OCI a partir de um ficheiro Compose, de um URL, de um comando docker run ou de uma referência de imagem e reveja o que o ProxMenux consegue reproduzir antes de a instalar."
+    "description": "Adapte uma imagem OCI a partir de um arquivo Compose, de um URL, de um comando docker run ou de uma referência de imagem e reveja o que o ProxMenux consegue reproduzir antes de a instalar."
   },
   "header": {
     "title": "Instalar uma imagem fora do catálogo",
-    "description": "A sua imagem é adaptada a partir do ficheiro Compose, de um comando docker run ou apenas da referência. O resultado é apresentado para revisão antes de criar qualquer LXC.",
+    "description": "Sua imagem é adaptada a partir do arquivo Compose, de um comando docker run ou apenas da referência. O resultado é apresentado para revisão antes de criar qualquer LXC.",
     "section": "OCI manager Apps"
   },
   "sections": [
@@ -23,7 +23,7 @@
     {
       "id": "sources",
       "title": "Como é descrita a imagem",
-      "intro": "O primeiro ecrã pergunta como é descrita a imagem. Quatro opções recebem uma definição a adaptar, uma quinta utiliza apenas o nome da imagem e outras três leem um oci-compose já escrito.",
+      "intro": "A primeira tela pergunta como é descrita a imagem. Quatro opções recebem uma definição a adaptar, uma quinta utiliza apenas o nome da imagem e outras três leem um oci-compose já escrito.",
       "blocks": [
         {
           "table": {
@@ -33,24 +33,24 @@
             ],
             "rows": [
               [
-                "Colar o ficheiro Compose no terminal",
+                "Colar o arquivo Compose no terminal",
                 "Cole o conteúdo YAML no terminal e termine com Ctrl+D."
               ],
               [
-                "Ler o ficheiro Compose deste host",
-                "Um caminho no nó, <code>/root/docker-compose.yml</code> por predefinição. O ficheiro tem de existir e não ultrapassar 256 KiB."
+                "Ler o arquivo Compose deste host",
+                "Um caminho no nó, <code>/root/docker-compose.yml</code> por padrão. O arquivo tem de existir e não ultrapassar 256 KiB."
               ],
               [
-                "Descarregar o ficheiro Compose de um endereço",
-                "Um endereço <code>http://</code> ou <code>https://</code> que disponibilize o YAML em bruto. São descarregados no máximo 256 KiB."
+                "Baixar o arquivo Compose de um endereço",
+                "Um endereço <code>http://</code> ou <code>https://</code> que disponibilize o YAML em bruto. São baixados no máximo 256 KiB."
               ],
               [
                 "Colar o comando docker run no terminal",
-                "O comando publicado pelo projeto. São adaptadas as portas, o ambiente, os volumes, os dispositivos, as capabilities, o utilizador, a memória partilhada e as restantes opções suportadas."
+                "O comando publicado pelo projeto. São adaptadas as portas, o ambiente, os volumes, os dispositivos, as capabilities, o usuário, a memória compartilhada e as restantes opções suportadas."
               ],
               [
-                "Apenas a referência da imagem, sem ficheiro Compose",
-                "Uma referência como <code>ghcr.io/user/application:latest</code>. O registo é consultado e os metadados OCI da imagem são preservados."
+                "Apenas a referência da imagem, sem arquivo Compose",
+                "Uma referência como <code>ghcr.io/user/application:latest</code>. O registro é consultado e os metadados OCI da imagem são preservados."
               ],
               [
                 "Colar um oci-compose no terminal",
@@ -58,11 +58,11 @@
               ],
               [
                 "Ler um oci-compose deste host",
-                "Um ficheiro JSON no nó, <code>/root/oci-compose.json</code> por predefinição, com um máximo de 2 MiB."
+                "Um arquivo JSON no nó, <code>/root/oci-compose.json</code> por padrão, com um máximo de 2 MiB."
               ],
               [
-                "Descarregar um oci-compose de um endereço",
-                "Um endereço <code>http://</code> ou <code>https://</code> que disponibilize o ficheiro JSON. São descarregados no máximo 2 MiB."
+                "Baixar um oci-compose de um endereço",
+                "Um endereço <code>http://</code> ou <code>https://</code> que disponibilize o arquivo JSON. São baixados no máximo 2 MiB."
               ]
             ]
           }
@@ -79,7 +79,7 @@
     {
       "id": "reference-only",
       "title": "O que fornece apenas a referência da imagem",
-      "intro": "A imagem contém os metadados do seu processo, mas não todo o ambiente que um ficheiro Compose costuma acrescentar.",
+      "intro": "A imagem contém os metadados do seu processo, mas não todo o ambiente que um arquivo Compose costuma acrescentar.",
       "blocks": [
         {
           "table": {
@@ -96,7 +96,7 @@
               ],
               [
                 "Volumes declarados pela imagem",
-                "Diretórios do host indicados apenas no ficheiro Compose",
+                "Diretórios do host indicados apenas no arquivo Compose",
                 "Os caminhos adicionais são acrescentados antes da instalação"
               ],
               [
@@ -105,7 +105,7 @@
                 "São confirmados a porta e o método de verificação do serviço"
               ],
               [
-                "Arquiteturas e digest no registo",
+                "Arquiteturas e digest no registro",
                 "Dispositivos, privilégios ou dependências externas",
                 "Não são ativados sem uma definição que os solicite"
               ]
@@ -127,12 +127,12 @@
                 "body": "São lidos os serviços, a imagem, as portas, os caminhos, o ambiente, os dispositivos, a segurança e a verificação de estado."
               },
               {
-                "title": "Consultar o registo",
-                "body": "A imagem tem de existir no registo e são apresentadas as arquiteturas publicadas. Um registo privado é consultado com a conta guardada para ele."
+                "title": "Consultar o registro",
+                "body": "A imagem tem de existir no registro e são apresentadas as arquiteturas publicadas. Um registro privado é consultado com a conta salva para ele."
               },
               {
                 "title": "Listar o que não é aplicado",
-                "body": "São listados os labels, as redes Docker, as definições Swarm e outras chaves sem efeito num LXC."
+                "body": "São listados os labels, as redes Docker, as configurações Swarm e outras chaves sem efeito em um LXC."
               },
               {
                 "title": "Bloquear opções sem equivalente seguro",
@@ -140,7 +140,7 @@
               },
               {
                 "title": "Pedir segredos",
-                "body": "As variáveis cujo nome indica uma palavra-passe, token ou chave são pedidas como dados sensíveis durante a instalação."
+                "body": "As variáveis cujo nome indica uma senha, token ou chave são pedidas como dados sensíveis durante a instalação."
               }
             ]
           }
@@ -148,12 +148,12 @@
         {
           "figure": {
             "src": "/oci-manager/custom-review.png",
-            "alt": "Resumo da interpretação do ficheiro Compose pelo ProxMenux",
+            "alt": "Resumo da interpretação do arquivo Compose pelo ProxMenux",
             "caption": "Resumo apresentado antes de o instalador perguntar o VMID e os recursos."
           }
         },
         {
-          "p": "Após aceitar o resumo, segue-se o mesmo assistente do catálogo: nome, modo predefinido ou avançado, VMID, CPU, memória, rede, arranque com o nó, caminhos persistentes e adicionais, dispositivos compatíveis e resumo final."
+          "p": "Após aceitar o resumo, segue-se o mesmo assistente do catálogo: nome, modo padrão ou avançado, VMID, CPU, memória, rede, inicialização com o nó, caminhos persistentes e adicionais, dispositivos compatíveis e resumo final."
         }
       ]
     },
@@ -180,44 +180,44 @@
     {
       "id": "oci-compose",
       "title": "Um oci-compose escrito à mão",
-      "intro": "Um oci-compose é o ficheiro JSON a partir do qual se instala uma aplicação. O catálogo guarda um por aplicação. O mesmo formato pode ser escrito à mão e instalado com esta opção.",
+      "intro": "Um oci-compose é o arquivo JSON a partir do qual se instala uma aplicação. O catálogo mantém um por aplicação. O mesmo formato pode ser escrito à mão e instalado com esta opção.",
       "blocks": [
         {
-          "p": "Num ficheiro escrito à mão, o autor define a imagem, as portas, as variáveis, os volumes e as perguntas da instalação. O ProxMenux completa o resto ao ler o ficheiro. O formato permite expressar o que o Compose não prevê: o texto de uma pergunta, uma palavra-passe gerada durante a instalação, um perfil de GPU, o proprietário de cada volume, a verificação do primeiro arranque ou as credenciais apresentadas no fim."
+          "p": "Em um arquivo escrito à mão, o autor define a imagem, as portas, as variáveis, os volumes e as perguntas da instalação. O ProxMenux completa o resto ao ler o arquivo. O formato permite expressar o que o Compose não prevê: o texto de uma pergunta, uma senha gerada durante a instalação, um perfil de GPU, o proprietário de cada volume, a verificação da primeira inicialização ou as credenciais apresentadas no fim."
         },
         {
           "steps": {
             "items": [
               {
                 "title": "Verificar",
-                "body": "Os ficheiros com erros não são instalados. Cada erro indica o campo afetado; se o JSON for inválido, são indicadas a linha e a coluna."
+                "body": "Os arquivos com erros não são instalados. Cada erro indica o campo afetado; se o JSON for inválido, são indicadas a linha e a coluna."
               },
               {
                 "title": "Rever",
-                "body": "Um ficheiro válido apresenta o que instala: imagem, endereço web, portas, caminhos persistentes, variáveis pedidas pelo instalador e ficheiros que serão escritos."
+                "body": "Um arquivo válido apresenta o que instala: imagem, endereço web, portas, caminhos persistentes, variáveis pedidas pelo instalador e arquivos que serão escritos."
               },
               {
                 "title": "Instalar",
-                "body": "A instalação segue o mesmo processo das aplicações do catálogo, com definições predefinidas ou avançadas."
+                "body": "A instalação segue o mesmo processo das aplicações do catálogo, com configurações padrão ou avançadas."
               }
             ]
           }
         },
         {
           "calloutWarning": {
-            "title": "Um ficheiro que define os privilégios",
-            "body": "Um oci-compose determina o que é montado no contentor e com que privilégios. A revisão mostra-o antes da instalação: instale apenas ficheiros de fontes de confiança."
+            "title": "Um arquivo que define os privilégios",
+            "body": "Um oci-compose determina o que é montado no contêiner e com que privilégios. A revisão mostra-o antes da instalação: instale apenas arquivos de fontes de confiança."
           }
         },
         {
-          "p": "O <readmeLink>README do motor OCI</readmeLink> descreve o formato bloco a bloco, com dois exemplos completos. O registo de uma instalação também pode ser lido desta forma: apenas é utilizado o modelo original, sem nenhuma das respostas dessa instalação."
+          "p": "O <readmeLink>README do motor OCI</readmeLink> descreve o formato bloco a bloco, com dois exemplos completos. O registro de uma instalação também pode ser lido desta forma: apenas é utilizado o modelo original, sem nenhuma das respostas dessa instalação."
         }
       ]
     },
     {
       "id": "compose-stacks",
-      "title": "Ficheiros Compose com vários serviços",
-      "intro": "Um ficheiro Compose com vários serviços é instalado como uma pilha: um LXC nativo por serviço, unidos por uma ponte privada e iniciados pela ordem das suas dependências. <stacksLink>Aplicações com vários contentores</stacksLink> descreve como uma pilha é criada, verificada e atualizada. Esta secção trata do que o ficheiro Compose decide.",
+      "title": "Arquivos Compose com vários serviços",
+      "intro": "Um arquivo Compose com vários serviços é instalado como uma pilha: um LXC nativo por serviço, unidos por uma ponte privada e iniciados pela ordem das suas dependências. <stacksLink>Aplicações com vários contêineres</stacksLink> descreve como uma pilha é criada, verificada e atualizada. Esta seção trata do que o arquivo Compose decide.",
       "blocks": [
         {
           "table": {
@@ -229,18 +229,18 @@
             "rows": [
               [
                 "Principal",
-                "O indicado em <code>x-casaos.main</code>. Sem ele, o primeiro serviço que publique uma porta ou, não havendo, o primeiro do ficheiro.",
-                "A sua porta web publicada responde por HTTP, ou o seu próprio <code>healthcheck</code> passa. Precisa de uma porta TCP publicada."
+                "O indicado em <code>x-casaos.main</code>. Sem ele, o primeiro serviço que publique uma porta ou, não havendo, o primeiro do arquivo.",
+                "Sua porta web publicada responde por HTTP, ou seu próprio <code>healthcheck</code> passa. Precisa de uma porta TCP publicada."
               ],
               [
                 "Base de dados ou cache",
-                "A sua imagem é PostgreSQL, MariaDB, MongoDB, Redis, Valkey ou Meilisearch.",
-                "A verificação que o ProxMenux tem para esse servidor, como <code>pg_isready</code>, a menos que o serviço declare o seu próprio <code>healthcheck</code>."
+                "Sua imagem é PostgreSQL, MariaDB, MongoDB, Redis, Valkey ou Meilisearch.",
+                "A verificação que o ProxMenux tem para esse servidor, como <code>pg_isready</code>, a menos que o serviço declare seu próprio <code>healthcheck</code>."
               ],
               [
                 "Worker",
                 "Qualquer outro serviço que se mantém em execução.",
-                "O seu próprio <code>healthcheck</code>. Sem ele, HTTP na porta que publica, TCP numa porta que apenas lista em <code>expose</code> ou, não havendo, apenas que o LXC esteja em execução."
+                "Seu próprio <code>healthcheck</code>. Sem ele, HTTP na porta que publica, TCP em uma porta que apenas lista em <code>expose</code> ou, não havendo, apenas que o LXC esteja em execução."
               ],
               [
                 "Tarefa de execução única",
@@ -253,7 +253,7 @@
         {
           "list": {
             "items": [
-              "Um <code>healthcheck</code> corre dentro do LXC do seu serviço, como <code>CMD</code> ou <code>CMD-SHELL</code>. Uma verificação <code>CMD-SHELL</code> não pode usar variáveis como <code>$PORT</code>, porque não corre com o ambiente da aplicação: o valor tem de ser escrito.",
+              "Um <code>healthcheck</code> roda dentro do LXC do seu serviço, como <code>CMD</code> ou <code>CMD-SHELL</code>. Uma verificação <code>CMD-SHELL</code> não pode usar variáveis como <code>$PORT</code>, porque não roda com o ambiente da aplicação: o valor tem de ser escrito.",
               "<code>interval</code>, <code>timeout</code>, <code>start_period</code> e <code>retries</code> definem quanto tempo se espera pela verificação, no máximo 3600 segundos no total.",
               "Um serviço que outro aguarda com <code>condition: service_healthy</code> precisa de um <code>healthcheck</code> próprio, a menos que seja uma base de dados ou uma cache da tabela."
             ]
@@ -265,9 +265,9 @@
         {
           "list": {
             "items": [
-              "O seu <code>restart</code> tem de ser <code>no</code> ou estar ausente. O serviço principal, e um serviço que outros aguardam com <code>service_healthy</code>, não podem ser tarefas.",
-              "Corre antes dos serviços que a aguardam. Uma execução bem-sucedida fica registada e os arranques seguintes só a repetem quando a sua imagem ou a sua configuração mudam (ambiente, montagens, dispositivos). Uma alteração de CPU, memória ou tamanho do disco não a repete.",
-              "O Proxmox não a inicia no arranque e o watchdog não a vigia."
+              "Seu <code>restart</code> tem de ser <code>no</code> ou estar ausente. O serviço principal, e um serviço que outros aguardam com <code>service_healthy</code>, não podem ser tarefas.",
+              "Roda antes dos serviços que a aguardam. Uma execução bem-sucedida fica registrada e as inicializações seguintes só a repetem quando sua imagem ou sua configuração mudam (ambiente, montagens, dispositivos). Uma alteração de CPU, memória ou tamanho do disco não a repete.",
+              "O Proxmox não a inicia na inicialização e o watchdog não a vigia."
             ]
           }
         },
@@ -280,7 +280,7 @@
           }
         },
         {
-          "p": "As aplicações leem muitas vezes o seu endereço público de uma variável como <code>APP_PUBLIC_URL</code>, e dentro de uma pilha <code>localhost</code> é o LXC do próprio serviço. Uma variável com <code>PUBLIC</code> ou <code>EXTERNAL</code> entre as palavras do seu nome, terminada em <code>_URL</code>, <code>_URI</code> ou <code>_ORIGIN</code>, cujo valor aponte para <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> ou <code>::1</code>, é reescrita com o endereço na LAN do serviço que publica essa porta, com a porta do seu contentor. Esse serviço precisa de um endereço estático."
+          "p": "As aplicações leem muitas vezes seu endereço público de uma variável como <code>APP_PUBLIC_URL</code>, e dentro de uma pilha <code>localhost</code> é o LXC do próprio serviço. Uma variável com <code>PUBLIC</code> ou <code>EXTERNAL</code> entre as palavras do seu nome, terminada em <code>_URL</code>, <code>_URI</code> ou <code>_ORIGIN</code>, cujo valor aponte para <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> ou <code>::1</code>, é reescrita com o endereço na LAN do serviço que publica essa porta, com a porta do seu contêiner. Esse serviço precisa de um endereço estático."
         },
         {
           "code": {
@@ -312,7 +312,7 @@
               ],
               [
                 "<strong>URL de verificação de serviço inválido</strong>",
-                "O URL está mal formado ou a sua porta não é válida."
+                "O URL está mal formado ou sua porta não é válida."
               ]
             ]
           }
@@ -321,60 +321,60 @@
     },
     {
       "id": "private-registries",
-      "title": "Imagens em registos privados",
-      "intro": "Uma imagem num registo privado, como um pacote privado do GitHub ou um repositório privado do Docker Hub, é consultada com uma conta guardada no ProxMenux.",
+      "title": "Imagens em registros privados",
+      "intro": "Uma imagem em um registro privado, como um pacote privado do GitHub ou um repositório privado do Docker Hub, é consultada com uma conta salva no ProxMenux.",
       "blocks": [
         {
           "steps": {
             "items": [
               {
-                "title": "O registo recusa o acesso à imagem",
-                "body": "Quando o registo indica que a imagem requer uma conta, a revisão propõe iniciar sessão nesse registo e consulta novamente a imagem."
+                "title": "O registro recusa o acesso à imagem",
+                "body": "Quando o registro indica que a imagem requer uma conta, a revisão propõe fazer login nesse registro e consulta novamente a imagem."
               },
               {
-                "title": "Iniciar sessão",
-                "body": "Um utilizador e uma palavra-passe ou token com permissão para descarregar a imagem. O registo verifica-os e só são guardados se forem aceites."
+                "title": "Fazer login",
+                "body": "Um usuário e uma senha ou token com permissão para baixar a imagem. O registro verifica-os e só são salvos se forem aceitos."
               },
               {
                 "title": "Instalar e manter atualizado",
-                "body": "A conta é utilizada para descarregar a imagem na instalação e também nas atualizações, em Modificar, Recriar, no watchdog e na verificação de atualizações do Monitor, em qualquer nó do cluster."
+                "body": "A conta é utilizada para baixar a imagem na instalação e também nas atualizações, em Modificar, Recriar, no watchdog e na verificação de atualizações do Monitor, em qualquer nó do cluster."
               }
             ]
           }
         },
         {
-          "p": "<strong>Contas de registos</strong>, no menu principal do OCI manager Apps, apresenta as contas guardadas por registo e utilizador, nunca os seus segredos. Cada conta permite verificar, descarregar ou instalar uma imagem, atualizar as credenciais ou removê-las."
+          "p": "<strong>Contas de registros</strong>, no menu principal do OCI manager Apps, apresenta as contas salvas por registro e usuário, nunca seus segredos. Cada conta permite verificar, baixar ou instalar uma imagem, atualizar as credenciais ou removê-las."
         },
         {
           "list": {
             "items": [
-              "GitHub (<code>ghcr.io</code>): o utilizador é a conta GitHub e a palavra-passe é um token de acesso pessoal com a permissão <code>read:packages</code>.",
-              "Docker Hub (<code>docker.io</code>): o utilizador é a conta Docker Hub e a palavra-passe é um token de acesso com permissão de leitura.",
-              "Outros registos, incluindo os que usam uma porta própria como <code>registry.example.com:5000</code>: o utilizador e a palavra-passe ou token fornecidos por esse registo."
+              "GitHub (<code>ghcr.io</code>): o usuário é a conta GitHub e a senha é um token de acesso pessoal com a permissão <code>read:packages</code>.",
+              "Docker Hub (<code>docker.io</code>): o usuário é a conta Docker Hub e a senha é um token de acesso com permissão de leitura.",
+              "Outros registros, incluindo os que usam uma porta própria como <code>registry.example.com:5000</code>: o usuário e a senha ou token fornecidos por esse registro."
             ]
           }
         },
         {
           "calloutInfo": {
-            "title": "Onde são guardadas as contas",
-            "body": "Em <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, legível apenas por root, na mesma pasta onde o Proxmox guarda as palavras-passe de armazenamento. <code>/etc/pve</code> é partilhado por todos os nós do cluster, pelo que uma conta adicionada num nó é utilizada em todos. A cópia do host inclui o ficheiro e a desinstalação do ProxMenux remove-o de todos os nós."
+            "title": "Onde são salvas as contas",
+            "body": "Em <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, legível apenas por root, na mesma pasta onde o Proxmox mantém as senhas de armazenamento. <code>/etc/pve</code> é compartilhado por todos os nós do cluster, pelo que uma conta adicionada em um nó é utilizada em todos. A cópia do host inclui o arquivo e a desinstalação do ProxMenux remove-o de todos os nós."
           }
         }
       ]
     },
     {
       "id": "limits",
-      "title": "Definições que não são instaladas",
+      "title": "Configurações que não são instaladas",
       "blocks": [
         {
           "list": {
             "items": [
-              "Um Dockerfile sem imagem publicada: primeiro é necessário construir a imagem e publicá-la num registo OCI.",
-              "Um ficheiro Compose com vários serviços é instalado como se descreve em <sectionLink>Ficheiros Compose com vários serviços</sectionLink>, exceto quando declara mais de uma rede, uma rede externa, opções nos volumes de nível superior, dependências opcionais (<code>required: false</code>) ou serviços que dependem do principal.",
-              "Numa pilha, um serviço que use <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> ou <code>extra_hosts</code> é marcado com «precisa de revisão da pilha», e a pilha não é instalada.",
+              "Um Dockerfile sem imagem publicada: primeiro é necessário construir a imagem e publicá-la em um registro OCI.",
+              "Um arquivo Compose com vários serviços é instalado como se descreve em <sectionLink>Arquivos Compose com vários serviços</sectionLink>, exceto quando declara mais de uma rede, uma rede externa, opções nos volumes de nível superior, dependências opcionais (<code>required: false</code>) ou serviços que dependem do principal.",
+              "Em uma pilha, um serviço que use <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> ou <code>extra_hosts</code> é marcado com «precisa de revisão da pilha», e a pilha não é instalada.",
               "<code>configs</code>, segredos externos ou formatos de dispositivo que não possam ser adaptados sem ambiguidade.",
               "Substituições de shell como <code>$(command)</code>: é necessário escrever diretamente o valor resultante.",
-              "Opções <code>docker run</code> não reconhecidas e <code>--env-file</code>: utilize antes um ficheiro Compose com valores explícitos."
+              "Opções <code>docker run</code> não reconhecidas e <code>--env-file</code>: utilize antes um arquivo Compose com valores explícitos."
             ]
           }
         }

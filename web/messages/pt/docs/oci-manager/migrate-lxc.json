@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "title": "Migrar um serviço LXC para o OCI manager Apps | ProxMenux",
+    "description": "Como migrar um serviço que roda em um LXC existente, criado por um instalador do Community Scripts ou configurado manualmente, para um aplicativo do OCI manager Apps, com instruções para um agente."
+  },
+  "header": {
+    "title": "Migrar um serviço LXC para o OCI manager Apps",
+    "description": "Não existe uma ferramenta de conversão: o mesmo aplicativo é instalado a partir do catálogo OCI e os dados do LXC antigo são levados para ele. O LXC antigo fica parado até que se confirme que o novo aplicativo funciona.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "what",
+      "title": "O que significa migrar um serviço",
+      "blocks": [
+        {
+          "p": "Um serviço instalado em um LXC por um instalador do Community Scripts, ou configurado manualmente, executa o aplicativo a partir de pacotes ou binários dentro de um sistema de uso geral. Um aplicativo do OCI manager Apps executa a imagem que o projeto publica, como um LXC nativo, com seus dados em volumes do contêiner ou em diretórios do host. Um modelo não se converte no outro: migrar um serviço significa instalar o mesmo aplicativo a partir do catálogo OCI e levar para ele a configuração e os dados do serviço antigo."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "LXC antigo",
+                "detail": "com backup\nparado, não excluído"
+              },
+              {
+                "label": "Dados",
+                "detail": "configuração, banco de dados\nbibliotecas e arquivos"
+              },
+              {
+                "label": "Aplicativo OCI",
+                "detail": "novo LXC\nnovo VMID e novo endereço"
+              }
+            ],
+            "caption": "O LXC antigo é mantido até que se confirme que o novo aplicativo funciona."
+          }
+        },
+        {
+          "p": "O aplicativo precisa existir no catálogo. A aba <strong>Catálogo</strong> do ProxMenux Monitor marca suas entradas com o selo <strong>OCI</strong>, e o menu do OCI manager Apps no ProxMenux as lista por categoria. Um aplicativo que não está no catálogo pode ser instalado a partir da sua imagem ou do seu arquivo Compose (<customLink>Imagem fora do catálogo</customLink>), ou sugerido para o catálogo (<contributeLink>Instalar uma aplicação e contribuir para o catálogo</contributeLink>)."
+        },
+        {
+          "p": "Quando o LXC antigo executa o aplicativo com Docker, seus volumes já seguem a estrutura da imagem: cada volume ou diretório montado do Docker corresponde a um caminho do aplicativo OCI. Uma instalação a partir de pacotes guarda seus arquivos em outros lugares, e cada diretório precisa do seu lugar na nova estrutura."
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Antes de mudar qualquer coisa",
+      "intro": "Além do backup, nada nesta etapa altera o serviço antigo.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Faça backup do LXC antigo",
+                "body": "Faça um backup do LXC antigo pelo Proxmox VE, no painel de backup dele ou com <code>vzdump</code>, e confira se a tarefa termina sem erros. Esse backup é o caminho de volta se a migração falhar. Um diretório do host montado no LXC não faz parte dele: seus dados precisam de um backup do próprio armazenamento."
+              },
+              {
+                "title": "Encontre os dados e a versão",
+                "body": "<code>pct config</code> do LXC antigo mostra seus discos, pontos de montagem, dispositivos e se ele é privilegiado. Dentro dele, o serviço guarda configuração, banco de dados e arquivos nos caminhos que seu instalador ou sua documentação indicam, muitas vezes em <code>/etc</code>, <code>/opt</code> ou <code>/var/lib</code>. Anote a versão instalada do aplicativo, o tamanho e o dono de cada caminho, suas portas e como ele é acessado: endereço, nome DNS, proxy reverso e outros aplicativos que o usam."
+              },
+              {
+                "title": "Compare com o aplicativo OCI",
+                "body": "A ficha do aplicativo na aba <strong>Catálogo</strong> mostra sua <strong>Imagem</strong> e, em <strong>Armazenamento</strong>, cada caminho que o aplicativo usa dentro do seu contêiner, como <code>/config</code> ou <code>/data</code>, com o lugar onde ele pode ficar: um volume do contêiner, um diretório do host ou qualquer um dos dois. A documentação da imagem explica o que cada caminho contém."
+              },
+              {
+                "title": "Confira versões e banco de dados",
+                "body": "A instalação usa a versão que a imagem publica naquele momento, normalmente a mais recente; depois de instalada, a aba Aplicativo do ProxMenux Monitor a mostra. A nova versão não pode ser mais antiga que a do LXC antigo: os aplicativos migram seus dados para a frente, raramente para trás. Um aplicativo com vários contêineres instala o mecanismo de banco de dados e a versão da sua entrada no catálogo: a ficha mostra a imagem de cada contêiner em <strong>Contêineres criados</strong>. O banco de dados antigo precisa usar o mesmo mecanismo."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Quando não começar",
+            "body": "Não haver um aplicativo adequado no catálogo, uma imagem mais antiga que a versão instalada ou um mecanismo de banco de dados diferente são motivos para não começar a migração. O LXC antigo continua funcionando como está."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Onde os dados ficam no novo aplicativo",
+      "intro": "Cada caminho do aplicativo OCI fica em um volume do contêiner ou em um diretório do host. Caminhos com o estado do aplicativo, como sua configuração, ficam em um volume do contêiner. Caminhos com conteúdo do usuário, como mídia, fotos, downloads ou backups, podem ficar em qualquer um dos dois, e os dois modos de instalação perguntam onde.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "",
+              "Volume do contêiner",
+              "Diretório do host"
+            ],
+            "rows": [
+              [
+                "Backup do Proxmox VE",
+                "Incluído",
+                "Não incluído: precisa de um backup do próprio armazenamento"
+              ],
+              [
+                "Ao remover o aplicativo",
+                "Excluído com o aplicativo",
+                "Mantido, com seu conteúdo"
+              ],
+              [
+                "Indicado para",
+                "Configuração, bancos de dados e dados de tamanho moderado",
+                "Bibliotecas grandes que já estão no host, um dataset ou um compartilhamento de rede; dados usados por vários aplicativos"
+              ],
+              [
+                "Dados do LXC antigo",
+                "Copiados para o volume",
+                "O diretório que o LXC antigo montava pode ser informado como diretório do host do novo aplicativo, sem copiá-lo"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Um diretório do host montado pelo LXC antigo aparece em <code>pct config</code> como uma linha <code>mpN</code> com um caminho do host. Informar esse mesmo caminho ao novo aplicativo reaproveita os dados onde eles estão. Um diretório existente mantém seus donos e seu conteúdo: a instalação não os altera."
+        },
+        {
+          "p": "Aplicativos que salvam caminhos absolutos no banco de dados, como servidores de mídia ou gerenciadores de fotos, continuam encontrando seus arquivos quando a biblioteca é montada no mesmo caminho dentro do novo contêiner. <strong>Instalar com configurações avançadas</strong> adiciona caminhos extras no caminho do contêiner que você escolher, e depois <strong>Modificar</strong> → <strong>Caminhos</strong> adiciona caminhos ou, com <strong>Alterar o diretório do host</strong>, aponta um caminho em diretório do host para outro diretório do host. <storageLink>Dados, caminhos e rede</storageLink> descreve os dois locais."
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Instale o aplicativo OCI",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Instale pela aba <strong>Catálogo</strong> do ProxMenux Monitor, com <strong>Instalar</strong> ou <strong>Instalação avançada</strong>, ou pelo menu do OCI manager Apps, com <strong>Instalar com as configurações padrão</strong> ou <strong>Instalar com configurações avançadas</strong>. Os dois caminhos executam as mesmas etapas. A instalação avançada é a indicada quando é preciso escolher o VMID, o armazenamento de cada caminho, caminhos extras ou dispositivos.",
+              "O novo aplicativo é um novo LXC, com VMID, endereço MAC e endereço próprios, por DHCP ou fixo. Ele não assume o endereço do LXC antigo: um endereço fixo em uso pelo LXC antigo só é atribuído ao novo aplicativo depois que o LXC antigo for removido, em <strong>Modificar</strong> → <strong>Rede</strong> em um aplicativo de contêiner único.",
+              "Os dispositivos que o LXC antigo usava, como uma GPU, um Coral ou um adaptador Zigbee, são repassados de novo quando o perfil do aplicativo os oferece: os perfis de aceleração aparecem durante a instalação, e os dispositivos opcionais na instalação avançada. <strong>Modificar</strong> → <strong>Dispositivos</strong> os adiciona depois. <hardwareLink>Dispositivos e aceleração</hardwareLink> lista os perfis.",
+              "A instalação inicia o aplicativo e verifica se ele responde, de modo que o aplicativo cria sua configuração inicial. Essa primeira inicialização também deixa arquivos com o dono com que o aplicativo grava.",
+              "Se o LXC antigo inicia junto com o nó, <code>pct set OLD_ID --onboot 0</code> desativa isso, para que uma reinicialização do host não inicie os dois serviços."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "move",
+      "title": "Mova os dados",
+      "intro": "Com os dois contêineres parados, os arquivos deles são acessados pelo host Proxmox. <code>pct mount</code> monta o sistema de arquivos de um contêiner parado, com seus volumes e diretórios do host, em <code>/var/lib/lxc/VMID/rootfs</code>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Pare o serviço antigo",
+                "body": "Se o serviço tem um servidor de banco de dados, pare primeiro o aplicativo dentro do LXC antigo e gere um dump do banco de dados com a ferramenta do seu mecanismo, como <code>pg_dump</code> para PostgreSQL ou <code>mariadb-dump</code> para MariaDB. Depois desligue o LXC antigo."
+              },
+              {
+                "title": "Pare o novo aplicativo",
+                "body": "Desligue-o pelo Proxmox VE, pelo ProxMenux Monitor ou com <code>pct shutdown</code>; a vigilância não reinicia um aplicativo parado dessa forma. Em um aplicativo com vários contêineres, pare só o contêiner do aplicativo: o banco de dados continua em execução para receber a importação."
+              },
+              {
+                "title": "Monte e copie",
+                "body": "Execute <code>pct mount</code> nos dois VMIDs e copie a configuração e os dados do serviço antigo para os caminhos correspondentes do novo aplicativo com <code>cp -a</code>, que preserva permissões, links e datas. A documentação do projeto diz quais arquivos passam de uma instalação a partir de pacotes para sua imagem e se alguma configuração faz referência a caminhos antigos."
+              },
+              {
+                "title": "Defina o dono dos arquivos",
+                "body": "Em um contêiner sem privilégios, cada UID do contêiner passa a ser, no host, 100000 mais esse UID: o usuário 1000 do contêiner é 101000 no host. Dê aos arquivos copiados o dono com que o novo aplicativo grava, o que a primeira inicialização dele deixou nos seus arquivos, com <code>chown -R</code> no host. O LXC antigo pode ter usado outro usuário, ou ter sido privilegiado, com os UIDs do próprio host."
+              },
+              {
+                "title": "Desmonte",
+                "body": "Execute <code>pct unmount</code> nos dois VMIDs antes de iniciar qualquer coisa."
+              }
+            ]
+          }
+        },
+        {
+          "shell": {
+            "code": "pct shutdown OLD_ID\npct shutdown NEW_ID\npct mount OLD_ID\npct mount NEW_ID\nstat -c '%u:%g %n' /var/lib/lxc/NEW_ID/rootfs/config/*\ncp -a /var/lib/lxc/OLD_ID/rootfs/var/lib/app/. /var/lib/lxc/NEW_ID/rootfs/config/\nchown -R 101000:101000 /var/lib/lxc/NEW_ID/rootfs/config\npct unmount NEW_ID\npct unmount OLD_ID"
+          }
+        },
+        {
+          "p": "No exemplo, <code>/var/lib/app</code> representa o diretório de dados do serviço antigo, <code>/config</code> o caminho do novo aplicativo e <code>101000:101000</code> o dono que <code>stat</code> mostra nos arquivos da primeira inicialização dele. Cada aplicativo tem seus próprios caminhos e seu próprio dono."
+        },
+        {
+          "calloutInfo": {
+            "title": "Um diretório do host que mantém seus donos",
+            "body": "Um diretório do host reaproveitado do LXC antigo tem os donos que aquele LXC lhe deu. Se o novo aplicativo grava com outro UID, <code>chown -R</code> define o novo dono. Se os arquivos precisam manter o dono no host, porque o host ou outros contêineres os usam, <strong>Mapeamento de usuários do ponto de montagem (idmap)</strong>, na instalação avançada ou em Modificar, faz o usuário do aplicativo corresponder a esse dono sem alterar os arquivos. A opção é oferecida para aplicativos de contêiner único sem privilégios, em diretórios do host em ext4, XFS, Btrfs ou ZFS (OpenZFS 2.2 ou mais recente) sem outras montagens dentro deles, quando o Proxmox VE oferece suporte. Imagens que leem <code>PUID</code> e <code>PGID</code> executam o aplicativo com o UID e o GID dessas variáveis, que a instalação avançada permite alterar."
+          }
+        }
+      ]
+    },
+    {
+      "id": "database",
+      "title": "Aplicativos com banco de dados",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Um aplicativo que guarda o banco de dados em um arquivo, como o SQLite, o leva junto com o restante dos seus arquivos.",
+              "Em um aplicativo com vários contêineres, o banco de dados é um contêiner próprio na rede privada do aplicativo. O dump é importado dentro desse contêiner, com <code>pct exec</code> e o cliente do seu mecanismo, enquanto o contêiner do aplicativo está parado.",
+              "O novo aplicativo criou as próprias tabelas na primeira inicialização. O procedimento de backup e restauração do projeto diz se o dump vai para um banco de dados vazio e quais opções ele exige.",
+              "Um dump passa entre versões do mesmo mecanismo quando a nova versão é igual ou mais recente. Copiar os arquivos de dados de um servidor de banco de dados só funciona com o mesmo mecanismo e a mesma versão principal, com os dois servidores parados.",
+              "Na inicialização seguinte, o aplicativo executa as migrações da sua versão sobre os dados importados. A aba Logs do ProxMenux Monitor mostra a saída do console enquanto elas rodam."
+            ]
+          }
+        },
+        {
+          "p": "<stacksLink>Aplicativos com vários contêineres</stacksLink> descreve como os membros de um stack iniciam e como se comunicam entre si."
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Inicie e confira",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Inicie o novo aplicativo. Um aplicativo com vários contêineres é iniciado pelo contêiner do aplicativo, e suas dependências iniciam antes.",
+              "Confira se ele responde no novo endereço, se os usuários do serviço antigo conseguem entrar e se os dados estão lá: bibliotecas, histórico e configurações. A aba Logs do ProxMenux Monitor mostra a saída do console do aplicativo.",
+              "Confira os dispositivos pelo próprio aplicativo: transcodificação por hardware, detecção em um Coral, o adaptador Zigbee.",
+              "Atualize o que acessava o endereço antigo: registros DNS, o proxy reverso, favoritos e outros aplicativos que usam o serviço, como um gerenciador de downloads que envia arquivos para um servidor de mídia.",
+              "Adicione o novo VMID, ou todos os VMIDs de um aplicativo com vários contêineres, às tarefas de backup do Proxmox VE que incluíam o LXC antigo. Uma tarefa para todos os guests já os inclui. Os diretórios do host continuam precisando de um backup próprio.",
+              "Use um backup como ponto de retorno, não um snapshot: enquanto existir um snapshot criado pelo usuário, uma atualização do aplicativo para antes de mudar qualquer coisa."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": "Remova o LXC antigo",
+      "blocks": [
+        {
+          "p": "Remova o LXC antigo só depois que o novo aplicativo funcionar por algum tempo com seus dados e seus usuários. Até lá, iniciar o LXC antigo de novo é o caminho de volta; pare antes o novo aplicativo, pois os dois podem usar os mesmos dispositivos e diretórios do host."
+        },
+        {
+          "list": {
+            "items": [
+              "O LXC antigo é um LXC comum e é removido pelo Proxmox VE. Seus diretórios do host não são excluídos com ele, e o novo aplicativo pode estar usando-os.",
+              "Salve por algum tempo o backup feito antes da migração. Exclua-o, junto com os backups mais antigos do LXC antigo, só quando não forem mais necessários.",
+              "Quando o LXC antigo não existir mais, seu endereço fixo pode ser atribuído a um aplicativo de contêiner único em <strong>Modificar</strong> → <strong>Rede</strong>.",
+              "Se o novo aplicativo for removido mais tarde, <strong>Gerenciar aplicativos OCI instalados</strong> → <strong>Remover</strong> exclui seus contêineres e volumes do contêiner e mantém seus diretórios do host com o conteúdo (<lifecycleLink>Instalar, atualizar e modificar</lifecycleLink>)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "brief",
+      "title": "Copie estas instruções para seu agente",
+      "blocks": [
+        {
+          "p": "Um agente com acesso ao host Proxmox pode migrar um serviço com estas instruções. Substitua os dados entre colchetes; o agente descobre o restante no host e pergunta antes de mudar qualquer coisa."
+        },
+        {
+          "agentPrompt": {
+            "title": "Migrar um serviço LXC para o OCI manager Apps",
+            "body": "Quero migrar um serviço que roda em um LXC existente no meu host Proxmox para um aplicativo do OCI manager Apps (ProxMenux). Não existe uma ferramenta de conversão: instale o mesmo aplicativo a partir do catálogo OCI e mova os dados dele. Trabalhe só com este serviço.\n\nServiço e VMID do LXC antigo: [SERVIÇO / VMID DO LXC ANTIGO]\nHost Proxmox: [HOST PROXMOX]\nOnde os dados devem ficar: [VOLUME DO CONTÊINER, DIRETÓRIO DO HOST OU NÃO SEI]\n\nSiga estas etapas:\n1. Inspecione primeiro apenas lendo. No host: `pct config` do LXC antigo, com discos, pontos de montagem, dispositivos, rede, opções de inicialização e se ele é privilegiado. Dentro dele: os serviços em execução, a versão instalada do aplicativo, os caminhos da configuração, do banco de dados e dos arquivos com tamanhos e donos, as portas em que ele escuta e como é acessado (endereço, nome DNS, proxy reverso, outros aplicativos que o usam). Não mude nada nesta etapa.\n2. Encontre o aplicativo correspondente no catálogo OCI do ProxMenux (aba Catálogo do ProxMenux Monitor ou menu do OCI manager Apps). Compare sua imagem e versão, seus caminhos e onde cada um pode ficar e, em um aplicativo com vários contêineres, o mecanismo de banco de dados e a versão dele com o que você encontrou. Pare e me informe se não houver um aplicativo adequado, se ele instalaria uma versão mais antiga que a atual ou se o banco de dados dele não puder receber os dados antigos.\n3. Faça backup do LXC antigo com vzdump e confirme que a tarefa terminou sem erros. Os diretórios do host montados nele não estão nesse backup; avise se eles salvam dados que serão alterados.\n4. Planeje a migração e mostre-a para mim antes de mudar qualquer coisa: o aplicativo e o modo de instalação, o lugar de cada caminho antigo na nova estrutura, volume do contêiner ou diretório do host para cada caminho, o armazenamento, a rede (bridge, DHCP ou endereço fixo), os dispositivos a repassar, as etapas do banco de dados, o tempo de indisponibilidade previsto e como voltar atrás.\n5. Depois da minha aprovação, instale o aplicativo com o OCI manager Apps, com Instalar com configurações avançadas quando for preciso escolher caminhos, caminhos extras ou dispositivos. Use um VMID novo; nunca reutilize o VMID nem o endereço fixo do LXC antigo enquanto o LXC antigo existir. Se o LXC antigo inicia junto com o nó, desative isso.\n6. Mova os dados: pare o serviço antigo e gere um dump do banco de dados com a ferramenta do seu mecanismo, se houver um; desligue o LXC antigo e o contêiner do novo aplicativo; copie os arquivos com `pct mount`, preservando as permissões; defina como dono o usuário com que o novo aplicativo grava (em um contêiner sem privilégios, UID do host = 100000 + UID do contêiner) ou use Mapeamento de usuários do ponto de montagem (idmap) onde se aplicar; depois, `pct unmount`. Importe o dump no banco de dados do novo aplicativo, com o mesmo mecanismo, seguindo o procedimento de restauração do projeto.\n7. Inicie o novo aplicativo e verifique-o: ele responde no seu endereço, os usuários existentes conseguem entrar, os dados estão presentes, os logs não mostram erros e os dispositivos funcionam. Relate o que você observou, não o que espera.\n8. Diga o que eu preciso atualizar: registros DNS, proxy reverso, favoritos, outros aplicativos que apontam para o endereço antigo e as tarefas de backup que agora precisam incluir o novo VMID ou os novos VMIDs.\n9. Deixe o LXC antigo parado, não excluído. Pergunte antes de remover o LXC, qualquer backup ou qualquer dado.\n\nNunca exponha um serviço à internet, altere regras de firewall ou exclua dados sem me perguntar antes. Não coloque senhas, tokens ou outros segredos nos seus relatórios. Termine com o novo endereço, o que foi movido e para onde, as verificações feitas e seus resultados, e as etapas que ficam comigo."
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "Um serviço de cada vez",
+            "body": "Cada migração tem seu próprio backup, suas próprias verificações e seu próprio caminho de volta. Migrar os serviços um por um limita uma falha a um só deles."
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Páginas relacionadas",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Dados, caminhos e rede",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "volumes do contêiner, diretórios do host, donos e endereços."
+              },
+              {
+                "label": "Aplicativos com vários contêineres",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "aplicativo, banco de dados e cache como LXCs coordenados."
+              },
+              {
+                "label": "Dispositivos e aceleração",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, Coral, dispositivos USB e seriais."
+              },
+              {
+                "label": "Instalar, atualizar e modificar",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "Modificar, backups, restauração e remoção."
+              },
+              {
+                "label": "Instalar uma aplicação e contribuir para o catálogo",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "quando o aplicativo ainda não está no catálogo."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

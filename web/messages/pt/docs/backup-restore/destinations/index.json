@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Destinos das cópias de segurança — arquivo local, Proxmox Backup Server e Borg | ProxMenux",
+    "title": "Destinos dos backups — arquivo local, Proxmox Backup Server e Borg | ProxMenux",
     "description": "Três backends de armazenamento recebem a mesma carga útil de backup ProxMenux: um arquivo .tar.zst local em qualquer sistema de arquivos com permissão de gravação, um backup PBS em uma datastore Proxmox Backup Server, ou um arquivo Borg em um repositório Borg local ou remoto. Cada infra-estrutura tem suas próprias características de compressão, desduplicação, criptografia e rede.",
     "ogTitle": "Destinos de backup do ProxMenux",
     "ogDescription": "Local, Proxmox Backup Server e Borg — três backends de armazenamento para a mesma carga útil de backup do host.",
@@ -10,7 +10,7 @@
   "header": {
     "title": "Destinos",
     "description": "Três backends de armazenamento suportados pelo ProxMenux Backup: arquivo local, Proxmox Backup Server (recomendado) e Borg. Cada um recebe o mesmo arquivo de três blocos de dados; eles diferem em formato de armazenamento, deduplicação, modelo de criptografia e requisitos de rede.",
-    "section": "Cópias de segurança e restauro"
+    "section": "Backups e restauração"
   },
   "intro": {
     "title": "Mesmo conteúdo, três backends",
@@ -22,7 +22,7 @@
     "rows": [
       {
         "feature": "Formato de armazenamento",
-        "local": "Um ficheiro <code>.tar.zst</code> (ou <code>.tar.gz</code> se o <code>zstd</code> estiver ausente).",
+        "local": "Um arquivo <code>.tar.zst</code> (ou <code>.tar.gz</code> se o <code>zstd</code> estiver ausente).",
         "pbs": "Backup PBS (blocos <code>.pxar</code> no datastore).",
         "borg": "Arquivo Borg dentro de um repositório Borg (arquivos de segmentos)."
       },
@@ -54,7 +54,7 @@
         "feature": "Rede",
         "local": "Nenhuma. Escreve para um ponto de montagem local (tipicamente um disco interno ou uma unidade USB).",
         "pbs": "TCP para o servidor PBS (porta padrão 8007). Requer credenciais PBS + impressão digital.",
-        "borg": "Localização local do sistema de ficheiros ou túnel SSH para uma máquina Borg remota."
+        "borg": "Localização local do sistema de arquivos ou túnel SSH para uma máquina Borg remota."
       },
       {
         "feature": "Dependências",
@@ -76,7 +76,7 @@
   },
   "sameArchive": {
     "heading": "A disposição do arquivo não muda com o destino",
-    "body": "Onde quer que o backup esteja guardado, contém sempre os mesmos três blocos descritos em <em>Como funciona</em>: o sistema de ficheiros (<code>rootfs/</code>), os metadados (<code>metadata/</code>) e o manifesto (<code>manifest.json</code>). Extrair um arquivo local <code>.tar.zst</code>, restaurar um <code>.pxar</code> a partir do PBS ou extrair um arquivo Borg produzem sempre uma árvore de diretórios idêntica. Por isso, o restauro lê sempre os mesmos ficheiros, seja qual for o destino de onde vem o backup."
+    "body": "Onde quer que o backup esteja salvo, contém sempre os mesmos três blocos descritos em <em>Como funciona</em>: o sistema de arquivos (<code>rootfs/</code>), os metadados (<code>metadata/</code>) e o manifesto (<code>manifest.json</code>). Extrair um arquivo local <code>.tar.zst</code>, restaurar um <code>.pxar</code> a partir do PBS ou extrair um arquivo Borg produzem sempre uma árvore de diretórios idêntica. Por isso, a restauração lê sempre os mesmos arquivos, seja qual for o destino de onde vem o backup."
   },
   "extractStandalone": {
     "heading": "Extraindo um backup fora de ProxMenux",

@@ -13,8 +13,8 @@
     "section": "Ajuda e informações"
   },
   "intro": {
-    "title": "IOMMU deve estar activado em BIOS / UEFI",
-    "body": "Ative primeiro IOMMU no firmware: procure <em>VT-d</em>, <em>AMD-Vi</em> ou <em>IOMMU</em> na BIOS/UEFI. No Linux, está ativo por predefinição em AMD e em Intel com kernels Proxmox 6.8 ou posteriores. Os kernels Intel anteriores podem precisar de <code>intel_iommu=on</code>. A opção <code>iommu=pt</code> controla o modo passthrough de IOMMU e não justifica desativar indiscriminadamente o framebuffer do anfitrião."
+    "title": "IOMMU deve estar ativado em BIOS / UEFI",
+    "body": "Ative primeiro IOMMU no firmware: procure <em>VT-d</em>, <em>AMD-Vi</em> ou <em>IOMMU</em> na BIOS/UEFI. No Linux, está ativo por padrão em AMD e em Intel com kernels Proxmox 6.8 ou posteriores. Os kernels Intel anteriores podem precisar de <code>intel_iommu=on</code>. A opção <code>iommu=pt</code> controla o modo passthrough de IOMMU e não justifica desativar indiscriminadamente o framebuffer do host."
   },
   "commandGroups": [
     {
@@ -59,7 +59,7 @@
         },
         {
           "command": "cat /etc/modules",
-          "description": "Mostrar os módulos carregados na hora de arranque"
+          "description": "Mostrar os módulos carregados na hora de inicialização"
         },
         {
           "command": "lsmod | grep vfio",
@@ -80,7 +80,7 @@
         },
         {
           "command": "dmesg | grep -i iommu",
-          "description": "Verificar as mensagens IOMMU no registo do kernel"
+          "description": "Verificar as mensagens IOMMU no registro do kernel"
         },
         {
           "command": "dmesg | grep -e DMAR -e IOMMU",
@@ -105,7 +105,7 @@
         },
         {
           "command": "cat /proc/cmdline",
-          "description": "Mostrar os parâmetros de arranque do kernel actuais"
+          "description": "Mostrar os parâmetros de inicialização do kernel actuais"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "command": "cat /etc/pve/qemu-server/<vmid>.conf",
-          "description": "Ver o ficheiro de configuração VM"
+          "description": "Ver o arquivo de configuração VM"
         },
         {
           "command": "qm set <vmid> -machine q35",
@@ -137,7 +137,7 @@
   ],
   "afterChangesTip": {
     "title": "Após alterar as configurações GRUB ou modprobe",
-    "bodyRich": "Em anfitriões com GRUB, aplique os parâmetros de arranque com <code>update-grub</code>. Atualize os módulos com <code>update-initramfs -u -k all</code> e reinicie. Outros gestores de arranque requerem o seu próprio procedimento. Verifique <code>cat /proc/cmdline</code> (parâmetros do kernel), <code>dmesg | grep -i iommu</code> (IOMMU inicializado) e <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (grupos presentes)."
+    "bodyRich": "Em hosts com GRUB, aplique os parâmetros de inicialização com <code>update-grub</code>. Atualize os módulos com <code>update-initramfs -u -k all</code> e reinicie. Outros gerenciadores de inicialização requerem seu próprio procedimento. Verifique <code>cat /proc/cmdline</code> (parâmetros do kernel), <code>dmesg | grep -i iommu</code> (IOMMU inicializado) e <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (grupos presentes)."
   },
   "related": {
     "heading": "Relacionado",
@@ -150,7 +150,7 @@
       {
         "href": "/docs/hardware/igpu-acceleration-lxc",
         "label": "Adicionar GPU ao LXC",
-        "tail": " — partilhar o acesso aos dispositivos GPU do anfitrião com um contentor LXC."
+        "tail": " — compartilhar o acesso aos dispositivos GPU do host com um contêiner LXC."
       },
       {
         "href": "/docs/help-info",

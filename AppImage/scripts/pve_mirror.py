@@ -385,6 +385,83 @@ def cluster_resources_storage():
         return None
 
 
+def _online_members(members):
+    """PVE::Cluster::get_members: a single host counts as its own online member."""
+    nodelist = members.get('nodelist')
+    if not nodelist or members['nodename'] not in nodelist:
+        return {members['nodename']: True}
+    return {name: isinstance(entry, dict) and bool(entry.get('online'))
+            for name, entry in nodelist.items()}
+
+
+def cluster_resources_node():
+    """`pvesh get /cluster/resources --type node` without cgroup-mode."""
+    if not available():
+        return None
+    members = read_members()
+    rrd = read_rrd()
+    if members is None or rrd is None:
+        return None
+    online = _online_members(members)
+    try:
+        _known_rrd_prefixes(rrd)
+        resources = []
+        for node in node_names(members):
+            entry = {'id': f'node/{node}', 'node': node, 'type': 'node', 'status': 'unknown'}
+            key = rrd_key(rrd, 'node', node)
+            if key is not None:
+                values = rrd[key]
+                if online.get(node):
+                    entry['uptime'] = perl_number(_field(values, 0))
+                    entry['cpu'] = perl_number(_field(values, 5))
+                    entry['mem'] = perl_number(_field(values, 8))
+                    entry['disk'] = perl_number(_field(values, 12))
+                    entry['level'] = _field(values, 1)
+                    entry['status'] = 'online'
+                entry['maxcpu'] = perl_number(_field(values, 4)) or 1
+                entry['maxmem'] = perl_number(_field(values, 7))
+                entry['maxdisk'] = perl_number(_field(values, 11))
+            if online.get(node) is False:
+                entry['status'] = 'offline'
+            resources.append(entry)
+        return resources
+    except (MirrorError, ValueError):
+        return None
+
+
+def cluster_status():
+    """`pvesh get /cluster/status` from `.members`, without the subscription level.
+
+    A single host is one local, online node with no cluster entry, as PVE
+    answers it.
+    """
+    if not available():
+        return None
+    data = read_json('.members')
+    members = read_members()
+    if data is None or members is None:
+        return None
+    nodename = members['nodename']
+    nodelist = members.get('nodelist')
+    if not nodelist or nodename not in nodelist:
+        return [{'type': 'node', 'id': f'node/{nodename}', 'name': nodename,
+                 'nodeid': 0, 'local': 1, 'online': 1}]
+    rows = []
+    cluster = data.get('cluster')
+    if isinstance(cluster, dict):
+        rows.append({'type': 'cluster', 'id': 'cluster', 'name': cluster.get('name'),
+                     'version': cluster.get('version'), 'nodes': cluster.get('nodes'),
+                     'quorate': cluster.get('quorate')})
+    for name, entry in nodelist.items():
+        if not isinstance(entry, dict):
+            return None
+        rows.append({'type': 'node', 'id': f'node/{name}', 'name': name,
+                     'nodeid': entry.get('id'), 'ip': entry.get('ip'),
+                     'online': 1 if entry.get('online') else 0,
+                     'local': 1 if name == nodename else 0})
+    return rows
+
+
 def cluster_nodes():
     """Other members of the cluster as (name, ip, online) from `.members`.
 

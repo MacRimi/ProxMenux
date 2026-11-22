@@ -2,7 +2,7 @@
   "meta": {
     "title": "Destino Borg — tipos de repositório, autenticação SSH, criptografia | ProxMenux",
     "description": "O destino Borg grava backups do host ProxMenux em um repositório local, em disco externo montado ou em servidor remoto via SSH. Descreve a busca pelo executável borg, as quatro opções iniciais de chave SSH, a criptografia repokey, os destinos salvos e a retenção por tarefa agendada.",
-    "ogTitle": "Cópia de segurança do ProxMenux — destino Borg",
+    "ogTitle": "Backup do ProxMenux — destino Borg",
     "ogDescription": "Como ProxMenux escreve backups de host para repositórios Borg, com estratégias de autenticação SSH e criptografia repokey.",
     "twitterTitle": "Destino de backup Borg | ProxMenux",
     "twitterDescription": "Repositórios Borg locais, USB e SSH para backups de host."
@@ -10,15 +10,15 @@
   "header": {
     "title": "Borg",
     "description": "O destino Borg escreve backups de host para um repositório Borg. Três tipos de repositório são suportados: caminho local do sistema de arquivos, disco externo montado, ou servidor remoto via SSH. Deduplicação de nível de chunk em todos os arquivos no repositório e criptografia opcional repokey.",
-    "section": "Cópias de segurança e restauro"
+    "section": "Backups e restauração"
   },
   "aboutBorg": {
     "heading": "O que é Borg",
-    "body": "Borg (também escrito BorgBackup) é uma ferramenta de backup de desduplicação de código aberto mantida pela comunidade Borg Backup. Ele armazena todos os arquivos como um conjunto de blocos de comprimento variável dentro de um repositório; blocos são compartilhados entre os arquivos, então fazer o backup de dados inalterados tem custo de armazenamento quase zero. Borg não está ligado ao Proxmox — é uma ferramenta de backup de propósito geral usada em muitos ambientes. ProxMenux usa-o como um dos três destinos para backups de host; cada mecanismo Borg-específico descrito nesta página (tipos de repositório, borg-serve sobre SSH, criptografia repokey, prune) é o comportamento padrão Borg."
+    "body": "Borg (também escrito BorgBackup) é uma ferramenta de backup de desduplicação de código aberto mantida pela comunidade Borg Backup. Ele armazena todos os arquivos como um conjunto de blocos de comprimento variável dentro de um repositório; blocos são compartilhados entre os arquivos, então fazer o backup de dados inalterados tem custo de armazenamento quase zero. Borg não está vinculado ao Proxmox — é uma ferramenta de backup de propósito geral usada em muitos ambientes. ProxMenux usa-o como um dos três destinos para backups de host; cada mecanismo Borg-específico descrito nesta página (tipos de repositório, borg-serve sobre SSH, criptografia repokey, prune) é o comportamento padrão Borg."
   },
   "intro": {
     "title": "Deduplicação por blocos com repositórios locais ou acessíveis via SSH",
-    "body": "Um repositório Borg armazena blocos compartilhados entre todos os seus arquivos de backup. Repetir o backup de um arquivo inalterado não transfere nem armazena novos dados. O ProxMenux usa <code>borg create</code> para o backup e <code>borg extract</code> para a restauração. O repositório pode estar no mesmo sistema de arquivos da origem, em disco externo montado ou em host remoto acessível via SSH."
+    "body": "Um repositório Borg armazena blocos compartilhados entre todos seus arquivos de backup. Repetir o backup de um arquivo inalterado não transfere nem armazena novos dados. O ProxMenux usa <code>borg create</code> para o backup e <code>borg extract</code> para a restauração. O repositório pode estar no mesmo sistema de arquivos da origem, em disco externo montado ou em host remoto acessível via SSH."
   },
   "binarySourcing": {
     "heading": "O binário borg",
@@ -41,7 +41,7 @@
       },
       {
         "priority": "4",
-        "source": "Transferência do GitHub",
+        "source": "Download do GitHub",
         "detail": "<code>wget</code> contra a URL <code>borg-linux64</code> fixada em <code>github.com/borgbackup/borg/releases/</code>, verificada contra uma constante SHA-256 em <code>lib_host_backup_common.sh</code> (<code>HB_BORG_LINUX64_SHA256</code>). No checksum descompasso o binário é descartado e o backup aborta. O arquivo baixado é armazenado em cache na dir estado para backups subsequentes usar caminho 2."
       }
     ]
@@ -64,7 +64,7 @@
         "type": "local",
         "url": "/backup/borgbackup",
         "urlNote": "any absolute path",
-        "detail": "O repositório vive numa pasta local. Significativo apenas quando o diretório alvo está em um disco físico separado — um repositório no mesmo disco que a fonte protege contra o erro do operador, mas não contra a falha do disco."
+        "detail": "O repositório vive em uma pasta local. Significativo apenas quando o diretório alvo está em um disco físico separado — um repositório no mesmo disco que a fonte protege contra o erro do operador, mas não contra a falha do disco."
       }
     ]
   },
@@ -75,7 +75,7 @@
     "hostChoicesBody": "Qualquer host Linux com acesso SSH se qualifica. Configuração comum:",
     "hostChoicesItems": [
       "Um NAS dedicado ou caixa de backup (Debian, Ubuntu, TrueNAS SCALE com uma shell).",
-      "Um recipiente LXC dentro de um nó Proxmox. Pegada pequena, isolada do hospedeiro a executar os backups.",
+      "Um contêiner LXC dentro de um nó Proxmox. Pegada pequena, isolada do host a executar os backups.",
       "Outro host Proxmox na mesma LAN, ou um VM em qualquer lugar acessível sobre SSH."
     ],
     "lxcWarningTitle": "LXC como servidor Borg",
@@ -154,11 +154,11 @@
         "content": "Frase secreta do destino identificado acima por NAME (<code>chmod 600</code>). Presente somente quando se escolhe criptografia repokey."
       }
     ],
-    "outro": "Salvar o destino é opcional. Recusar não grava a configuração com nome, mas não remove uma chave SSH gerada. Se repokey for ativado sem destino salvo, o ProxMenux ainda guarda a frase secreta no arquivo legado borg-pass.txt."
+    "outro": "Salvar o destino é opcional. Recusar não grava a configuração com nome, mas não remove uma chave SSH gerada. Se repokey for ativado sem destino salvo, o ProxMenux ainda salva a frase secreta no arquivo legado borg-pass.txt."
   },
   "encryption": {
     "heading": "Criptografia",
-    "body": "Os repositórios são inicializados com um modo de criptografia via <code>hb_borg_init_if_needed</code>: o moderno <code>borg repo-create -e MODE</code> quando disponível, ou o legado <code>borg init --encryption=MODE</code>. ProxMenux expõe dois modos: <code>repokey</code> (padrão) e <code>none</code>. No modo <code>repokey</code> Borg armazena a chave de criptografia dentro do próprio repositório; o acesso requer uma frase-passe, que ProxMenux pede duas vezes com validação de correspondência e armazena em <code>borg-pass-NAME.txt</code> para destinos salvos, ou no arquivo legado descrito acima. Uma janela de reconhecimento obrigatória é mostrada após a frase- senha ser salva: a frase- senha é a única maneira de acessar os arquivos criptografados, e perdê- la torna cada arquivo no repositório irrecuperável."
+    "body": "Os repositórios são inicializados com um modo de criptografia via <code>hb_borg_init_if_needed</code>: o moderno <code>borg repo-create -e MODE</code> quando disponível, ou o legado <code>borg init --encryption=MODE</code>. ProxMenux expõe dois modos: <code>repokey</code> (padrão) e <code>none</code>. No modo <code>repokey</code> Borg armazena a chave de criptografia dentro do próprio repositório; o acesso requer uma frase secreta, que ProxMenux pede duas vezes com validação de correspondência e armazena em <code>borg-pass-NAME.txt</code> para destinos salvos, ou no arquivo legado descrito acima. Uma janela de reconhecimento obrigatória é mostrada após a frase- senha ser salva: a frase- senha é a única maneira de acessar os arquivos criptografados, e perdê- la torna cada arquivo no repositório irrecuperável."
   },
   "runtimeEnv": {
     "heading": "Ambiente de execução",
@@ -167,7 +167,7 @@
       {
         "var": "BORG_RSH",
         "value": "ssh -i SSH_KEY_PATH -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new [-p PORT]",
-        "purpose": "Comando remoto usado pelo Borg para repositórios SSH. Uma chave selecionada acrescenta as opções de identidade. Quando um destino é adicionado com uma porta diferente da padrão, o ProxMenux acrescenta também -p PORT; os destinos guardados, as tarefas agendadas e o Monitor usam antes a porta do URL ssh://. Sem chave personalizada, e num destino novo com a porta padrão, a variável fica indefinida e o Borg usa a configuração SSH do host."
+        "purpose": "Comando remoto usado pelo Borg para repositórios SSH. Uma chave selecionada acrescenta as opções de identidade. Quando um destino é adicionado com uma porta diferente da padrão, o ProxMenux acrescenta também -p PORT; os destinos salvos, as tarefas agendadas e o Monitor usam antes a porta do URL ssh://. Sem chave personalizada, e em um destino novo com a porta padrão, a variável fica indefinida e o Borg usa a configuração SSH do host."
       },
       {
         "var": "BORG_PASSPHRASE",
@@ -208,7 +208,7 @@
       {
         "label": "Documentação Borg",
         "href": "https://borgbackup.readthedocs.io/",
-        "tail": " — ponto de entrada principal que abrange conceitos, implantação, arranque rápido e todos os comandos."
+        "tail": " — ponto de entrada principal que abrange conceitos, implantação, início rápido e todos os comandos."
       },
       {
         "label": "borg create",

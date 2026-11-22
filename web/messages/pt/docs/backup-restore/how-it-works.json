@@ -4,13 +4,13 @@
     "description": "Descrição detalhada do que um backup ProxMenux contém: os rootfs produzidos pelo rsync do perfil de caminho padrão, o manifesto estruturado construído por seis coletores independentes e o inventário de aplicativos que impulsiona a reinstalação automática de pacotes e componentes após uma restauração.",
     "ogTitle": "Como o backup ProxMenux funciona internamente",
     "ogDescription": "Os três blocos de um backup ProxMenux: rootfs, manifesto e aplicativos.",
-    "twitterTitle": "Como funcionam as cópias de segurança ProxMenux | ProxMenux",
+    "twitterTitle": "Como funcionam os backups ProxMenux | ProxMenux",
     "twitterDescription": "As três cargas de um backup ProxMenux e como a restauração reproduz o host fonte deles."
   },
   "header": {
     "title": "Como funciona",
     "description": "A estrutura interna de um backup ProxMenux — sistema de arquivos, manifesto e inventário de aplicativos — e como a restauração usa os três para reproduzir o host de origem em um destino que pode ter outro kernel.",
-    "section": "Cópias de segurança e restauro"
+    "section": "Backups e restauração"
   },
   "intro": {
     "title": "Um arquivo, três blocos",
@@ -24,7 +24,7 @@
   },
   "rootfs": {
     "heading": "A carga útil do rootfs",
-    "intro": "A árvore <code>rootfs/</code> é uma <strong>cópia simples do sistema de arquivos</strong> criada pelo <code>rsync</code> a partir do host de origem. Contém um <strong>perfil padrão</strong> de caminhos selecionados para restaurar o Proxmox e os <strong>caminhos personalizados</strong> adicionados à tarefa ou sessão interativa. A seleção é intencionalmente restrita a caminhos que <em>guardam configuração</em> ou <em>guardam um estado que o Proxmox não consegue recriar sozinho</em>.",
+    "intro": "A árvore <code>rootfs/</code> é uma <strong>cópia simples do sistema de arquivos</strong> criada pelo <code>rsync</code> a partir do host de origem. Contém um <strong>perfil padrão</strong> de caminhos selecionados para restaurar o Proxmox e os <strong>caminhos personalizados</strong> adicionados à tarefa ou sessão interativa. A seleção é intencionalmente restrita a caminhos que <em>salvam configuração</em> ou <em>salvam um estado que o Proxmox não consegue recriar sozinho</em>.",
     "defaultProfileTitle": "O perfil por omissão",
     "defaultProfileBody": "O perfil padrão é definido por <code>hb_default_profile_paths</code> em <code>lib_host_backup_common.sh</code>. Abrange oito categorias fixas e, quando necessário, o estado ZFS, que juntas descrevem um host Proxmox funcional:",
     "categoriesTitle": "Categorias de localização",
@@ -32,7 +32,7 @@
       {
         "category": "Núcleo PVE",
         "paths": "/etc/pve, /var/lib/pve-cluster, /etc/vzdump.conf",
-        "why": "Conteúdo do sistema de ficheiros de cluster e valores por omissão do vzdump. O banco de dados pmxcfs (<code>config.db</code>) é capturado como um instantâneo consistente via <code>sqlite3 .backup</code> sem parar o cluster, e os sidecars <code>.db-wal</code> / <code>.db-shm</code> são excluídos do rsync. Quando o <code>sqlite3</code> não está disponível, é criado <code>config.db.raw-fallback</code>, que a restauração usa automaticamente como banco de dados."
+        "why": "Conteúdo do sistema de arquivos de cluster e valores por omissão do vzdump. O banco de dados pmxcfs (<code>config.db</code>) é capturado como um instantâneo consistente via <code>sqlite3 .backup</code> sem parar o cluster, e os sidecars <code>.db-wal</code> / <code>.db-shm</code> são excluídos do rsync. Quando o <code>sqlite3</code> não está disponível, é criado <code>config.db.raw-fallback</code>, que a restauração usa automaticamente como banco de dados."
       },
       {
         "category": "Identidade do host e rede",
@@ -50,7 +50,7 @@
         "why": "Tokens IOMMU, lista negra do módulo, IDs do dispositivo VFIO, tabela de montagem, configuração da pilha de armazenamento."
       },
       {
-        "category": "Shell e definições regionais",
+        "category": "Shell e configurações regionais",
         "paths": "/etc/environment, /etc/bash.bashrc, /etc/inputrc, /etc/profile, /etc/profile.d, /etc/locale.gen, /etc/locale.conf",
         "why": "Configuração do shell, variáveis de ambiente, configuração de geração local."
       },
@@ -87,7 +87,7 @@
   "manifest": {
     "heading": "O bloco do manifesto",
     "intro": "<code>manifest.json</code> é um documento JSON estruturado que descreve o host de origem no momento do backup. É produzido por <strong>seis coletores independentes</strong> orquestrados por <code>build_manifest.sh</code>. Cada coletor é somente leitura, produz um fragmento JSON bem definido, e cai de volta para um padrão vazio seguro se falhar — o manifesto ainda é utilizável se uma seção estiver incompleta.",
-    "orchestratorCaption": "Os seis coletores compõem o manifesto. Cada colecionador corre em seu próprio subprocesso; uma falha em um cai de volta para um padrão seguro documentado e avisa, mas não aborta o backup.",
+    "orchestratorCaption": "Os seis coletores compõem o manifesto. Cada colecionador roda em seu próprio subprocesso; uma falha em um cai de volta para um padrão seguro documentado e avisa, mas não aborta o backup.",
     "collectorRows": [
       {
         "collector": "collect_source_host.sh",
@@ -97,7 +97,7 @@
       {
         "collector": "collect_hardware.sh",
         "produces": "hardware_inventory",
-        "content": "GPUs (com o mapeamento do instalador do fornecedor e ProxMenux), TPUs (Coral USB + M.2 com detecção de <code>lsusb</code>/<code>lspci</code>), NICs (com a associação MAC, slot PCI e ponte), dispositivos sem fio. As entradas GPU têm uma heurística <code>passthrough_eligible</code>."
+        "content": "GPUs (com o mapeamento do instalador do provedor e ProxMenux), TPUs (Coral USB + M.2 com detecção de <code>lsusb</code>/<code>lspci</code>), NICs (com a associação MAC, slot PCI e ponte), dispositivos sem fio. As entradas GPU têm uma heurística <code>passthrough_eligible</code>."
       },
       {
         "collector": "collect_storage.sh",
@@ -112,7 +112,7 @@
       {
         "collector": "collect_proxmenux_state.sh",
         "produces": "proxmenux_installed_components",
-        "content": "Lê <code>/usr/local/share/proxmenux/managed_installs.json</code> (registo de tudo que ProxMenux instalou) e <code>installed_tools.json</code>. Cada entrada mantém o caminho do instalador (<code>menu_script</code>) para que a restauração possa desencadear o mesmo fluxo de instalação."
+        "content": "Lê <code>/usr/local/share/proxmenux/managed_installs.json</code> (registro de tudo que ProxMenux instalou) e <code>installed_tools.json</code>. Cada entrada mantém o caminho do instalador (<code>menu_script</code>) para que a restauração possa desencadear o mesmo fluxo de instalação."
       },
       {
         "collector": "collect_guests.sh",
@@ -121,7 +121,7 @@
       }
     ],
     "schemaTitle": "Validação do esquema",
-    "schemaBody": "O ProxMenux inclui um modelo que descreve os campos que o manifesto deve conter e o formato de cada um. Quando é gerado um backup, o manifesto pode ser verificado automaticamente face a esse modelo, pelo que um coletor que tenha produzido JSON malformado ou um campo mal escrito é detetado de imediato. A verificação destina-se ao desenvolvimento do próprio ProxMenux: num sistema que não a tenha instalada, o backup funciona normalmente e o manifesto é gerado na mesma."
+    "schemaBody": "O ProxMenux inclui um modelo que descreve os campos que o manifesto deve conter e o formato de cada um. Quando é gerado um backup, o manifesto pode ser verificado automaticamente face a esse modelo, pelo que um coletor que tenha produzido JSON malformado ou um campo mal escrito é detectado de imediato. A verificação destina-se ao desenvolvimento do próprio ProxMenux: em um sistema que não a tenha instalada, o backup funciona normalmente e o manifesto é gerado na mesma."
   },
   "applications": {
     "heading": "O inventário de aplicativos",
@@ -136,7 +136,7 @@
       {
         "component": "nvidia_driver",
         "installer": "gpu_tpu/nvidia_installer.sh",
-        "action": "Lê-se <code>version</code> + <code>patched</code>. Transfere exatamente o mesmo arquivo de execução NVIDIA, constrói módulos DKMS contra o kernel do alvo, reaplica o patch ProxMenux se a fonte o tiver."
+        "action": "Lê-se <code>version</code> + <code>patched</code>. Baixa exatamente o mesmo arquivo de execução NVIDIA, constrói módulos DKMS contra o kernel do alvo, reaplica o patch ProxMenux se a fonte o tiver."
       },
       {
         "component": "coral_driver",
@@ -164,7 +164,7 @@
         "stage": "1",
         "name": "Verificação de compatibilidade",
         "reads": "manifest.json",
-        "action": "Corre <code>hb_compat_check</code>. Compara hardware fonte vs. alvo (NICs, IDs de armazenamento), versão PVE e versão principal do kernel. Define <code>HB_COMPAT_KERNEL_DIRECTION</code> (<code>same</code>, <code>bk_newer</code> ou <code>bk_older</code>) e povoa <code>RS_SKIP_PATHS</code> com exclusões de hardware-drift e cross-kernel."
+        "action": "Executa <code>hb_compat_check</code>. Compara hardware fonte vs. alvo (NICs, IDs de armazenamento), versão PVE e versão principal do kernel. Define <code>HB_COMPAT_KERNEL_DIRECTION</code> (<code>same</code>, <code>bk_newer</code> ou <code>bk_older</code>) e povoa <code>RS_SKIP_PATHS</code> com exclusões de hardware-drift e cross-kernel."
       },
       {
         "stage": "2",
@@ -192,7 +192,7 @@
       },
       {
         "stage": "5",
-        "name": "Após o arranque",
+        "name": "Após a inicialização",
         "reads": "rootfs (já aplicado) + components_status.json",
         "action": "Após reiniciar, <code>apply_pending_restore.sh</code> reproduz os caminhos diferidos e <code>apply_cluster_postboot.sh</code> executa <code>update-initramfs</code>, <code>update-grub</code> (ou <code>proxmox-boot-tool refresh</code>) e itera sobre <code>components_status.json</code> disparando o gancho <code>--auto-reinstall</code> de cada componente."
       }

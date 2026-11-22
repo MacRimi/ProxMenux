@@ -1,23 +1,23 @@
 {
   "meta": {
-    "title": "Cópia de segurança e reinício das interfaces | Documentação ProxMenux",
+    "title": "Backup e reinício das interfaces | Documentação ProxMenux",
     "description": "Snapshot manual, navegar e restaurar backups /etc/network/interfaces armazenados em /var/backups/proxmenux/. Inclui uma reinicialização do serviço de rede com confirmação e uma visão rápida da configuração ao vivo.",
-    "ogTitle": "Cópia de segurança e reinício das interfaces | Documentação ProxMenux",
+    "ogTitle": "Backup e reinício das interfaces | Documentação ProxMenux",
     "ogDescription": "Instantâneo e restauração da configuração de rede Proxmox; reinicie o serviço de rede com confirmação."
   },
   "header": {
-    "title": "Cópia de segurança e reinício das interfaces",
+    "title": "Backup e reinício das interfaces",
     "description": "Quatro utilitários que giram em torno de /etc/network/interfaces: tirar um instantâneo manual, visualizar a configuração ao vivo, restaurar um backup anterior com visualização opcional, e reiniciar o serviço de rede com consentimento explícito. Mesmo diretório de backup usado pelos fluxos de reparo guiados.",
     "section": "Rede"
   },
   "intro": {
     "title": "O que isto faz",
-    "body": "Gere o mesmo diretório de cópias de segurança usado pelas reparações guiadas (<code>/var/backups/proxmenux/</code>). Permite criar uma cópia extra antes de qualquer alteração manual, consultar todas as cópias existentes e repor qualquer uma delas — sempre com uma nova cópia do estado anterior ao restauro, criada automaticamente como segunda proteção."
+    "body": "Gerencia o mesmo diretório de backups usado pelas reparações guiadas (<code>/var/backups/proxmenux/</code>). Permite criar uma cópia extra antes de qualquer alteração manual, consultar todas as cópias existentes e restaurar qualquer uma delas — sempre com uma nova cópia do estado anterior à restauração, criada automaticamente como segunda proteção."
   },
   "shared": {
     "heading": "O diretório de backup compartilhado",
     "intro": "Cada backup feito em qualquer lugar no menu Rede chega no mesmo lugar:",
-    "outro": "Os nomes dos ficheiros contêm data e hora, são ordenados por data e nunca são substituídos. O diretório é criado na primeira utilização."
+    "outro": "Os nomes dos arquivos contêm data e hora, são ordenados por data e nunca são substituídos. O diretório é criado na primeira utilização."
   },
   "show": {
     "heading": "Mostrar arquivo de configuração de rede",
@@ -26,31 +26,31 @@
   "create": {
     "heading": "Criar backup de rede",
     "body": "Copia o <code>/etc/network/interfaces</code> atual para o diretório de backup com um timestamp fresco. É isso — sem análise, sem prompts, apenas um instantâneo.",
-    "whenTitle": "Quando criar uma cópia de segurança manual",
+    "whenTitle": "Quando criar um backup manual",
     "whenBody": "Antes de editar <code>/etc/network/interfaces</code> à mão, instalar um pacote que possa alterar a pilha de rede (por exemplo NetworkManager ou Open vSwitch) ou fazer qualquer alteração de hardware. As reparações guiadas já criam uma cópia automaticamente — esta opção serve para as operações <em>manuais</em>."
   },
   "restore": {
     "heading": "Restaurar backup de rede",
-    "intro": "Lista todas as cópias em <code>/var/backups/proxmenux/</code> da mais recente à mais antiga e guia um restauro com proteções:",
+    "intro": "Lista todas as cópias em <code>/var/backups/proxmenux/</code> da mais recente à mais antiga e guia uma restauração com proteções:",
     "steps": [
       {
-        "title": "1. Escolher uma cópia de segurança",
+        "title": "1. Escolher um backup",
         "body": "Um menu lista cada backup pelo seu timestamp. Se não existirem backups, o fluxo sai com uma mensagem clara.",
         "tone": "blue"
       },
       {
         "title": "2. Visualização opcional",
-        "body": "Propõe abrir a cópia selecionada numa vista com deslocamento antes de confirmar o restauro. A opção predefinida é Sim — não ignore este passo num host remoto.",
+        "body": "Propõe abrir a cópia selecionada em uma vista com deslocamento antes de confirmar a restauração. A opção padrão é Sim — não ignore este passo em um host remoto.",
         "tone": "blue"
       },
       {
-        "title": "3. Cópia de segurança antes do restauro",
+        "title": "3. Backup antes da restauração",
         "body": "Antes de sobrepor <code>/etc/network/interfaces</code>, toma <strong>outro</strong> backup do estado atual. Restaurar um backup é em si uma ação destrutiva, então o novo instantâneo pré-restore permite que você volte se o backup escolhido acabar sendo o errado.",
         "tone": "amber"
       },
       {
         "title": "4. Aplicar a restauração",
-        "body": "Substitui <code>/etc/network/interfaces</code> pela cópia selecionada. A alteração do ficheiro está no disco; o estado atual do kernel ainda reflete a configuração anterior.",
+        "body": "Substitui <code>/etc/network/interfaces</code> pela cópia selecionada. A alteração do arquivo está no disco; o estado atual do kernel ainda reflete a configuração anterior.",
         "tone": "amber"
       },
       {
@@ -59,12 +59,12 @@
         "tone": "emerald"
       }
     ],
-    "autoBackupTitle": "O restauro cria automaticamente a sua própria cópia de segurança",
-    "autoBackupBody": "Selecionar <em>Restaurar backup de rede</em> cria sempre uma nova cópia da configuração <em>atual</em> antes de a substituir. Se restaurar a cópia errada, o ficheiro mais recente em <code>/var/backups/proxmenux/</code> contém o estado anterior."
+    "autoBackupTitle": "A restauração cria automaticamente seu próprio backup",
+    "autoBackupBody": "Selecionar <em>Restaurar backup de rede</em> cria sempre uma nova cópia da configuração <em>atual</em> antes de a substituir. Se restaurar a cópia errada, o arquivo mais recente em <code>/var/backups/proxmenux/</code> contém o estado anterior."
   },
   "restart": {
     "heading": "Reinicie o serviço de rede",
-    "body": "Executa <code>systemctl restart networking</code> após uma confirmação sim/não. Relata o resultado com <code>msg_ok</code> / <code>msg_error</code>. A maioria dos fluxos neste menu oferece o seu próprio prompt de reinicialização no final; esta opção é para reiniciar após uma edição manual ou depois de recusar o reinício do fluxo antes.",
+    "body": "Executa <code>systemctl restart networking</code> após uma confirmação sim/não. Relata o resultado com <code>msg_ok</code> / <code>msg_error</code>. A maioria dos fluxos neste menu oferece seu próprio prompt de reinicialização no final; esta opção é para reiniciar após uma edição manual ou depois de recusar o reinício do fluxo antes.",
     "warnTitle": "Breve desconexão garantida; desconexão permanente possível",
     "warnBody": "Reiniciando <code>networking</code> derruba e reaplica cada interface declarada em <code>/etc/network/interfaces</code>. As sessões SSH hospedadas nessas interfaces caem. Se a nova configuração for inválida, a rede nunca voltará. Execute isto apenas quando:",
     "warnItems": [
@@ -74,18 +74,18 @@
     ]
   },
   "manualRollback": {
-    "heading": "Retroceder manualmente de uma consola",
-    "intro": "Se você não conseguir alcançar o menu (sem SSH, a janela está a falhar, ...) mas pode chegar a uma consola, o rollback são dois comandos:",
+    "heading": "Retroceder manualmente de um console",
+    "intro": "Se você não conseguir alcançar o menu (sem SSH, a janela está falhando, ...) mas pode chegar o um console, o rollback são dois comandos:",
     "outro": "É a <em>mesma</em> operação executada pelo menu, apenas escrita à mão. Se <code>networking</code> continuar sem iniciar, consulte <code>journalctl -u networking -b</code> para identificar o erro de sintaxe ou do controlador."
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",
     "noneTitle": "\"Nenhum backup encontrado\" na Restauração",
-    "noneBody": "O diretório <code>/var/backups/proxmenux/</code> não existe ou não contém ficheiros <code>interfaces_backup_*</code>. Execute <em>Criar backup de rede</em> pelo menos uma vez ou faça uma reparação guiada, que cria uma cópia automaticamente. Confirme com <code>ls /var/backups/proxmenux/</code>.",
+    "noneBody": "O diretório <code>/var/backups/proxmenux/</code> não existe ou não contém arquivos <code>interfaces_backup_*</code>. Execute <em>Criar backup de rede</em> pelo menos uma vez ou faça uma reparação guiada, que cria uma cópia automaticamente. Confirme com <code>ls /var/backups/proxmenux/</code>.",
     "unreachTitle": "Reiniciar a rede tem sucesso, mas a máquina ainda não está acessível",
-    "unreachBody": "A nova configuração está errada ou não atribui o seu IP de gestão. Reponha a configuração a partir da consola (ver acima). Depois use a <bridgeLink>análise de bridges</bridgeLink> e a <configLink>análise de configuração</configLink> para perceber o problema antes de voltar a aplicar.",
-    "emptyTitle": "A antevisão da restauração mostra um arquivo vazio",
-    "emptyBody": "O ficheiro de backup está vazio (0 bytes). Isto acontece se uma cópia falhar silenciosamente numa execução anterior. Escolha uma cópia mais antiga ou execute novamente <em>Criar backup de rede</em> agora, se a configuração atual funcionar."
+    "unreachBody": "A nova configuração está errada ou não atribui seu IP de gestão. Restaure a configuração a partir do console (ver acima). Depois use a <bridgeLink>análise de bridges</bridgeLink> e a <configLink>análise de configuração</configLink> para perceber o problema antes de voltar a aplicar.",
+    "emptyTitle": "A pré-visualização da restauração mostra um arquivo vazio",
+    "emptyBody": "O arquivo de backup está vazio (0 bytes). Isto acontece se uma cópia falhar silenciosamente em uma execução anterior. Escolha uma cópia mais antiga ou execute novamente <em>Criar backup de rede</em> agora, se a configuração atual funcionar."
   },
   "related": {
     "heading": "Relacionado",
@@ -103,7 +103,7 @@
       {
         "label": "Diagnósticos",
         "href": "/docs/network/diagnostics",
-        "tail": " — para verificar o estado atual após um restauro."
+        "tail": " — para verificar o estado atual após uma restauração."
       }
     ]
   }

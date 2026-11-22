@@ -11,7 +11,7 @@
     "section": "Armazenamento e Compartilhamento · LXC"
   },
   "privReq": {
-    "title": "Recipiente privilegiado necessário",
+    "title": "Contêiner privilegiado necessário",
     "body": "<code>nfs-kernel-server</code> precisa montar o sistema de arquivos do kernel <code>nfsd</code> em <code>/proc/fs/nfsd</code>. Isso exige <code>CAP_SYS_ADMIN</code> no espaço de nomes do kernel do host, não apenas no espaço de usuários do contêiner. LXC sem privilégios não têm essa capacidade: <code>rpc.nfsd: Unable to access /proc/fs/nfsd errno 2 (No such file or directory)</code>; o systemd indica falha de dependência em <code>nfs-server.service</code>. O script exige um CT com privilégios e <strong>interrompe a execução se o CT não tiver privilégios</strong>. Outra opção é executar o servidor NFS em uma VM."
   },
   "what": {
@@ -25,7 +25,7 @@
   },
   "shared": {
     "heading": "O grupo comum « sharedfiles »",
-    "body": "Antes de exportar a pasta, ProxMenux cria um grupo chamado <code>sharedfiles</code> com <strong>GID 101000</strong> dentro do recipiente, adiciona cada usuário regular para ele, em seguida, define o diretório de exportação para <code>root:sharedfiles</code> com modo <code>2775</code>. O <code>2</code> na frente é o bit SGID — cada arquivo ou pasta criado dentro automaticamente herda o grupo <code>sharedfiles</code>.",
+    "body": "Antes de exportar a pasta, ProxMenux cria um grupo chamado <code>sharedfiles</code> com <strong>GID 101000</strong> dentro do contêiner, adiciona cada usuário regular para ele, em seguida, define o diretório de exportação para <code>root:sharedfiles</code> com modo <code>2775</code>. O <code>2</code> na frente é o bit SGID — cada arquivo ou pasta criado dentro automaticamente herda o grupo <code>sharedfiles</code>.",
     "gidTitle": "Por que GID 101000 especificamente",
     "gidBody": "Com o mapeamento padrão de IDs do LXC (+100000), o GID 101000 do host aparece como GID <strong>1000</strong> em um CT sem privilégios. Este fluxo de servidor usa um CT <strong>com privilégios</strong>, sem deslocamento. Dois CTs com privilégios que usem <code>sharedfiles</code> com GID 101000 compartilham o mesmo ID numérico de grupo.",
     "remapTitle": "A criação legada de usuários «remap_*» é ignorada em CTs com privilégios",
@@ -45,7 +45,7 @@
     "heading": "Como o script é executado (Criar fluxo)"
   },
   "network": {
-    "heading": "Rede ACL — quem pode montar a partilha",
+    "heading": "Rede ACL — quem pode montar o compartilhamento",
     "intro": "<code>/etc/exports</code> define quais clientes podem montar a exportação. O diálogo oferece três modos:",
     "headerMode": "Modo",
     "headerValue": "Valor escrito em /etc/exports",
@@ -58,12 +58,12 @@
       },
       {
         "mode": "Sub- rede personalizada",
-        "value": "o seu CIDR (por ex. 10.0.0.0/24)",
+        "value": "seu CIDR (por ex. 10.0.0.0/24)",
         "when": "Quando sua LAN não está em 192.168.x.x ou você quer um escopo mais apertado."
       },
       {
         "mode": "Uma máquina",
-        "value": "o seu IP (por exemplo: 10.0.0.42)",
+        "value": "seu IP (por exemplo: 10.0.0.42)",
         "when": "Apenas uma máquina específica deve montar. Muito restritivo."
       }
     ]

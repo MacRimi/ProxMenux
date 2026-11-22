@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Avaliação e inventário | Auditoria e relatórios",
-    "description": "Avaliação de Auditoria e relatórios: perfis dos relatórios, classificação dos resultados, riscos aceites, fontes ilegíveis, Lynis e inventário do nó."
+    "description": "Avaliação de Auditoria e relatórios: perfis dos relatórios, classificação dos resultados, riscos aceitos, fontes ilegíveis, Lynis e inventário do nó."
   },
   "header": {
     "title": "Avaliação e inventário",
@@ -26,7 +26,7 @@
     {
       "id": "profiles",
       "title": "Perfis de relatórios",
-      "intro": "Cada perfil responde a uma pergunta diferente. Os controlos e secções são seleccionados antes da composição do documento.",
+      "intro": "Cada perfil responde a uma pergunta diferente. Os controles e seções são selecionados antes da composição do documento.",
       "blocks": [
         {
           "table": {
@@ -80,7 +80,7 @@
             "rows": [
               [
                 "Crítico",
-                "Uma condição falhada que tem prioridade."
+                "Uma condição malsucedida que tem prioridade."
               ],
               [
                 "Aviso",
@@ -100,7 +100,7 @@
               ],
               [
                 "Não aplicável",
-                "Não se aplica nada no âmbito do controlo."
+                "Não se aplica nada no âmbito do controle."
               ],
               [
                 "Risco aceite",
@@ -131,7 +131,7 @@
             "rows": [
               [
                 "Não verificado",
-                "A verificação mantém a sua identidade, indica nas evidências qual a fonte que falhou e não transforma dados em falta num resultado conforme."
+                "A verificação mantém sua identidade, indica nas evidências qual a fonte que falhou e não transforma dados ausentes em um resultado conforme."
               ],
               [
                 "Evidência incompleta",
@@ -151,7 +151,7 @@
       "title": "Lynis",
       "blocks": [
         {
-          "p": "A revisão de segurança utiliza o relatório Lynis do anfitrião. Se Lynis nunca foi executado ou o relatório ultrapassa a antiguidade permitida pela política, um diálogo oferece <strong>Executar com Lynis</strong>, que demora alguns minutos mais, ou <strong>Executar sem Lynis</strong>, que utiliza o relatório existente."
+          "p": "A revisão de segurança utiliza o relatório Lynis do host. Se Lynis nunca foi executado ou o relatório ultrapassa a antiguidade permitida pela política, um diálogo oferece <strong>Executar com Lynis</strong>, que demora alguns minutos mais, ou <strong>Executar sem Lynis</strong>, que utiliza o relatório existente."
         }
       ]
     },
@@ -160,7 +160,7 @@
       "title": "Aceitar um risco",
       "blocks": [
         {
-          "p": "<strong>Aceitar risco</strong> regista uma decisão sobre uma conclusão. A justificação é obrigatória e é guardada com o autor e a data."
+          "p": "<strong>Aceitar risco</strong> registra uma decisão sobre uma conclusão. A justificação é obrigatória e é salva com o autor e a data."
         },
         {
           "table": {
@@ -199,7 +199,7 @@
               "Identidade, versão Proxmox VE, kernel, assinatura e cluster.",
               "CPU, memória, placa, BIOS, controladores e IOMMU.",
               "Discos, SMART, horas de energia e eventos gravados.",
-              "Adaptadores, bonds, bridges, latência e ligações.",
+              "Adaptadores, bonds, bridges, latência e conexões.",
               "Armazenamento, hóspedes com seus discos e interfaces e backups.",
               "A passagem PCI e o software ProxMenux gerenciam."
             ]

@@ -628,7 +628,9 @@ async function cleanup() {
       void send("Browser.close", {}, null).catch(() => browser.kill())
     }
     await browserClosed
-    await fs.promises.rm(profile, { recursive: true, force: true, maxRetries: 5 })
+    // Helper processes can outlive the browser for a moment; a temporary
+    // profile left behind does not fail the check.
+    await fs.promises.rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => {})
   } finally {
     clearTimeout(forceClose)
   }

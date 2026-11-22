@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "O que é, em um parágrafo",
-    "body": "Uma cópia do ProxMenux guarda o estado completo de um host Proxmox: <strong>o sistema de ficheiros</strong>, com os diretórios relevantes em <code>/etc</code>, <code>/root</code> e <code>/var/lib/pve-cluster</code> e os caminhos personalizados opcionais; <strong>um manifesto estruturado</strong> em JSON com o hardware detetado, parâmetros do kernel, configuração de rede, estado do ZFS, utilizadores e entradas cron; e <strong>um inventário de aplicações</strong>, com os pacotes que o APT marca como instalados manualmente e os componentes instalados pelo ProxMenux, incluindo as versões exatas. Os três destinos suportados — arquivo local, Proxmox Backup Server (recomendado) e Borg — recebem o mesmo conteúdo autónomo. Qualquer um permite reconstruir o host de destino sem que o host de origem tenha de estar acessível durante o restauro."
+    "body": "Uma cópia do ProxMenux armazena o estado completo de um host Proxmox: <strong>o sistema de arquivos</strong>, com os diretórios relevantes em <code>/etc</code>, <code>/root</code> e <code>/var/lib/pve-cluster</code> e os caminhos personalizados opcionais; <strong>um manifesto estruturado</strong> em JSON com o hardware detectado, parâmetros do kernel, configuração de rede, estado do ZFS, usuários e entradas cron; e <strong>um inventário de aplicações</strong>, com os pacotes que o APT marca como instalados manualmente e os componentes instalados pelo ProxMenux, incluindo as versões exatas. Os três destinos suportados — arquivo local, Proxmox Backup Server (recomendado) e Borg — recebem o mesmo conteúdo autônomo. Qualquer um permite reconstruir o host de destino sem que o host de origem tenha de estar acessível durante a restauração."
   },
   "video": {
     "heading": "Vídeo passo a passo",
@@ -24,18 +24,18 @@
   },
   "whatItIsNot": {
     "heading": "O que não é",
-    "intro": "Esta secção abrange a cópia de segurança e o restauro <strong>do host</strong>: a instalação do Proxmox, não as aplicações e os sistemas convidados que nela são executados.",
+    "intro": "Esta seção abrange o backup e a restauração <strong>do host</strong>: a instalação do Proxmox, não as aplicações e os sistemas convidados que nela são executados.",
     "items": [
-      "<strong>Não é uma ferramenta de backup de VM/CT.</strong> Esta funcionalidade não guarda os discos nem o estado da RAM dos sistemas convidados; essa é a função do <code>vzdump</code>. Os <strong>ficheiros de configuração</strong> dos convidados (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> e <code>lxc/*.conf</code>) <strong>são</strong> guardados. Após o restauro, o inventário reaparece e os discos podem ser restaurados ou associados a partir de um backup existente no PBS ou em armazenamento local.",
-      "<strong>Não é uma operação sobre todo o cluster.</strong> Cada nó cria a sua própria cópia. A pertença ao cluster é guardada em <code>/etc/pve</code> para permitir reintegrar um nó restaurado, mas recuperar todo o cluster exige coordenar o restauro dos vários nós.",
-      "<strong>Não é uma imagem completa do disco.</strong> Os binários do kernel, o initramfs e a partição de arranque não são guardados. Durante o restauro, o ProxMenux utiliza os ficheiros de arranque do host de destino, regenerados automaticamente por <code>update-initramfs</code> e pela ferramenta do gestor de arranque, e instala os controladores adequados ao kernel em execução no destino."
+      "<strong>Não é uma ferramenta de backup de VM/CT.</strong> Esta funcionalidade não armazena os discos nem o estado da RAM dos sistemas convidados; essa é a função do <code>vzdump</code>. Os <strong>arquivos de configuração</strong> dos convidados (<code>/etc/pve/nodes/&lt;node&gt;/qemu-server/*.conf</code> e <code>lxc/*.conf</code>) <strong>são</strong> salvos. Após a restauração, o inventário reaparece e os discos podem ser restaurados ou associados a partir de um backup existente no PBS ou em armazenamento local.",
+      "<strong>Não é uma operação sobre todo o cluster.</strong> Cada nó cria sua própria cópia. A pertença ao cluster é salva em <code>/etc/pve</code> para permitir reintegrar um nó restaurado, mas recuperar todo o cluster exige coordenar a restauração dos vários nós.",
+      "<strong>Não é uma imagem completa do disco.</strong> Os binários do kernel, o initramfs e a partição de inicialização não são salvos. Durante a restauração, o ProxMenux utiliza os arquivos de inicialização do host de destino, regenerados automaticamente por <code>update-initramfs</code> e pela ferramenta do gerenciador de inicialização, e instala os controladores adequados ao kernel em execução no destino."
     ]
   },
   "threePillars": {
     "heading": "Os três pilares de um backup",
     "intro": "Um arquivo ProxMenux é estruturado em torno de três cargas independentes. A restauração usa as três em conjunto para reproduzir o host de origem em um destino que pode nem ter o mesmo kernel instalado.",
     "diagramCaption": "Cada backup envia as mesmas três cargas, independentemente do destino. A restauração consome todos os três: rootfs para estabelecer arquivos, manifesto para detectar desvios e diferenças entre kernels e inventário de aplicativos para reinstalar pacotes e componentes no próprio kernel do destino.",
-    "pillar1Label": "Sistema de ficheiros",
+    "pillar1Label": "Sistema de arquivos",
     "pillar1Detail": "rootfs/\n(rsync de /etc,\n/etc/systemd/network,\n/root, mais um\ninstantâneo sqlite3\nde /var/lib/pve-cluster,\n+ caminhos opcionais)",
     "pillar2Label": "Manifesto",
     "pillar2Detail": "manifest.json\n(hardware, parâmetros\ndo kernel, rede,\nZFS, usuários, cron,\npools ZFS, armazenamento)",

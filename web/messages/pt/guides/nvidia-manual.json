@@ -1,26 +1,26 @@
 {
   "meta": {
     "title": "Instalar controladores NVIDIA no Proxmox VE 9 — procedimento manual | Guias ProxMenux",
-    "description": "Instale e configure manualmente os drivers NVIDIA num anfitrião Proxmox VE 9 e disponibilize a GPU a um ou mais contentores LXC. Inclui os drivers, o serviço de persistência, a correção NVENC opcional e a configuração de cada contentor.",
+    "description": "Instale e configure manualmente os drivers NVIDIA em um host Proxmox VE 9 e disponibilize a GPU a um ou mais contêineres LXC. Inclui os drivers, o serviço de persistência, a correção NVENC opcional e a configuração de cada contêiner.",
     "ogTitle": "Instalação de drivers NVIDIA no Proxmox VE 9 (procedimento manual)",
-    "ogDescription": "Instalação manual NVIDIA no PVE 9: driver do anfitrião, serviço de persistência, correção NVENC opcional e acesso à GPU em cada contentor LXC."
+    "ogDescription": "Instalação manual NVIDIA no PVE 9: driver do host, serviço de persistência, correção NVENC opcional e acesso à GPU em cada contêiner LXC."
   },
   "header": {
     "title": "Instalação de drivers de placas gráficas NVIDIA no Proxmox VE 9 (procedimento manual)",
-    "description": "Instale e configure manualmente os drivers NVIDIA num anfitrião Proxmox VE 9 e disponibilize a GPU a um ou mais contentores LXC. Inclui os drivers, o serviço de persistência, a correção NVENC opcional e a configuração de cada contentor.",
+    "description": "Instale e configure manualmente os drivers NVIDIA em um host Proxmox VE 9 e disponibilize a GPU a um ou mais contêineres LXC. Inclui os drivers, o serviço de persistência, a correção NVENC opcional e a configuração de cada contêiner.",
     "section": "Guias"
   },
   "intro": {
     "calloutTitle": "Observação",
-    "calloutBody": "Este procedimento manual fica como referência. Para a maioria dos utilizadores recomenda-se o assistente ProxMenux: <strong>Instalar drivers NVIDIA no anfitrião</strong> em <em>GPU e Coral-TPU</em>, seguido de <strong>Adicionar GPU a LXC</strong> ou <strong>Adicionar GPU a VM</strong> para configurar o convidado. O assistente executa os mesmos passos com verificações adicionais de cabeçalhos do kernel, IOMMU e conflitos VFIO. Esta página ajuda a compreender cada comando ou a adaptar a configuração.",
+    "calloutBody": "Este procedimento manual fica como referência. Para a maioria dos usuários recomenda-se o assistente ProxMenux: <strong>Instalar drivers NVIDIA no host</strong> em <em>GPU e Coral-TPU</em>, seguido de <strong>Adicionar GPU a LXC</strong> ou <strong>Adicionar GPU a VM</strong> para configurar o convidado. O assistente executa os mesmos passos com verificações adicionais de cabeçalhos do kernel, IOMMU e conflitos VFIO. Esta página ajuda a compreender cada comando ou a adaptar a configuração.",
     "targetNote": "Destina-se ao <strong>Proxmox VE 9</strong> (Debian Trixie). O PVE 7 (Bullseye) e o PVE 8 (Bookworm) já não são abrangidos.",
     "stepsTitle": "O que vai fazer",
     "steps": [
-      "Preparar o anfitrião Proxmox VE 9: bloquear nouveau e verificar repositórios e pré-requisitos.",
+      "Preparar o host Proxmox VE 9: bloquear nouveau e verificar repositórios e pré-requisitos.",
       "Instale o driver NVIDIA no host.",
       "Instale o serviço de persistência NVIDIA.",
       "Opcional: aplicar a correção keylase para remover o limite de sessões NVENC simultâneas nas GPU de consumo.",
-      "Disponibilizar a GPU a um ou mais contentores LXC e instalar em cada um a versão correspondente do driver."
+      "Disponibilizar a GPU a um ou mais contêineres LXC e instalar em cada um a versão correspondente do driver."
     ]
   },
   "prepareHost": {
@@ -33,7 +33,7 @@
     "blacklistImageAlt": "Verificação da lista negra",
     "reposHeading": "1.2 Verificar repositórios (PVE 9 / Trixie)",
     "reposBody": "As ferramentas de pós-instalação podem já ter configurado os repositórios. Verifique primeiro as fontes existentes e ignore alterações já feitas, sem duplicar entradas.",
-    "reposOtherwise": "Caso contrário, numa instalação PVE 9 de origem sem subscrição Enterprise:",
+    "reposOtherwise": "Caso contrário, em uma instalação PVE 9 de origem sem assinatura Enterprise:",
     "reposEditCode": "nano /etc/apt/sources.list.d/proxmox.sources",
     "reposPveBody": "Certifique-se de que contém a fonte sem assinatura para Trixie:",
     "reposPveCode": "Types: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg",
@@ -53,7 +53,7 @@
     "nvencCalloutTitle": "Aviso",
     "pickReplace": "Substitua <code>latest.txt</code> no URL pelo número de versão para encontrar o instalador terminado em <code>.run</code>. Lista completa dos drivers:",
     "pickListCode": "https://download.nvidia.com/XFree86/Linux-x86_64/",
-    "pickImageAlt": "Transferência do driver NVIDIA",
+    "pickImageAlt": "Download do driver NVIDIA",
     "pickVersionNote": "Ao longo do resto deste guia, substitua <code>'<'VERSION'>'</code> pela versão atual (por exemplo <code>580.95.05</code>).",
     "downloadHeading": "2.2 Baixe e execute o instalador",
     "downloadCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run",
@@ -61,10 +61,10 @@
     "firstPassCode": "./NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none --disable-nouveau\nreboot",
     "secondPassBody": "Depois que o host voltar, execute o instalador novamente para compilar e instalar o módulo do kernel:",
     "secondPassCode": "/opt/nvidia/NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none",
-    "modulesHeading": "2.3 Carregar módulos NVIDIA no arranque",
+    "modulesHeading": "2.3 Carregar módulos NVIDIA na inicialização",
     "modulesBody": "Edite a configuração de carregamento dos módulos:",
     "modulesEditCode": "nano /etc/modules-load.d/modules.conf",
-    "modulesAddBody": "Adicione os módulos NVIDIA para o anfitrião e LXC. Os módulos VFIO destinam-se à passagem direta para VM e não são necessários aqui:",
+    "modulesAddBody": "Adicione os módulos NVIDIA para o host e LXC. Os módulos VFIO destinam-se à passagem direta para VM e não são necessários aqui:",
     "modulesAddCode": "nvidia\nnvidia_uvm",
     "modulesSaveBody": "Salvar (<code>Ctrl+X</code>) e reconstruir initramfs:",
     "modulesSaveCode": "update-initramfs -u -k all",
@@ -92,7 +92,7 @@
     "after": "Volte a aplicar a correção após cada atualização do driver. O repositório keylase inclui ainda <code>patch-fbc.sh</code> para FBC, a captura do framebuffer."
   },
   "lxcSetup": {
-    "heading": "5. Configurar o acesso à GPU num contentor LXC",
+    "heading": "5. Configurar o acesso à GPU em um contêiner LXC",
     "identifyHeading": "5.1 Identificar os números de dispositivo",
     "identifyBody": "Na máquina:",
     "identifyCode": "ls -l /dev/nv*",
@@ -117,49 +117,49 @@
       },
       {
         "device": "<code>/dev/nvidia-modeset</code>",
-        "major": "195 (partilhado com nvidia)"
+        "major": "195 (compartilhado com nvidia)"
       }
     ],
     "editHeading": "5.2 Editar a configuração do LXC",
-    "editBody": "Pare o contentor se estiver em execução. Abra a configuração, substituindo <code>'<'CTID'>'</code> pelo respetivo ID:",
+    "editBody": "Pare o contêiner se estiver em execução. Abra a configuração, substituindo <code>'<'CTID'>'</code> pelo respectivo ID:",
     "editCode": "nano /etc/pve/lxc/CTID.conf",
-    "editConfigBody": "Comente apenas as linhas <code>lxc.cgroup2.devices.allow</code> ou <code>/dev/dri</code> que realmente entrem em conflito. Adicione a configuração NVIDIA e ajuste os números major aos dispositivos NVIDIA mostrados por <code>ls -l /dev/nv*</code> no <strong>seu</strong> anfitrião:",
+    "editConfigBody": "Comente apenas as linhas <code>lxc.cgroup2.devices.allow</code> ou <code>/dev/dri</code> que realmente entrem em conflito. Adicione a configuração NVIDIA e ajuste os números major aos dispositivos NVIDIA mostrados por <code>ls -l /dev/nv*</code> no <strong>seu</strong> host:",
     "editConfigCode": "lxc.cgroup2.devices.allow: c 195:* rwm\nlxc.cgroup2.devices.allow: c 509:* rwm\nlxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file\nlxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-modeset dev/nvidia-modeset none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file",
     "editConfigImageAlt": "Configuração do LXC",
-    "editSave": "Guarde o ficheiro, saia com <code>Ctrl+X</code> e inicie o contentor.",
-    "installCtHeading": "5.3 Instalar o driver no contentor",
+    "editSave": "Salve o arquivo, saia com <code>Ctrl+X</code> e inicie o contêiner.",
+    "installCtHeading": "5.3 Instalar o driver no contêiner",
     "installCtCalloutTitle": "Importante",
-    "installCtCalloutBody": "Esta parte é executada <strong>no contentor</strong>, não no anfitrião.",
-    "installCtBody": "O módulo do kernel já está carregado no anfitrião. O contentor só precisa das bibliotecas em espaço de utilizador da mesma versão do driver:",
+    "installCtCalloutBody": "Esta parte é executada <strong>no contêiner</strong>, não no host.",
+    "installCtBody": "O módulo do kernel já está carregado no host. O contêiner só precisa das bibliotecas em espaço de usuário da mesma versão do driver:",
     "installCtCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run\n./NVIDIA-Linux-x86_64-VERSION.run --no-kernel-module",
-    "installCtAfter": "Leia as perguntas e limite esta instalação às bibliotecas em espaço de utilizador. Não compile nem instale módulos do kernel dentro do LXC.",
+    "installCtAfter": "Leia as perguntas e limite esta instalação às bibliotecas em espaço de usuário. Não compile nem instale módulos do kernel dentro do LXC.",
     "installCtImageAlt": "Instalação do driver NVIDIA",
-    "verifyCtHeading": "5.4 Verificar no contentor",
+    "verifyCtHeading": "5.4 Verificar no contêiner",
     "verifyCtSmiCode": "nvidia-smi",
     "verifyCtSmiImageAlt": "NVIDIA SMI em LXC",
     "verifyCtLsCode": "ls -l /dev/nv*",
     "verifyCtLsImageAlt": "Dispositivos NVIDIA em LXC",
-    "verifyCtAfter": "A GPU deverá aparecer na lista e os nós dos dispositivos no sistema de ficheiros do contentor.",
+    "verifyCtAfter": "A GPU deverá aparecer na lista e os nós dos dispositivos no sistema de arquivos do contêiner.",
     "workloadHeading": "5.5 Confirmar a utilização da GPU com uma carga real",
-    "workloadBody": "Ative a aceleração NVIDIA no Plex ou Jellyfin, inicie uma transcodificação e confirme a utilização real da GPU no painel ou nos registos. Instalar o driver não ativa automaticamente a aceleração na aplicação.",
+    "workloadBody": "Ative a aceleração NVIDIA no Plex ou Jellyfin, inicie uma transcodificação e confirme a utilização real da GPU no painel ou nos registros. Instalar o driver não ativa automaticamente a aceleração na aplicação.",
     "workloadImage1Alt": "Plex usando NVIDIA GPU",
     "workloadImage2Alt": "Plex usando NVIDIA GPU - sessão ativa",
-    "repeatNote": "Repita a <strong>secção 5</strong> para cada contentor adicional que precise da GPU. Quando atualizar o driver do anfitrião, mantenha alinhadas as bibliotecas em espaço de utilizador de todos os contentores."
+    "repeatNote": "Repita a <strong>seção 5</strong> para cada contêiner adicional que precise da GPU. Quando atualizar o driver do host, mantenha alinhadas as bibliotecas em espaço de usuário de todos os contêineres."
   },
   "docker": {
     "heading": "6. (Opcional) NVIDIA Docker dentro de um LXC",
-    "body": "Se o Docker já funciona no LXC, instale aí <code>nvidia-container-toolkit</code> para disponibilizar a GPU aos contentores Docker. O acesso à GPU a partir do LXC deve funcionar primeiro. Estes comandos destinam-se a Docker executado como root:",
+    "body": "Se o Docker já funciona no LXC, instale aí <code>nvidia-container-toolkit</code> para disponibilizar a GPU aos contêineres Docker. O acesso à GPU a partir do LXC deve funcionar primeiro. Estes comandos destinam-se a Docker executado como root:",
     "code": "apt-get update\napt-get install -y ca-certificates curl gnupg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor --yes -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' > /etc/apt/sources.list.d/nvidia-container-toolkit.list\napt-get update\napt-get install -y nvidia-container-toolkit\nnvidia-ctk runtime configure --runtime=docker\nsystemctl restart docker",
     "after": "Os comandos configuram o repositório NVIDIA, instalam o toolkit, configuram o runtime Docker e reiniciam o Docker. Mantêm-se as permissões dos dispositivos e as restrições cgroup do LXC; confirme a GPU com uma carga de teste."
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",
     "items": [
-      "<strong><code>nvidia-smi</code> funciona no anfitrião, mas apresenta “No devices found” no contentor:</strong> verifique montagens, permissões e versões das bibliotecas. Se diferirem, instale no contentor a mesma <code>'<'VERSION'>'</code> do anfitrião com <code>--no-kernel-module</code>.",
-      "<strong>A compilação do driver falha:</strong> consulte o registo. “No precompiled kernel interface was found” pode apenas indicar que é necessária compilação local. Instale os cabeçalhos correspondentes a <code>uname -r</code> com <code>apt-get install pve-headers-$(uname -r)</code> ou o pacote proxmox-headers equivalente.",
+      "<strong><code>nvidia-smi</code> funciona no host, mas apresenta “No devices found” no contêiner:</strong> verifique montagens, permissões e versões das bibliotecas. Se diferirem, instale no contêiner a mesma <code>'<'VERSION'>'</code> do host com <code>--no-kernel-module</code>.",
+      "<strong>A compilação do driver falha:</strong> consulte o registro. “No precompiled kernel interface was found” pode apenas indicar que é necessária compilação local. Instale os cabeçalhos correspondentes a <code>uname -r</code> com <code>apt-get install pve-headers-$(uname -r)</code> ou o pacote proxmox-headers equivalente.",
       "<strong>As sessões NVENC continuam limitadas:</strong> confirme que a correção suporta o driver ativo. Uma atualização pode substituí-la. Para uma versão compatível, volte a executar <code>./patch.sh</code> em <code>/opt/nvidia/nvidia-patch</code> e verifique a saída.",
-      "<strong>A GPU deixa de responder após inatividade:</strong> verifique <code>systemctl status nvidia-persistenced</code> e ative o serviço se necessário. Consulte também os registos do kernel e do driver; não é a única causa possível.",
-      "<strong>O contentor arranca, mas <code>ls /dev/nv*</code> não mostra dispositivos NVIDIA:</strong> verifique os bind mounts e os caminhos no anfitrião. Utilize <code>ls -l /dev/nv*</code> para confirmar os números major NVIDIA e verifique as regras <code>lxc.cgroup2.devices.allow</code> e as permissões."
+      "<strong>A GPU deixa de responder após inatividade:</strong> verifique <code>systemctl status nvidia-persistenced</code> e ative o serviço se necessário. Consulte também os registros do kernel e do driver; não é a única causa possível.",
+      "<strong>O contêiner inicia, mas <code>ls /dev/nv*</code> não mostra dispositivos NVIDIA:</strong> verifique os bind mounts e os caminhos no host. Utilize <code>ls -l /dev/nv*</code> para confirmar os números major NVIDIA e verifique as regras <code>lxc.cgroup2.devices.allow</code> e as permissões."
     ]
   }
 }

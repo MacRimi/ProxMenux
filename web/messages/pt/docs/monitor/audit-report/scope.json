@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Âmbito e garantias | Auditoria e relatórios",
-    "description": "Origem dos dados de Auditoria e relatórios, limites do âmbito, garantias da conceção e localização dos dados."
+    "description": "Origem dos dados de Auditoria e relatórios, limites do âmbito, garantias da concepção e localização dos dados."
   },
   "header": {
     "title": "Âmbito e garantias",
-    "description": "De onde vêm os dados de uma avaliação, o que fica fora do seu âmbito e onde Auditoria e relatórios guarda os dados.",
+    "description": "De onde vêm os dados de uma avaliação, o que fica fora do seu âmbito e onde Auditoria e relatórios armazena os dados.",
     "section": "Auditoria e relatórios"
   },
   "sections": [
@@ -35,16 +35,16 @@
           "list": {
             "items": [
               "O interior dos convidados, além do que eles declaram para Proxmox VE.",
-              "Equipamento de rede fora do hospedeiro.",
+              "Equipamento de rede fora do host.",
               "Dependências remotas que o nó não consegue observar.",
               "Estado físico que o hardware não expõe.",
-              "O registo de alterações não inclui ações manuais ou de outro software."
+              "O registro de alterações não inclui ações manuais ou de outro software."
             ]
           }
         },
         {
           "calloutWarning": {
-            "title": "Provas em falta não são provas de ausência",
+            "title": "Provas ausentes não são provas de ausência",
             "body": "Uma fonte que não pode ser lida dá um resultado não verificado ou incompleto, nunca conforme. O relatório enumera as fontes que não estavam disponíveis."
           }
         }
@@ -52,7 +52,7 @@
     },
     {
       "id": "guarantees",
-      "title": "Garantias do projecto",
+      "title": "Garantias do projeto",
       "blocks": [
         {
           "list": {
@@ -71,7 +71,7 @@
     },
     {
       "id": "storage",
-      "title": "Onde são guardados os dados",
+      "title": "Onde são salvos os dados",
       "blocks": [
         {
           "table": {
@@ -97,7 +97,7 @@
                 "<code>/usr/local/share/proxmenux/changes/spool/</code>"
               ],
               [
-                "Registo consolidado",
+                "Registro consolidado",
                 "<code>/usr/local/share/proxmenux/changes.db</code>"
               ]
             ]

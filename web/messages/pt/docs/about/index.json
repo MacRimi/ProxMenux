@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Sobre",
-    "description": "Informações do projeto, perguntas frequentes, colaboradores e código de conduta. O ProxMenux é uma ferramenta de gestão por menus, de código aberto, para Proxmox VE 8+, desenvolvida e mantida por MacRimi com a ajuda de uma pequena equipa de testes e colaboradores.",
+    "description": "Informações do projeto, perguntas frequentes, colaboradores e código de conduta. O ProxMenux é uma ferramenta de gestão por menus, de código aberto, para Proxmox VE 8+, desenvolvida e mantida por MacRimi com a ajuda de uma pequena equipe de testes e colaboradores.",
     "section": "Sobre"
   },
   "callout": {
@@ -15,7 +15,7 @@
     "body": "O ProxMenux é distribuído sob a licença GPL-3.0 e desenvolvido publicamente no GitHub. Cada script pode ser revisto e cada alteração rastreada. São bem-vindos relatos de erros, ideias, código e testes."
   },
   "section": {
-    "heading": "Nesta secção",
+    "heading": "Nesta seção",
     "options": [
       {
         "icon": "HelpCircle",
@@ -44,12 +44,12 @@
       {
         "href": "https://github.com/MacRimi/ProxMenux/issues/new",
         "title": "🐛 Comunicar um erro",
-        "description": "GitHub Issues — inclua os registos e os passos para reproduzir o problema."
+        "description": "GitHub Issues — inclua os registros e os passos para reproduzir o problema."
       },
       {
         "href": "https://github.com/MacRimi/ProxMenux/discussions",
         "title": "💡 Sugerir uma funcionalidade",
-        "description": "GitHub Discussions — partilhe ideias antes de abrir um PR."
+        "description": "GitHub Discussions — compartilhe ideias antes de abrir um PR."
       },
       {
         "href": "https://github.com/MacRimi/ProxMenux/pulls",
@@ -59,7 +59,7 @@
     ]
   },
   "support": {
-    "heading": "Apoiar o projecto",
+    "heading": "Apoiar o projeto",
     "introRich": "Se o ProxMenux lhe poupa tempo, a forma mais simples de o dar a conhecer é <starlink>atribuir uma ⭐ ao repositório no GitHub</starlink>. Se quiser ir mais longe:",
     "kofiLabel": "Apoio em Ko-fi",
     "kofiOutro": " — compra um café ao mantenedor e mantém o desenvolvimento."

@@ -200,6 +200,11 @@
                 "tail": "Istruzioni per l’agente, verifiche dell’installazione e pull request per il catalogo."
               },
               {
+                "label": "Spostare un servizio LXC in OCI manager Apps",
+                "href": "/docs/oci-manager/migrate-lxc",
+                "tail": "installarlo dal catalogo, spostarne i dati e tenere il vecchio LXC fino alla conferma."
+              },
+              {
                 "label": "Installazione, aggiornamento e modifica",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Il contratto dell’istanza e le sue operazioni."

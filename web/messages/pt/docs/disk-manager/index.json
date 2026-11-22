@@ -1,20 +1,20 @@
 {
   "meta": {
-    "title": "Gestor de discos Proxmox: VM/LXC, testes SMART e eliminação | ProxMenux",
-    "description": "Faça a gestão de discos físicos num host Proxmox VE com o ProxMenux: ligue discos a VM ou LXC (qm set scsi/sata/virtio, pct mp), importe imagens img / qcow2 / vmdk / raw, atribua HBA ou controladores NVMe completos, apague discos com verificações de segurança e execute autotestes SMART.",
+    "title": "Gerenciador de discos Proxmox: VM/LXC, testes SMART e eliminação | ProxMenux",
+    "description": "Faça a gestão de discos físicos em um host Proxmox VE com o ProxMenux: anexe discos a VM ou LXC (qm set scsi/sata/virtio, pct mp), importe imagens img / qcow2 / vmdk / raw, atribua HBA ou controladores NVMe completos, apague discos com verificações de segurança e execute autotestes SMART.",
     "ogTitle": "Gerenciador de disco Proxmox — Anexar discos a VMs / LXC, testes SMART, limpa",
     "ogDescription": "Anexar discos a VMs / LXC, importar imagens de disco, passagem PCI para controladores, limpeza segura e testes SMART em Proxmox VE.",
-    "twitterTitle": "Gestor de discos Proxmox | ProxMenux",
+    "twitterTitle": "Gerenciador de discos Proxmox | ProxMenux",
     "twitterDescription": "Anexar discos a VMs / LXC, imagens de importação, passagem PCI, limpeza segura e testes SMART."
   },
   "header": {
     "title": "Gerenciador de disco",
-    "description": "O menu Gerenciador de disco agrupa as ferramentas ProxMenux para lidar com discos físicos em um host Proxmox: anexar discos em recipientes VMs e LXC, importar imagens de disco, passar por um controlador inteiro ou dispositivo NVMe, limpar discos com segurança e executar testes de saúde SMART.",
+    "description": "O menu Gerenciador de disco agrupa as ferramentas ProxMenux para lidar com discos físicos em um host Proxmox: anexar discos em contêineres VMs e LXC, importar imagens de disco, passar por um controlador inteiro ou dispositivo NVMe, limpar discos com segurança e executar testes de saúde SMART.",
     "section": "Gerenciador de disco"
   },
   "intro": {
     "title": "Para que serve este menu",
-    "body": "Estas ferramentas trabalham com <strong>discos físicos visíveis ao host Proxmox e ficheiros de imagem nele guardados</strong>. Há três grupos: <strong>VM</strong> (ligar discos ou importar imagens), <strong>LXC</strong> (ligar discos a um contentor) e <strong>Utilitários</strong> (formatação e estado SMART). As operações de ligação e eliminação ocultam ou bloqueiam discos de sistema e em uso; as verificações SMART podem examiná-los sem os apagar."
+    "body": "Estas ferramentas trabalham com <strong>discos físicos visíveis ao host Proxmox e arquivos de imagem nele salvos</strong>. Há três grupos: <strong>VM</strong> (anexar discos ou importar imagens), <strong>LXC</strong> (anexar discos a um contêiner) e <strong>Utilitários</strong> (formatação e estado SMART). As operações de conexão e eliminação ocultam ou bloqueiam discos de sistema e em uso; as verificações SMART podem examiná-los sem os apagar."
   },
   "opening": {
     "heading": "Abrir o menu",
@@ -23,7 +23,7 @@
   },
   "groups": {
     "heading": "Três grupos de ferramentas",
-    "intro": "O menu está organizado em três grupos: <strong>VM</strong>, <strong>LXC</strong> e <strong>Utilitários</strong>. Clique num cartão para ir diretamente às ferramentas desse grupo.",
+    "intro": "O menu está organizado em três grupos: <strong>VM</strong>, <strong>LXC</strong> e <strong>Utilitários</strong>. Clique em um cartão para ir diretamente às ferramentas desse grupo.",
     "vmTitle": "VM",
     "vmBody": "Ferramentas que operam em máquinas virtuais existentes. O VM deve ser desligado; o ProxMenux valida isto antes de tocar na configuração.",
     "vmItems": [
@@ -32,12 +32,12 @@
       "Adicionar controlador ou NVMe a uma VM"
     ],
     "lxcTitle": "LXC",
-    "lxcBody": "Ferramentas para contentores LXC existentes. Este script exige um contentor privilegiado e oferece alterar a opção quando necessário. Leia primeiro os cuidados sobre conversão e propriedade dos ficheiros na página da ferramenta.",
+    "lxcBody": "Ferramentas para contêineres LXC existentes. Este script exige um contêiner privilegiado e oferece alterar a opção quando necessário. Leia primeiro os cuidados sobre conversão e propriedade dos arquivos na página da ferramenta.",
     "lxcItems": [
       "Importar disco para LXC"
     ],
     "utilitiesTitle": "Utilitários",
-    "utilitiesBody": "Ferramentas do lado do hospedeiro que operam nos próprios discos, independentemente de qualquer VM ou recipiente.",
+    "utilitiesBody": "Ferramentas do lado do host que operam nos próprios discos, independentemente de qualquer VM ou contêiner.",
     "utilitiesItems": [
       "Formatar ou apagar um disco físico",
       "Integridade e teste do disco SMART"
@@ -69,19 +69,19 @@
   },
   "lxc": {
     "heading": "LXC",
-    "intro": "Ferramentas para contentores LXC existentes. Este script exige um contentor privilegiado e oferece alterar a opção quando necessário. Leia primeiro os cuidados sobre conversão e propriedade dos ficheiros na página da ferramenta.",
+    "intro": "Ferramentas para contêineres LXC existentes. Este script exige um contêiner privilegiado e oferece alterar a opção quando necessário. Leia primeiro os cuidados sobre conversão e propriedade dos arquivos na página da ferramenta.",
     "options": [
       {
         "icon": "Boxes",
         "href": "/docs/disk-manager/import-disk-lxc",
         "title": "Importar disco para LXC",
-        "description": "Anexar um disco físico não atribuído a um recipiente LXC existente como ponto de montagem. Lida com detecção / formato do sistema de arquivos e conversão privilegiada."
+        "description": "Anexar um disco físico não atribuído a um contêiner LXC existente como ponto de montagem. Lida com detecção / formato do sistema de arquivos e conversão privilegiada."
       }
     ]
   },
   "utilities": {
     "heading": "Utilitários",
-    "intro": "Ferramentas do lado do hospedeiro que operam nos próprios discos, independentemente de qualquer VM ou recipiente.",
+    "intro": "Ferramentas do lado do host que operam nos próprios discos, independentemente de qualquer VM ou contêiner.",
     "options": [
       {
         "icon": "Eraser",
@@ -98,8 +98,8 @@
     ]
   },
   "safety": {
-    "title": "Regras de segurança para ligação e eliminação de discos",
-    "intro": "As operações de ligação e eliminação excluem dispositivos que possam prejudicar o host:",
+    "title": "Regras de segurança para conexão e eliminação de discos",
+    "intro": "As operações de conexão e eliminação excluem dispositivos que possam prejudicar o host:",
     "items": [
       "O <strong>disco de sistema</strong>, o pool raiz, o swap e os membros ativos de ZFS/LVM/RAID ficam sempre ocultos.",
       "Os discos <strong>montados</strong> em qualquer ponto do host são ocultos ou bloqueados na execução.",

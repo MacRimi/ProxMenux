@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Dispositivos e aceleração ProxMenux",
-    "description": "Como o OCI Manager Apps passa GPU, NVIDIA, Coral, USB, FUSE e outros dispositivos para um recipiente OCI como recursos Proxmox VE nativos validados."
+    "description": "Como o OCI Manager Apps passa GPU, NVIDIA, Coral, USB, FUSE e outros dispositivos para um contêiner OCI como recursos Proxmox VE nativos validados."
   },
   "header": {
     "title": "Dispositivos e aceleração",
-    "description": "GPU, NVIDIA, Coral, USB, FUSE e dispositivos de bloco tornam-se os recursos de Proxmox VE nativos validados do recipiente.",
+    "description": "GPU, NVIDIA, Coral, USB, FUSE e dispositivos de bloco tornam-se os recursos de Proxmox VE nativos validados do contêiner.",
     "section": "OCI manager Apps"
   },
   "sections": [
@@ -14,7 +14,7 @@
       "title": "O dispositivo de que a aplicação necessita, não a máquina inteira",
       "blocks": [
         {
-          "p": "Um dispositivo solicitado pelo arquivo Compose ou pelo perfil da aplicação torna-se uma entrada de <code>devN</code> ou uma montagem LXC. Pedir um GPU, um dispositivo USB ou um Coral não torna o recipiente privilegiado."
+          "p": "Um dispositivo solicitado pelo arquivo Compose ou pelo perfil da aplicação torna-se uma entrada de <code>devN</code> ou uma montagem LXC. Pedir um GPU, um dispositivo USB ou um Coral não torna o contêiner privilegiado."
         },
         {
           "flow": {
@@ -25,7 +25,7 @@
               },
               {
                 "label": "ProxMenux",
-                "detail": "fornecedor e\npermissões verificadas"
+                "detail": "provedor e\npermissões verificadas"
               },
               {
                 "label": "LXC",
@@ -95,17 +95,17 @@
               [
                 "Intel/AMD DRM",
                 "<code>/dev/dri/renderD*</code> e <code>/sys/class/drm/NODE/device/vendor</code>",
-                "Um dispositivo de caracteres com o fornecedor <code>0x8086</code> (Intel) ou <code>0x1002</code> (AMD)"
+                "Um dispositivo de caracteres com o provedor <code>0x8086</code> (Intel) ou <code>0x1002</code> (AMD)"
               ],
               [
                 "AMD OpenCL",
                 "O nó de renderização, mais <code>/dev/kfd</code> quando o perfil precisa dele",
-                "Existência, tipo, fornecedor, permissões e compatibilidade declarada"
+                "Existência, tipo, provedor, permissões e compatibilidade declarada"
               ],
               [
                 "AMD ROCm",
                 "O nó de renderização, <code>/dev/kfd</code> e a geração que o controlador de computação relata em <code>/sys/class/kfd/kfd/topology/nodes/*/properties</code>",
-                "Uma GPU de uma geração suportada pela imagem ROCm da aplicação (as GPUs RDNA2 que indica e as mais recentes) é oferecida sem alterações. As outras GPUs dessas famílias, como as Radeon 680M e 780M, são oferecidas como experimentais e nunca são a opção proposta. O ROCm não as suporta oficialmente: a aplicação apresenta-as como a geração da sua família (<code>HSA_OVERRIDE_GFX_VERSION</code>) e o instalador pede confirmação antes de transferir a imagem maior. Uma GPU mais antiga, como a gráfica integrada de um Ryzen 5000U, não é oferecida e o Immich mantém o reconhecimento na CPU"
+                "Uma GPU de uma geração suportada pela imagem ROCm da aplicação (as GPUs RDNA2 que indica e as mais recentes) é oferecida sem alterações. As outras GPUs dessas famílias, como as Radeon 680M e 780M, são oferecidas como experimentais e nunca são a opção proposta. O ROCm não as suporta oficialmente: a aplicação apresenta-as como a geração da sua família (<code>HSA_OVERRIDE_GFX_VERSION</code>) e o instalador pede confirmação antes de baixar a imagem maior. Uma GPU mais antiga, como a gráfica integrada de um Ryzen 5000U, não é oferecida e o Immich mantém o reconhecimento na CPU"
               ],
               [
                 "NVIDIA",
@@ -114,13 +114,13 @@
               ],
               [
                 "Coral PCIe/M.2",
-                "<code>/dev/apex_N</code> e sua ligação em <code>/sys/dev/char/MAJOR:MINOR</code>",
+                "<code>/dev/apex_N</code> e seu link em <code>/sys/dev/char/MAJOR:MINOR</code>",
                 "Nó de caracteres, major/menor, proprietário, GID e permissões"
               ],
               [
                 "USB e serial",
                 "<code>/dev/ttyUSB*</code>, <code>/dev/ttyACM*</code> ou <code>/dev/bus/usb/BBB/DDD</code>",
-                "Nó de caracteres; para USB também fornecedor, produto e série quando sysfs publica-los"
+                "Nó de caracteres; para USB também provedor, produto e série quando sysfs publica-los"
               ],
               [
                 "KVM, TUN, FUSE, vídeo e SCSI genérico",
@@ -158,7 +158,7 @@
               },
               {
                 "title": "Validação",
-                "body": "Existência, tipo, fornecedor permitido, permissões e GID são verificados. Um desencontro impede a operação."
+                "body": "Existência, tipo, provedor permitido, permissões e GID são verificados. Um desencontro impede a operação."
               },
               {
                 "title": "O contrato está escrito",
@@ -310,7 +310,7 @@
               {
                 "icon": "shield",
                 "title": "Montagens somente de leitura",
-                "body": "As bibliotecas host são montadas somente para leitura em vez de serem copiadas para o recipiente."
+                "body": "As bibliotecas host são montadas somente para leitura em vez de serem copiadas para o contêiner."
               },
               {
                 "icon": "hardDrive",
@@ -337,15 +337,15 @@
       "blocks": [
         {
           "calloutInfo": {
-            "title": "Um dispositivo USB é registado pelo que é",
-            "body": "O kernel numera um dispositivo USB de cada vez que o encontra, pelo que, após um reinício ou uma religação, <code>/dev/bus/usb/003/004</code> ou <code>/dev/ttyUSB0</code> podem designar outro dispositivo, ou nenhum. O ProxMenux regista o dispositivo pelo fabricante, produto, número de série e porta física. Um dispositivo USB recebe a árvore USB do host e uma regra udev que permite ao contentor escrever apenas nesse dispositivo. Um adaptador série USB recebe a sua ligação estável em <code>/dev/serial</code> montada no caminho que a aplicação espera. Quando o dispositivo regressa enquanto o contentor está em execução, o contentor é reiniciado para que a aplicação volte a abri-lo."
+            "title": "Um dispositivo USB é registrado pelo que é",
+            "body": "O kernel numera um dispositivo USB de cada vez que o encontra, pelo que, após um reinício ou uma religação, <code>/dev/bus/usb/003/004</code> ou <code>/dev/ttyUSB0</code> podem designar outro dispositivo, ou nenhum. O ProxMenux registra o dispositivo pelo fabricante, produto, número de série e porta física. Um dispositivo USB recebe a árvore USB do host e uma regra udev que permite ao contêiner escrever apenas nesse dispositivo. Um adaptador série USB recebe sua conexão estável em <code>/dev/serial</code> montada no caminho que a aplicação espera. Quando o dispositivo volta enquanto o contêiner está em execução, o contêiner é reiniciado para que a aplicação volte a abri-lo."
           }
         },
         {
-          "p": "Um periférico é escolhido entre os dispositivos USB do host ou pelo seu nó atual: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> ou <code>/dev/bus/usb/BBB/DDD</code>. O nó serve apenas para encontrar o dispositivo; o que é guardado é a sua identidade. Passar todo o <code>/dev</code> não é aceite. O Coral só é oferecido às aplicações cujo perfil o declara."
+          "p": "Um periférico é escolhido entre os dispositivos USB do host ou pelo seu nó atual: <code>/dev/ttyUSB0</code>, <code>/dev/ttyACM0</code>, <code>/dev/apex_0</code> ou <code>/dev/bus/usb/BBB/DDD</code>. O nó serve apenas para encontrar o dispositivo; o que é salvo é sua identidade. Passar todo o <code>/dev</code> não é aceite. O Coral só é oferecido às aplicações cujo perfil o declara."
         },
         {
-          "p": "O Zigbee2MQTT é um exemplo. O seu perfil oferece o adaptador Zigbee como dispositivo opcional, desativado por predefinição, pelo que uma instalação predefinida não o passa. Na instalação avançada, <strong>Passe um dispositivo da máquina para o LXC</strong> lista os dispositivos USB do host, com <strong>Outro nó, digitado manualmente</strong> no fim, e propõe <code>/dev/ttyACM0</code>. O adaptador mantém o mesmo caminho dentro do contentor e tem de estar ligado durante a instalação."
+          "p": "O Zigbee2MQTT é um exemplo. Seu perfil oferece o adaptador Zigbee como dispositivo opcional, desativado por padrão, pelo que uma instalação padrão não o passa. Na instalação avançada, <strong>Passe um dispositivo da máquina para o LXC</strong> lista os dispositivos USB do host, com <strong>Outro nó, digitado manualmente</strong> no fim, e propõe <code>/dev/ttyACM0</code>. O adaptador mantém o mesmo caminho dentro do contêiner e tem de estar conectado durante a instalação."
         }
       ]
     },
@@ -391,7 +391,7 @@
       "title": "Confirmações por nível de risco",
       "blocks": [
         {
-          "p": "Dispositivos específicos, privilégio opcional, privilégio exigido, relaxamento AppArmor ou seccomp e acesso ao espaço de nomes PID do hospedeiro são tratados como casos separados, não sob uma etiqueta genérica privilegiada. Cada opção com risco é explicada e confirmada durante a instalação."
+          "p": "Dispositivos específicos, privilégio opcional, privilégio exigido, relaxamento AppArmor ou seccomp e acesso ao espaço de nomes PID do host são tratados como casos separados, não sob uma etiqueta genérica privilegiada. Cada opção com risco é explicada e confirmada durante a instalação."
         }
       ]
     }

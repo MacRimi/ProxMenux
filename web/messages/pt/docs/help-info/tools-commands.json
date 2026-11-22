@@ -1,24 +1,24 @@
 {
   "meta": {
     "title": "Ferramentas CLI Linux para Proxmox — htop, iftop, journalctl, rsync, tmux | ProxMenux",
-    "description": "Ferramentas CLI Linux para administrar o Proxmox VE no dia a dia: monitorização (htop, atop, glances, iotop), rede (iftop, nmap, mtr, ss), ficheiros e texto (find, grep, journalctl), desempenho (iostat, perf, strace), segurança (fail2ban, lynis, lsof) e administração remota (ssh, rsync, tmux).",
+    "description": "Ferramentas CLI Linux para administrar o Proxmox VE no dia a dia: monitoramento (htop, atop, glances, iotop), rede (iftop, nmap, mtr, ss), arquivos e texto (find, grep, journalctl), desempenho (iostat, perf, strace), segurança (fail2ban, lynis, lsof) e administração remota (ssh, rsync, tmux).",
     "ogTitle": "Ferramentas CLI Linux para Proxmox — htop, iftop, journalctl, rsync, tmux",
-    "ogDescription": "Ferramentas CLI para administrar o Proxmox VE no dia a dia, agrupadas por função: monitorização, rede, ficheiros e texto, desempenho, segurança e administração remota.",
+    "ogDescription": "Ferramentas CLI para administrar o Proxmox VE no dia a dia, agrupadas por função: monitoramento, rede, arquivos e texto, desempenho, segurança e administração remota.",
     "twitterTitle": "Ferramentas CLI Linux para Proxmox | ProxMenux",
     "twitterDescription": "Ferramentas CLI para a administração diária do Proxmox VE, agrupadas por função."
   },
   "header": {
     "title": "Ferramentas CLI do sistema",
-    "description": "Ferramentas CLI para administrar o anfitrião Proxmox no dia a dia, agrupadas por função: monitorização, rede, ficheiros e texto, análise de desempenho, segurança, administração remota e configuração do sistema.",
+    "description": "Ferramentas CLI para administrar o host Proxmox no dia a dia, agrupadas por função: monitoramento, rede, arquivos e texto, análise de desempenho, segurança, administração remota e configuração do sistema.",
     "section": "Ajuda e informações"
   },
   "intro": {
     "title": "Algumas têm de ser instaladas primeiro",
-    "body": "Várias destas ferramentas não vêm instaladas por padrão, nem mesmo com a pós-instalação e as suas opções predefinidas. Para as adicionar, o <utilsLink>instalador de utilitários de sistema</utilsLink> do ProxMenux oferece grupos predefinidos: base, desenvolvimento, rede, análise, entre outros."
+    "body": "Várias destas ferramentas não vêm instaladas por padrão, nem mesmo com a pós-instalação e suas opções padrão. Para as adicionar, o <utilsLink>instalador de utilitários de sistema</utilsLink> do ProxMenux oferece grupos padrão: base, desenvolvimento, rede, análise, entre outros."
   },
   "commandGroups": [
     {
-      "title": "Monitorização do sistema",
+      "title": "Monitoramento do sistema",
       "commands": [
         {
           "command": "htop",
@@ -38,7 +38,7 @@
         },
         {
           "command": "nmon",
-          "description": "Ferramenta de monitorização do desempenho"
+          "description": "Ferramenta de monitoramento do desempenho"
         },
         {
           "command": "iotop",
@@ -55,7 +55,7 @@
       "commands": [
         {
           "command": "iftop",
-          "description": "Mostrar a utilização da largura de banda numa interface"
+          "description": "Mostrar a utilização da largura de banda em uma interface"
         },
         {
           "command": "nmap <host>",
@@ -88,7 +88,7 @@
       "commands": [
         {
           "command": "find / -name <filename>",
-          "description": "Procurar os ficheiros pelo nome"
+          "description": "Procurar os arquivos pelo nome"
         },
         {
           "command": "grep -r 'pattern' /path",
@@ -96,7 +96,7 @@
         },
         {
           "command": "sed -i 's/old/new/g' file",
-          "description": "Substituir o texto nos ficheiros"
+          "description": "Substituir o texto nos arquivos"
         },
         {
           "command": "awk '{print $1}' file",
@@ -104,15 +104,15 @@
         },
         {
           "command": "tail -f /var/log/syslog",
-          "description": "Seguir o ficheiro de registo em tempo real"
+          "description": "Seguir o arquivo de registro em tempo real"
         },
         {
           "command": "less /var/log/messages",
-          "description": "Ver o ficheiro com paginação"
+          "description": "Ver o arquivo com paginação"
         },
         {
           "command": "journalctl -f",
-          "description": "Acompanhar os registos do journal do systemd"
+          "description": "Acompanhar os registros do journal do systemd"
         }
       ]
     },
@@ -137,7 +137,7 @@
         },
         {
           "command": "lsof",
-          "description": "Listar os ficheiros abertos"
+          "description": "Listar os arquivos abertos"
         },
         {
           "command": "pstree",
@@ -166,11 +166,11 @@
         },
         {
           "command": "last",
-          "description": "Mostrar a lista dos últimos utilizadores que iniciaram sessão"
+          "description": "Mostrar a lista dos últimos usuários que iniciaram sessão"
         },
         {
           "command": "w",
-          "description": "Mostrar quem está ligado e o que está a fazer"
+          "description": "Mostrar quem está conectado e o que está fazendo"
         },
         {
           "command": "lynis audit system",
@@ -191,7 +191,7 @@
         },
         {
           "command": "scp <file> <user>@<host>:<path>",
-          "description": "Copiar ficheiros em segurança"
+          "description": "Copiar arquivos em segurança"
         },
         {
           "command": "rsync -avz <src> <dest>",
@@ -224,19 +224,19 @@
         },
         {
           "command": "journalctl -u <service>",
-          "description": "Ver os registos de serviços"
+          "description": "Ver os registros de serviços"
         },
         {
           "command": "timedatectl",
-          "description": "Gerir a data e a hora do sistema"
+          "description": "Gerenciar a data e a hora do sistema"
         },
         {
           "command": "hostnamectl",
-          "description": "Gerir o nome do anfitrião"
+          "description": "Gerenciar o nome do host"
         },
         {
           "command": "localectl",
-          "description": "Gerir as definições regionais e o teclado do sistema"
+          "description": "Gerenciar as configurações regionais e o teclado do sistema"
         },
         {
           "command": "update-alternatives --config <name>",
@@ -251,7 +251,7 @@
   ],
   "tmuxTip": {
     "title": "Usar tmux / screen para comandos demorados",
-    "bodyRich": "Execute tarefas demoradas, como cópias de segurança, atualizações ou grandes transferências rsync, em <code>tmux</code> ou <code>screen</code> para uma desconexão SSH não terminar a sessão do terminal. Numa sessão tmux, volte a ligar-se ao mesmo anfitrião com o mesmo utilizador e execute <code>tmux attach</code>. As sessões screen usam o seu próprio comando de reconexão."
+    "bodyRich": "Execute tarefas demoradas, como backups, atualizações ou grandes transferências rsync, em <code>tmux</code> ou <code>screen</code> para uma desconexão SSH não encerrar a sessão do terminal. Em uma sessão tmux, volte a se conectar ao mesmo host com o mesmo usuário e execute <code>tmux attach</code>. As sessões screen usam seu próprio comando de reconexão."
   },
   "related": {
     "heading": "Relacionado",
@@ -259,7 +259,7 @@
       {
         "href": "/docs/utils/system-utils",
         "label": "Instalador de utilitários de sistema",
-        "tail": " — instalar qualquer uma destas ferramentas em falta."
+        "tail": " — instalar qualquer uma destas ferramentas ausentes."
       },
       {
         "href": "/docs/help-info/system-commands",

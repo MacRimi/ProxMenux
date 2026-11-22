@@ -118,6 +118,7 @@
               { "label": "Devices and acceleration", "href": "/docs/oci-manager/hardware", "tail": "GPU, NVIDIA, Coral, USB and other devices." },
               { "label": "Multi-container applications", "href": "/docs/oci-manager/stacks", "tail": "application, database and cache as coordinated LXCs." },
               { "label": "Install an app and contribute it", "href": "/docs/oci-manager/contribute-app", "tail": "agent brief, installation checks and catalog pull request." },
+              { "label": "Move an LXC service to OCI manager Apps", "href": "/docs/oci-manager/migrate-lxc", "tail": "install it from the catalog, move its data and keep the old LXC until it is confirmed." },
               { "label": "Install, update and modify", "href": "/docs/oci-manager/lifecycle", "tail": "the instance contract and its operations." },
               { "label": "In ProxMenux Monitor", "href": "/docs/oci-manager/monitor", "tail": "versions, updates, console output and terminal." }
             ]

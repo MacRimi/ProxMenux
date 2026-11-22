@@ -11,8 +11,8 @@
     "section": "Armazenamento e Compartilhamento · LXC"
   },
   "privReq": {
-    "title": "Recipiente privilegiado necessário",
-    "body": "Samba personifica o usuário de conexão com <code>setgroups()</code> em cada conexão em árvore (no momento em que um cliente abre um compartilhamento). Em um LXC sem privilégios, o kernel rejeita esse syscall porque o espaço de nomes de usuário do container é criado com <code>setgroups=deny</code> — e o <code>smbd</code> responde abortando o processo de worker com <code>PANIC: sys_setgroups failed</code>. O resultado é que o <code>smbd</code> inicia e liga as portas 139/445, mas toda conexão com o cliente falha com o <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. O script impõe um CT privilegiado por esta razão e <strong>interrompe a execução se o CT não tiver privilégios</strong>. Não há correção limpa no lado do servidor; use um CT privilegiado ou execute Samba dentro de uma VM."
+    "title": "Contêiner privilegiado necessário",
+    "body": "Samba personifica o usuário de conexão com <code>setgroups()</code> em cada conexão em árvore (no momento em que um cliente abre um compartilhamento). Em um LXC sem privilégios, o kernel rejeita esse syscall porque o espaço de nomes de usuário do container é criado com <code>setgroups=deny</code> — e o <code>smbd</code> responde abortando o processo de worker com <code>PANIC: sys_setgroups failed</code>. O resultado é que o <code>smbd</code> inicia e vincula as portas 139/445, mas toda conexão com o cliente falha com o <code>NT_STATUS_CONNECTION_DISCONNECTED</code>. O script impõe um CT privilegiado por esta razão e <strong>interrompe a execução se o CT não tiver privilégios</strong>. Não há correção limpa no lado do servidor; use um CT privilegiado ou execute Samba dentro de uma VM."
   },
   "what": {
     "heading": "O que isto faz",
@@ -28,12 +28,12 @@
     "body": "Antes de adicionar o compartilhamento ao <code>smb.conf</code>, o script verifica se a pasta escolhida é uma montagem <strong>bind do host</strong> ou uma pasta <strong>local regular dentro do CT</strong> – e aplica diferentes permissões de propriedade em conformidade:",
     "headerType": "Tipo de pasta",
     "headerAction": "O que o script faz",
-    "bindType": "Montagem de ligação da máquina",
+    "bindType": "Montagem de conexão da máquina",
     "bindTypeSubRich": "detectado através da saída <code>mount</code>",
     "bindActionRich": "Cria o grupo <code>sharedfiles</code> (GID padrão 101000, dinâmico se tomado) e adiciona o usuário Samba a ele. Depois verifica o sistema de arquivos: onde <code>chown</code> funciona executa <code>chown root:sharedfiles</code> + <code>chmod 2775</code> (SGID, novos arquivos herdam o grupo), e onde há suporte a ACL aplica ACLs de acesso e padrão (<code>u:&lt;user&gt;:rwx,g:sharedfiles:rwx</code>, recursivas). Em vfat / exfat / ntfs ignora ambos e mostra como remontar com o uid/gid correto. O acesso de escrita é verificado no final.",
     "localType": "Pasta local dentro do CT",
-    "localTypeSub": "nenhuma montagem de ligação detectada",
-    "localActionRich": "Propriedade padrão: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Nenhum grupo compartilhado é necessário porque nenhum outro CT escreve para esta pasta. Regressa ao <code>setfacl</code> se o acesso de escrita ainda estiver ausente.",
+    "localTypeSub": "nenhuma montagem de conexão detectada",
+    "localActionRich": "Propriedade padrão: <code>chown -R &lt;user&gt;:&lt;user&gt;</code> + <code>chmod -R 755</code>. Nenhum grupo compartilhado é necessário porque nenhum outro CT escreve para esta pasta. Volta ao <code>setfacl</code> se o acesso de escrita ainda estiver ausente.",
     "gidTitle": "GID para 'sharedfiles'",
     "gidBody": "O script do servidor Samba cria <code>sharedfiles</code> com GID <strong>101000</strong>, o mesmo GID que o fluxo do servidor <nfsLink>NFS</nfsLink> usa, de modo que ambos os protocolos compartilham um único grupo. Se outro grupo já tiver o GID 101000 dentro do CT, o script cria <code>sharedfiles</code> com um GID dinâmico. Verifique com <code>getent group sharedfiles</code>."
   },
@@ -46,7 +46,7 @@
     "heading": "Como o script é executado (Criar fluxo)"
   },
   "modes": {
-    "heading": "Os três modos de partilha",
+    "heading": "Os três modos de compartilhamento",
     "intro": "Cada modo escreve uma seção diferente em <code>smb.conf</code>. Todos os três incluem um <code>comment</code>, <code>valid users = &lt;username&gt;</code> (sem anônimo), <code>force user = &lt;username&gt;</code> e <code>force group = sharedfiles</code> (para que as escritas fiquem com propriedade consistente) e <code>veto files = /lost+found/</code> (esconde-o de clientes).",
     "headerMode": "Modo",
     "headerBlock": "Bloco escrito para smb.conf",
@@ -61,7 +61,7 @@
   },
   "connect": {
     "heading": "Conexão de clientes",
-    "headerOs": "Sistema operativo do cliente",
+    "headerOs": "Sistema operacional do cliente",
     "headerHow": "Como conectar",
     "windowsOs": "Windows",
     "windowsHowRich": "Explorador de Arquivos → barra de endereço: <code>\\\\&lt;ct-ip&gt;\\&lt;share-name&gt;</code>. Ou <em>Mapear unidade de rede</em> → marque «Conectar usando credenciais diferentes».",
@@ -100,8 +100,8 @@
       "Rocky / Alma: <code>dnf install samba</code>"
     ],
     "aptOutro": "Execute novamente o script ProxMenux; a instalação é ignorada quando as ferramentas já estão presentes.",
-    "noShareTitle": "O cliente conecta- se mas não consegue ver a partilha",
-    "noShareBody": "Verifique se o <code>browseable = yes</code> está definido no bloco de partilha (por omissão para os modos rw / ro; pode estar em falta na personalização). Também verifique o firewall CT e o firewall do host Proxmox permitem o TCP 445 (SMB) e o 139 (NetBIOS). Alguns clientes do Windows também exigem resolução de nome — tente o IP diretamente primeiro.",
+    "noShareTitle": "O cliente conecta- se mas não consegue ver o compartilhamento",
+    "noShareBody": "Verifique se o <code>browseable = yes</code> está definido no bloco de compartilhamento (por omissão para os modos rw / ro; pode estar ausente na personalização). Também verifique o firewall CT e o firewall do host Proxmox permitem o TCP 445 (SMB) e o 139 (NetBIOS). Alguns clientes do Windows também exigem resolução de nome — tente o IP diretamente primeiro.",
     "authTitle": "Falha na autenticação (NT_STATUS_LOGON_FAILURE)",
     "authBody": "A senha está incorreta (as senhas Samba são <em>separadas</em> das do sistema; liste os usuários Samba com <code>pdbedit -L</code>) ou o usuário não consta em <code>valid users</code> para esse compartilhamento. Redefina a senha dentro do CT com <code>smbpasswd &lt;user&gt;</code>.",
     "groupTitle": "Os arquivos escritos pelo cliente aparecem com o grupo errado no servidor",

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Comandos de rede Proxmox — ip, ping, ss, pve-firewall, iptables | ProxMenux",
-    "description": "Referência de comandos de rede do anfitrião Proxmox VE: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig, nslookup, além de pve-firewall, iptables e nftables para filtragem. Inspeção de bridges, agregações de ligações e VLAN.",
+    "description": "Referência de comandos de rede do host Proxmox VE: ip / ip link / ip addr, ping, traceroute, mtr, ss, ethtool, dig, nslookup, além de pve-firewall, iptables e nftables para filtragem. Inspeção de bridges, agregações de links e VLAN.",
     "ogTitle": "Comandos de rede Proxmox — ip, ping, ss, pve-firewall, iptables",
     "ogDescription": "Referência de comandos de rede para Proxmox VE — inspeção de interface, testes de conectividade, monitoramento, firewall (pve-firewall, iptables, nftables) e pesquisas de DNS.",
     "twitterTitle": "Comandos de rede Proxmox | ProxMenux",
@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Inventário rápido da interface",
-    "body": "<code>ip a</code> mostra cada interface com os respetivos endereços IP e MAC. <code>ip r</code> mostra a tabela de encaminhamento. Em conjunto, respondem em segundos à maioria das dúvidas sobre a configuração de uma interface."
+    "body": "<code>ip a</code> mostra cada interface com os respectivos endereços IP e MAC. <code>ip r</code> mostra a tabela de encaminhamento. Em conjunto, respondem em segundos à maioria das dúvidas sobre a configuração de uma interface."
   },
   "commandGroups": [
     {
@@ -97,7 +97,7 @@
       ]
     },
     {
-      "title": "Monitorização da rede",
+      "title": "Monitoramento da rede",
       "commands": [
         {
           "command": "ss -tuln",
@@ -157,12 +157,12 @@
       {
         "href": "/docs/network",
         "label": "Gerenciamento de rede",
-        "tail": " — ferramentas de rede interactivas ProxMenux (análise de ponte, nomes persistentes, monitorização)."
+        "tail": " — ferramentas de rede interactivas ProxMenux (análise de ponte, nomes persistentes, monitoramento)."
       },
       {
         "href": "/docs/help-info/tools-commands",
         "label": "Ferramentas CLI do sistema",
-        "tail": " — mais instrumentos de monitorização da rede."
+        "tail": " — mais instrumentos de monitoramento da rede."
       },
       {
         "href": "/docs/help-info",

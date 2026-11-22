@@ -118,11 +118,11 @@
       ]
     },
     {
-      "title": "Acções do Disco",
+      "title": "Ações do Disco",
       "commands": [
         {
           "command": "qm importdisk <vmid> <image_path> <storage>",
-          "description": "Importar a imagem como disco não utilizado da VM e ligá-lo depois"
+          "description": "Importar a imagem como disco não utilizado da VM e anexá-lo depois"
         },
         {
           "command": "qm set <vmid> -<bus><index> <disk_path>",
@@ -203,11 +203,11 @@
   },
   "smartInfo": {
     "title": "SMART em SATA/SAS e NVMe",
-    "bodyRich": "<strong>Os discos SATA / SAS, incluindo SSD,</strong> podem ser inspecionados com <code>smartctl</code> de <code>smartmontools</code>, instalado por predefinição no Proxmox. Indique o dispositivo, por exemplo <code>/dev/sda</code> ou <code>/dev/sdb</code>. <strong>Os discos NVMe</strong> usam outro protocolo nativo. O <code>smartctl</code> também os suporta; o <code>nvme</code> de <code>nvme-cli</code> oferece consultas específicas a controladores, namespaces e estado NVMe. Instale-o com <code>apt install nvme-cli</code> se faltar."
+    "bodyRich": "<strong>Os discos SATA / SAS, incluindo SSD,</strong> podem ser inspecionados com <code>smartctl</code> de <code>smartmontools</code>, instalado por padrão no Proxmox. Indique o dispositivo, por exemplo <code>/dev/sda</code> ou <code>/dev/sdb</code>. <strong>Os discos NVMe</strong> usam outro protocolo nativo. O <code>smartctl</code> também os suporta; o <code>nvme</code> de <code>nvme-cli</code> oferece consultas específicas a controladores, namespaces e estado NVMe. Instale-o com <code>apt install nvme-cli</code> se faltar."
   },
   "selfTestWarn": {
     "title": "Auto-testes executados em segundo plano",
-    "bodyRich": "Em discos compatíveis, <code>smartctl -t short /dev/&lt;disk&gt;</code> e <code>smartctl -t long /dev/&lt;disk&gt;</code> iniciam testes em segundo plano e devolvem logo o controlo. Verifique o progresso com <code>smartctl -a /dev/&lt;disk&gt;</code>, procurando \"Self-test routine in progress\", ou aguarde e leia <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Os testes curtos costumam demorar dois minutos; os longos podem levar horas. O disco permanece utilizável, mas o desempenho de E/S pode diminuir."
+    "bodyRich": "Em discos compatíveis, <code>smartctl -t short /dev/&lt;disk&gt;</code> e <code>smartctl -t long /dev/&lt;disk&gt;</code> iniciam testes em segundo plano e devolvem logo o controle. Verifique o progresso com <code>smartctl -a /dev/&lt;disk&gt;</code>, procurando \"Self-test routine in progress\", ou aguarde e leia <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Os testes curtos costumam demorar dois minutos; os longos podem levar horas. O disco permanece utilizável, mas o desempenho de E/S pode diminuir."
   },
   "related": {
     "heading": "Relacionado",

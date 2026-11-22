@@ -13,7 +13,7 @@
   },
   "intro": {
     "title": "Como funciona o seletor NAS",
-    "body": "No processo ISO genérico, o seletor tenta detetar a última versão estável no espelho do projeto, usa uma versão de recurso se necessário, transfere a ISO e abre o configurador comum de CPU, RAM, discos e rede. Synology DSM e ZimaOS usam instaladores próprios."
+    "body": "No processo ISO genérico, o seletor tenta detectar a última versão estável no espelho do projeto, usa uma versão de recurso se necessário, baixa a ISO e abre o configurador comum de CPU, RAM, discos e rede. Synology DSM e ZimaOS usam instaladores próprios."
   },
   "image": {
     "alt": "Selector NAS de sistema ProxMenux",
@@ -26,7 +26,7 @@
   },
   "labels": {
     "base": "Base",
-    "fileSystem": "Sistema de ficheiros",
+    "fileSystem": "Sistema de arquivos",
     "viewDetails": "Ver detalhes"
   },
   "supported": {
@@ -34,7 +34,7 @@
     "cards": [
       {
         "name": "Synology DSM",
-        "tagline": "DiskStation Manager com carregador ARC/RR. Configure o carregador antes do primeiro arranque.",
+        "tagline": "DiskStation Manager com carregador ARC/RR. Configure o carregador antes da primeira inicialização.",
         "icon": "HardDrive",
         "base": "Linux (personalizado)",
         "fileSystem": "Btrfs, ext4",
@@ -43,7 +43,7 @@
       },
       {
         "name": "TrueNAS SCALE",
-        "tagline": "TrueNAS baseado em Debian com aplicações Docker nas versões atuais e ZFS como sistema de ficheiros principal. As versões antigas do SCALE usavam Kubernetes.",
+        "tagline": "TrueNAS baseado em Debian com aplicações Docker nas versões atuais e ZFS como sistema de arquivos principal. As versões antigas do SCALE usavam Kubernetes.",
         "icon": "Database",
         "base": "Debian Linux",
         "fileSystem": "ZFS",
@@ -88,7 +88,7 @@
       },
       {
         "name": "ZimaOS",
-        "tagline": "Sistema operacional NAS leve focado em mídia, aplicativos Docker e automação doméstica. Usa o seu próprio instalador.",
+        "tagline": "Sistema operacional NAS leve focado em mídia, aplicativos Docker e automação doméstica. Usa seu próprio instalador.",
         "icon": "MonitorIcon",
         "base": "Buildroot (evolução do CasaOS)",
         "fileSystem": "ext4",
@@ -135,7 +135,7 @@
       {
         "href": "/docs/help-info/zfs-commands",
         "label": "Comandos de gerenciamento ZFS",
-        "tail": " — útil se a sua distribuição NAS usar ZFS por baixo."
+        "tail": " — útil se sua distribuição NAS usar ZFS por baixo."
       },
       {
         "href": "/docs/create-vm",

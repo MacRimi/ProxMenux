@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox ProxMenux Documentação",
-    "description": "Registe um alvo iSCSI como armazenamento Proxmox com o ProxMenux. A ferramenta instala open-iscsi, descobre o portal através de sendtargets, permite escolher o alvo e executa pvesm add iscsi. Fornece dispositivos de blocos raw para as imagens de disco das VM.",
+    "description": "Registre um alvo iSCSI como armazenamento Proxmox com o ProxMenux. A ferramenta instala open-iscsi, descobre o portal através de sendtargets, permite escolher o alvo e executa pvesm add iscsi. Fornece dispositivos de blocos raw para as imagens de disco das VM.",
     "ogTitle": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox ProxMenux Documentação",
-    "ogDescription": "Registe um alvo iSCSI como armazenamento Proxmox com descoberta guiada. Usa pvesm add iscsi e fornece dispositivos de blocos raw para os discos das VM."
+    "ogDescription": "Registre um alvo iSCSI como armazenamento Proxmox com descoberta guiada. Usa pvesm add iscsi e fornece dispositivos de blocos raw para os discos das VM."
   },
   "header": {
     "title": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox",
@@ -29,7 +29,7 @@
       },
       {
         "term": "IQN",
-        "meaningRich": "A forma canônica é <code>iqn.YYYY-MM.reverse.domain:identifier</code>, por exemplo <code>iqn.2024-08.com.truenas:proxmox-pool</code>. Tanto o alvo como o iniciador têm o seu próprio IQN."
+        "meaningRich": "A forma canônica é <code>iqn.YYYY-MM.reverse.domain:identifier</code>, por exemplo <code>iqn.2024-08.com.truenas:proxmox-pool</code>. Tanto o alvo como o iniciador têm seu próprio IQN."
       },
       {
         "term": "LUN",
@@ -44,7 +44,7 @@
   "opening": {
     "heading": "Abrir a ferramenta",
     "body": "Do menu principal do ProxMenux, abra o <strong>Storage &amp; Share Manager → Adicione iSCSI Target como Proxmox Storage</strong>. Você verá este sub-menu com quatro opções:",
-    "imageAlt": "Menu do gestor de máquinas iSCSI — Adicionar / Ver / Remover / Teste de conectividade"
+    "imageAlt": "Menu do gerenciador de máquinas iSCSI — Adicionar / Ver / Remover / Teste de conectividade"
   },
   "howRuns": {
     "heading": "Como o script é executado (Adicionar fluxo)",
@@ -60,7 +60,7 @@
       "<strong>Tipo de conteúdo</strong> — ao contrário do NFS / Samba, o conteúdo de iSCSI é <strong>fixo ao <code>images</code></strong>. iSCSI expõe dispositivos de bloco brutos, não um sistema de arquivos, então o Proxmox só permite hospedar discos VM nele."
     ],
     "authTitle": "Autorizar o iniciador Proxmox no alvo",
-    "authBody1": "Antes do fluxo Adicionar funcionar de ponta a ponta, o alvo iSCSI precisa conhecer seu host Proxmox. Obter o seu IQN iniciador:",
+    "authBody1": "Antes do fluxo Adicionar funcionar de ponta a ponta, o alvo iSCSI precisa conhecer seu host Proxmox. Obter seu IQN iniciador:",
     "authBody2": "Adicione esse IQN à lista de acesso do alvo (TrueNAS: <em>Sharing → Block → Initiators Groups</em>; Synology: <em>SAN Manager → iSCSI → Target → Edit → Initiators</em>; etc.). Se o iniciador não estiver autorizado, a descoberta com <code>iscsiadm</code> retorna uma lista vazia ou um erro de autenticação."
   },
   "manual": {
@@ -79,7 +79,7 @@
   },
   "test": {
     "heading": "Teste de conectividade iSCSI",
-    "body": "Executa um passe diagnóstico: verifica se o <code>iscsiadm</code> está instalado, imprime o seu IQN iniciador, confirma que o <code>iscsid</code> está em execução, pings cada portal registrado, sonda sua porta, e relata o <code>pvesm status</code> mais se uma sessão iSCSI está atualmente ativa (<code>iscsiadm --mode session</code>). Sessão ativa mais portal acessível, mas \"inativo\" no Proxmox geralmente significa um estado obsoleto — tente <code>pvesm set &lt;id&gt; --disable 0</code>."
+    "body": "Executa um passe diagnóstico: verifica se o <code>iscsiadm</code> está instalado, imprime seu IQN iniciador, confirma que o <code>iscsid</code> está em execução, pings cada portal registrado, sonda sua porta, e relata o <code>pvesm status</code> mais se uma sessão iSCSI está atualmente ativa (<code>iscsiadm --mode session</code>). Sessão ativa mais portal acessível, mas \"inativo\" no Proxmox geralmente significa um estado obsoleto — tente <code>pvesm set &lt;id&gt; --disable 0</code>."
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",
@@ -91,10 +91,10 @@
       "Portal IP / porta errada (dupla verificação, padrão é 3260).",
       "O serviço iSCSI não está em execução no servidor alvo.",
       "Firewall bloqueia 3260 entre Proxmox e o alvo.",
-      "<strong>Iniciador IQN não está autorizado no alvo.</strong> Causa mais frequente em matrizes empresariais. Adicione o seu Proxmox IQN ao ACL inicial do alvo primeiro."
+      "<strong>Iniciador IQN não está autorizado no alvo.</strong> Causa mais frequente em matrizes empresariais. Adicione seu Proxmox IQN ao ACL inicial do alvo primeiro."
     ],
     "noTargetTitle": "Nenhum alvo encontrado, mas a descoberta foi bem- sucedida",
-    "noTargetBody": "O servidor aceitou o seu iniciador, mas não expõe nenhum alvo a ele. Revise os controles de autenticação/acesso do alvo — alguns arrays permitem a descoberta de todas as IQNs, mas filtram os alvos que cada IQN pode ver.",
+    "noTargetBody": "O servidor aceitou seu iniciador, mas não expõe nenhum alvo a ele. Revise os controles de autenticação/acesso do alvo — alguns arrays permitem a descoberta de todas as IQNs, mas filtram os alvos que cada IQN pode ver.",
     "noLunTitle": "LUNs não aparecem em /dev/disk/by-path após o registro",
     "noLunBody": "<code>pvesm add iscsi</code> teve sucesso, mas o kernel não está vendo dispositivos de bloco. Verifique <code>iscsiadm --mode session</code> — se nenhuma sessão estiver ativa, inicie uma manualmente com <code>iscsiadm --mode node --login</code>. Se uma sessão existir, mas não aparecerem LUNs, force uma nova varredura: <code>iscsiadm --mode session --rescan</code>. Se ainda nada, o alvo provavelmente não tem LUNs atribuídos a este IQN ainda (configurar mapeamento LUN no alvo).",
     "chapTitle": "Autenticação CHAP",
@@ -106,7 +106,7 @@
       {
         "href": "/docs/storage-share/host-nfs",
         "label": "Compartilhamento NFS como armazenamento Proxmox",
-        "tail": " — alternativas ao nível dos ficheiros. Mais simples de configurar, mais flexível (backup / ISO / tmpl / imagens), ligeiramente mais lento para discos VM ao vivo."
+        "tail": " — alternativas ao nível dos arquivos. Mais simples de configurar, mais flexível (backup / ISO / tmpl / imagens), ligeiramente mais lento para discos VM ao vivo."
       },
       {
         "href": "/docs/storage-share/host-samba",
