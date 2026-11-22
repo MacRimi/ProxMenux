@@ -224,9 +224,10 @@ def scan(vmid, run=read, guard_run=native.bounded_run):
 
 
 def cached(vmid):
+    source = native.discovery_source(vmid)
     with _mutex:
         value = copy.deepcopy(_cache.get(int(vmid)))
-    if value is None:
+    if not value or source is None or value.get('_source') != source:
         return {'vmid': int(vmid), 'status': 'not_scanned', 'candidates': [], 'stale': False, 'issues': []}
     if time.time() - value['scanned_at'] >= CACHE_SECONDS:
         value['stale'] = True
@@ -241,6 +242,13 @@ def mark_stale(vmid):
             _cache[int(vmid)]['_retired'] = True
 
 
+def forget(vmid):
+    vmid = int(vmid)
+    with _mutex:
+        _generations[vmid] = _generations.get(vmid, 0) + 1
+        _cache.pop(vmid, None)
+
+
 def discover(vmid):
     vmid = int(vmid)
     with _mutex:
@@ -250,13 +258,19 @@ def discover(vmid):
     try:
         with _mutex:
             generation = _generations.get(vmid, 0)
+        source = native.discovery_source(vmid)
         try:
             result = scan(vmid)
         except native.ProbeError as exc:
             result = {**cached(vmid), 'status': 'error', 'issues': [str(exc)], 'stale': True}
             result.setdefault('scanned_at', time.time())
+        if source != native.discovery_source(vmid):
+            return {'vmid': vmid, 'status': 'error', 'issues': ['guest_changed'],
+                    'candidates': [], 'stale': True}
         with _mutex:
             previous = copy.deepcopy(_cache.get(vmid))
+            if previous and previous.get('_source') != source:
+                previous = None
             if generation != _generations.get(vmid, 0):
                 return {**cached(vmid), 'status': 'error', 'issues': ['guest_changed'], 'stale': True}
             if result['status'] != 'complete' and previous:
@@ -269,18 +283,21 @@ def discover(vmid):
                 result['stale'] = True
                 result['scanned_at'] = previous['scanned_at']
             result['_attempt_at'] = time.time()
-            _cache[vmid] = copy.deepcopy(result)
-        return cached(vmid)
+            if source is not None:
+                _cache[vmid] = copy.deepcopy({**result, '_source': source})
+        return {key: val for key, val in result.items() if not key.startswith('_')}
     finally:
         lock.release()
 
 
 def cached_web_links(vmid, lookup):
     """Reuse a Find snapshot in existing web-link suggestions without another scan."""
+    source = native.discovery_source(vmid)
     with _mutex:
         value = copy.deepcopy(_cache.get(int(vmid)))
     # Only a complete search lists every container; otherwise probe as before.
-    if (not value or value.get('_retired') or value.get('status') != 'complete'
+    if (not value or source is None or value.get('_source') != source
+            or value.get('_retired') or value.get('status') != 'complete'
             or time.time() - value['_attempt_at'] >= SNAPSHOT_SECONDS):
         return None
     result = []

@@ -12,8 +12,12 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import re
 import socket
+import stat
+import sys
+import time
 
 import oci_console_logs
 
@@ -46,6 +50,73 @@ def installation_marker(config: str) -> str | None:
     text = config.split("\n[", 1)[0]
     match = re.search(r"^#.*proxmenux-instance=([0-9a-f-]{36})(?![0-9a-f-])", text, re.MULTILINE)
     return match.group(1) if match else None
+
+
+OCI_JOURNAL_BYTES = 2 * 1024 * 1024
+MAX_OCI_JOURNALS = 256
+
+
+class OciStateError(Exception):
+    """A plain guest action is unsafe until the OCI state is known."""
+
+
+def check_plain_lxc(config: str, instance: Path, deadline: float) -> None:
+    if installation_marker(config):
+        raise OciStateError('managed_oci')
+    if re.search(r'^#.*proxmenux-instance=|^\s*lxc\.environment\.runtime:', config, re.M):
+        raise OciStateError('oci_unknown')
+
+    try:
+        instance_mode = instance.lstat().st_mode
+    except FileNotFoundError:
+        return
+    except OSError:
+        raise OciStateError('oci_unknown') from None
+    if not stat.S_ISDIR(instance_mode):
+        raise OciStateError('oci_unknown')
+    try:
+        for name in ('oci-compose.json', 'stack-assembly.json'):
+            try:
+                (instance / name).lstat()
+            except FileNotFoundError:
+                continue
+            # An active record without a live marker needs review. This also
+            # rejects incomplete installations and broken records or symlinks.
+            raise OciStateError('oci_unknown')
+
+        # OCI keeps journals after successful work and rollback. Only these
+        # terminal phases prove that the directory contains history.
+        checked = 0
+        for name in ('transactions', 'stack-transactions'):
+            directory = instance / name
+            try:
+                mode = directory.lstat().st_mode
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISDIR(mode):
+                raise OciStateError('oci_unknown')
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    checked += 1
+                    if checked > MAX_OCI_JOURNALS or time.monotonic() >= deadline:
+                        raise OciStateError('oci_unknown')
+                    if not entry.is_dir(follow_symlinks=False):
+                        raise OciStateError('oci_unknown')
+                    journal = Path(entry.path) / 'transaction.json'
+                    fd = os.open(journal, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                    with os.fdopen(fd, 'rb') as handle:
+                        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                            raise OciStateError('oci_unknown')
+                        raw = handle.read(OCI_JOURNAL_BYTES + 1)
+                    if len(raw) > OCI_JOURNAL_BYTES:
+                        raise OciStateError('oci_unknown')
+                    state = json.loads(raw)
+                    if not isinstance(state, dict) or state.get('schema_version') != 1:
+                        raise OciStateError('oci_unknown')
+                    if state.get('phase') not in ('committed', 'rolled-back'):
+                        raise OciStateError('guest_busy')
+    except (OSError, ValueError, RecursionError):
+        raise OciStateError('oci_unknown') from None
 
 
 def belongs_to_guest(vmid: int, record: dict) -> bool:
@@ -118,3 +189,18 @@ def info(vmid: int) -> dict:
         and all((r.get("deployment") or {}).get("watchdog") is True for r in records),
     )
     return result
+
+
+if __name__ == "__main__":
+    # Native worker runs the same check after acquiring Proxmox's config lock.
+    if len(sys.argv) != 3:
+        sys.exit(2)
+    try:
+        with open(sys.argv[2], "rb") as handle:
+            raw = handle.read(65537)
+        if len(raw) > 65536:
+            sys.exit(1)
+        check_plain_lxc(raw.decode("utf-8").split("\n[", 1)[0], Path(sys.argv[1]),
+                        time.monotonic() + 3)
+    except (OciStateError, OSError, UnicodeError):
+        sys.exit(1)

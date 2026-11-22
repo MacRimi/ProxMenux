@@ -2,6 +2,8 @@
 use strict;
 use warnings;
 use JSON::PP qw(decode_json encode_json);
+use File::Path qw(make_path);
+use Fcntl qw(LOCK_EX LOCK_NB);
 
 our ($request, $deferred, $under_lock, $native_calls, $nested_calls) = (undef, undef, 0, 0, 0);
 {
@@ -56,6 +58,8 @@ require $ARGV[0];
     no warnings 'once';
     $PlainLxcRemoval::CFS_ROOT = $request->{cfs};
     $PlainLxcRemoval::RECEIPT_ROOT = $request->{receipts};
+    $PlainLxcRemoval::OCI_ROOT = $request->{oci_root};
+    $PlainLxcRemoval::OCI_CHECKER = $request->{oci_checker};
 }
 my $rpc = bless {}, 'PlainLxcRemoval';
 my $options = $rpc->prepare('fixture', $request->{args});
@@ -77,6 +81,18 @@ if ($request->{scenario} eq 'generation_changed') {
     open(my $vmlist, '>', "$request->{cfs}/.vmlist") or die;
     print {$vmlist} encode_json({ ids => { 100 => { node => 'fixture', type => 'lxc', version => 5 } } });
     close($vmlist) or die;
+}
+if ($request->{scenario} eq 'oci_started') {
+    my $directory = "$request->{oci_root}/100/transactions/fixture";
+    make_path($directory);
+    open(my $journal, '>', "$directory/transaction.json") or die;
+    print {$journal} encode_json({ schema_version => 1, phase => 'recovering' });
+    close($journal) or die;
+}
+my $oci_lock;
+if ($request->{scenario} eq 'oci_lock_busy') {
+    open($oci_lock, '>', "$request->{oci_root}/.lock") or die;
+    flock($oci_lock, LOCK_EX | LOCK_NB) or die;
 }
 my $ok = eval { $deferred->($request->{task}); 1 };
 die "fake worker failed unexpectedly: $@" if !$ok && $request->{scenario} eq 'success';

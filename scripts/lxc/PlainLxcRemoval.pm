@@ -4,12 +4,16 @@ package PlainLxcRemoval;
 use strict;
 use warnings;
 use Digest::SHA qw(sha256_hex);
-use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
+use Errno qw(ENOENT);
+use Fcntl qw(O_CREAT O_EXCL O_WRONLY O_RDONLY O_NOFOLLOW O_NONBLOCK LOCK_SH LOCK_NB);
+use File::Basename qw(dirname);
 use JSON::PP qw(decode_json);
 
 our @ISA = ('PVE::RPCEnvironment');
 our $CFS_ROOT = '/etc/pve';
 our $RECEIPT_ROOT = '/run/proxmenux-lxc-removals';
+our $OCI_ROOT = '/usr/local/share/proxmenux/oci/instances';
+our $OCI_CHECKER = dirname(__FILE__) . '/oci_instance_info.py';
 
 sub read_bytes {
     my ($fh) = @_;
@@ -47,6 +51,20 @@ sub check_disk {
     my $root = PVE::LXC::Config->parse_volume('rootfs', $config->{rootfs});
     die "Reviewed root volume changed\n" unless $root && $root->{volume} eq $expected;
     die "Reviewed root volume unavailable\n" unless root_volume_exists($vmid, $expected);
+}
+
+sub lock_plain_oci_state {
+    my ($vmid) = @_;
+    my $lock;
+    if (sysopen($lock, "$OCI_ROOT/.lock", O_RDONLY | O_NOFOLLOW | O_NONBLOCK)) {
+        die "OCI registry is busy\n" unless -f $lock && flock($lock, LOCK_SH | LOCK_NB);
+    } elsif ($! != ENOENT) {
+        die "OCI registry lock unavailable\n";
+    }
+    my $status = system('/usr/bin/python3', '-B', $OCI_CHECKER, "$OCI_ROOT/$vmid",
+        PVE::LXC::Config->config_file($vmid));
+    die "Reviewed LXC OCI state changed or is unavailable\n" if $status != 0;
+    return $lock;
 }
 
 sub root_volume_exists {
@@ -106,6 +124,7 @@ sub disable_protection {
     require PVE::LXC;
     return PVE::LXC::Config->lock_config($vmid, sub {
         check_identity($guard, $node, $vmid);
+        my $oci_lock = lock_plain_oci_state($vmid);
         my $config = PVE::LXC::Config->load_config($vmid);
         die "Container is running\n" if PVE::LXC::check_running($vmid);
         die "Removal protection is not enabled\n" unless $config->{protection};
@@ -151,6 +170,7 @@ sub fork_worker {
         PVE::LXC::Config->lock_config($vmid, sub {
             check_identity($guard, $node, $vmid);
             check_disk($vmid, $volume);
+            my $oci_lock = lock_plain_oci_state($vmid);
             # Storage plugins may start their own cleanup worker (imgdel).
             local $self->{plain_lxc_native_worker} = 1;
             $worker->($upid);

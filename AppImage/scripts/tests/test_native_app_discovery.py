@@ -437,7 +437,7 @@ class DiscoveryFixtures(unittest.TestCase):
             with self.subTest(cached=prior is not None):
                 native._cache.clear()
                 if prior:
-                    native._cache[101] = copy.deepcopy(prior)
+                    native._cache[101] = {**copy.deepcopy(prior), '_source': native.discovery_source(101)}
                 entered, release = threading.Event(), threading.Event()
                 results = []
                 def delayed(vmid):
@@ -465,6 +465,25 @@ class DiscoveryFixtures(unittest.TestCase):
         with patch.object(native, 'scan', side_effect=lambda vmid: (
                 native.mark_stale(102), copy.deepcopy(complete))[1]):
             self.assertFalse(native.discover(101)['stale'])
+
+    def test_replacement_hides_prior_evidence_and_discards_a_late_scan(self):
+        complete = native.scan(101, self.runner())
+        with patch.object(native, 'scan', return_value=complete):
+            native.discover(101)
+        config = self.config / '101.conf'
+        old_config = config.read_bytes()
+
+        def replace_during_scan(vmid):
+            replacement = self.config / 'replacement'
+            replacement.write_bytes(old_config)
+            replacement.replace(config)
+            return complete
+
+        with patch.object(native, 'scan', side_effect=replace_during_scan):
+            self.assertEqual(native.discover(101)['issues'], ['guest_changed'])
+        self.assertEqual(native.cached(101)['candidates'], [])
+        with patch.object(native, 'scan', side_effect=native.ProbeError('timeout')):
+            self.assertEqual(native.discover(101)['candidates'], [])
 
     def test_scan_excludes_later_updater_and_releases_lock_after_success_or_failure(self):
         path = self.root / 'proxmenux-lxc-update-101.lock'
@@ -535,7 +554,7 @@ class DiscoveryFixtures(unittest.TestCase):
 
     def test_failed_scan_releases_discovery_lock_and_keeps_prior_evidence(self):
         complete = native.scan(101, self.runner())
-        native._cache[101] = copy.deepcopy(complete)
+        native._cache[101] = {**copy.deepcopy(complete), '_source': native.discovery_source(101)}
         with patch.object(native, 'scan', side_effect=RuntimeError('unexpected')):
             with self.assertRaises(RuntimeError):
                 native.discover(101)
@@ -747,6 +766,7 @@ class Routes(unittest.TestCase):
     """Execute actual Flask route bodies; fixture auth, no server startup jobs."""
     def setUp(self):
         from flask import Flask, request, jsonify, g
+        self.enterContext(patch.object(native, 'discovery_source', return_value='fixture'))
         self.app = Flask('native-fixture')
         self.authorized = True
         def require_auth(fn):
@@ -809,7 +829,7 @@ class Routes(unittest.TestCase):
                 'installation_path': '/opt/retained/server'}
         previous = {'vmid': 101, 'status': 'complete', 'stale': False,
                     'scanned_at': time.time(), 'candidates': [item]}
-        native._cache[101] = copy.deepcopy(previous)
+        native._cache[101] = {**copy.deepcopy(previous), '_source': 'fixture'}
         with patch.object(native, 'scan', side_effect=native.ProbeError('guest_stopped')), \
              patch.object(lxc_apps, 'load_sidecar', return_value={'apps': []}), \
              patch.object(lxc_apps, 'get_suggestions') as suggestions, \
@@ -827,10 +847,10 @@ class Routes(unittest.TestCase):
 
     def test_actual_lifecycle_marks_last_known_stale_without_scanning(self):
         import docker_app_discovery as docker
-        docker._cache[101] = {'vmid':101, 'status':'complete', 'stale':False, 'candidates':[], 'scanned_at':time.time()}
+        docker._cache[101] = {'vmid':101, 'status':'complete', 'stale':False, 'candidates':[], 'scanned_at':time.time(), '_source':'fixture'}
         self.addCleanup(docker._cache.clear)
         native._cache[101] = {'vmid': 101, 'status': 'complete', 'stale': False,
-                              'candidates': [], 'scanned_at': time.time()}
+                              'candidates': [], 'scanned_at': time.time(), '_source': 'fixture'}
         with patch.object(native, 'discover') as scan, \
              patch.object(docker, 'discover') as docker_scan, \
              patch.object(lxc_apps, 'clear_schedule_reboot_required') as clear:
@@ -865,6 +885,24 @@ class Routes(unittest.TestCase):
                 environment['_vm_app_suggestions_cache'].clear()
                 self.assertEqual(environment['_vm_modal_prewarmer_pass'](), 1)
             scan.assert_not_called()
+
+    def test_destroy_event_drops_both_discovery_results_without_probing_guest(self):
+        import docker_app_discovery as docker
+        prior = {'vmid': 101, 'status': 'complete', 'stale': False, 'scanned_at': time.time(),
+                 'candidates': [{'discovery_id': 'previous-guest'}], '_source': 'fixture'}
+        native._cache[101] = copy.deepcopy(prior)
+        docker._cache[101] = copy.deepcopy(prior)
+        self.addCleanup(native._cache.clear)
+        self.addCleanup(docker._cache.clear)
+        self.globals.update(_oci_operation_running=lambda vmid: False, _guest_app_sources={},
+                            reconcile_link_detachments=Mock())
+        with patch.object(native, 'scan') as native_scan, patch.object(docker, 'scan') as docker_scan, \
+             patch.object(lxc_apps, 'forget_guest'):
+            self.globals['_handle_guest_lifecycle']('101', 'lxc', 'destroy')
+            self.assertEqual(native.cached(101)['candidates'], [])
+            self.assertEqual(docker.cached(101)['candidates'], [])
+            native_scan.assert_not_called()
+            docker_scan.assert_not_called()
 
 
 if __name__ == '__main__':

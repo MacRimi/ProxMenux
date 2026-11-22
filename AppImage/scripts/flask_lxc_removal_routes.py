@@ -28,6 +28,7 @@ from jwt_middleware import require_admin_scope
 from pbs_manager import is_pbs_host
 import custom_links
 import lxc_removal_receipts as receipts
+from oci_instance_info import OciStateError, check_plain_lxc
 
 
 lxc_removal_bp = Blueprint("lxc_removal", __name__)
@@ -150,26 +151,14 @@ def _rootfs(value: str):
 
 
 def _contains_oci(vmid: int, config_text: str) -> bool:
-    # Both an on-disk OCI record and a surviving restoration marker forbid
-    # this path.  An unreadable record is not interpreted as an ordinary CT.
-    record = OCI_INSTANCE_ROOT / str(vmid) / "oci-compose.json"
-    if record.exists():
-        try:
-            value = json.loads(record.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            raise RemovalError("oci_identity_unavailable") from None
-        if not isinstance(value, dict):
-            raise RemovalError("oci_identity_unavailable")
-        # A record alone cannot identify a replacement guest. Keep the
-        # destructive path closed until that record has been reviewed.
-        from oci_instance_info import installation_marker
-        if value.get("installation_id") and installation_marker(config_text) != value["installation_id"]:
-            raise RemovalError("oci_identity_unavailable")
-        return True
-    return bool(re.search(
-        r"^#.*proxmenux-instance=|^\s*lxc\.(?:environment\.runtime|init\.cwd|signal\.halt):",
-        config_text, re.MULTILINE,
-    ))
+    try:
+        check_plain_lxc(config_text.split("\n[", 1)[0], OCI_INSTANCE_ROOT / str(vmid),
+                        time.monotonic() + 3)
+    except OciStateError as error:
+        if str(error) == "managed_oci":
+            return True
+        raise RemovalError("oci_identity_unavailable") from None
+    return False
 
 
 def _root_volume_exists(node, vmid, volume):
@@ -314,7 +303,9 @@ def _settle_link_detachment(operation, status):
         pending = receipts.link_detachment(operation)
         if pending is None:
             return
-        if state == "ok":
+        if state == "warning" and _guest_removal_evidence(pending["vmid"], status["task"]):
+            return
+        if state in {"ok", "warning"}:
             custom_links.detach_lxc_bindings(pending["vmid"], pending["bindings"])
         receipts.finish_link_detachment(operation)
     except (OSError, ValueError, TypeError, KeyError) as error:
@@ -345,13 +336,7 @@ def reconcile_link_detachments(vmid=None):
             print(f"[ProxMenux] Could not recover LXC link detachment: {error}", flush=True)
 
 
-def _status(vmid, node, volume, task, operation):
-    status = _task_status(node, task)
-    # The original task identifies the removal even if the VMID or disk name
-    # has already been reused. Only the saved bindings may be detached here.
-    _settle_link_detachment(operation, status)
-    if status["state"] != "ok":
-        return status
+def _guest_removal_evidence(vmid, task):
     try:
         resources = _pvesh_json(["get", "/cluster/resources", "--type", "vm"])
     except RemovalError:
@@ -371,6 +356,19 @@ def _status(vmid, node, volume, task, operation):
         return {"state": "unknown", "task": task, "reason": "result_verification_unavailable"}
     else:
         return {"state": "warning", "task": task, "reason": "configuration_still_present"}
+    return None
+
+
+def _status(vmid, node, volume, task, operation):
+    status = _task_status(node, task)
+    # The original task identifies the removal even if the VMID or disk name
+    # has already been reused. Only the saved bindings may be detached here.
+    _settle_link_detachment(operation, status)
+    if status["state"] != "ok":
+        return status
+    evidence = _guest_removal_evidence(vmid, task)
+    if evidence:
+        return evidence
     try:
         if _root_volume_exists(node, vmid, volume):
             return {"state": "warning", "task": task, "reason": "root_volume_still_present"}

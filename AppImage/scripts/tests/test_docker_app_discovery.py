@@ -187,6 +187,7 @@ class Scan(unittest.TestCase):
 
 class Cache(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch.object(native, "discovery_source", return_value="fixture"))
         docker._cache.clear(); docker._generations.clear(); docker._locks.clear()
         self.addCleanup(docker._cache.clear)
         self.addCleanup(docker._generations.clear)
@@ -224,6 +225,15 @@ class Cache(unittest.TestCase):
             with patch.object(docker, 'scan') as scan:
                 self.assertEqual(docker.discover(101)['status'], 'busy'); scan.assert_not_called()
         finally: lock.release()
+
+    def test_replaced_guest_loses_cached_apps_and_web_links(self):
+        with patch.object(docker, 'scan', return_value=self.value):
+            docker.discover(101)
+        with patch.object(native, 'discovery_source', return_value='replacement'):
+            self.assertEqual(docker.cached(101)['candidates'], [])
+            self.assertIsNone(docker.cached_web_links(101, Mock()))
+            with patch.object(docker, 'scan', side_effect=native.ProbeError('timeout')):
+                self.assertEqual(docker.discover(101)['candidates'], [])
 
     def test_shared_web_links_avoid_duplicate_inspect_and_stop_at_snapshot_boundary(self):
         lookup = Mock(return_value={'slug': None, 'name': 'web', 'logo_url': None})
@@ -316,6 +326,7 @@ class Reader(unittest.TestCase):
 
 class Routes(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch.object(native, "discovery_source", return_value="fixture"))
         from flask import Flask, request, jsonify
         self.app = Flask(__name__)
         def auth(fn):
@@ -337,7 +348,7 @@ class Routes(unittest.TestCase):
 
     def test_existing_suggestions_refresh_preserves_docker_cache_without_new_scan(self):
         value = {'vmid':101,'status':'complete','candidates':[],'scanned_at':time.time(),'stale':False}
-        docker._cache[101] = copy.deepcopy(value)
+        docker._cache[101] = {**copy.deepcopy(value), '_source': 'fixture'}
         self.addCleanup(docker._cache.clear)
         with patch.object(docker,'discover') as scan, patch.object(lxc_apps,'get_suggestions',return_value={'extras':[]}) as catalog, patch.object(lxc_apps,'_write_sidecar') as write:
             response = self.client.post('/api/vms/101/apps/suggestions',headers={'X-Fixture':'yes'})

@@ -228,6 +228,23 @@ class LxcRemoveTests(unittest.TestCase):
         record.write_text(json.dumps({"installation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}))
         response = self.call("GET", f"/api/vms/{VMID}/remove-preview")
         self.assertEqual(response.json, {"error": "oci_identity_unavailable"})
+
+    def test_oci_journal_appearing_after_review_blocks_remove_and_protection(self):
+        self.write_config("protection: 1\n")
+        protection_check = self.preview()["protection_check"]
+        journal = self.oci / str(VMID) / "transactions" / "historic" / "transaction.json"
+        journal.parent.mkdir(parents=True)
+        journal.write_text(json.dumps({"schema_version": 1, "phase": "recovering"}))
+        result = self.call("POST", f"/api/vms/{VMID}/disable-removal-protection",
+                           {"check": protection_check})
+        self.assertEqual(result.status_code, 409)
+        self.assertEqual(self.protection_calls, [])
+        self.write_config()
+        journal.write_text(json.dumps({"schema_version": 1, "phase": "committed"}))
+        before = self.preview()["check"]
+        journal.write_text(json.dumps({"schema_version": 1, "phase": "recovering"}))
+        result = self.confirm(before)
+        self.assertEqual(result.json, {"error": "oci_identity_unavailable"})
         self.assertFalse(self.delete_calls)
 
     def test_preview_blocks_each_unsafe_target_without_a_delete(self):
@@ -534,6 +551,7 @@ class LxcRemoveTests(unittest.TestCase):
         })
         check = self.preview()["check"]
         self.assertEqual(list(routes.receipts.pending_link_detachments()), [])
+
         self.confirm(check)
         self.task_state = {"status": "stopped", "exitstatus": "unexpected status"}
         self.assertEqual(self.status(check).json["state"], "unknown")
@@ -541,6 +559,27 @@ class LxcRemoveTests(unittest.TestCase):
         self.task_state["exitstatus"] = "destroy failed"
         self.assertEqual(self.status(check).json["state"], "failed")
         self.assertEqual(custom_links.load_all(), [original])
+        self.assertEqual(list(routes.receipts.pending_link_detachments()), [])
+
+    def test_warning_retries_link_detachment_until_guest_absence_is_verifiable(self):
+        _, original = custom_links.create({
+            "name": "Original", "url": "https://example.test/original",
+            "binding": {"vmid": VMID, "guest_type": "lxc"},
+        })
+        check = self.preview()["check"]
+        self.confirm(check)
+        self.task_state = {"status": "stopped", "exitstatus": "WARNINGS: 1"}
+        self.assertEqual(self.status(check).json["state"], "warning")
+        self.assertEqual(custom_links.load_all(), [original])
+        self.assertEqual(len(list(routes.receipts.pending_link_detachments())), 1)
+        self.resources = []
+        self.assertEqual(self.status(check).json["state"], "warning")
+        self.assertEqual(custom_links.load_all(), [original])
+        (self.conf / f"{VMID}.conf").unlink()
+        routes.reconcile_link_detachments(VMID)
+        self.assertEqual(self.status(check).json["state"], "warning")
+        self.assertEqual(custom_links.load_all()[0]["url"], original["url"])
+        self.assertIsNone(custom_links.load_all()[0]["binding"])
         self.assertEqual(list(routes.receipts.pending_link_detachments()), [])
 
     def test_reused_vmid_with_identical_config_cannot_use_old_confirmation(self):
@@ -623,7 +662,7 @@ class LxcRemoveTests(unittest.TestCase):
             **os.environ, "SCRIPT_DIR": str(SCRIPTS), "APP_DIR": str(appdir),
         })
         for name in ("flask_server.py", "flask_lxc_removal_routes.py", "lxc_removal_receipts.py",
-                     "plain_lxc_pve.pl", "PlainLxcRemoval.pm"):
+                     "plain_lxc_pve.pl", "PlainLxcRemoval.pm", "oci_instance_info.py", "oci_console_logs.py"):
             self.assertTrue((bin_dir / name).is_file(), name)
         for name in ("plain_lxc_pve.pl", "PlainLxcRemoval.pm"):
             subprocess.run(["perl", "-c", str(bin_dir / name)], check=True, capture_output=True)
@@ -638,10 +677,14 @@ class LxcRemoveTests(unittest.TestCase):
             ("foreign_disk", 0, TASK),
             ("template_changed", 0, TASK),
             ("storage_changed", 0, TASK),
+            ("oci_started", 0, TASK),
+            ("oci_lock_busy", 0, TASK),
             ("sealed", 0, routes.receipts.REJECTED),
         ]:
             with self.subTest(scenario=scenario):
                 self.write_generation(4)
+                oci_root = self.root / scenario
+                oci_root.mkdir()
                 current = dict(check, operation=routes.uuid4().hex, purge=1, destroy_unreferenced_disks=1)
                 reservation = routes.receipts.begin(current["operation"])
                 if scenario == "sealed":
@@ -652,6 +695,7 @@ class LxcRemoveTests(unittest.TestCase):
                     )},
                     "cfs": str(self.root), "config": str(self.conf / f"{VMID}.conf"),
                     "receipts": str(routes.receipts.DIRECTORY), "scenario": scenario, "task": TASK,
+                    "oci_root": str(oci_root), "oci_checker": str(SCRIPTS / "oci_instance_info.py"),
                 }
                 run = subprocess.run(["perl", str(fixture), str(module)], text=True, check=True,
                                      input=json.dumps(request), capture_output=True)
