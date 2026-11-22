@@ -1502,7 +1502,7 @@
       "receiptUnavailable": "Prehliadaču sa nepodarilo uložiť údaje na obnovenie sledovania. Požiadavka sa neodoslala.",
       "targetChanged": "LXC sa od kontroly zmenil. Nič sa neodstránilo; pred pokračovaním ho znova skontrolujte.",
       "reasons": {
-        "container_running": "Kontajner beží. Pred odstránením ho vypnite.",
+        "container_running": "Kontajner beží. Ak ho chcete odstrániť, najprv ho vypnite.",
         "container_protected": "Je zapnutá ochrana Proxmoxu proti odstráneniu.",
         "container_locked": "Kontajner je zamknutý inou operáciou.",
         "container_template": "Toto je šablóna LXC. Šablóny tu nemožno odstrániť.",

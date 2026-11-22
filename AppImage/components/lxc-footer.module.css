@@ -10,7 +10,6 @@
 }
 
 .actions > button {
-  height: 32px;
   gap: 4px;
   padding: 4px 3px;
   font-family: Arial, "Segoe UI", sans-serif;
@@ -55,10 +54,4 @@
 
 .actions:has(> :only-child) {
   grid-template-columns: 1fr;
-}
-
-@media (pointer: coarse) {
-  .actions > button {
-    height: 44px;
-  }
 }

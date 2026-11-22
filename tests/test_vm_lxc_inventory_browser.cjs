@@ -825,6 +825,7 @@ async function run() {
       const remove = buttons.find(el => el.textContent.trim() === 'Odstrániť');
       return {
         removeDisabled: remove.disabled,
+        removalHint: document.getElementById(remove.getAttribute('aria-describedby'))?.textContent.trim(),
         rows: new Set(buttons.map(button => button.offsetTop)).size,
         overflow: footer.scrollWidth > footer.clientWidth + 1,
         controls: buttons.map(button => {
@@ -842,11 +843,12 @@ async function run() {
       };
     })()`)
     assert.ok(layout.removeDisabled && !layout.overflow, `Removal guard and layout at ${width}px`)
+    assert.equal(layout.removalHint, "Kontajner beží. Ak ho chcete odstrániť, najprv ho vypnite.")
     assert.equal(layout.controls.length, 6)
     assert.ok(layout.controls.some(control => control.text === "Vynútiť vypnutie"))
     const widths = layout.controls.map(control => control.width)
     assert.ok(Math.max(...widths) - Math.min(...widths) <= 1, `Equal button widths at ${width}px`)
-    assert.ok(layout.controls.every(control => control.fits && control.height === (mobile ? 44 : 32)),
+    assert.ok(layout.controls.every(control => control.fits && control.height === 40),
       `One line with a visible icon at ${width}px: ${JSON.stringify(layout)}`)
     assert.equal(layout.rows, width >= 768 ? 1 : width < 640 ? 3 : 2)
   }
