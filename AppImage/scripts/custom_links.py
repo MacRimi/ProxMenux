@@ -16,6 +16,7 @@ Schema of each entry
             "vmid":       <int>,
             "guest_type": "lxc" | "qemu"
         },
+        "binding_revision": "<uuid4>",       # for explicit binding changes
         "created_at": <unix ts>,
         "updated_at": <unix ts>
     }
@@ -209,9 +210,11 @@ def validate_entry(raw: Any, existing_id: Optional[str] = None) -> tuple[bool, A
 
 def create(payload: dict) -> tuple[bool, Any]:
     """Add a new link. Assigns a fresh UUID and appends to the file."""
-    ok, entry = validate_entry(payload)
+    ok, entry = validate_entry(payload, existing_id=str(uuid.uuid4()))
     if not ok:
         return False, entry
+    if entry["binding"]:
+        entry["binding_revision"] = str(uuid.uuid4())
     with _lock:
         current = load_all()
         current.append(entry)
@@ -234,6 +237,11 @@ def update(link_id: str, payload: dict) -> tuple[bool, Any]:
                 ok, entry = validate_entry(merged, existing_id=link_id)
                 if not ok:
                     return False, entry
+                if entry["binding"]:
+                    revision = (str(uuid.uuid4()) if "binding" in payload
+                                else existing.get("binding_revision"))
+                    if revision is not None:
+                        entry["binding_revision"] = revision
                 current[i] = entry
                 save_all(current)
                 return True, entry
@@ -253,24 +261,30 @@ def delete(link_id: str) -> tuple[bool, Any]:
     return True, {"deleted": link_id}
 
 
-def purge_binding_for_vmid(vmid: int) -> int:
-    """Clear the `binding` on every link that pointed to a guest that
-    no longer exists. Called from the guest lifecycle hook when a VM
-    or CT is destroyed so the dashboard never surfaces a dead ID.
-    Returns the number of links updated (0 or more)."""
-    try:
-        target = int(vmid)
-    except (TypeError, ValueError):
-        return 0
+def _bound_to_lxc(entry, vmid):
+    binding = entry.get("binding")
+    return (isinstance(binding, dict) and binding.get("vmid") == vmid
+            and binding.get("guest_type") == "lxc")
+
+
+def snapshot_lxc_bindings(vmid: int) -> dict:
+    """Capture link identities, including entries written before revisions existed."""
+    return {entry["id"]: entry.get("binding_revision") for entry in load_all()
+            if _bound_to_lxc(entry, vmid) and isinstance(entry.get("id"), str)}
+
+
+def detach_lxc_bindings(vmid: int, bindings: dict) -> None:
+    """Keep the latest metadata and leave new or explicitly rebound links alone."""
     changed = 0
     with _lock:
         current = load_all()
         for entry in current:
-            binding = entry.get("binding") or {}
-            if isinstance(binding, dict) and binding.get("vmid") == target:
+            link_id = entry.get("id")
+            if (_bound_to_lxc(entry, vmid) and isinstance(link_id, str) and link_id in bindings
+                    and entry.get("binding_revision") == bindings[link_id]):
                 entry["binding"] = None
+                entry.pop("binding_revision", None)
                 entry["updated_at"] = int(time.time())
                 changed += 1
         if changed:
             save_all(current)
-    return changed

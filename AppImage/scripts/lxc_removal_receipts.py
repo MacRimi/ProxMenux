@@ -1,5 +1,6 @@
 """One-shot dispatch receipts shared with the native removal worker."""
 
+import json
 import os
 from pathlib import Path
 import re
@@ -19,13 +20,17 @@ DESTROY_UPID = re.compile(
 )
 
 
-def _path(operation):
-    if not isinstance(operation, str) or not OPERATION.fullmatch(operation):
-        raise ValueError("Invalid removal operation")
+def _directory():
     info = DIRECTORY.lstat()
     if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
         raise OSError("Invalid removal receipt directory")
-    return DIRECTORY / operation
+    return DIRECTORY
+
+
+def _path(operation):
+    if not isinstance(operation, str) or not OPERATION.fullmatch(operation):
+        raise ValueError("Invalid removal operation")
+    return _directory() / operation
 
 
 def begin(operation):
@@ -38,6 +43,36 @@ def begin(operation):
 def task_for(value, node, vmid):
     match = DESTROY_UPID.fullmatch(value) if isinstance(value, str) else None
     return value if match and match["node"] == node and match["vmid"] == str(vmid) else None
+
+
+def stage_link_detachment(operation, node, vmid, bindings):
+    if bindings:
+        path = _path(operation)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path) as pending:
+            json.dump({"node": node, "vmid": vmid, "bindings": bindings}, pending)
+            pending.flush()
+            os.link(pending.name, path / "links.json")
+
+
+def pending_link_detachments():
+    try:
+        directory = _directory()
+    except FileNotFoundError:
+        return
+    for path in directory.glob("*/links.json"):
+        if OPERATION.fullmatch(path.parent.name):
+            yield path.parent.name
+
+
+def link_detachment(operation):
+    try:
+        return json.loads((_path(operation) / "links.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+
+
+def finish_link_detachment(operation):
+    (_path(operation) / "links.json").unlink(missing_ok=True)
 
 
 def outcome(operation):

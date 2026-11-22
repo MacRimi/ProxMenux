@@ -111,7 +111,7 @@ from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
 from flask_vm_backup_routes import vm_backup_bp  # noqa: E402
 from flask_plain_lxc_routes import plain_lxc_bp  # noqa: E402
-from flask_lxc_removal_routes import lxc_removal_bp  # noqa: E402
+from flask_lxc_removal_routes import lxc_removal_bp, reconcile_link_detachments  # noqa: E402
 from flask_vm_backup_routes import active_vzdump  # noqa: E402
 from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
                                    guest_backup_deletion_status)  # noqa: E402
@@ -2324,6 +2324,8 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
             _vm_cache_invalidate(guest_id, _vm_schedule_cache)
         except Exception as exc:
             print(f'[ProxMenux] could not forget the applications of {guest_type} {guest_id}: {exc}', flush=True)
+        if guest_type == 'lxc':
+            reconcile_link_detachments(guest_id)
         _publish_guest_modal_cache_revision(guest_id)
 
 
@@ -14743,6 +14745,7 @@ def api_lxc_apps_dockerhub_tag_preview():
 def api_custom_links_list():
     try:
         import custom_links
+        reconcile_link_detachments()
         return jsonify(custom_links.load_all())
     except Exception as e:
         return jsonify({'error': str(e)}), 500

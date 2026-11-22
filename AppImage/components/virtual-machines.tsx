@@ -19,7 +19,7 @@ import { Switch } from "./ui/switch"
 import { Textarea } from "./ui/textarea"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import useSWR from "swr"
+import useSWR, { mutate as revalidate } from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { LxcRemoveDialog } from "./lxc-remove-dialog"
@@ -7926,6 +7926,7 @@ export function VirtualMachines() {
         open={removeLxcOpen}
         onOpenChange={setRemoveLxcOpen}
         onRemoved={(vmid) => {
+          void revalidate("/api/apps/custom-links")
           vmModalCacheRef.current.details.delete(vmid)
           vmModalCacheRef.current.backups.delete(vmid)
           vmModalCacheRef.current.schedule.delete(vmid)

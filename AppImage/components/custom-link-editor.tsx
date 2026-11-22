@@ -116,7 +116,9 @@ export function CustomLinkEditor({
         url: draft.url.trim(),
         logo_url: draft.logo_url.trim(),
         category: draft.category.trim(),
-        binding: parseKey(draft.bindingKey),
+        ...(!editing || draft.bindingKey !== buildKey(editing.binding)
+          ? { binding: parseKey(draft.bindingKey) }
+          : {}),
       }
       if (editing) {
         await fetchApi(`/api/apps/custom-links/${editing.id}`, {

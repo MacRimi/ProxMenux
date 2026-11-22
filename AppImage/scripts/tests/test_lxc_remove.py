@@ -16,6 +16,7 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SCRIPTS)]
 
 import flask_lxc_removal_routes as routes
+import custom_links
 import jwt_middleware
 import lxc_check_job
 
@@ -67,6 +68,8 @@ class LxcRemoveTests(unittest.TestCase):
         self.enterContext(patch.object(routes, "CONF_DIR", self.conf))
         self.enterContext(patch.object(routes, "CFS_DIR", self.root))
         self.enterContext(patch.object(routes.receipts, "DIRECTORY", self.root / "removals"))
+        self.enterContext(patch.object(custom_links, "_CUSTOM_LINKS_PATH", str(self.root / "links.json")))
+        self.enterContext(patch.object(custom_links, "_cached_entries", None))
         self.enterContext(patch.object(lxc_check_job, "LOCK_DIR", self.root))
         self.enterContext(patch.object(lxc_check_job, "subprocess", SimpleNamespace(
             run=self.run, TimeoutExpired=subprocess.TimeoutExpired,
@@ -447,6 +450,54 @@ class LxcRemoveTests(unittest.TestCase):
         self.task_state = {"status": ["stopped"], "exitstatus": "OK"}
         self.assertEqual(self.status(check).json["state"], "unknown")
         self.assertEqual(len(self.delete_calls), 1)
+
+    def test_success_detaches_only_original_bindings_even_if_vmid_was_reused(self):
+        binding = {"vmid": VMID, "guest_type": "lxc"}
+        old_url = "https://example.test/original"
+        _, old = custom_links.create({"name": "Original", "url": old_url, "binding": binding})
+        old.pop("binding_revision")  # A link saved before this feature.
+        _, rebound = custom_links.create({"name": "Rebound", "url": old_url, "binding": binding})
+        _, qemu = custom_links.create({
+            "name": "VM", "url": old_url, "binding": {**binding, "guest_type": "qemu"},
+        })
+        custom_links.save_all([old, rebound, qemu])
+
+        check = self.preview()["check"]
+        self.assertEqual(self.confirm(check).json["state"], "running")
+        self.assertEqual(custom_links.load_all(), [old, rebound, qemu])
+        new_url = "https://example.test/edited"
+        self.assertTrue(custom_links.update(old["id"], {"url": new_url})[0])
+        self.write_generation(5)
+        self.assertTrue(custom_links.update(rebound["id"], {"binding": binding})[0])
+        _, new = custom_links.create({"name": "Replacement", "url": old_url, "binding": binding})
+        self.task_state = {"status": "stopped", "exitstatus": "OK"}
+
+        routes.reconcile_link_detachments(VMID)
+        stored = {entry["id"]: entry for entry in custom_links.load_all()}
+        self.assertIsNone(stored[old["id"]]["binding"])
+        self.assertEqual(stored[old["id"]]["url"], new_url)
+        self.assertEqual(stored[qemu["id"]], qemu)
+        self.assertEqual(stored[new["id"]], new)
+        self.assertEqual(stored[rebound["id"]]["binding"], binding)
+        self.assertEqual(self.status(check).json["reason"], "vmid_still_present")
+        self.assertEqual(list(routes.receipts.pending_link_detachments()), [])
+        self.assertEqual(len(self.delete_calls), 1)
+
+    def test_unconfirmed_or_failed_destroy_leaves_links_bound(self):
+        _, original = custom_links.create({
+            "name": "Original", "url": "https://example.test/original",
+            "binding": {"vmid": VMID, "guest_type": "lxc"},
+        })
+        check = self.preview()["check"]
+        self.assertEqual(list(routes.receipts.pending_link_detachments()), [])
+        self.confirm(check)
+        self.task_state = {"status": "stopped", "exitstatus": "unexpected status"}
+        self.assertEqual(self.status(check).json["state"], "unknown")
+        self.assertEqual(custom_links.load_all(), [original])
+        self.task_state["exitstatus"] = "destroy failed"
+        self.assertEqual(self.status(check).json["state"], "failed")
+        self.assertEqual(custom_links.load_all(), [original])
+        self.assertEqual(list(routes.receipts.pending_link_detachments()), [])
 
     def test_reused_vmid_with_identical_config_cannot_use_old_confirmation(self):
         check = self.preview()["check"]

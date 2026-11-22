@@ -26,6 +26,7 @@ from itsdangerous import BadData, URLSafeTimedSerializer
 from auth_manager import _get_jwt_secret
 from jwt_middleware import require_admin_scope
 from pbs_manager import is_pbs_host
+import custom_links
 import lxc_removal_receipts as receipts
 
 
@@ -280,11 +281,11 @@ def _invalidate(vmid: int):
         pass
 
 
-def _status(vmid, node, volume, task):
+def _task_status(node, task):
     try:
         status = _pvesh_json(["get", f"/nodes/{node}/tasks/{task}/status"])
     except RemovalError:
-        return {"state": "unknown", "task": task, "reason": "task_status_unavailable"}
+        status = None
     if not isinstance(status, dict) or status.get("status") not in ("running", "stopped"):
         return {"state": "unknown", "task": task, "reason": "task_status_unavailable"}
     if status["status"] == "running":
@@ -297,6 +298,55 @@ def _status(vmid, node, volume, task):
         return {"state": "warning", "task": task, "exitstatus": exitstatus}
     if exitstatus != "OK":
         return {"state": "failed", "task": task, "exitstatus": exitstatus}
+    return {"state": "ok", "task": task}
+
+
+def _settle_link_detachment(operation, status):
+    state = status["state"]
+    if state not in {"ok", "failed", "warning"}:
+        return
+    try:
+        pending = receipts.link_detachment(operation)
+        if pending is None:
+            return
+        if state == "ok":
+            custom_links.detach_lxc_bindings(pending["vmid"], pending["bindings"])
+        receipts.finish_link_detachment(operation)
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        # Preserve the pending record for a retry. The native outcome is independent.
+        print(f"[ProxMenux] Could not finish LXC link detachment: {error}", flush=True)
+
+
+def reconcile_link_detachments(vmid=None):
+    """Recover pending link work after a browser disconnect or Monitor restart."""
+    try:
+        operations = list(receipts.pending_link_detachments())
+    except OSError as error:
+        print(f"[ProxMenux] Could not list pending LXC link detachments: {error}", flush=True)
+        return
+    for operation in operations:
+        try:
+            pending = receipts.link_detachment(operation)
+            if pending is None or (vmid is not None and pending["vmid"] != vmid):
+                continue
+            started, value = receipts.outcome(operation)
+            if value == receipts.REJECTED or started is None or time.time() - started >= receipts.RECEIPT_AGE:
+                receipts.finish_link_detachment(operation)
+                continue
+            task = receipts.task_for(value, pending["node"], pending["vmid"])
+            if task:
+                _settle_link_detachment(operation, _task_status(pending["node"], task))
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            print(f"[ProxMenux] Could not recover LXC link detachment: {error}", flush=True)
+
+
+def _status(vmid, node, volume, task, operation):
+    status = _task_status(node, task)
+    # The original task identifies the removal even if the VMID or disk name
+    # has already been reused. Only the saved bindings may be detached here.
+    _settle_link_detachment(operation, status)
+    if status["state"] != "ok":
+        return status
     try:
         resources = _pvesh_json(["get", "/cluster/resources", "--type", "vm"])
     except RemovalError:
@@ -383,12 +433,16 @@ def remove(actor: str, vmid: int):
                 receipts.begin(operation)
             except FileExistsError:
                 return jsonify(_operation_status(check)), 202
+            receipts.stage_link_detachment(operation, check["node"], vmid,
+                                           custom_links.snapshot_lxc_bindings(vmid))
             if time.time() >= check["expires"]:
                 receipts.seal_unstarted(operation)
+                receipts.finish_link_detachment(operation)
                 raise RemovalError("check_expired")
             lxc_check_job.begin_removal(reservation, check["node"], operation)
             if not _dispatch(check, purge, destroy_unreferenced):
-                receipts.seal_unstarted(operation)
+                if receipts.seal_unstarted(operation) == receipts.REJECTED:
+                    receipts.finish_link_detachment(operation)
         finally:
             reservation.close()
         return jsonify(_operation_status(check)), 202
@@ -453,7 +507,7 @@ def _operation_status(check):
     task = receipts.task_for(value, node, vmid)
     if not task:
         return {"state": "unknown", "task": None, "reason": "submission_unconfirmed"}
-    return _status(vmid, node, check["volume"], task)
+    return _status(vmid, node, check["volume"], task, operation)
 
 
 @lxc_removal_bp.get("/api/vms/<int:vmid>/remove-operation")
