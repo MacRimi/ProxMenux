@@ -25,6 +25,8 @@
       "Initial configuration is handled through a first run wizard.",
       "To adopt devices, navigate to Settings > System > Advanced, configure the Inform Host, and enable the Override option.",
       "The default device password for adoption is ubnt."
-    ]
+    ],
+    "hidden": true,
+    "hidden_reason": "Its image is no longer maintained; UniFi Network Application replaces it"
   }
 }

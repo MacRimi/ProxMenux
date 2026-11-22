@@ -439,6 +439,21 @@
         "digest": "2c35b8ec567a403207b4681f037be967f1efd04f06f75d9801841f25b7504e45",
         "scenario": "PVE amd64/ZFS; private PostgreSQL 18, SMTP OTP in Chrome, allowlist rejected a nonmatching email, initial admin claimed the role, support email configured. Prior poll persisted through restart, in-place Modify, cold restore and same-image update."
       }
+    },
+    "archivebox": {
+      "status": "laboratory-validated"
+    },
+    "hedgedoc-official": {
+      "status": "laboratory-validated"
+    },
+    "planka-official": {
+      "status": "laboratory-validated"
+    },
+    "sure": {
+      "status": "laboratory-validated"
+    },
+    "unifi-network": {
+      "status": "laboratory-validated"
     }
   }
 }

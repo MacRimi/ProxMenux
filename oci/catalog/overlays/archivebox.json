@@ -1,21 +1,10 @@
 {
   "catalog_ui": {
-    "hidden": true,
-    "hidden_reason": "Pending multi-container adaptation; retained for future work"
-  },
-  "proxmox": {
-    "installer_profile": {
-      "volume_preparations": [
-        {
-          "container_path": "/data",
-          "remove_lost_found": true,
-          "owner_strategy": "mapped-root",
-          "only_when_mount_type": "managed-volume"
-        }
-      ],
-      "non_persistent_image_volumes": [
-        "/out"
-      ]
+    "tagline": {
+      "en_US": "Save copies of web pages, articles and media you want to keep, in a private archive you host yourself."
+    },
+    "description": {
+      "en_US": "ArchiveBox is a self-hosted web archive that saves complete copies of the pages you give it. For each URL it can store the HTML, a PDF, a screenshot, the readable text, media and a WARC file, so the content stays available after the original site changes or disappears. Links are added from the web interface, the browser extension, bookmark exports or RSS feeds, and the archive can be searched by full text."
     }
   }
 }

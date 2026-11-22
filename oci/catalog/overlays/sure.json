@@ -1,6 +1,13 @@
 {
   "catalog_ui": {
-    "hidden": true,
-    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+    "tagline": {
+      "en_US": "Track accounts, budgets, investments and net worth in a personal finance app you host yourself."
+    },
+    "description": {
+      "en_US": "Sure is a self-hosted personal finance application maintained by the community, continuing the open-source Maybe Finance project. It brings bank accounts, credit cards, investments, loans and property into one view of net worth, with budgets, categories, recurring transactions and reports. Transactions are imported from CSV files or entered by hand, and an optional AI assistant answers questions about the data."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/we-promise/sure/3dbad35cdb129e95db51347d27ec52d844c52faa/docs/screenshots/dashboard-light.webp"
+    ]
   }
 }

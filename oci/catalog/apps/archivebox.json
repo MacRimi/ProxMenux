@@ -2,16 +2,16 @@
   "schema_version": "0.5.0",
   "kind": "proxmenux.oci-template",
   "id": "image-archivebox",
-  "status": "generated-review-required",
+  "status": "generated-unvalidated",
   "catalog_ui": {
     "title": {
       "en_US": "ArchiveBox"
     },
     "tagline": {
-      "en_US": "Self-hosted internet archiving solution"
+      "en_US": "Save copies of web pages, articles and media you want to keep, in a private archive you host yourself."
     },
     "description": {
-      "en_US": "ArchiveBox is a powerful, self-hosted internet archiving solution that allows you to create your own personal archive of web pages, PDFs, videos, and more. It functions as a personal internet archive, saving content in multiple formats for long-term preservation.\n\nThe system consists of multiple components:\n- **ArchiveBox**: The main application providing the web interface and archiving capabilities\n- **Sonic**: A fast search backend for full-text search across archived content\n- **ArchiveBox Scheduler**: A background service for scheduled archiving tasks\n- **NoVNC**: A web-based VNC client for browser-based archiving\n\n**Key Features:**\n- Save web pages in multiple formats (HTML, PDF, screenshots, etc.)\n- Full-text search across all archived content\n- Scheduled archiving of websites and RSS feeds\n- Browser-based archiving with NoVNC\n- User authentication and access control\n- Extract and save media files (videos, audio, PDFs, etc.)\n\n**Learn More:**\n- [ArchiveBox Official Website](https://archivebox.io)\n- [ArchiveBox GitHub Repository](https://github.com/ArchiveBox/ArchiveBox)\n- [ArchiveBox Documentation](https://github.com/ArchiveBox/ArchiveBox/wiki)\n"
+      "en_US": "Save copies of web pages, articles and media you want to keep, in a private archive you host yourself."
     },
     "category": "documents",
     "category_label": "Documents & Notes",
@@ -21,47 +21,62 @@
     "thumbnail": null,
     "screenshots": [],
     "architectures": [
-      "amd64"
+      "amd64",
+      "arm64"
     ],
     "launch": {
       "scheme": "http",
-      "port": 8000,
+      "port": 5797,
       "path": "/"
     },
-    "website": "https://archivebox.io",
-    "documentation": null,
-    "repository": "https://hub.docker.com/r/archivebox/archivebox",
-    "tips": [],
+    "website": "https://archivebox.io/",
+    "documentation": "https://github.com/ArchiveBox/ArchiveBox/wiki",
+    "repository": "https://github.com/ArchiveBox/ArchiveBox",
+    "tips": [
+      "Sign in with the administrator account shown at the end of the installation and change its password."
+    ],
     "mini_changelog": [],
     "display_version": null,
-    "updated_at": null,
-    "hidden": true,
-    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+    "updated_at": "2026-11-22"
   },
   "source": {
     "provider": "official",
-    "repository": "https://hub.docker.com/r/archivebox/archivebox",
-    "revision": "e27286fc551a27ebc617239ccf45d9f2e741c213adeed4f9fc37df676c1cf27c",
+    "repository": "https://github.com/ArchiveBox/ArchiveBox",
+    "revision": "c8a451b5b4c297294a1232de32041ac15f45a168",
     "image_repository_url": "https://hub.docker.com/r/archivebox/archivebox",
-    "readme_pushed_at": "2026-09-11T10:43:22Z",
-    "compose_sha256": "e27286fc551a27ebc617239ccf45d9f2e741c213adeed4f9fc37df676c1cf27c",
-    "generated_at": "2026-09-13T15:48:20+00:00"
+    "readme_pushed_at": "",
+    "compose_sha256": "802496f4f532d2079cc35005e164e0b00b90084f3510d04cc993cc5d6920894a",
+    "generated_at": "2026-11-22T20:16:40+00:00"
   },
   "container_contract": {
     "service_name": "archivebox",
     "container_name": "archivebox",
     "image": {
-      "reference": "archivebox/archivebox:latest",
+      "reference": "docker.io/archivebox/archivebox:latest",
       "registry": "docker.io",
-      "repository": "archivebox/archivebox",
+      "repository": "docker.io/archivebox/archivebox",
       "tag": "latest",
       "digest": null,
-      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
     },
     "environment": [
       {
+        "name": "PUBLIC_ADD_VIEW",
+        "example": "False",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ARCHIVEDOTORG_ENABLED",
+        "example": "True",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
         "name": "ADMIN_USERNAME",
-        "example": "archivebox",
+        "example": "admin",
         "required": true,
         "sensitive": false,
         "source": "docker-compose"
@@ -72,69 +87,13 @@
         "required": true,
         "sensitive": true,
         "source": "docker-compose"
-      },
-      {
-        "name": "ALLOWED_HOSTS",
-        "example": "*",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
-        "name": "CSRF_TRUSTED_ORIGINS",
-        "example": "*",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
-        "name": "PUBLIC_INDEX",
-        "example": "True",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
-        "name": "PUBLIC_SNAPSHOTS",
-        "example": "True",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
-        "name": "PUBLIC_ADD_VIEW",
-        "example": "False",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
-        "name": "SEARCH_BACKEND_ENGINE",
-        "example": "sonic",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
-        "name": "SEARCH_BACKEND_HOST_NAME",
-        "example": "archivebox_sonic",
-        "required": true,
-        "sensitive": false,
-        "source": "docker-compose"
-      },
-      {
-        "name": "SEARCH_BACKEND_PASSWORD",
-        "example": "${GENERATED_SEARCH_BACKEND_PASSWORD}",
-        "required": true,
-        "sensitive": true,
-        "source": "docker-compose"
       }
     ],
     "volumes": [
       {
         "id": "volume-0",
         "container_path": "/data",
-        "compose_source_example": "/DATA/AppData/$AppID/data",
+        "compose_source_example": "data",
         "read_only": false,
         "required": true,
         "installation_choice": [
@@ -150,242 +109,63 @@
     ],
     "ports": [
       {
-        "container_port": 8000,
-        "published_example": 18010,
+        "container_port": 5797,
+        "published_example": 5797,
         "protocol": "tcp",
         "required": true,
         "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
       }
     ],
-    "related_services": [
-      {
-        "name": "archivebox_scheduler",
-        "image": "archivebox/archivebox:latest"
-      },
-      {
-        "name": "archivebox_sonic",
-        "image": "archivebox/sonic:latest"
-      },
-      {
-        "name": "archivebox_novnc",
-        "image": "theasp/novnc:latest"
-      }
-    ],
+    "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: archivebox\nservices:\n  archivebox:\n    image: archivebox/archivebox:latest\n    container_name: archivebox\n    deploy:\n      resources:\n        reservations:\n          memory: 128M\n    restart: unless-stopped\n    networks:\n    - archivebox_network\n    depends_on:\n    - archivebox_sonic\n    ports:\n    - target: 8000\n      published: '18010'\n      protocol: tcp\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/data\n      target: /data\n    environment:\n    - ADMIN_USERNAME=archivebox\n    - ADMIN_PASSWORD=${GENERATED_ADMIN_PASSWORD}\n    - ALLOWED_HOSTS=*\n    - CSRF_TRUSTED_ORIGINS=*\n    - PUBLIC_INDEX=True\n    - PUBLIC_SNAPSHOTS=True\n    - PUBLIC_ADD_VIEW=False\n    - SEARCH_BACKEND_ENGINE=sonic\n    - SEARCH_BACKEND_HOST_NAME=archivebox_sonic\n    - SEARCH_BACKEND_PASSWORD=${GENERATED_SEARCH_BACKEND_PASSWORD}\n    healthcheck:\n      test:\n      - CMD\n      - wget\n      - --no-verbose\n      - --tries=1\n      - --spider\n      - http://localhost:8000\n      interval: 1m\n      timeout: 3s\n  archivebox_scheduler:\n    image: archivebox/archivebox:latest\n    container_name: archivebox_scheduler\n    deploy:\n      resources:\n        reservations:\n          memory: 128M\n    restart: unless-stopped\n    networks:\n    - archivebox_network\n    depends_on:\n    - archivebox_sonic\n    command:\n    - schedule\n    - --foreground\n    - --update\n    - --every=day\n    environment:\n    - TIMEOUT=120\n    - SEARCH_BACKEND_ENGINE=sonic\n    - SEARCH_BACKEND_HOST_NAME=archivebox_sonic\n    - SEARCH_BACKEND_PASSWORD=${GENERATED_SEARCH_BACKEND_PASSWORD}\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/data\n      target: /data\n  archivebox_sonic:\n    image: archivebox/sonic:latest\n    container_name: archivebox_sonic\n    deploy:\n      resources:\n        reservations:\n          memory: 128M\n    restart: unless-stopped\n    networks:\n    - archivebox_network\n    expose:\n    - 1491\n    environment:\n    - SEARCH_BACKEND_PASSWORD=${GENERATED_SEARCH_BACKEND_PASSWORD}\n    volumes:\n    - type: bind\n      source: /DATA/AppData/$AppID/data/sonic\n      target: /var/lib/sonic/store\n  archivebox_novnc:\n    image: theasp/novnc:latest\n    container_name: archivebox_novnc\n    deploy:\n      resources:\n        reservations:\n          memory: 128M\n    restart: unless-stopped\n    networks:\n    - archivebox_network\n    ports:\n    - target: 8080\n      published: '18082'\n      protocol: tcp\n    environment:\n    - DISPLAY_WIDTH=1920\n    - DISPLAY_HEIGHT=1080\n    - RUN_XTERM=no\nnetworks:\n  archivebox_network:\n    driver: bridge\n"
+    "original_compose": "name: archivebox\nservices:\n  archivebox:\n    image: docker.io/archivebox/archivebox:latest\n    restart: unless-stopped\n    ports:\n    - 5797:5797\n    volumes:\n    - data:/data\n    environment:\n      PUBLIC_ADD_VIEW: 'False'\n      ARCHIVEDOTORG_ENABLED: 'True'\n      ADMIN_USERNAME: admin\n      ADMIN_PASSWORD: ${GENERATED_ADMIN_PASSWORD}\n    shm_size: 1gb\n    mem_limit: 4g\nvolumes:\n  data: {}\n"
   },
   "compose_stack": {
     "project_name": "archivebox",
     "deployment_model": "one-native-oci-lxc-per-compose-service",
     "user_experience": "single-application-install",
     "main_service": "archivebox",
-    "service_count": 4,
+    "service_count": 1,
     "services": [
       {
-        "name": "archivebox_novnc",
-        "image": "theasp/novnc:latest",
-        "is_main": false,
-        "role": "dependency",
-        "vmid_offset": 1,
-        "depends_on": [],
-        "frontend_network": true,
-        "private_network": true,
-        "compose": {
-          "image": "theasp/novnc:latest",
-          "container_name": "archivebox_novnc",
-          "deploy": {
-            "resources": {
-              "reservations": {
-                "memory": "128M"
-              }
-            }
-          },
-          "restart": "unless-stopped",
-          "networks": [
-            "archivebox_network"
-          ],
-          "ports": [
-            {
-              "target": 8080,
-              "published": "18082",
-              "protocol": "tcp"
-            }
-          ],
-          "environment": [
-            "DISPLAY_WIDTH=1920",
-            "DISPLAY_HEIGHT=1080",
-            "RUN_XTERM=no"
-          ]
-        }
-      },
-      {
-        "name": "archivebox_sonic",
-        "image": "archivebox/sonic:latest",
-        "is_main": false,
-        "role": "dependency",
-        "vmid_offset": 2,
-        "depends_on": [],
-        "frontend_network": false,
-        "private_network": true,
-        "compose": {
-          "image": "archivebox/sonic:latest",
-          "container_name": "archivebox_sonic",
-          "deploy": {
-            "resources": {
-              "reservations": {
-                "memory": "128M"
-              }
-            }
-          },
-          "restart": "unless-stopped",
-          "networks": [
-            "archivebox_network"
-          ],
-          "expose": [
-            1491
-          ],
-          "environment": [
-            "SEARCH_BACKEND_PASSWORD=${GENERATED_SEARCH_BACKEND_PASSWORD}"
-          ],
-          "volumes": [
-            {
-              "type": "bind",
-              "source": "/DATA/AppData/$AppID/data/sonic",
-              "target": "/var/lib/sonic/store"
-            }
-          ]
-        }
-      },
-      {
-        "name": "archivebox_scheduler",
-        "image": "archivebox/archivebox:latest",
-        "is_main": false,
-        "role": "dependency",
-        "vmid_offset": 3,
-        "depends_on": [
-          "archivebox_sonic"
-        ],
-        "frontend_network": false,
-        "private_network": true,
-        "compose": {
-          "image": "archivebox/archivebox:latest",
-          "container_name": "archivebox_scheduler",
-          "deploy": {
-            "resources": {
-              "reservations": {
-                "memory": "128M"
-              }
-            }
-          },
-          "restart": "unless-stopped",
-          "networks": [
-            "archivebox_network"
-          ],
-          "depends_on": [
-            "archivebox_sonic"
-          ],
-          "command": [
-            "schedule",
-            "--foreground",
-            "--update",
-            "--every=day"
-          ],
-          "environment": [
-            "TIMEOUT=120",
-            "SEARCH_BACKEND_ENGINE=sonic",
-            "SEARCH_BACKEND_HOST_NAME=archivebox_sonic",
-            "SEARCH_BACKEND_PASSWORD=${GENERATED_SEARCH_BACKEND_PASSWORD}"
-          ],
-          "volumes": [
-            {
-              "type": "bind",
-              "source": "/DATA/AppData/$AppID/data",
-              "target": "/data"
-            }
-          ]
-        }
-      },
-      {
         "name": "archivebox",
-        "image": "archivebox/archivebox:latest",
+        "image": "docker.io/archivebox/archivebox:latest",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
-        "depends_on": [
-          "archivebox_sonic"
-        ],
+        "depends_on": [],
         "frontend_network": true,
-        "private_network": true,
+        "private_network": false,
         "compose": {
-          "image": "archivebox/archivebox:latest",
-          "container_name": "archivebox",
-          "deploy": {
-            "resources": {
-              "reservations": {
-                "memory": "128M"
-              }
-            }
-          },
+          "image": "docker.io/archivebox/archivebox:latest",
           "restart": "unless-stopped",
-          "networks": [
-            "archivebox_network"
-          ],
-          "depends_on": [
-            "archivebox_sonic"
-          ],
           "ports": [
-            {
-              "target": 8000,
-              "published": "18010",
-              "protocol": "tcp"
-            }
+            "5797:5797"
           ],
           "volumes": [
-            {
-              "type": "bind",
-              "source": "/DATA/AppData/$AppID/data",
-              "target": "/data"
-            }
+            "data:/data"
           ],
-          "environment": [
-            "ADMIN_USERNAME=archivebox",
-            "ADMIN_PASSWORD=${GENERATED_ADMIN_PASSWORD}",
-            "ALLOWED_HOSTS=*",
-            "CSRF_TRUSTED_ORIGINS=*",
-            "PUBLIC_INDEX=True",
-            "PUBLIC_SNAPSHOTS=True",
-            "PUBLIC_ADD_VIEW=False",
-            "SEARCH_BACKEND_ENGINE=sonic",
-            "SEARCH_BACKEND_HOST_NAME=archivebox_sonic",
-            "SEARCH_BACKEND_PASSWORD=${GENERATED_SEARCH_BACKEND_PASSWORD}"
-          ],
-          "healthcheck": {
-            "test": [
-              "CMD",
-              "wget",
-              "--no-verbose",
-              "--tries=1",
-              "--spider",
-              "http://localhost:8000"
-            ],
-            "interval": "1m",
-            "timeout": "3s"
-          }
+          "environment": {
+            "PUBLIC_ADD_VIEW": "False",
+            "ARCHIVEDOTORG_ENABLED": "True",
+            "ADMIN_USERNAME": "admin",
+            "ADMIN_PASSWORD": "${GENERATED_ADMIN_PASSWORD}"
+          },
+          "shm_size": "1gb",
+          "mem_limit": "4g"
         }
       }
     ],
     "top_level": {
       "name": "archivebox",
-      "networks": {
-        "archivebox_network": {
-          "driver": "bridge"
-        }
+      "volumes": {
+        "data": {}
       }
     },
     "networking": {
       "frontend": "selected-proxmox-bridge",
-      "private_required": true,
+      "private_required": false,
       "private_creation": "automatic-create-if-missing",
       "private_address_allocation": "automatic-static-address-per-service",
       "service_discovery": "private-addresses-with-compose-service-host-aliases",
@@ -397,28 +177,6 @@
         "id": "archivebox-volume-0",
         "service": "archivebox",
         "container_path": "/data",
-        "mode": "host-bind",
-        "user_selectable": true,
-        "backup": false,
-        "shared_with_other_lxc": true,
-        "source_path": null,
-        "source_path_prompt": "Host directory for archivebox:/data"
-      },
-      {
-        "id": "archivebox-scheduler-volume-0",
-        "service": "archivebox_scheduler",
-        "container_path": "/data",
-        "mode": "host-bind",
-        "user_selectable": true,
-        "backup": false,
-        "shared_with_other_lxc": true,
-        "source_path": null,
-        "source_path_prompt": "Host directory for archivebox_scheduler:/data"
-      },
-      {
-        "id": "archivebox-sonic-volume-0",
-        "service": "archivebox_sonic",
-        "container_path": "/var/lib/sonic/store",
         "mode": "managed-volume",
         "user_selectable": false,
         "backup": true,
@@ -428,18 +186,12 @@
       }
     ],
     "orchestration": {
-      "reserve_vmids_atomically": 4,
+      "reserve_vmids_atomically": 1,
       "start_order": [
-        "archivebox_novnc",
-        "archivebox_sonic",
-        "archivebox_scheduler",
         "archivebox"
       ],
       "stop_order": [
-        "archivebox",
-        "archivebox_scheduler",
-        "archivebox_sonic",
-        "archivebox_novnc"
+        "archivebox"
       ],
       "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
       "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
@@ -472,24 +224,6 @@
               "environment_variable": "ADMIN_PASSWORD"
             }
           ]
-        },
-        {
-          "id": "search-backend-password",
-          "strategy": "generate-cryptographically-random-at-install",
-          "bindings": [
-            {
-              "service": "archivebox",
-              "environment_variable": "SEARCH_BACKEND_PASSWORD"
-            },
-            {
-              "service": "archivebox_scheduler",
-              "environment_variable": "SEARCH_BACKEND_PASSWORD"
-            },
-            {
-              "service": "archivebox_sonic",
-              "environment_variable": "SEARCH_BACKEND_PASSWORD"
-            }
-          ]
         }
       ]
     }
@@ -499,12 +233,23 @@
       {
         "label": "Web UI",
         "scheme": "http",
-        "port": 8000,
+        "port": 5797,
         "path": "/",
         "source": "compose-metadata"
       }
     ],
-    "credentials": []
+    "credentials": [
+      {
+        "label": "Generated ArchiveBox administrator",
+        "type": "runtime-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "ADMIN_PASSWORD",
+        "change_required": true,
+        "source": "proxmenux-installer-generated",
+        "retrieval": null
+      }
+    ]
   },
   "proxmox": {
     "runtime": "native-oci-lxc",
@@ -538,26 +283,37 @@
       "stop_signal": "import-from-oci-image"
     },
     "installer_profile": {
-      "startup_healthcheck": {
-        "type": "http",
-        "scheme": "http",
-        "port": 8000,
-        "path": "/",
-        "timeout_seconds": 180,
-        "request_timeout_seconds": 3,
-        "stability_seconds": 0,
-        "verify_tls": true,
-        "required": true,
-        "source": "compose-healthcheck"
+      "tmpfs_mounts": [
+        {
+          "id": "compose-shm",
+          "container_path": "/dev/shm",
+          "default_size_mb": 1024,
+          "minimum_size_mb": 1,
+          "size_prompt": "Size of the /dev/shm shared memory in MB",
+          "mount_options": [
+            "rw",
+            "nosuid",
+            "nodev"
+          ]
+        }
+      ],
+      "resources": {
+        "memory_default_mb": 4096
       },
       "volume_preparations": [
         {
           "container_path": "/data",
           "remove_lost_found": true,
-          "owner_strategy": "mapped-root",
+          "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
         }
       ],
+      "generated_sensitive_environment": {
+        "ADMIN_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 24
+        }
+      },
       "non_persistent_image_volumes": [
         "/out"
       ]
@@ -593,7 +349,7 @@
         "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
         "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
         "behavioral_impact": "None expected.",
-        "validation": "not-requested-by-compose"
+        "validation": "pending-per-application"
       },
       {
         "id": "compose-command",
@@ -606,8 +362,8 @@
       {
         "id": "compose-privileged-mode",
         "upstream_behavior": "Compose selects whether the container runs in privileged mode.",
-        "native_lxc_behavior": "ProxMenux uses a privileged LXC only after an explicit high-risk confirmation; otherwise it keeps the LXC unprivileged.",
-        "reason": "The native OCI-LXC deployment must preserve the requested privilege level without silently weakening isolation.",
+        "native_lxc_behavior": "ProxMenux keeps the LXC unprivileged by default and exposes the broad Compose privilege request only as an explicit compatibility option.",
+        "reason": "A Compose privilege request is source metadata, not proof that the image technically requires a privileged LXC.",
         "behavioral_impact": "A privileged LXC has weaker isolation from the Proxmox host.",
         "validation": "native-equivalent"
       },
@@ -625,7 +381,7 @@
         "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
         "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
         "behavioral_impact": "The check runs during installation rather than continuously after installation.",
-        "validation": "pending-per-application"
+        "validation": "not-requested-by-compose"
       },
       {
         "id": "compose-cpu-priority",
@@ -636,12 +392,20 @@
         "validation": "not-requested-by-compose"
       },
       {
+        "id": "compose-resource-limits",
+        "upstream_behavior": "mem_limit sets the memory ceiling; ulimits sets process soft/hard resource limits.",
+        "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
+        "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
+        "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
+        "validation": "pending-per-application"
+      },
+      {
         "id": "compose-network-identity",
         "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
         "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
         "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
         "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
-        "validation": "pending-per-application"
+        "validation": "not-requested-by-compose"
       },
       {
         "id": "compose-network-mode",
@@ -684,15 +448,18 @@
         "validation": "not-requested-by-compose"
       }
     ],
-    "generic_stack_review": [
-      "archivebox_novnc: perfil de salud y persistencia pendiente",
-      "archivebox_scheduler: perfil de salud y persistencia pendiente",
-      "archivebox_sonic: perfil de salud y persistencia pendiente",
-      "volumen compartido entre servicios pendiente"
+    "custom_compose_stack": false,
+    "catalog": {
+      "replaces_discovered_ids": [
+        "archivebox"
+      ]
+    },
+    "stack_completion_notes": [
+      "Sign in with the administrator account shown below and complete the setup wizard that opens on the first visit."
     ]
   },
   "compatibility": {
-    "automatic_install_candidate": false,
+    "automatic_install_candidate": true,
     "validated": false,
     "supported_compose_keys": [
       "cap_add",
@@ -704,6 +471,7 @@
       "entrypoint",
       "environment",
       "extra_hosts",
+      "group_add",
       "healthcheck",
       "hostname",
       "image",
@@ -712,28 +480,27 @@
       "labels",
       "logging",
       "mac_address",
+      "mem_limit",
       "network_mode",
       "networks",
       "ports",
       "privileged",
       "restart",
       "runtime",
+      "security_opt",
       "shm_size",
       "stdin_open",
       "stop_grace_period",
+      "stop_signal",
       "sysctls",
+      "tmpfs",
       "tty",
+      "ulimits",
       "user",
       "volumes",
       "working_dir"
     ],
-    "untranslated_blockers": [
-      "multi-service-compose",
-      "compose-key:depends_on",
-      "service:archivebox_scheduler:compose-key:depends_on",
-      "service:archivebox_sonic:compose-key:expose",
-      "native-multi-lxc-orchestrator-not-yet-implemented"
-    ],
+    "untranslated_blockers": [],
     "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
   },
   "validation": {
