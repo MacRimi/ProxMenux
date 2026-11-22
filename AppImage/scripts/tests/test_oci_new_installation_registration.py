@@ -13,6 +13,7 @@ from unittest.mock import patch
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import lxc_apps
+import oci_instance_info
 
 
 class NewInstallationRegistrationTests(unittest.TestCase):
@@ -24,6 +25,7 @@ class NewInstallationRegistrationTests(unittest.TestCase):
         (self.root / 'catalog/index.json').write_text(json.dumps({'applications': []}))
         (self.root / 'instances').mkdir()
         patches = [patch.object(lxc_apps, '_OCI_INSTANCE_ROOT', str(self.root / 'instances')),
+                   patch.object(oci_instance_info, '_installation', side_effect=lambda vmid: f'install-{vmid}'),
                    patch.object(lxc_apps, '_OCI_CATALOG_INDEX', str(self.root / 'catalog/index.json')),
                    patch.object(lxc_apps, '_oci_catalog_cache', None),
                    patch.object(lxc_apps, '_APPS_DIR', str(self.root / 'apps')),
@@ -62,6 +64,17 @@ class NewInstallationRegistrationTests(unittest.TestCase):
         self.assertEqual(add.call_args.args[0], 125)
         self.assertEqual(add.call_args.args[1]['name'], 'Duplicati Official')
         self.assertEqual(add.call_args.args[1]['installed_via'], 'oci_image')
+
+    def test_reused_vmid_does_not_publish_or_register_the_previous_oci_application(self):
+        self.record(125)
+        self.sidecar(125)
+        with patch.object(oci_instance_info, "_installation", return_value=None), \
+                patch.object(lxc_apps, "add_app") as add:
+            self.assertIsNone(lxc_apps._oci_instance_meta(125))
+            self.assertFalse(lxc_apps.ensure_oci_registration(125))
+            self.assertEqual(lxc_apps.load_sidecar(125)["apps"], [])
+            self.assertNotIn("125", lxc_apps.get_active_apps())
+        add.assert_not_called()
 
     def test_a_record_is_looked_at_once_until_it_is_written_again(self):
         self.record(125)

@@ -86,6 +86,35 @@ sub publish_task {
     die "Removal receipt was not claimed; no removal was started\n" unless $claimed;
 }
 
+sub valid_target {
+    my ($vmid, $guard) = @_;
+    return !ref($vmid) && ($vmid // '') =~ /\A[1-9][0-9]{2,8}\z/
+        && ref($guard) eq 'HASH' && join(',', sort keys %$guard) eq 'digest,file,generation'
+        && ($guard->{digest} // '') =~ /\A[0-9a-f]{64}\z/
+        && ref($guard->{generation}) eq 'ARRAY' && @{$guard->{generation}} == 2
+        && ref($guard->{file}) eq 'ARRAY' && @{$guard->{file}} == 4
+        && !grep { !defined($_) || ref($_) || !/\A[0-9]{1,20}\z/ }
+            (@{$guard->{generation}}, @{$guard->{file}});
+}
+
+sub disable_protection {
+    my ($node, $params, $set_option) = @_;
+    my ($vmid, $guard) = @$params{qw(vmid guard)};
+    die "Invalid protection request\n"
+        unless join(',', sort keys %$params) eq 'guard,vmid' && valid_target($vmid, $guard);
+    require PVE::LXC::Config;
+    require PVE::LXC;
+    return PVE::LXC::Config->lock_config($vmid, sub {
+        check_identity($guard, $node, $vmid);
+        my $config = PVE::LXC::Config->load_config($vmid);
+        die "Container is running\n" if PVE::LXC::check_running($vmid);
+        die "Removal protection is not enabled\n" unless $config->{protection};
+        $set_option->($vmid, $config->{digest});
+        die "Protection change not confirmed\n" if PVE::LXC::Config->load_config($vmid)->{protection};
+        return 1;
+    });
+}
+
 sub prepare {
     my ($self, $node, $params) = @_;
     my ($vmid, $operation, $guard, $volume, $purge, $destroy_unreferenced) =
@@ -94,15 +123,9 @@ sub prepare {
             eq 'destroy_unreferenced_disks,guard,operation,purge,vmid,volume'
         && !ref($purge) && ($purge // '') =~ /\A[01]\z/
         && !ref($destroy_unreferenced) && ($destroy_unreferenced // '') =~ /\A[01]\z/
-        && ($vmid // '') =~ /\A[1-9][0-9]{2,8}\z/
+        && valid_target($vmid, $guard)
         && ($operation // '') =~ /\A[0-9a-f]{32}\z/
-        && ($volume // '') =~ m{\A[A-Za-z0-9][A-Za-z0-9_.-]*:[A-Za-z0-9][A-Za-z0-9_.+:/@-]*\z}
-        && ref($guard) eq 'HASH' && join(',', sort keys %$guard) eq 'digest,file,generation'
-        && ($guard->{digest} // '') =~ /\A[0-9a-f]{64}\z/
-        && ref($guard->{generation}) eq 'ARRAY' && @{$guard->{generation}} == 2
-        && ref($guard->{file}) eq 'ARRAY' && @{$guard->{file}} == 4
-        && !grep { !defined($_) || ref($_) || !/\A[0-9]{1,20}\z/ }
-            (@{$guard->{generation}}, @{$guard->{file}});
+        && ($volume // '') =~ m{\A[A-Za-z0-9][A-Za-z0-9_.-]*:[A-Za-z0-9][A-Za-z0-9_.+:/@-]*\z};
     require PVE::LXC::Config;
     require PVE::Storage;
     check_identity($guard, $node, $vmid);

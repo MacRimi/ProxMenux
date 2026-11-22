@@ -10,6 +10,7 @@ from unittest.mock import patch
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import lxc_apps
+import oci_instance_info
 
 DIGEST = 'sha256:' + 'ab' * 32
 
@@ -22,6 +23,7 @@ class StackMemberRegistrationTests(unittest.TestCase):
         (self.root / 'catalog').mkdir()
         (self.root / 'catalog/index.json').write_text(json.dumps({'applications': []}))
         patches = [patch.object(lxc_apps, '_OCI_INSTANCE_ROOT', str(self.root / 'instances')),
+                   patch.object(oci_instance_info, '_installation', side_effect=lambda vmid: f'install-{vmid}'),
                    patch.object(lxc_apps, '_OCI_CATALOG_INDEX', str(self.root / 'catalog/index.json')),
                    patch.object(lxc_apps, '_oci_catalog_cache', None),
                    patch.object(lxc_apps, '_APPS_DIR', str(self.root / 'apps')),

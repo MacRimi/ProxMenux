@@ -8,7 +8,10 @@ from types import SimpleNamespace
 import unittest
 
 SERVER = Path(__file__).resolve().parents[1] / 'flask_server.py'
-NAMES = ('_vm_cache_get', '_vm_cache_put', '_vm_conf_signature', '_vm_conf_cache_get', '_vm_conf_cache_put')
+NAMES = (
+    '_vm_cache_get', '_vm_cache_put', '_vm_conf_signature', '_vm_conf_cache_get',
+    '_vm_conf_cache_put', '_cached_lxc_app_suggestions',
+)
 
 
 class ConfAwareCacheTests(unittest.TestCase):
@@ -23,12 +26,17 @@ class ConfAwareCacheTests(unittest.TestCase):
             if path not in self.files:
                 raise OSError(path)
             mtime, size = self.files[path]
-            return SimpleNamespace(st_mtime_ns=mtime, st_size=size)
+            return SimpleNamespace(st_dev=1, st_ino=1, st_mtime_ns=mtime, st_size=size)
 
         self.scope = {'os': SimpleNamespace(stat=stat), 'time': time, '_vm_modal_cache_lock': threading.Lock(),
                       '_vm_conf_built': {}, 'open': lambda path, _: io.BytesIO(self.contents.get(path, b'onboot: 0'))}
         exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SERVER), 'exec'), self.scope)
         self.cache = {}
+        self.oci_revision = 'installed'
+        self.scope['_app_suggestions_source'] = lambda vmid: (
+            self.scope['_vm_conf_signature'](vmid), self.oci_revision,
+        )
+        self.scope['_vm_app_suggestions_cache'] = self.cache
 
     def build(self, value):
         signature = self.scope['_vm_conf_signature'](111)
@@ -62,9 +70,17 @@ class ConfAwareCacheTests(unittest.TestCase):
         self.files.clear()
         self.assertIsNone(self.get())
 
+    def test_retiring_a_record_hides_its_suggestions_without_a_rescan(self):
+        source = self.scope['_app_suggestions_source'](111)
+        old = {'name_suggestion': 'BentoPDF'}
+        self.scope['_vm_conf_cache_put'](self.cache, 'app_suggestions', 111, old, source)
+        self.assertEqual(self.scope['_cached_lxc_app_suggestions'](111), old)
+        self.oci_revision = None
+        self.assertIsNone(self.scope['_cached_lxc_app_suggestions'](111))
+
     def test_vm_conf_path_and_missing_guest(self):
         self.files = {'/etc/pve/qemu-server/200.conf': (5, 10)}
-        self.assertEqual(self.scope['_vm_conf_signature'](200)[1:3], (5, 10))
+        self.assertEqual(self.scope['_vm_conf_signature'](200)[3:5], (5, 10))
         self.assertIsNone(self.scope['_vm_conf_signature'](999))
 
 

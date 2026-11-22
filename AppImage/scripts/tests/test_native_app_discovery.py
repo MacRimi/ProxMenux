@@ -704,16 +704,18 @@ class Routes(unittest.TestCase):
         self.globals = {'app': self.app, 'request': request, 'jsonify': jsonify,
                         'require_auth': require_auth, '_vm_app_suggestions_cache': {},
                         '_VM_APP_SUGGESTIONS_TTL': 300,
-                        '_vm_cache_get': lambda cache, vmid, ttl: cache.get(vmid),
-                        '_vm_cache_put': lambda cache, vmid, value: cache.update({vmid: value}),
+                        '_app_suggestions_source': lambda vmid: vmid,
+                        '_guest_lifecycle_lock': threading.RLock(), '_guest_modal_cache_revision': {},
+                        '_vm_conf_cache_put': lambda cache, name, vmid, value, source: cache.update({vmid: value}),
                         '_pvesh_cache': {}, '_vm_disk_cache': {}, '_vm_schedule_cache': {}, '_vm_cache_invalidate': Mock(),
                         '_invalidate_lxc_ip': Mock(), '_schedule_started_guest_refresh': Mock(),
                         '_publish_guest_modal_cache_revision': Mock()}
+        self.globals['_cached_lxc_app_suggestions'] = self.globals['_vm_app_suggestions_cache'].get
         tree = ast.parse((SCRIPTS / 'flask_server.py').read_text())
         routes = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in (
             'api_vm_apps_suggestions', 'api_vm_apps_native_discovery', 'api_vm_apps_add',
-            '_handle_guest_lifecycle')]
-        self.assertEqual(len(routes), 4)
+            '_handle_guest_lifecycle', '_build_lxc_app_suggestions')]
+        self.assertEqual(len(routes), 5)
         exec(compile(ast.Module(body=routes, type_ignores=[]), str(SCRIPTS / 'flask_server.py'), 'exec'), self.globals)
         self.client = self.app.test_client()
 
@@ -796,6 +798,7 @@ class Routes(unittest.TestCase):
             environment[name] = 300
         for name in ('get_vm_config', 'api_vm_backups', 'api_vm_apps_schedule', 'api_lxc_mount_points'):
             environment[name] = lambda vmid: None
+        environment['_vm_cache_get'] = lambda cache, vmid, ttl: cache.get(vmid)
         environment.update({'get_cached_pvesh_cluster_resources_vm': lambda: [
             {'vmid': 101, 'type': 'lxc', 'status': 'running'}], 'time': Mock(), 'sys': sys})
         exec(compile(ast.Module(body=[warmer], type_ignores=[]), 'flask_server.py', 'exec'), environment)

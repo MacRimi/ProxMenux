@@ -58,13 +58,15 @@ function send(method, params = {}, targetSession = sessionId) {
   })
 }
 
+let protectedLxc = true
+
 async function respond({ requestId, request }) {
   const url = new URL(request.url)
   const reply = (responseCode, value, contentType) => send("Fetch.fulfillRequest", {
     requestId, responseCode, body: Buffer.from(value).toString("base64"),
     responseHeaders: [{ name: "Content-Type", value: contentType }],
   })
-  const removal = url.origin === origin && /^\/api\/vms\/(100|300|301|302)\/(remove-preview|remove-operation|remove)$/.exec(url.pathname)
+  const removal = url.origin === origin && /^\/api\/vms\/(100|300|301|302)\/(remove-preview|remove-operation|remove|disable-removal-protection)$/.exec(url.pathname)
   if (removal) {
     const vmid = Number(removal[1])
     const action = removal[2]
@@ -73,8 +75,10 @@ async function respond({ requestId, request }) {
     const check = "fixture-removal-" + vmid
     if (action === "remove-preview" && request.method === "GET") {
       const preview = {
-        eligible: vmid !== 100, reasons: vmid === 100 ? ["container_running"] : [],
-        check: vmid === 100 ? null : check,
+        eligible: vmid !== 100 && !(vmid === 302 && protectedLxc),
+        reasons: vmid === 100 ? ["container_running"] : vmid === 302 && protectedLxc ? ["container_protected"] : [],
+        check: vmid === 100 || (vmid === 302 && protectedLxc) ? null : check,
+        ...(vmid === 302 && protectedLxc ? { protection_check: "fixture-protection-302" } : {}),
         target: { vmid, name: guests.find(guest => guest.vmid === vmid)?.name, node: "fixture", status: vmid === 100 ? "running" : "stopped" },
         disk: {storage: "local-lvm", volume: "local-lvm:subvol-" + vmid + "-disk-0", size: "8G"},
       }
@@ -83,6 +87,11 @@ async function respond({ requestId, request }) {
         return
       }
       return json(preview)
+    }
+    if (vmid === 302 && action === "disable-removal-protection" && request.method === "POST") {
+      assert.deepEqual(JSON.parse(request.postData), {check: "fixture-protection-302"})
+      protectedLxc = false
+      return json({protection: false})
     }
     if (vmid === 300 && action === "remove" && request.method === "POST") {
       assert.deepEqual(JSON.parse(request.postData), {check, confirm_vmid: "300", purge: false, destroy_unreferenced_disks: false})
@@ -510,6 +519,13 @@ async function verifyLxcRemoval() {
   assert.equal(typeof rejectPreviousRemoval, "function")
   await rejectPreviousRemoval()
   await waitFor("!sessionStorage.getItem('proxmenux.lxc-removal.301')")
+  await waitFor(`Boolean(${button("Disable protection…")})`)
+  await click(button("Disable protection…"))
+  await click(button("Cancel"))
+  assert.equal(removalRequests.filter(([, action]) => action === "disable-removal-protection").length, 0)
+  await click(button("Disable protection…"))
+  await click(button("Disable protection"))
+  await waitFor(`Boolean(${confirm}) && (${confirm}).disabled`)
   assert.deepEqual(await optionStates(), ["false", "false"])
   await fill("302")
   await waitFor(`!(${confirm}).disabled`)
@@ -524,7 +540,7 @@ async function verifyLxcRemoval() {
   await key("Escape")
   await waitFor("!document.querySelector('[role=dialog]')")
   assert.deepEqual(removalRequests.filter(([, , method]) => method !== "GET"),
-    [[300, "remove", "POST"], [301, "remove", "POST"]])
+    [[300, "remove", "POST"], [301, "remove", "POST"], [302, "disable-removal-protection", "POST"]])
   assert.ok(removalRequests.filter(([, action]) => action === "remove-operation").length >= 2)
   guests.splice(guests.findIndex(guest => guest.vmid === 301), 1)
   guests.splice(guests.findIndex(guest => guest.vmid === 302), 1)

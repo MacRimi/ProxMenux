@@ -8,6 +8,7 @@ from unittest.mock import patch
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import lxc_apps
+import oci_instance_info
 
 ICON = 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/go2rtc.webp'
 VERSION_FILE = {'path': '/opt/frigate/frigate/version.py', 'regex': 'VERSION = "([0-9]+(?:\\.[0-9]+)+)'}
@@ -30,6 +31,7 @@ class CatalogFixture(unittest.TestCase):
         (self.root / 'catalog/apps/frigate.json').write_text(json.dumps(
             {'id': 'image-frigate', 'first_run': {'endpoints': catalog_endpoints, 'version_file': VERSION_FILE}}))
         patches = [patch.object(lxc_apps, '_OCI_INSTANCE_ROOT', str(self.root / 'instances')),
+                   patch.object(oci_instance_info, '_installation', side_effect=lambda vmid: f'install-{vmid}'),
                    patch.object(lxc_apps, '_OCI_CATALOG_INDEX', str(self.root / 'catalog/index.json')),
                    patch.object(lxc_apps, '_oci_catalog_cache', None)]
         for item in patches:

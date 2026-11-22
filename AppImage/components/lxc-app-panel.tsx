@@ -1279,7 +1279,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
     try {
       const r: SidecarResponse = await fetchApi(`/api/vms/${vmid}/apps/${appId}`, { method: "DELETE" })
       setSidecar(r)
-      setLxcAppsCached(vmid, r, suggestions)
+      setSuggestions(null)
+      setLxcAppsCached(vmid, r, null)
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.deleteFailed"))

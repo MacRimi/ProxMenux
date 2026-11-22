@@ -62,6 +62,7 @@ class LxcRemoveTests(unittest.TestCase):
         self.pending = current_lxc_options()
         self.storage_content = {"local-lvm": [{"volid": VOLUME, "vmid": VMID, "content": "rootdir"}]}
         self.delete_calls = []
+        self.protection_calls = []
         self.task_state = {"status": "running"}
         self.dispatch_mode = "accepted"
         self.run = Mock(side_effect=self.pvesh)
@@ -110,6 +111,12 @@ class LxcRemoveTests(unittest.TestCase):
     def pvesh(self, argv, **_kwargs):
         if argv == ["/usr/bin/perl", routes.NATIVE_BRIDGE]:
             request = json.loads(_kwargs["input"])
+            if request["action"] == "disable-protection":
+                self.assertEqual(request["node"], NODE)
+                self.assertEqual(set(request["params"]), {"vmid", "guard"})
+                self.protection_calls.append(request)
+                self.write_config()
+                return self.result(1)
             if request["action"] == "remove-disk-status":
                 self.assertEqual(request["node"], NODE)
                 params = request["params"]
@@ -184,6 +191,43 @@ class LxcRemoveTests(unittest.TestCase):
         self.assertEqual(data["disk"], {"storage": "local-lvm", "volume": "local-lvm:subvol-100-disk-0", "size": "8G"})
         self.assertNotIn("backup", data)
         self.assertEqual([call.args[0][2] for call in self.run.call_args_list], ["/cluster/resources"])
+        self.assertFalse(self.delete_calls)
+
+    def test_protection_confirmation_changes_only_protection_and_needs_a_new_remove_review(self):
+        self.write_config("protection: 1\n")
+        preview = self.preview()
+        self.assertEqual(preview["reasons"], ["container_protected"])
+        self.assertIsNone(preview["check"])
+        self.assertFalse(self.protection_calls)
+        token = preview["protection_check"]
+        path = f"/api/vms/{VMID}/disable-removal-protection"
+        self.assertEqual(self.confirm(token).status_code, 409)
+        self.assertEqual(self.call("POST", path, {"check": token}, token="observer").status_code, 403)
+        response = self.call("POST", path, {"check": token})
+        self.assertEqual(response.json, {"protection": False})
+        self.assertEqual(len(self.protection_calls), 1)
+        self.assertFalse(self.delete_calls)
+        self.assertIsNotNone(self.preview()["check"])
+        self.assertEqual(self.call("POST", path, {"check": token}).status_code, 409)
+        self.assertEqual(len(self.protection_calls), 1)
+
+    def test_replacement_or_another_blocker_cannot_use_the_protection_confirmation(self):
+        self.write_config("protection: 1\n")
+        path = f"/api/vms/{VMID}/disable-removal-protection"
+        token = self.preview()["protection_check"]
+        self.write_generation(5)
+        self.assertEqual(self.call("POST", path, {"check": token}).status_code, 409)
+        self.resources[0]["status"] = "running"
+        self.assertNotIn("protection_check", self.preview())
+        self.assertFalse(self.protection_calls)
+        self.assertFalse(self.delete_calls)
+
+    def test_removal_does_not_accept_an_unverified_oci_record(self):
+        record = self.oci / str(VMID) / "oci-compose.json"
+        record.parent.mkdir()
+        record.write_text(json.dumps({"installation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}))
+        response = self.call("GET", f"/api/vms/{VMID}/remove-preview")
+        self.assertEqual(response.json, {"error": "oci_identity_unavailable"})
         self.assertFalse(self.delete_calls)
 
     def test_preview_blocks_each_unsafe_target_without_a_delete(self):

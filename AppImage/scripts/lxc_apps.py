@@ -3541,7 +3541,11 @@ def test_config(vmid, payload: dict) -> tuple[bool, Any]:
 
 
 def load_sidecar(vmid) -> Optional[dict]:
-    return _read_sidecar(vmid)
+    sidecar = _read_sidecar(vmid)
+    if sidecar and any(app.get("installed_via") == "oci_image" for app in sidecar.get("apps") or []):
+        if _read_oci_record(vmid) is None:
+            sidecar["apps"] = [app for app in sidecar["apps"] if app.get("installed_via") != "oci_image"]
+    return sidecar
 
 
 def set_dismissed_slug(vmid, slug: str, dismissed: bool) -> tuple[bool, Any]:
@@ -4595,6 +4599,8 @@ def _check_oci_app(vmid, app_id, force=False, notify=True):
                     pass
             before_app = copy.deepcopy(app)
             before_record = _read_oci_record(vmid)
+            if before_record is None:
+                return load_sidecar(vmid)
 
         # No global cache lock is held while waiting for registries. The same
         # native resolver, credentials and digest comparisons are retained.
@@ -5187,7 +5193,7 @@ def get_active_apps() -> dict:
             vmid = int(name[:-5])
         except ValueError:
             continue
-        sidecar = _read_sidecar(vmid)
+        sidecar = load_sidecar(vmid)
         if not sidecar:
             continue
         apps = sidecar.get("apps") or []
@@ -5940,12 +5946,14 @@ _OCI_DISMISSED_FILE = f"{_APPS_DIR}/.oci-dismissed.json"
 
 
 def _read_oci_record(vmid) -> Optional[dict]:
+    import oci_instance_info
+
     try:
         with open(f"{_OCI_INSTANCE_ROOT}/{int(vmid)}/oci-compose.json", encoding="utf-8") as handle:
             record = json.load(handle)
     except (OSError, ValueError, TypeError):
         return None
-    return record if isinstance(record, dict) else None
+    return record if isinstance(record, dict) and oci_instance_info.belongs_to_guest(vmid, record) else None
 
 
 def _oci_dismissed() -> dict:
@@ -6106,6 +6114,8 @@ def _register_oci_installation(vmid) -> bool:
     }
     # Registrations made at startup would each announce their update on their
     # own; the scheduled sweep sends pending updates together instead.
+    if _read_oci_record(vmid) != record:
+        return False
     ok, result = add_app(vmid, payload, notify=False)
     if not ok:
         print(f"[ProxMenux] lxc_apps: automatic OCI registration of CT {vmid} failed: {result}")
@@ -6165,11 +6175,7 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
     — CT 152 runs Chromium and happens to have Docker inside, which the
     runtime probe reported as the only candidate.
     """
-    try:
-        with open(f"{_OCI_INSTANCE_ROOT}/{int(vmid)}/oci-compose.json", encoding="utf-8") as handle:
-            record = json.load(handle)
-    except (OSError, ValueError, TypeError):
-        return None
+    record = _read_oci_record(vmid)
     # While an update or recreation runs, the record is the copy taken before
     # it: still the right identity for the container, not yet its new image.
     # While the installation runs it already names what the container holds:

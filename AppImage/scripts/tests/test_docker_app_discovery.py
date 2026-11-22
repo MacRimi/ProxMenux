@@ -303,11 +303,14 @@ class Routes(unittest.TestCase):
                 return fn(*args, **kwargs) if request.headers.get('X-Fixture') == 'yes' else ({'error':'unauthorized'},401)
             return wrapped
         source = SCRIPTS/'flask_server.py'
-        routes = [n for n in ast.parse(source.read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('api_vm_apps_docker_discovery','api_vm_apps_suggestions')]
+        routes = [n for n in ast.parse(source.read_text()).body if isinstance(n,ast.FunctionDef) and n.name in (
+            'api_vm_apps_docker_discovery', 'api_vm_apps_suggestions', '_build_lxc_app_suggestions')]
         self.cache = {}
         scope = {'app':self.app, 'request':request, 'jsonify':jsonify, 'require_auth':auth,
-                 '_vm_cache_get':lambda c,v,t:c.get(v), '_vm_cache_put':lambda c,v,p:c.update({v:p}),
-                 '_vm_app_suggestions_cache':self.cache, '_VM_APP_SUGGESTIONS_TTL':60}
+                 '_cached_lxc_app_suggestions':self.cache.get,
+                 '_app_suggestions_source':lambda vmid: vmid, '_guest_lifecycle_lock':threading.RLock(),
+                 '_guest_modal_cache_revision':{}, '_vm_conf_cache_put':lambda c,n,v,p,s:c.update({v:p}),
+                 '_vm_app_suggestions_cache':self.cache}
         exec(compile(ast.Module(body=routes, type_ignores=[]), str(source), 'exec'),scope)
         self.client = self.app.test_client()
 

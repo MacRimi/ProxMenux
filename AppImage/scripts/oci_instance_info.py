@@ -36,12 +36,29 @@ def _installation(vmid: int) -> str | None:
     path = f"/etc/pve/nodes/{socket.gethostname().split('.', 1)[0]}/lxc/{int(vmid)}.conf"
     try:
         with open(path, encoding="utf-8", errors="ignore") as handle:
-            text = handle.read().split("\n[", 1)[0]
+            text = handle.read()
     except OSError:
         return None
+    return installation_marker(text)
+
+
+def installation_marker(config: str) -> str | None:
+    text = config.split("\n[", 1)[0]
     match = re.search(r"^#.*proxmenux-instance=([0-9a-f-]{36})(?![0-9a-f-])", text, re.MULTILINE)
     return match.group(1) if match else None
 
+
+def belongs_to_guest(vmid: int, record: dict) -> bool:
+    installation = _installation(vmid)
+    return bool(installation and installation == record.get("installation_id"))
+
+
+def record_signature(vmid: int):
+    try:
+        info = os.stat(os.path.join(ROOT, str(int(vmid)), "oci-compose.json"))
+        return info.st_dev, info.st_ino, info.st_mtime_ns, info.st_size
+    except FileNotFoundError:
+        return None
 
 def _unrecoverable(vmid: int, installation: str) -> bool:
     """A restored container that carries no copy of its record: the menu
@@ -79,13 +96,17 @@ def info(vmid: int) -> dict:
         # Restored from a backup: the record stayed on the host it came from.
         result["restored"] = not _unrecoverable(vmid, installation)
         return result
-    if record is None:
+    if record is None or not installation:
+        result["console_log"] = False
         return result
     primary_id = int((record.get("stack_member") or {}).get("primary_vmid") or vmid)
     primary = record if primary_id == vmid else (_record(primary_id) or {})
+    if primary_id != vmid and not belongs_to_guest(primary_id, primary):
+        primary = {}
     members = [int(m["vmid"]) for m in (primary.get("stack") or {}).get("members") or []
                if isinstance(m, dict) and str(m.get("vmid", "")).isdigit()]
-    records = [record] if not members else [r for r in (_record(m) for m in members) if r]
+    records = [record] if not members else [r for m in members
+                                            if (r := _record(m)) and belongs_to_guest(m, r)]
     result.update(
         oci_instance=True,
         stack=bool(members) or bool(record.get("stack_member")),
@@ -93,6 +114,7 @@ def info(vmid: int) -> dict:
         members=members,
         host_directories=any(_host_dirs(r) for r in records),
         pending=bool(record.get("pending_transaction") or primary.get("pending_stack_transaction")),
-        watchdog=all((r.get("deployment") or {}).get("watchdog") is True for r in records),
+        watchdog=len(records) == (len(members) or 1)
+        and all((r.get("deployment") or {}).get("watchdog") is True for r in records),
     )
     return result

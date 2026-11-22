@@ -66,6 +66,12 @@ class RestoredInstanceTests(unittest.TestCase):
         self.assertFalse(result["restored"])
         self.assertFalse(result["oci_instance"])
 
+    def test_an_old_record_does_not_define_the_replacement_container(self):
+        self.record(119, OTHER)
+        self.assertFalse(self.info(119, None)["oci_instance"])
+        with patch.object(oci_instance_info, "_installation", return_value=None):
+            self.assertFalse(oci_instance_info.belongs_to_guest(119, {"installation_id": OTHER}))
+
     def test_the_mark_is_read_from_the_notes_of_the_container(self):
         text = f"#<div>Tandoor</div>\n#<!-- proxmenux-instance={APP} -->\narch: amd64\n[snap]\n#proxmenux-instance={OTHER}\n"
         with patch("builtins.open", unittest.mock.mock_open(read_data=text)):

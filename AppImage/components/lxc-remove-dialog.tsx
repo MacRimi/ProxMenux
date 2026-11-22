@@ -25,6 +25,7 @@ interface RemovalPreview {
   eligible: boolean
   reasons: string[]
   check: string | null
+  protection_check?: string
   target: { vmid: number; name: string }
 }
 
@@ -64,6 +65,10 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
   const [purge, setPurge] = useState(false)
   const [destroyUnreferenced, setDestroyUnreferenced] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmProtection, setConfirmProtection] = useState(false)
+  const [protectionError, setProtectionError] = useState(false)
+  const [changingProtection, setChangingProtection] = useState(false)
+  const protectionRequest = useRef(false)
   const [tracked, setTracked] = useState<TrackedRemoval | null>(null)
   const submitRef = useRef(false)
   const previewRequest = useRef(0)
@@ -87,6 +92,8 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
     const request = ++previewRequest.current
     setLoadingPreview(true)
     setPreviewError(null)
+    setConfirmProtection(false)
+    setProtectionError(false)
     setPreview(null)
     setTypedVmid("")
     setPurge(false)
@@ -100,6 +107,31 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
       if (previewRequest.current === request) setPreviewError(error instanceof Error ? error.message : String(error))
     } finally {
       if (previewRequest.current === request) setLoadingPreview(false)
+    }
+  }
+
+  const disableProtection = async () => {
+    if (!target || !confirmProtection || preview?.target.vmid !== target.vmid
+        || !preview.protection_check || protectionRequest.current) return
+    const reviewed = previewRequest.current
+    protectionRequest.current = true
+    setChangingProtection(true)
+    try {
+      const { protection } = await fetchApi<{ protection: boolean }>(`/api/vms/${target.vmid}/disable-removal-protection`, {
+        method: "POST",
+        signal: AbortSignal.timeout(30_000),
+        body: JSON.stringify({ check: preview.protection_check }),
+      })
+      if (protection !== false) throw new Error("protection_change_unconfirmed")
+      if (reviewed === previewRequest.current) await refreshPreview()
+    } catch {
+      if (reviewed === previewRequest.current) {
+        await refreshPreview()
+        if (reviewed + 1 === previewRequest.current) setProtectionError(true)
+      }
+    } finally {
+      protectionRequest.current = false
+      setChangingProtection(false)
     }
   }
 
@@ -211,6 +243,7 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
     && preview.check && displayTarget
     && typedVmid === String(preview.target.vmid)
     && !previewError
+    && !changingProtection
     && !submitting,
   )
 
@@ -228,6 +261,9 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
 
   const changeOpen = (nextOpen: boolean) => {
     if (!nextOpen) {
+      if (protectionRequest.current) return
+      setConfirmProtection(false)
+      setProtectionError(false)
       setTypedVmid("")
       setPurge(false)
       setDestroyUnreferenced(false)
@@ -271,6 +307,11 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
             <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
               {preview.reasons.map(reason => <li key={reason}>{t(`vmLxc.remove.reasons.${reason}`)}</li>)}
             </ul>
+            {confirmProtection && displayTarget && (
+              <p className="mt-3 text-foreground">
+                {t("vmLxc.remove.disableProtectionHint", { name: displayTarget.name, vmid: displayTarget.vmid })}
+              </p>
+            )}
           </div>
         ) : target && !previewError ? (
           <div className="space-y-4">
@@ -303,15 +344,30 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
           </div>
         )}
 
+        {protectionError && <p className="text-sm text-amber-400" role="status">{t("vmLxc.remove.disableProtectionUnconfirmed")}</p>}
         <DialogFooter className="gap-2 sm:gap-0">
           {terminal?.state === "unknown" && <Button type="button" variant="outline" onClick={refreshTask}>{t("vmLxc.remove.checkTask")}</Button>}
           {target && terminal?.state === "failed" && <Button type="button" variant="outline" onClick={reviewAfterFailure}>{t("vmLxc.remove.reviewAgain")}</Button>}
-          {!terminal && (previewError || blocked) && <Button type="button" variant="outline" onClick={() => void refreshPreview()} disabled={loadingPreview || submitting}>{t("vmLxc.remove.checkAgain")}</Button>}
-          <Button type="button" variant="outline" onClick={() => changeOpen(false)}>
+          {!terminal && (previewError || blocked) && !confirmProtection && <Button type="button" variant="outline" onClick={() => void refreshPreview()} disabled={loadingPreview || submitting || changingProtection}>{t("vmLxc.remove.checkAgain")}</Button>}
+          {!terminal && blocked && preview?.protection_check && !confirmProtection && (
+            <Button type="button" variant="outline" disabled={changingProtection} onClick={() => setConfirmProtection(true)}>
+              {t("vmLxc.remove.reviewProtection")}
+            </Button>
+          )}
+          <Button type="button" variant="outline" disabled={changingProtection} onClick={() => {
+            if (confirmProtection) setConfirmProtection(false)
+            else changeOpen(false)
+          }}>
             {t(terminal?.state === "succeeded" ? "actions.close" : "vmLxc.remove.cancel")}
           </Button>
+          {!terminal && blocked && confirmProtection && preview?.protection_check && (
+            <Button type="button" variant="outline" disabled={changingProtection} onClick={() => void disableProtection()}>
+              {changingProtection && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("vmLxc.remove.disableProtection")}
+            </Button>
+          )}
           {target && !terminal && !blocked && !previewError && (
-            <Button type="button" variant="destructive" disabled={!removeEnabled} onClick={() => void submit()}>
+            <Button type="button" variant="destructive" disabled={!removeEnabled || changingProtection} onClick={() => void submit()}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t("vmLxc.remove.confirm")}
             </Button>
           )}

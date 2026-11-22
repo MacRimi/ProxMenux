@@ -160,6 +160,11 @@ def _contains_oci(vmid: int, config_text: str) -> bool:
             raise RemovalError("oci_identity_unavailable") from None
         if not isinstance(value, dict):
             raise RemovalError("oci_identity_unavailable")
+        # A record alone cannot identify a replacement guest. Keep the
+        # destructive path closed until that record has been reviewed.
+        from oci_instance_info import installation_marker
+        if value.get("installation_id") and installation_marker(config_text) != value["installation_id"]:
+            raise RemovalError("oci_identity_unavailable")
         return True
     return bool(re.search(
         r"^#.*proxmenux-instance=|^\s*lxc\.(?:environment\.runtime|init\.cwd|signal\.halt):",
@@ -382,13 +387,52 @@ def preview(actor: str, vmid: int):
     try:
         preflight = _preflight(vmid)
         guard = preflight.pop("guard")
-        check = _ticket().dumps({
+        review = {
             "actor": actor, "vmid": vmid, "guard": guard, "node": preflight["target"]["node"],
             "volume": preflight["disk"]["volume"], "operation": uuid4().hex, "expires": time.time() + CHECK_AGE,
-        }) if preflight["eligible"] else None
-        return jsonify(**preflight, check=check)
+        }
+        if preflight["eligible"]:
+            return jsonify(**preflight, check=_ticket().dumps(review))
+        if preflight["reasons"] == ["container_protected"]:
+            return jsonify(**preflight, check=None,
+                           protection_check=_ticket().dumps({**review, "purpose": "disable_protection"}))
+        return jsonify(**preflight, check=None)
     except RemovalError as error:
         return jsonify(error=error.code), error.status
+
+
+@lxc_removal_bp.post("/api/vms/<int:vmid>/disable-removal-protection")
+@require_admin_scope
+@_admin
+def disable_removal_protection(actor: str, vmid: int):
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or set(body) != {"check"}:
+        return jsonify(error="invalid_request"), 400
+    import lxc_check_job
+    try:
+        check = _load_check(body["check"], actor, vmid, CHECK_AGE, purpose="disable_protection")
+        try:
+            reservation = lxc_check_job.acquire(vmid)
+        except BlockingIOError:
+            raise RemovalError("operation_pending") from None
+        with reservation:
+            current = _preflight(vmid)
+            if (current["guard"] != check["guard"] or current["target"]["node"] != check["node"]
+                    or current["reasons"] != ["container_protected"]):
+                raise RemovalError("target_changed")
+            if time.time() >= check["expires"]:
+                raise RemovalError("check_expired")
+            result = _native_request("disable-protection", check["node"], {
+                "vmid": vmid, "guard": check["guard"],
+            })
+        _invalidate(vmid)
+        if type(result) is not int or result != 1:
+            raise RemovalError("protection_change_unconfirmed", 503)
+        return jsonify(protection=False)
+    except RemovalError as error:
+        return jsonify(error=error.code), error.status
+    except (OSError, UnicodeError):
+        return jsonify(error="protection_change_unconfirmed"), 503
 
 
 @lxc_removal_bp.post("/api/vms/<int:vmid>/remove")
@@ -452,14 +496,15 @@ def remove(actor: str, vmid: int):
         return jsonify(state="unknown", task=None, reason="submission_unconfirmed"), 202
 
 
-def _load_check(token, actor, vmid, max_age):
+def _load_check(token, actor, vmid, max_age, purpose="remove"):
     if not isinstance(token, str) or len(token) > 4096:
         raise RemovalError("invalid_request", 400)
     try:
         check = _ticket().loads(token, max_age=max_age)
     except BadData:
         raise RemovalError("check_expired") from None
-    if not isinstance(check, dict) or check.get("actor") != actor or check.get("vmid") != vmid:
+    if (not isinstance(check, dict) or check.get("actor") != actor or check.get("vmid") != vmid
+            or check.get("purpose", "remove") != purpose):
         raise RemovalError("check_mismatch")
     if not receipts.OPERATION.fullmatch(check.get("operation", "")):
         raise RemovalError("check_expired")
