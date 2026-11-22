@@ -173,8 +173,11 @@ uninstall_proxmenux_monitor() {
     echo " - Config dir ${MONITOR_CONFIG_DIR} does not exist (ok)"
     fi
 
-    # 4b. Remove the manual console launcher installed with the Monitor
+    # 4b. Remove the manual console launcher installed with the Monitor and
+    # the console's runtime files
     pmx_remove_file "/usr/local/bin/proxmenux-console"
+    rm -f /run/proxmenux-monitor/console.json
+    rm -rf /run/proxmenux-console
 
     # 5. Reload systemd
     echo " - Recargando systemd..."

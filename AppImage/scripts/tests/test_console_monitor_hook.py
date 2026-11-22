@@ -6,8 +6,6 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import Mock
 
 
 SERVER_SOURCE = Path(__file__).resolve().parents[1] / "flask_server.py"
@@ -28,24 +26,6 @@ def load_server_functions(*names):
 
 
 class ConsoleMonitorHookTests(unittest.TestCase):
-    def test_run_pvesh_uses_exact_command_and_parses_list(self):
-        namespace = load_server_functions("_console_run_pvesh")
-        expected = [{"type": "node", "name": "pve-01"}]
-        run = Mock(return_value=SimpleNamespace(returncode=0, stdout=json.dumps(expected)))
-        namespace["subprocess"] = SimpleNamespace(run=run)
-        self.assertEqual(namespace["_console_run_pvesh"](), expected)
-        run.assert_called_once_with(
-            ["pvesh", "get", "/cluster/status", "--output-format", "json"],
-            capture_output=True, text=True, timeout=10,
-        )
-
-    def test_run_pvesh_raises_on_nonzero_exit(self):
-        namespace = load_server_functions("_console_run_pvesh")
-        namespace["subprocess"] = SimpleNamespace(
-            run=Mock(return_value=SimpleNamespace(returncode=1, stdout="[]")))
-        with self.assertRaises(OSError):
-            namespace["_console_run_pvesh"]()
-
     def test_read_language_handles_config_and_bad_documents(self):
         namespace = load_server_functions("_console_read_language")
         with tempfile.TemporaryDirectory() as directory:
@@ -61,8 +41,8 @@ class ConsoleMonitorHookTests(unittest.TestCase):
 
     def test_publisher_hook_is_module_level_and_guarded(self):
         tree = ast.parse(SERVER_SOURCE.read_text(encoding="utf-8"))
-        expected_args = ["get_proxmox_node_name", "get_cached_pvesh_cluster_resources",
-                         "_console_run_pvesh", "_console_read_language"]
+        expected_args = ["get_proxmox_node_name", "console_snapshot.mirror_resources",
+                         "console_snapshot.mirror_cluster_status", "_console_read_language"]
         matches = []
         for node in tree.body:
             if not isinstance(node, ast.Try):
@@ -77,7 +57,12 @@ class ConsoleMonitorHookTests(unittest.TestCase):
         guard, call = matches[0]
         self.assertTrue(any(isinstance(handler.type, ast.Name)
                             and handler.type.id == "Exception" for handler in guard.handlers))
-        self.assertEqual([argument.id for argument in call.args], expected_args)
+        self.assertEqual([ast.unparse(argument) for argument in call.args], expected_args)
+        # Proxmox Backup Server runs the same Monitor and has nothing to publish.
+        conditions = [child for statement in guard.body for child in ast.walk(statement)
+                      if isinstance(child, ast.If)]
+        self.assertEqual([ast.unparse(item.test) for item in conditions], ["not is_pbs_host()"])
+        self.assertNotIn("subprocess", ast.unparse(guard))
         keywords = {keyword.arg: keyword.value for keyword in call.keywords}
         self.assertIsInstance(keywords["get_pve_version"], ast.Name)
         self.assertEqual(keywords["get_pve_version"].id, "get_proxmox_version")

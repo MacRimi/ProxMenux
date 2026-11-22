@@ -184,7 +184,7 @@ A read-only text dashboard for the node's physical console or any root shell. It
 ./ProxMenux-<version>.AppImage --tui --glyphs ascii   # acs | unicode | ascii
 ```
 
-It reads the snapshot published by the Monitor in `/run/proxmenux-monitor/console.json`. It does not call `pvesh` and does not change any configuration.
+It reads the snapshot that the Monitor writes to `/run/proxmenux-monitor/console.json` (readable by root only) while a console is open, from Proxmox's own status files in `/etc/pve` and the node history kept by `rrdcached`. Neither the console nor the Monitor runs `pvesh` for it, and nothing in the configuration changes. It needs Proxmox VE; on Proxmox Backup Server it exits with a message.
 
 | Key | Action |
 |---|---|

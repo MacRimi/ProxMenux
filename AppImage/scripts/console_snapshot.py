@@ -1,13 +1,12 @@
 """Lease-gated Proxmox snapshot shared by the Monitor and console TUI."""
 
-import grp
 import json
 import math
 import os
 from pathlib import Path
 import re
+import socket
 import stat
-import subprocess
 import tempfile
 import threading
 import time
@@ -20,6 +19,11 @@ HISTORY_POINTS = 60
 HISTORY_STEP_S = 60
 HISTORY_MAX_NODES = 64
 HISTORY_TIMEOUT_S = 3.0
+RRDCACHED_SOCKET = "/var/run/rrdcached.sock"
+RRD_DIR = Path("/var/lib/rrdcached/db")
+# pvestatd's node RRD on PVE 9, then the one PVE 8 writes.
+_NODE_RRD_FORMATS = ("pve-node-9.0", "pve2-node")
+_MAX_REPLY_BYTES = 256 * 1024
 _CLUSTER_INTERVAL_S = 30
 _IDLE_POLL_S = 2.0
 # Absorbs wall-clock slew between a monotonic sleep and the next time.time().
@@ -28,7 +32,6 @@ _STATUS = {"starting", "ok", "stale", "unavailable", "error"}
 _ANSI = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|.)")
 _MAX_BYTES = 1024 * 1024
 _NODE_NAME = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,61}[A-Za-z0-9])?")
-_BARE_NAN = re.compile(r"(?<=[:,\[])(\s*)[-+]?(?:nan|inf(?:inity)?)\b", re.IGNORECASE)
 
 
 def _fields(raw, names):
@@ -148,24 +151,102 @@ def normalize_history(result, points=HISTORY_POINTS, step_s=HISTORY_STEP_S):
     return entry
 
 
-def pvesh_history(node, run=subprocess.run):
-    """Upstream get_history: one node's last hour of RRD averages via pvesh.
+def mirror_resources():
+    """Nodes, guests and storages from Proxmox's own status files in /etc/pve."""
+    import pve_mirror
+    nodes = pve_mirror.cluster_resources_node()
+    guests = pve_mirror.cluster_resources_vm()
+    if nodes is None or guests is None:
+        raise OSError("the Proxmox status files are not available")
+    return nodes + guests + (pve_mirror.cluster_resources_storage() or [])
 
-    pvesh forwards /nodes/<node>/... to that node, so a member that went
-    away since the last /cluster/status would block the single publisher
-    thread until the TCP timeout; the short timeout bounds it to one node.
+
+def mirror_cluster_status():
+    """/cluster/status as `.members` gives it."""
+    import pve_mirror
+    status = pve_mirror.cluster_status()
+    if status is None:
+        raise OSError("the cluster membership file is not available")
+    return status
+
+
+def _fetch_value(text):
+    try:
+        value = float(text)
+    except ValueError:
+        return None
+    return value if math.isfinite(value) else None
+
+
+def parse_fetch(lines):
+    """Rows of an rrdcached FETCH reply, as `pvesh get .../rrddata` gives them."""
+    names = None
+    rows = []
+    for line in lines:
+        key, separator, rest = line.partition(":")
+        if not separator:
+            raise ValueError("unexpected FETCH line")
+        if key == "DSName":
+            names = rest.split()
+        elif key.isdigit():
+            if names is None:
+                raise ValueError("FETCH data before its DSName line")
+            values = rest.split()
+            if len(values) != len(names):
+                raise ValueError("FETCH row does not match DSName")
+            row = {"time": int(key)}
+            for name, text in zip(names, values):
+                row[name] = _fetch_value(text)
+            rows.append(row)
+    if names is None:
+        raise ValueError("FETCH reply has no DSName line")
+    return rows
+
+
+def _fetch_reply(connection):
+    """The lines of one rrdcached answer: a ``N message`` status, then N lines."""
+    stream = connection.makefile("rb")
+    total = 0
+
+    def line():
+        nonlocal total
+        raw = stream.readline(_MAX_REPLY_BYTES)
+        total += len(raw)
+        if not raw.endswith(b"\n") or total > _MAX_REPLY_BYTES:
+            raise ValueError("rrdcached reply is cut or too large")
+        return raw.decode("ascii", "replace").rstrip("\n")
+
+    status, _, message = line().partition(" ")
+    try:
+        count = int(status)
+    except ValueError:
+        raise ValueError("rrdcached reply has no status") from None
+    if count < 0:
+        raise OSError(f"rrdcached: {message}"[:200])
+    return [line() for _ in range(count)]
+
+
+def rrdcached_history(node, now=None, socket_path=RRDCACHED_SOCKET, rrd_dir=RRD_DIR):
+    """One node's last hour of RRD averages, read from rrdcached's socket.
+
+    The same rows `pvesh get /nodes/<node>/rrddata --timeframe hour` returns,
+    without a Perl process: pmxcfs keeps the RRD of every cluster node on
+    every node, and rrdcached flushes a file before it answers a FETCH.
     """
     if not isinstance(node, str) or not _NODE_NAME.fullmatch(node):
         raise ValueError("invalid node name")
-    result = run(["pvesh", "get", f"/nodes/{node}/rrddata", "--timeframe", "hour",
-                  "--cf", "AVERAGE", "--output-format", "json"],
-                 capture_output=True, text=True, timeout=HISTORY_TIMEOUT_S)
-    if result.returncode != 0:
-        raise OSError(f"pvesh exited with {result.returncode}")
-    # A NaN that reaches Perl's JSON encoder is printed bare (-nan), which is
-    # not JSON; it means "no value", like a key the RRD left out.
-    return {"source": "rrddata",
-            "rows": json.loads(_BARE_NAN.sub(r"\1null", result.stdout))}
+    path = next((Path(rrd_dir) / kind / node for kind in _NODE_RRD_FORMATS
+                 if (Path(rrd_dir) / kind / node).is_file()), None)
+    if path is None:
+        raise OSError("no RRD file for this node")
+    end = int(time.time() if now is None else now) // HISTORY_STEP_S * HISTORY_STEP_S
+    start = end - HISTORY_POINTS * HISTORY_STEP_S
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(HISTORY_TIMEOUT_S)
+        connection.connect(socket_path)
+        connection.sendall(f"FETCH {path} AVERAGE {start} {end}\n".encode("ascii"))
+        lines = _fetch_reply(connection)
+    return {"source": "rrdcached", "rows": parse_fetch(lines)}
 
 
 def _empty_cluster():
@@ -190,31 +271,42 @@ def _due(last, now, interval):
     return last is None or not 0 <= now - last < interval - _SLACK_S
 
 
+def _private_directory(directory):
+    """Create ``directory`` as 0700, or refuse one that others could change.
+
+    It must be a real directory (not a link) owned by this user and not
+    writable by group or others.
+    """
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    info = os.lstat(directory)
+    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid()
+            or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+        raise OSError(f"{directory} is not a private directory of this user")
+
+
 def write_snapshot(data, path=DEFAULT_PATH):
-    """Replace a snapshot atomically, rechecking the optional console group."""
+    """Replace a snapshot atomically; only root can read it."""
     path = Path(path)
-    try:
-        gid = grp.getgrnam("proxmenux-console").gr_gid
-    except KeyError:
-        gid = None
     directory = path.parent
-    directory.mkdir(parents=True, exist_ok=True)
-    os.chmod(directory, 0o750 if gid is not None else 0o700)
-    if gid is not None:
-        os.chown(directory, -1, gid)
+    _private_directory(directory)
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory,
                                          delete=False) as stream:
             temporary = stream.name
+            os.fchmod(stream.fileno(), 0o600)
             json.dump(data, stream, ensure_ascii=False, separators=(",", ":"))
-            os.fchmod(stream.fileno(), 0o640 if gid is not None else 0o600)
-            if gid is not None:
-                os.fchown(stream.fileno(), -1, gid)
         os.replace(temporary, path)
     finally:
         if temporary is not None and os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def remove_snapshot(path=DEFAULT_PATH):
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
 
 
 def _fit_document(data):
@@ -249,7 +341,7 @@ def _fit_document(data):
 def touch_lease(state_dir=DEFAULT_STATE_DIR, now=None):
     """Create or refresh the TUI's client lease."""
     lease = Path(state_dir) / "client" / "lease"
-    lease.parent.mkdir(parents=True, exist_ok=True)
+    _private_directory(lease.parent)
     flags = os.O_CREAT | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(lease, flags, 0o600)
     try:
@@ -286,13 +378,18 @@ class _Source:
 class Publisher:
     """One publisher instance; tick and publish_once support deterministic callers.
 
-    get_history(node) returns {"source": "rrddata"|"rrdcached", "rows": [...]}
-    where each row is a dict like a `pvesh get /nodes/<node>/rrddata` entry
-    (time, cpu, maxcpu, memused, memtotal, loadavg); without it the snapshot
-    has no history section.
+    get_resources() returns /cluster/resources rows and get_cluster_status()
+    /cluster/status rows (``mirror_resources`` and ``mirror_cluster_status``
+    read them from /etc/pve). get_history(node) returns {"source":
+    "rrddata"|"rrdcached", "rows": [...]} where each row is a dict like a
+    `pvesh get /nodes/<node>/rrddata` entry (time, cpu, maxcpu, memused,
+    memtotal, loadavg); without it the snapshot has no history section.
+
+    Nothing is read or written while no console holds the lease; when the
+    lease expires the snapshot is removed.
     """
 
-    def __init__(self, get_node_name, get_resources, run_pvesh, read_language,
+    def __init__(self, get_node_name, get_resources, get_cluster_status, read_language,
                  path=DEFAULT_PATH, state_dir=DEFAULT_STATE_DIR, clock=time.time,
                  get_pve_version=None, version=None, get_history=None,
                  publish_interval_s=PUBLISH_INTERVAL_S):
@@ -300,7 +397,7 @@ class Publisher:
             raise ValueError("publish_interval_s must be positive")
         self.get_node_name = get_node_name
         self.get_resources = get_resources
-        self.run_pvesh = run_pvesh
+        self.get_cluster_status = get_cluster_status
         self.read_language = read_language
         self.get_pve_version = get_pve_version
         self.get_history = get_history
@@ -314,7 +411,8 @@ class Publisher:
         self.history = None if get_history is None else _empty_history()
         self.last_publish = None
         self.last_cluster_call = None
-        self.lease_active = False
+        # None until the first tick, so a snapshot left by an earlier run goes.
+        self.lease_active = None
         self._history_attempts = {}
         self._history_failures = 0
         self._pve_version = None
@@ -353,9 +451,6 @@ class Publisher:
 
     def _write(self, now):
         write_snapshot(_fit_document(self._document(now)), self.path)
-
-    def write_initial(self, now=None):
-        self._write(self.clock() if now is None else now)
 
     def _fresh_lease(self, now):
         try:
@@ -417,9 +512,11 @@ class Publisher:
     def publish_once(self, now=None):
         now = self.clock() if now is None else now
         if not self._fresh_lease(now):
+            if self.lease_active is not False:
+                remove_snapshot(self.path)
             self.lease_active = False
             return False
-        resumed = self.lease_active
+        resumed = self.lease_active is True
         self.lease_active = True
         if resumed and not _due(self.last_publish, now, self.publish_interval_s):
             return False
@@ -437,7 +534,7 @@ class Publisher:
         if _due(self.last_cluster_call, now, _CLUSTER_INTERVAL_S):
             self.last_cluster_call = now
             try:
-                self.cluster.succeed(normalize_cluster_status(self.run_pvesh()), now)
+                self.cluster.succeed(normalize_cluster_status(self.get_cluster_status()), now)
             except Exception as exc:
                 self.cluster.fail(exc)
         if self.history is not None:
@@ -449,7 +546,7 @@ class Publisher:
         """Publish if due; return the seconds to sleep before the next tick.
 
         The interval runs from the start of a publication, so the time spent
-        in pvesh does not stretch the cadence.
+        reading the sources does not stretch the cadence.
         """
         started = self.clock()
         try:
@@ -470,23 +567,19 @@ _publisher = None
 _publisher_lock = threading.Lock()
 
 
-def ensure_publisher(get_node_name, get_resources, run_pvesh, read_language,
+def ensure_publisher(get_node_name, get_resources, get_cluster_status, read_language,
                      path=DEFAULT_PATH, state_dir=DEFAULT_STATE_DIR,
                      clock=time.time, get_pve_version=None, version=None,
                      get_history=None, publish_interval_s=PUBLISH_INTERVAL_S):
-    """Write STARTING immediately and start exactly one daemon publisher."""
+    """Start exactly one daemon publisher."""
     global _publisher
     with _publisher_lock:
         if _publisher is not None:
             return _publisher
-        publisher = Publisher(get_node_name, get_resources, run_pvesh,
+        publisher = Publisher(get_node_name, get_resources, get_cluster_status,
                               read_language, path, state_dir, clock,
                               get_pve_version, version, get_history,
                               publish_interval_s)
-        try:
-            publisher.write_initial()
-        except Exception:
-            pass
         thread = threading.Thread(target=publisher.run, daemon=True)
         thread.start()
         _publisher = publisher

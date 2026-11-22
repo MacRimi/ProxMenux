@@ -5,10 +5,11 @@ import json
 import math
 import os
 from pathlib import Path
-import subprocess
+import socket
 import sys
 import tempfile
-from types import ModuleType, SimpleNamespace
+import threading
+from types import ModuleType
 import unittest
 from unittest import mock
 
@@ -67,6 +68,46 @@ def node_names(count):
     return [f"pve-{index:02d}" for index in range(1, count + 1)]
 
 
+_FETCH_NAMES = ("loadavg", "maxcpu", "cpu", "iowait", "memtotal", "memused")
+
+
+def fetch_reply(rows, in_progress=None):
+    """An rrdcached FETCH answer for the recorded rrddata rows."""
+    lines = ["FlushVersion: 1", f"Start: {rows[0]['time'] - 60}",
+             f"End: {rows[-1]['time']}", "Step: 60", f"DSCount: {len(_FETCH_NAMES)}",
+             "DSName: " + " ".join(_FETCH_NAMES)]
+    for row in rows:
+        lines.append(f"{row['time']}: " + " ".join(
+            "-nan" if row.get(name) is None else f"{row[name]:.17e}" for name in _FETCH_NAMES))
+    if in_progress is not None:
+        lines.append(f"{in_progress}: " + " ".join(["-nan"] * len(_FETCH_NAMES)))
+    return f"{len(lines)} Success\n" + "".join(line + "\n" for line in lines)
+
+
+class FakeRrdcached:
+    """A one-connection rrdcached on a UNIX socket that records the request."""
+
+    def __init__(self, directory, reply):
+        self.path = os.path.join(directory, "rrd.sock")
+        self.reply = reply
+        self.requests = []
+        self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.server.bind(self.path)
+        self.server.listen(1)
+        self.thread = threading.Thread(target=self._serve, daemon=True)
+        self.thread.start()
+
+    def _serve(self):
+        connection, _ = self.server.accept()
+        with connection:
+            self.requests.append(connection.makefile("rb").readline().decode())
+            connection.sendall(self.reply.encode())
+
+    def close(self):
+        self.thread.join(5)
+        self.server.close()
+
+
 class ConsoleSnapshotTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -85,7 +126,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
         return console_snapshot.Publisher(
             get_node_name=lambda: "pve-01",
             get_resources=lambda: self.resources if resources is None else resources(),
-            run_pvesh=lambda: self.status if status is None else status(),
+            get_cluster_status=lambda: self.status if status is None else status(),
             read_language=lambda: "es",
             path=self.path,
             state_dir=self.state_dir,
@@ -182,7 +223,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
         self.assertEqual(data["resources"]["guests"][0]["vmid"], 2499)
         self.assertEqual(data["history"]["status"], "ok")
 
-    def test_initial_snapshot_and_idempotent_ensure(self):
+    def test_ensure_is_idempotent_and_writes_nothing_without_a_console(self):
         with mock.patch.object(console_snapshot.threading, "Thread") as thread:
             first = console_snapshot.ensure_publisher(
                 lambda: "pve-01", lambda: self.resources, lambda: self.status,
@@ -195,13 +236,25 @@ class ConsoleSnapshotTests(unittest.TestCase):
             )
         self.assertIs(first, second)
         self.assertEqual(thread.call_count, 1)
-        data = self.document()
-        self.assertEqual((data["cluster"]["status"], data["resources"]["status"],
-                          data["history"]["status"]), ("starting",) * 3)
-        self.assertEqual(data["history"]["nodes"], {})
-        self.assertEqual(data["node"]["name"], "pve-01")
-        self.assertEqual(data["generator"]["version"], "9.9.9")
-        self.assertEqual(data["publish_interval_s"], 10)
+        self.assertFalse(self.path.exists())
+        self.assertEqual(first.history["status"], "starting")
+
+    def test_snapshot_exists_only_while_the_lease_is_fresh(self):
+        self.path.parent.mkdir(mode=0o700)
+        self.path.write_text("{}", encoding="utf-8")       # left by an earlier run
+        publisher = self.publisher()
+        self.assertFalse(publisher.publish_once(100.0))
+        self.assertFalse(self.path.exists())
+        self.lease(now=200)
+        self.assertTrue(publisher.publish_once(200.0))
+        self.assertEqual(self.document()["generator"]["name"], "proxmenux-monitor")
+        self.assertFalse(publisher.publish_once(205.0))     # still fresh, not due
+        self.assertTrue(self.path.exists())
+        self.assertFalse(publisher.publish_once(215.0))     # the console went away
+        self.assertFalse(self.path.exists())
+        self.lease(now=300)
+        self.assertTrue(publisher.publish_once(300.0))
+        self.assertTrue(self.path.exists())
 
     def test_unwritable_snapshot_path_does_not_break_ensure_publisher(self):
         blocked = self.root / "blocked"
@@ -295,20 +348,33 @@ class ConsoleSnapshotTests(unittest.TestCase):
         self.assertEqual(data["resources"]["status"], "unavailable")
         self.assertEqual(data["cluster"]["status"], "unavailable")
 
-    def test_atomic_write_and_permissions_with_and_without_group(self):
+    def test_atomic_write_is_private_to_its_owner(self):
         data = {"schema": 1}
-        with mock.patch.object(console_snapshot.grp, "getgrnam", side_effect=KeyError):
-            console_snapshot.write_snapshot(data, self.path)
-            self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
-            self.assertEqual(self.path.parent.stat().st_mode & 0o777, 0o700)
-        group = mock.Mock(gr_gid=os.getgid())
-        with mock.patch.object(console_snapshot.grp, "getgrnam", return_value=group), \
-             mock.patch.object(console_snapshot.os, "replace", wraps=os.replace) as replace:
+        with mock.patch.object(console_snapshot.os, "replace", wraps=os.replace) as replace:
             console_snapshot.write_snapshot(data, self.path)
             self.assertEqual(replace.call_count, 1)
             self.assertEqual(Path(replace.call_args.args[0]).parent, self.path.parent)
-        self.assertEqual(self.path.stat().st_mode & 0o777, 0o640)
-        self.assertEqual(self.path.parent.stat().st_mode & 0o777, 0o750)
+        self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.path.parent.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(os.listdir(self.path.parent), ["console.json"])
+
+    def test_snapshot_and_lease_refuse_shared_or_linked_directories(self):
+        shared = self.root / "shared"
+        shared.mkdir()
+        os.chmod(shared, 0o777)
+        linked = self.root / "linked"
+        linked.symlink_to(self.root / "elsewhere", target_is_directory=True)
+        (self.root / "elsewhere").mkdir(mode=0o700)
+        for directory in (shared, linked):
+            with self.subTest(directory=directory.name):
+                with self.assertRaises(OSError):
+                    console_snapshot.write_snapshot({"schema": 1}, directory / "console.json")
+                self.assertFalse((directory / "console.json").exists())
+        (self.state_dir / "client").mkdir(parents=True)
+        os.chmod(self.state_dir / "client", 0o777)
+        with self.assertRaises(OSError):
+            console_snapshot.touch_lease(self.state_dir, now=100)
+        self.assertFalse((self.state_dir / "client" / "lease").exists())
 
     def test_reader_rejects_bad_schema_corruption_and_clock_skew(self):
         self.assertEqual(console_snapshot.load_snapshot(self.path, 100).resources["status"],
@@ -406,8 +472,8 @@ class ConsoleSnapshotTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.publisher(publish_interval_s=0)
 
-    def test_document_age_stays_within_one_interval_with_a_slow_pvesh(self):
-        """A 0.8 s pvesh on every call keeps the age under 10 s for the 1537d8f2 TUI."""
+    def test_document_age_stays_within_one_interval_with_slow_sources(self):
+        """A 0.8 s source on every call keeps the age under 10 s for the 1537d8f2 TUI."""
         clock = FakeClock(1000.0)
         names = node_names(3)
         def slow(value):
@@ -440,40 +506,66 @@ class ConsoleSnapshotTests(unittest.TestCase):
 
     # Revision 4: history section from the node RRDs.
 
-    def test_pvesh_history_command_timeout_and_node_name(self):
-        run = mock.Mock(return_value=SimpleNamespace(returncode=0, stdout=self.rrd_text))
-        result = console_snapshot.pvesh_history("pve-02", run=run)
-        run.assert_called_once_with(
-            ["pvesh", "get", "/nodes/pve-02/rrddata", "--timeframe", "hour",
-             "--cf", "AVERAGE", "--output-format", "json"],
-            capture_output=True, text=True, timeout=3.0)
-        self.assertEqual((result["source"], len(result["rows"])), ("rrddata", 60))
-        run.return_value = SimpleNamespace(returncode=255, stdout="")
-        with self.assertRaises(OSError):
-            console_snapshot.pvesh_history("pve-02", run=run)
-        run.side_effect = subprocess.TimeoutExpired("pvesh", 3.0)
-        with self.assertRaises(subprocess.TimeoutExpired):
-            console_snapshot.pvesh_history("pve-02", run=run)
-        run.reset_mock()
-        for name in ("../cluster", "pve 02", "", "-pve", "a" * 64, None):
+    def rrd_dir(self, kind="pve-node-9.0", nodes=("pve-01", "pve-02")):
+        directory = self.root / "rrd"
+        for node in nodes:
+            (directory / kind).mkdir(parents=True, exist_ok=True)
+            (directory / kind / node).write_bytes(b"")
+        return directory
+
+    def test_rrdcached_history_sends_one_fetch_and_checks_the_node_name(self):
+        server = FakeRrdcached(self.temporary.name, fetch_reply(self.rrd_rows))
+        self.addCleanup(server.close)
+        directory = self.rrd_dir()
+        result = console_snapshot.rrdcached_history(
+            "pve-02", now=RRD_END + 59, socket_path=server.path, rrd_dir=directory)
+        server.close()
+        self.assertEqual(server.requests, [
+            f"FETCH {directory}/pve-node-9.0/pve-02 AVERAGE {RRD_END - 3600} {RRD_END}\n"])
+        self.assertEqual((result["source"], len(result["rows"])), ("rrdcached", 60))
+        self.assertEqual(result["rows"][-1]["cpu"], self.rrd_rows[-1]["cpu"])
+        for name in ("../cluster", "pve 02", "", "-pve", "a" * 64, "pve\n02", None):
             with self.assertRaises(ValueError):
-                console_snapshot.pvesh_history(name, run=run)
-        run.assert_not_called()
+                console_snapshot.rrdcached_history(name, socket_path=server.path,
+                                                   rrd_dir=directory)
+        with self.assertRaises(OSError):
+            console_snapshot.rrdcached_history("pve-03", socket_path=server.path,
+                                               rrd_dir=directory)
+
+    def test_rrdcached_history_uses_the_pve_8_file_and_reports_errors(self):
+        directory = self.rrd_dir(kind="pve2-node", nodes=("pve-01",))
+        server = FakeRrdcached(self.temporary.name,
+                               "-1 rrd_fetch_r failed: No such file or directory\n")
+        self.addCleanup(server.close)
+        with self.assertRaisesRegex(OSError, "rrd_fetch_r failed"):
+            console_snapshot.rrdcached_history("pve-01", now=RRD_END,
+                                               socket_path=server.path, rrd_dir=directory)
+        server.close()
+        self.assertTrue(server.requests[0].startswith(f"FETCH {directory}/pve2-node/pve-01 "))
+        with self.assertRaises(OSError):
+            console_snapshot.rrdcached_history(
+                "pve-01", socket_path=os.path.join(self.temporary.name, "missing.sock"),
+                rrd_dir=directory)
+
+    def test_parse_fetch_rejects_malformed_replies(self):
+        lines = fetch_reply(self.rrd_rows[:2]).splitlines()[1:]
+        self.assertEqual(len(console_snapshot.parse_fetch(lines)), 2)
+        for broken in ([], lines[:5], lines[:5] + lines[6:], lines + ["123: 1 2"],
+                       lines + ["garbage"]):
+            with self.assertRaises(ValueError):
+                console_snapshot.parse_fetch(broken)
 
     def test_recorded_rrddata_drops_the_minute_in_progress(self):
         newest = self.rrd_rows[-1]
-        in_progress = (',\n{"cpu":-nan,"loadavg":-nan,"maxcpu":16,"memtotal":-nan,'
-                       '"memused":-nan,"time":%d}\n]\n' % (RRD_END + 60))
         variants = {
-            "-nan": self.rrd_text.rstrip().rstrip("]") + in_progress,
-            "empty": json.dumps(self.rrd_rows + [{"time": RRD_END + 60}]),
-            "complete": self.rrd_text,
+            "-nan": fetch_reply(self.rrd_rows, in_progress=RRD_END + 60),
+            "complete": fetch_reply(self.rrd_rows),
         }
         for label, text in variants.items():
             with self.subTest(label):
-                run = mock.Mock(return_value=SimpleNamespace(returncode=0, stdout=text))
+                lines = text.splitlines()[1:]
                 entry = console_snapshot.normalize_history(
-                    console_snapshot.pvesh_history("pve-01", run=run))
+                    {"rows": console_snapshot.parse_fetch(lines)})
                 self.assertEqual(entry["t_end"], RRD_END)
                 self.assertEqual((entry["maxcpu"], entry["memtotal"]), (16, newest["memtotal"]))
                 for key in ("cpu", "mem", "load1"):
@@ -567,7 +659,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
                     self.assertEqual([per_tick.get(1000.0 + 10 * tick, 0)
                                       for tick in range(7)], [2, 2, 2, 2, 0, 0, 2])
 
-    def test_offline_nodes_get_no_pvesh_and_keep_stale_history(self):
+    def test_offline_nodes_get_no_fetch_and_keep_stale_history(self):
         clock = FakeClock(1000.0)
         names = node_names(5)
         publisher, calls, state = self.history_cluster(names, self.rrd, clock)
@@ -612,7 +704,7 @@ class ConsoleSnapshotTests(unittest.TestCase):
         timeouts = {"pve-02"}
         def history(node):
             if node in timeouts:
-                raise subprocess.TimeoutExpired(["pvesh"], console_snapshot.HISTORY_TIMEOUT_S)
+                raise socket.timeout("timed out")
             return self.rrd()
         publisher, calls, _state = self.history_cluster(names, history, clock)
         self.run_ticks(publisher, clock, 10)
@@ -637,16 +729,15 @@ class ConsoleSnapshotTests(unittest.TestCase):
         clock = FakeClock(1000.0)
         names = node_names(3)
         def fail(_node):
-            raise OSError("pvesh exited with 255")
+            raise OSError("rrdcached: rrd_fetch_r failed")
         publisher, _calls, state = self.history_cluster(names, fail, clock)
-        publisher.write_initial()
-        self.assertEqual(self.document()["history"]["status"], "starting")
+        self.assertEqual(publisher.history["status"], "starting")
         self.run_ticks(publisher, clock, 0)
         self.assertEqual(self.document()["history"]["status"], "unavailable")
         self.run_ticks(publisher, clock, 20)
         history = self.document()["history"]
         self.assertEqual((history["status"], history["nodes"]),  ("error", {}))
-        self.assertEqual(history["error"], "pve-03: pvesh exited with 255")
+        self.assertEqual(history["error"], "pve-03: rrdcached: rrd_fetch_r failed")
 
         clock = FakeClock(1000.0)
         publisher, _calls, state = self.history_cluster(["pve-01"], self.rrd, clock)
@@ -753,14 +844,17 @@ class ConsoleSnapshotTests(unittest.TestCase):
         self.assertEqual(node["mem"], [None] * 55 + [0.2, None, 1.0, None, None])
         self.assertEqual(node["load1"], [None] * 60)
 
-    def test_monitor_hook_wires_pvesh_history_with_the_default_interval(self):
+    def test_monitor_hook_wires_the_mirror_and_rrdcached_with_the_default_interval(self):
         tree = ast.parse(SERVER_SOURCE.read_text(encoding="utf-8"))
         calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
                  and isinstance(node.func, ast.Attribute)
                  and node.func.attr == "ensure_publisher"]
         self.assertEqual(len(calls), 1)
         keywords = {keyword.arg: ast.unparse(keyword.value) for keyword in calls[0].keywords}
-        self.assertEqual(keywords["get_history"], "console_snapshot.pvesh_history")
+        self.assertEqual(keywords["get_history"], "console_snapshot.rrdcached_history")
+        self.assertEqual([ast.unparse(argument) for argument in calls[0].args[1:3]],
+                         ["console_snapshot.mirror_resources",
+                          "console_snapshot.mirror_cluster_status"])
         self.assertNotIn("publish_interval_s", keywords)
 
 

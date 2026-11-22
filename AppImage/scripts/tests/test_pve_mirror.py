@@ -270,5 +270,71 @@ class ClusterAndGuestTests(MirrorFixture):
         self.assertEqual(status(131)['status'], 'stopped')
 
 
+
+class NodeAndClusterStatusTests(MirrorFixture):
+    CLUSTER = {'nodename': 'pmxlab1', 'version': 9,
+               'cluster': {'name': 'pmxlab', 'version': 3, 'nodes': 3, 'quorate': 1},
+               'nodelist': {'pmxlab1': {'id': 1, 'online': 1, 'ip': '10.90.0.11'},
+                            'pmxlab2': {'id': 2, 'online': 1, 'ip': '10.90.0.12'},
+                            'pmxlab3': {'id': 3, 'online': 0, 'ip': '10.90.0.13'}}}
+
+    def test_node_rows_pve9_single_host(self):
+        self.host(RRD_PVE9, {})
+        self.assertEqual(pve_mirror.cluster_resources_node(), [{
+            'id': 'node/amd', 'node': 'amd', 'type': 'node', 'status': 'online',
+            'uptime': 1286709, 'cpu': 0.0120177863237592, 'mem': 6330769408,
+            'disk': 64159633408, 'level': '', 'maxcpu': 16, 'maxmem': 16110796800,
+            'maxdisk': 100861726720}])
+
+    def test_node_rows_pve8_and_offline_members(self):
+        self.host(RRD_PVE8, {}, nodename='pve1', nodelist={
+            'pve1': {'id': 1, 'online': 1}, 'pve2': {'id': 2, 'online': 0}})
+        rows = {row['node']: row for row in pve_mirror.cluster_resources_node()}
+        self.assertEqual((rows['pve1']['status'], rows['pve1']['cpu'], rows['pve1']['mem'],
+                          rows['pve1']['maxmem'], rows['pve1']['maxcpu']),
+                         ('online', 0.1, 4000000000, 8000000000, 8))
+        self.assertEqual(rows['pve2'], {'id': 'node/pve2', 'node': 'pve2', 'type': 'node',
+                                        'status': 'offline'})
+        self.host(RRD_PVE8.replace('pve2-node/pve1', 'pve2-node/pve2'), {}, nodename='pve1',
+                  nodelist={'pve1': {'id': 1, 'online': 1}, 'pve2': {'id': 2, 'online': 0}})
+        rows = {row['node']: row for row in pve_mirror.cluster_resources_node()}
+        self.assertEqual(rows['pve1']['status'], 'unknown')
+        self.assertEqual((rows['pve2']['status'], rows['pve2']['maxmem']), ('offline', 8000000000))
+        self.assertNotIn('cpu', rows['pve2'])
+
+    def test_node_rows_fall_back_with_the_mirror(self):
+        self.assertIsNone(pve_mirror.cluster_resources_node())
+        self.host(RRD_PVE9.replace('pve-node-9.0', 'pve-node-10.0'), {})
+        self.assertIsNone(pve_mirror.cluster_resources_node())
+
+    def test_cluster_status_like_pvesh(self):
+        self.host(RRD_PVE9, {})
+        self.write('.members', json.dumps(self.CLUSTER))
+        self.assertEqual(pve_mirror.cluster_status(), [
+            {'type': 'cluster', 'id': 'cluster', 'name': 'pmxlab', 'version': 3, 'nodes': 3,
+             'quorate': 1},
+            {'type': 'node', 'id': 'node/pmxlab1', 'name': 'pmxlab1', 'nodeid': 1,
+             'ip': '10.90.0.11', 'online': 1, 'local': 1},
+            {'type': 'node', 'id': 'node/pmxlab2', 'name': 'pmxlab2', 'nodeid': 2,
+             'ip': '10.90.0.12', 'online': 1, 'local': 0},
+            {'type': 'node', 'id': 'node/pmxlab3', 'name': 'pmxlab3', 'nodeid': 3,
+             'ip': '10.90.0.13', 'online': 0, 'local': 0}])
+        no_quorum = json.loads(json.dumps(self.CLUSTER))
+        no_quorum['cluster']['quorate'] = 0
+        self.write('.members', json.dumps(no_quorum))
+        self.assertEqual(pve_mirror.cluster_status()[0]['quorate'], 0)
+
+    def test_cluster_status_single_host_and_broken_files(self):
+        self.host(RRD_PVE9, {})
+        self.assertEqual(pve_mirror.cluster_status(), [
+            {'type': 'node', 'id': 'node/amd', 'name': 'amd', 'nodeid': 0, 'local': 1,
+             'online': 1}])
+        broken = json.loads(json.dumps(self.CLUSTER))
+        broken['nodelist']['pmxlab2'] = 'x'
+        for text in ('{', json.dumps({'version': 1}), json.dumps(broken)):
+            with self.subTest(text=text[:30]):
+                self.write('.members', text)
+                self.assertIsNone(pve_mirror.cluster_status())
+
 if __name__ == '__main__':
     unittest.main()

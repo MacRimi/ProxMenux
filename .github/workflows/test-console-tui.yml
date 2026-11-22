@@ -17,7 +17,8 @@ on:
       - 'AppImage/scripts/tests/test_console_cluster.py'
       - 'AppImage/scripts/tests/test_console_brand.py'
       - 'AppImage/scripts/tests/test_console_tui.py'
-      - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
+      - 'AppImage/scripts/pve_mirror.py'
+      - 'AppImage/scripts/tests/test_pve_mirror.py'
       - 'AppImage/scripts/tests/test_console_monitor_hook.py'
       - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
       - 'AppImage/scripts/tests/test_lxc_vm_ip_inventory.py'
@@ -37,7 +38,8 @@ on:
       - 'AppImage/scripts/tests/test_console_cluster.py'
       - 'AppImage/scripts/tests/test_console_brand.py'
       - 'AppImage/scripts/tests/test_console_tui.py'
-      - 'AppImage/scripts/tests/test_cluster_resources_cache.py'
+      - 'AppImage/scripts/pve_mirror.py'
+      - 'AppImage/scripts/tests/test_pve_mirror.py'
       - 'AppImage/scripts/tests/test_console_monitor_hook.py'
       - 'AppImage/scripts/tests/test_cluster_guest_storage_ownership.py'
       - 'AppImage/scripts/tests/test_lxc_vm_ip_inventory.py'
@@ -78,8 +80,8 @@ jobs:
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_brand.py -v
       - name: Test console TUI entry point (no terminal)
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_tui.py -v
-      - name: Test cluster resources cache
-        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_cluster_resources_cache.py -v
+      - name: Test the Proxmox status file readers
+        run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_pve_mirror.py -v
       - name: Test the Monitor hook that starts the console publisher
         run: python -I -B -m unittest discover -s AppImage/scripts/tests -p test_console_monitor_hook.py -v
       - name: Test console installer
