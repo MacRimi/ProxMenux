@@ -165,10 +165,14 @@ def read_json(name):
 def read_vmlist():
     """Guest id -> {'node', 'type'} from `.vmlist`."""
     data = read_json('.vmlist')
-    if data is None or not isinstance(data.get('ids'), dict):
+    if data is None:
+        return None
+    # pmxcfs leaves `ids` out while the cluster has no guests.
+    ids = data.get('ids', {})
+    if not isinstance(ids, dict):
         return None
     guests = {}
-    for vmid, entry in data['ids'].items():
+    for vmid, entry in ids.items():
         if not str(vmid).isdigit() or not isinstance(entry, dict):
             return None
         if entry.get('type') not in GUEST_TYPES or not isinstance(entry.get('node'), str):

@@ -165,6 +165,15 @@ class ParsingTests(MirrorFixture):
         self.write('.vmlist', '{broken')
         self.assertIsNone(pve_mirror.cluster_resources_vm())
 
+    def test_a_cluster_without_guests_has_an_empty_list(self):
+        # pmxcfs writes only the version while there are no guests.
+        self.host(RRD_PVE9, {})
+        self.write('.vmlist', json.dumps({'version': 3}))
+        self.assertEqual(pve_mirror.read_vmlist(), {})
+        self.assertEqual(pve_mirror.cluster_resources_vm(), [])
+        self.write('.vmlist', json.dumps({'version': 3, 'ids': []}))
+        self.assertIsNone(pve_mirror.read_vmlist())
+
     def test_backup_server_host_never_uses_the_mirror(self):
         self.host(RRD_PVE9, {})
         pbs = mock.Mock(is_pbs_host=mock.Mock(return_value=True))
