@@ -11,7 +11,7 @@ let handler, footer
 function walk(node) {
   if (ts.isVariableDeclaration(node) && node.name.getText(tree) === 'handleVMControl') handler = node.getText(tree)
   if (ts.isJsxElement(node) && node.openingElement.tagName.getText(tree) === 'div'
-    && node.openingElement.attributes.getText(tree).includes('border-t border-border bg-background px-6 py-4 mt-auto'))
+    && node.openingElement.attributes.getText(tree).includes('lxcFooterStyles.footer'))
     footer = node.getText(tree)
   ts.forEachChild(node, walk)
 }
@@ -35,6 +35,8 @@ function buttons(node) {
       exports: {}, console: { error() {} }, selectedVM: { vmid: 100, status: action === 'start' ? 'stopped' : 'running', type: 'lxc' },
       selectedVMRef: { current: { vmid: 100 } }, controlRequestRef: { current: false },
       capabilities: { guests: true, terminal: true, admin: true }, removalHintId: 'removal-hint',
+      lxcFooterStyles: { footer: 'lxc-footer', actions: 'lxc-actions' },
+      cn: (...classes) => classes.join(' '),
       controlLoading: false, controlAction: null, controlWarning: null, posts: 0, alerts: [],
       setControlWarning(value) { context.controlWarning = value },
       setControlLoading(value) { context.controlLoading = value },

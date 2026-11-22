@@ -811,25 +811,52 @@ async function run() {
   await click(settings)
   await tap(card(testLxc))
   await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
+  await waitFor("document.querySelector('[role=dialog]').getAnimations().every(animation => animation.playState !== 'running')")
   assert.match(await evaluate("document.querySelector('[role=dialog]').textContent"), /Sieť I\/O/)
-  for (const width of [320, 390, 1024, 1440, 1920]) {
-    await send("Emulation.setDeviceMetricsOverride", {width, height: 860, deviceScaleFactor: 1, mobile: width < 640})
+  for (const width of [320, 390, 640, 768, 1024, 1440, 1920]) {
+    const mobile = width < 640
+    await send("Emulation.setDeviceMetricsOverride", {width, height: 860, deviceScaleFactor: 1, mobile})
+    await send("Emulation.setTouchEmulationEnabled", {enabled: mobile})
     await waitFor(`innerWidth === ${width}`)
-    assert.ok(await evaluate(`(() => {
-      const buttons = [...document.querySelectorAll('[role=dialog] button')];
-      const terminal = buttons.find(el => el.textContent.trim() === 'Terminál');
-      const remove = buttons.find(el => el.textContent.trim() === 'Odstrániť');
+    const layout = await evaluate(`(() => {
+      const terminal = [...document.querySelectorAll('[role=dialog] button')].find(el => el.textContent.trim() === 'Terminál');
       const footer = terminal.closest('[aria-busy]');
-      const oneLineWithIcon = button => {
-        const label = document.createRange();
-        label.selectNodeContents(button.querySelector('span'));
-        return label.getClientRects().length === 1 && button.querySelector('svg')?.getBoundingClientRect().width >= 15;
+      const buttons = [...footer.querySelectorAll('button')];
+      const remove = buttons.find(el => el.textContent.trim() === 'Odstrániť');
+      return {
+        removeDisabled: remove.disabled,
+        rows: new Set(buttons.map(button => button.offsetTop)).size,
+        overflow: footer.scrollWidth > footer.clientWidth + 1,
+        controls: buttons.map(button => {
+          const text = button.querySelector('span');
+          const label = document.createRange();
+          label.selectNodeContents(text);
+          const icon = button.querySelector('svg').getBoundingClientRect();
+          const bounds = button.getBoundingClientRect();
+          const line = label.getBoundingClientRect();
+          return { text: button.textContent.trim(), width: button.offsetWidth, height: button.offsetHeight,
+            fits: label.getClientRects().length === 1 && icon.width >= 11.5
+              && text.scrollWidth <= text.clientWidth + 1
+              && icon.left >= bounds.left - 0.5 && line.left >= icon.right - 0.5 && line.right <= bounds.right + 0.5 };
+        }),
       };
-      const equalWidths = Math.abs(terminal.offsetWidth - remove.offsetWidth) <= 1;
-      return [terminal, remove].every(oneLineWithIcon) && equalWidths
-        && remove.disabled && footer.scrollWidth <= footer.clientWidth + 1;
-    })()`), `Slovak terminal and removal controls must fit at ${width}px`)
+    })()`)
+    assert.ok(layout.removeDisabled && !layout.overflow, `Removal guard and layout at ${width}px`)
+    assert.equal(layout.controls.length, 6)
+    assert.ok(layout.controls.some(control => control.text === "Vynútiť vypnutie"))
+    const widths = layout.controls.map(control => control.width)
+    assert.ok(Math.max(...widths) - Math.min(...widths) <= 1, `Equal button widths at ${width}px`)
+    assert.ok(layout.controls.every(control => control.fits && control.height === (mobile ? 44 : 32)),
+      `One line with a visible icon at ${width}px: ${JSON.stringify(layout)}`)
+    assert.equal(layout.rows, width >= 768 ? 1 : width < 640 ? 3 : 2)
   }
+  const forceStop = "document.querySelector('[role=dialog] button[title=\"Vynútiť vypnutie\"]')"
+  const forceDialog = "[...document.querySelectorAll('[role=dialog]')].find(el => el.querySelector('h2')?.textContent.trim() === 'Vynútiť vypnutie VMID 100')"
+  await click(forceStop)
+  await waitFor(`Boolean(${forceDialog})`)
+  assert.equal(await evaluate(`[...(${forceDialog}).querySelectorAll('button')].find(el => el.textContent.trim() === 'Vynútiť vypnutie').disabled`), true)
+  await click(`[...(${forceDialog}).querySelectorAll('button')].find(el => el.textContent.trim() === 'Zrušiť')`)
+  await waitFor(`!(${forceDialog})`)
   console.log("Optional metrics, legacy settings, tag colors, transfer scales, sorting and persisted column settings passed")
   assert.deepEqual(rejectedWrites, [])
   assert.deepEqual(errors, [])

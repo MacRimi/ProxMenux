@@ -23,6 +23,7 @@ import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { LxcRemoveDialog } from "./lxc-remove-dialog"
+import lxcFooterStyles from "./lxc-footer.module.css"
 import { PlainLxcCreate } from "./plain-lxc-wizard"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
@@ -7809,7 +7810,8 @@ export function VirtualMachines() {
                 )}
               </div>
 
-              <div className="border-t border-border bg-background px-6 py-4 mt-auto shrink-0">
+              <div className={cn("border-t border-border bg-background mt-auto shrink-0",
+                selectedVM?.type === "lxc" ? lxcFooterStyles.footer : "px-6 py-4")}>
                 {controlWarning && controlWarning.vmid === selectedVM?.vmid && (
                   <p role="status" className="mb-2 text-sm text-amber-500">
                     {t("vmLxc.errors.controlWarning", { count: controlWarning.count })}
@@ -7825,10 +7827,11 @@ export function VirtualMachines() {
                     ? t(`vmLxc.actions.${action}Pending`) : t(key)
                   return (
                     <>
-                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${!controls ? "grid-cols-1" : hasTerminal ? canRemove ? "grid-cols-4 lg:grid-cols-6" : "grid-cols-4 lg:grid-cols-5" : canRemove ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                    <div aria-busy={controlLoading} className={selectedVM?.type === "lxc"
+                      ? lxcFooterStyles.actions : "grid grid-cols-4 gap-2 sm:gap-3"}>
                       {hasTerminal && (
                         <Button
-                          className={`w-full gap-1.5 px-2 whitespace-normal leading-tight bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 ${controls ? canRemove ? "col-span-2 order-first lg:col-span-1 lg:order-none" : "col-span-4 lg:col-span-1" : ""}`}
+                          className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30"
                           onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                         >
                           <Terminal className="size-4 shrink-0" aria-hidden="true" />
@@ -7885,7 +7888,7 @@ export function VirtualMachines() {
                         <Button
                           type="button"
                           variant="outline"
-                          className={`w-full gap-1.5 px-2 whitespace-normal leading-tight border-red-600/50 text-red-400 hover:text-red-300 ${controls ? hasTerminal ? "col-span-2 order-first lg:col-span-1 lg:order-none" : "col-span-4 lg:col-span-1" : ""}`}
+                          className="w-full border-red-600/50 text-red-400 hover:text-red-300"
                           disabled={selectedVM?.status !== "stopped" || controlLoading}
                           aria-describedby={showRemovalHint ? removalHintId : undefined}
                           onClick={() => setRemoveLxcOpen(true)}

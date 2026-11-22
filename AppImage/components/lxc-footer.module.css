@@ -1,0 +1,64 @@
+.footer {
+  container: lxc-footer / inline-size;
+  padding: 10px 12px 11px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.actions > button {
+  height: 32px;
+  gap: 4px;
+  padding: 4px 3px;
+  font-family: Arial, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.actions > button > svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+}
+
+.actions > button > span {
+  display: inline;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@container lxc-footer (min-width: 411px) {
+  .actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container lxc-footer (min-width: 722px) {
+  .actions {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}
+
+/* The Russian force-stop label needs a wider column to stay on one line. */
+.actions:lang(ru) {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 192px), 1fr));
+}
+
+.actions:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+
+@media (pointer: coarse) {
+  .actions > button {
+    height: 44px;
+  }
+}
