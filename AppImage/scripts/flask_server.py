@@ -6199,6 +6199,29 @@ try:
 except Exception:
     pass
 
+# Console TUI snapshot publisher: one daemon thread that, only while a
+# console holds its lease, writes the snapshot from Proxmox's own status
+# files and rrdcached. Optional by design — the Monitor must start even if
+# the module fails. Proxmox Backup Server has no guests or cluster to show.
+def _console_read_language():
+    try:
+        with open('/usr/local/share/proxmenux/config.json', encoding='utf-8') as stream:
+            return json.load(stream).get('language')
+    except Exception:
+        return None
+
+
+try:
+    import console_snapshot
+    if not is_pbs_host():
+        console_snapshot.ensure_publisher(
+            get_proxmox_node_name, console_snapshot.mirror_resources,
+            console_snapshot.mirror_cluster_status, _console_read_language,
+            get_pve_version=get_proxmox_version, version=None,
+            get_history=console_snapshot.rrdcached_history)
+except Exception:
+    pass
+
 
 # ─── Per-NIC live rate (moving window) ──────────────────────────
 # Keep the last ~30s of byte counters and derive the rate from the

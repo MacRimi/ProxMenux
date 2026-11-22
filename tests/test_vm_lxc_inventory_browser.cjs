@@ -73,7 +73,11 @@ browser.stdio[4].on("error", () => {})
 browser.on("error", error => { for (const reply of pending.values()) reply.reject(error) })
 browser.on("exit", () => {
   for (const reply of pending.values()) reply.reject(Error("Chromium exited"))
-  fs.rmSync(profile, { recursive: true, force: true })
+  // Chromium's helper processes can still be writing to the profile when the
+  // browser exits; a temporary profile left behind does not fail the check.
+  try {
+    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+  } catch {}
 })
 browser.stdio[4].on("data", data => {
   buffer += data.toString()

@@ -18,6 +18,12 @@ export LD_LIBRARY_PATH="${APPDIR}/usr/lib/${PMX_APPIMAGE_TRIPLET}:${APPDIR}/usr/
 # the interface has its own translations. The web terminal already used it.
 export LC_ALL=C.UTF-8
 
+# Console monitor (TUI). Handled before the Python ABI selection below, whose
+# warnings would dirty the console; `-I` ignores PYTHONPATH anyway.
+if [[ "$1" == "--tui" ]]; then
+    exec python3 -I "${APPDIR}/usr/bin/console_tui.py" "${@:2}"
+fi
+
 # Select the native dependency tree matching the host interpreter.  PVE 8
 # uses CPython 3.11 and PVE 9 uses CPython 3.13; both runtimes are bundled in
 # the same AppImage so its gevent HTTPS/WSS server is independent of the
