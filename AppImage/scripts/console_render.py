@@ -378,7 +378,7 @@ def _remote_state(vm):
     if status == "starting":
         return "starting" if age <= 15 or uptime < 120 else "unavailable"
     if not snapshot:
-        return "starting" if uptime < 120 else "unavailable"
+        return "starting" if uptime < 120 or vm.get("waiting") else "unavailable"
     if age > max(60, 4 * interval) or status in ("unavailable", "error"):
         return "unavailable"
     if status == "stale" or age > 2 * interval:

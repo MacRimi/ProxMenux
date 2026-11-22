@@ -340,6 +340,7 @@ class TerminalSmokeTests(unittest.TestCase):
             path = self.proc_root / target
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
+        (self.proc_root / "etc/pve").mkdir(parents=True)  # a Proxmox VE host
         self.snapshot = self.root / "snapshot.json"
         self.state_dir = self.root / "state"
         self.other_cwd = self.root / "elsewhere"
@@ -420,7 +421,7 @@ class TerminalSmokeTests(unittest.TestCase):
 
     def test_once_without_snapshot_shows_local_panels_and_starting(self):
         session = self.start(once=True)
-        self.assertEqual(session.wait_exit(), 0)
+        self.assertEqual(session.wait_exit(8), 0)
         self.assertTrue(session.terminal.contains("CPU"))
         self.assertTrue(session.terminal.contains("MEMORY"))
         self.assertTrue(session.terminal.contains("Monitor starting"))
@@ -428,8 +429,10 @@ class TerminalSmokeTests(unittest.TestCase):
     def test_once_without_snapshot_after_boot_shows_unavailable(self):
         (self.proc_root / "proc/uptime").write_text("180.0 10.0\n", encoding="utf-8")
         session = self.start(once=True)
-        self.assertEqual(session.wait_exit(), 0)
+        self.assertEqual(session.wait_exit(8), 0)
         self.assertTrue(session.terminal.contains("MONITOR UNAVAILABLE"))
+        # --once takes the lease so that a running Monitor writes the snapshot.
+        self.assertTrue((self.state_dir / "client" / "lease").is_file())
 
     def test_sigterm_restores_terminal_and_exits_zero(self):
         session = self.interactive()

@@ -73,6 +73,17 @@ class ArgumentTests(unittest.TestCase):
         self.assertEqual(result.stdout, b"")
         self.assertIn(b"--zoom", result.stderr)
 
+    def test_host_without_proxmox_ve_exits_69_before_touching_the_terminal(self):
+        with tempfile.TemporaryDirectory() as root:
+            command = [sys.executable, "-I", "-B", str(SCRIPTS / "console_tui.py"),
+                       "--proc-root", root, "--state-dir", os.path.join(root, "state")]
+            result = subprocess.run(command, stdin=subprocess.DEVNULL,
+                                    capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, console_tui.EXIT_UNSUPPORTED, result.stderr)
+            self.assertEqual(result.stdout, b"")
+            self.assertIn(b"needs Proxmox VE", result.stderr)
+            self.assertFalse(os.path.exists(os.path.join(root, "state")))
+
     def test_help_documents_the_brand_example(self):
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout), self.assertRaises(SystemExit) as caught:

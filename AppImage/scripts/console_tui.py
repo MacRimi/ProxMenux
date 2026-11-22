@@ -2,7 +2,8 @@
 
 Exit codes: 0 when the operator quits (``q``, Ctrl+C, SIGTERM or SIGHUP),
 10 to ask for bigger text (``+`` or ``=``), 11 to ask for smaller text
-(``-``), 64 for invalid arguments; any other code is a crash. The text keys
+(``-``), 64 for invalid arguments, 69 on a host without Proxmox VE (such as
+Proxmox Backup Server); any other code is a crash. The text keys
 only act with ``--zoom i/n`` (given by a launcher that can change the console
 font) and never past either end of that range.
 """
@@ -31,6 +32,13 @@ EXIT_OK = 0
 EXIT_BIGGER = 10
 EXIT_SMALLER = 11
 EXIT_USAGE = 64
+EXIT_UNSUPPORTED = 69
+# A console that has just opened waits this long for the Monitor's first
+# snapshot before it calls the Monitor unavailable.
+_FIRST_SNAPSHOT_S = 15
+# How long ``--once`` waits for that first snapshot (the Monitor checks the
+# lease every 2 s).
+_ONCE_WAIT_S = 4
 REDRAW_EVERY_S = 5
 WINDOWS_S = (60, 300)
 _MAX_ZOOM_STEPS = 64
@@ -288,7 +296,6 @@ def _parse_args(argv):
                              "an invalid file is ignored")
     parser.add_argument("--zoom", type=_zoom, metavar="POSITION/COUNT",
                         help="font step of the launcher; enables + and - (exit 10 and 11)")
-    parser.add_argument("--autostart", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -368,10 +375,10 @@ def _local(sampler, kernel, window_s, now):
     return local
 
 
-def _view_model(controls, local, data, fresh, translator, now, brand):
+def _view_model(controls, local, data, fresh, translator, now, brand, waiting=False):
     guests = ((data or {}).get("resources") or {}).get("guests") or []
     node = ((data or {}).get("node") or {}).get("name")
-    return {"local": local, "snapshot": data,
+    return {"local": local, "snapshot": data, "waiting": waiting,
             "host_other": console_metrics.host_other(local, guests, node, fresh),
             "glyphs": controls.glyphs, "lang": translator.language, "tr": translator,
             "now": now, "selected_view": controls.view, "sort": controls.sort,
@@ -385,6 +392,17 @@ def _renew_lease(state_dir, now):
         console_snapshot.touch_lease(state_dir, now)
     except (OSError, ValueError):
         pass
+
+
+def _await_snapshot(args, timeout_s=_ONCE_WAIT_S):
+    """For ``--once``: take the lease and give the Monitor a moment to write.
+
+    The Monitor only writes the snapshot while a console holds the lease.
+    """
+    _renew_lease(args.state_dir, time.time())
+    deadline = time.monotonic() + timeout_s
+    while not os.path.exists(args.snapshot) and time.monotonic() < deadline:
+        time.sleep(0.25)
 
 
 def _run(stdscr, args, brand):
@@ -405,7 +423,7 @@ def _run(stdscr, args, brand):
     previous_key = object()
     reload_now = True
     clear = False
-    last_redraw = time.monotonic()
+    last_redraw = opened = time.monotonic()
     while not _stop_requested:
         now = time.time()
         local = _local(sampler, kernel, controls.window_s, time.monotonic())
@@ -423,7 +441,9 @@ def _run(stdscr, args, brand):
         translator.set_language(data.get("language") if data else _configuration_language())
         height, width = stdscr.getmaxyx()
         grid = console_render.render(
-            _view_model(controls, local, data, fresh, translator, now, brand), width, height)
+            _view_model(controls, local, data, fresh, translator, now, brand,
+                        waiting=not args.once and time.monotonic() - opened < _FIRST_SNAPSHOT_S),
+            width, height)
         redraw = False
         if clear:
             stdscr.clearok(True)
@@ -463,6 +483,14 @@ def _session(args, brand):
                 pass
 
 
+def _proxmox_ve(root="/"):
+    """Whether this host runs Proxmox VE (its cluster file system mount point).
+
+    Proxmox Backup Server has neither guests nor a PVE cluster to show.
+    """
+    return os.path.isdir(os.path.join(root, "etc/pve"))
+
+
 def main(argv=None):
     global _stop_requested, _utf8
     try:
@@ -471,6 +499,12 @@ def main(argv=None):
         pass
     _utf8 = locale.nl_langinfo(locale.CODESET).upper().replace("-", "") == "UTF8"
     args = _parse_args(argv)
+    if not _proxmox_ve(args.proc_root):
+        print("proxmenux-console: the console dashboard needs Proxmox VE;"
+              " this host does not run it.", file=sys.stderr)
+        return EXIT_UNSUPPORTED
+    if args.once:
+        _await_snapshot(args)
     brand = console_brand.load(args.brand, args.brand_art)
     _stop_requested = False
     previous = {}

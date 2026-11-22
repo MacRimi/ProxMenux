@@ -322,6 +322,9 @@ class ConsoleRenderTests(unittest.TestCase, Invariants):
         self.assertIn("Monitor starting", lines(render(self.vm, 80, 24))[0])
         self.vm["local"]["uptime"] = 180
         self.assertIn("MONITOR UNAVAILABLE", lines(render(self.vm, 80, 24))[0])
+        # A console that has just opened waits for the Monitor's first snapshot.
+        self.vm["waiting"] = True
+        self.assertIn("Monitor starting", lines(render(self.vm, 80, 24))[0])
 
     def test_freshness_follows_the_publish_interval(self):
         self.vm["snapshot"]["publish_interval_s"] = 10
