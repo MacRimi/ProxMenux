@@ -121,3 +121,50 @@ class StackLogoTests(StackMemberRegistrationTests):
             self.assertFalse(lxc_apps.ensure_oci_registration(115))
         self.assertEqual(written['apps'][0]['logo_url'], self.ICON)
         self.assertEqual(written['apps'][1]['logo_url'], '')
+
+
+class ComposeStackMainTests(StackMemberRegistrationTests):
+    """A Compose stack gives every member a sheet named after its service."""
+
+    def stack(self):
+        folder = self.root / 'instances/152'
+        folder.mkdir(parents=True)
+        (folder / 'oci-compose.json').write_text(json.dumps({
+            'vmid': 152, 'status': 'installed', 'installation_id': 'install-152',
+            'stack_member': {'name': 'web', 'primary_vmid': 152},
+            'stack': {'template': {'id': 'image-sure', 'catalog_ui': {'title': {'en_US': 'Sure'},
+                                                                      'category_label': 'Finance & Budgeting'},
+                                   'first_run': {'endpoints': [{'port': 3000, 'scheme': 'http', 'path': '/'}]}}},
+            'observed': {'image': {'manifest_digest': DIGEST, 'architecture': 'amd64'}},
+            'template': {'id': 'image-web', 'catalog_ui': {'title': {'en_US': 'web'}},
+                         'first_run': {'endpoints': []},
+                         'container_contract': {'image': {'reference': 'ghcr.io/we-promise/sure:stable'},
+                                                'ports': [{'container_port': 3000}]}}}))
+
+    def test_the_main_container_is_registered_as_the_application(self):
+        self.stack()
+        with patch.object(lxc_apps, 'add_app', return_value=(True, {})) as add:
+            self.assertTrue(lxc_apps.ensure_oci_registration(152))
+        payload = add.call_args.args[1]
+        self.assertEqual(payload['name'], 'Sure')
+        self.assertEqual([(p['port'], p['scheme']) for p in payload['ports']], [(3000, 'http')])
+
+    def test_a_registration_named_after_the_service_takes_the_application(self):
+        self.stack()
+        sidecar = {'vmid': 152, 'apps': [{'id': 'a', 'name': 'web', 'installed_via': 'oci_image',
+                                          'logo_url': 'https://example.com/sure.webp', 'ports': []}]}
+        written = {}
+        with patch.object(lxc_apps, '_read_sidecar', return_value=sidecar), \
+                patch.object(lxc_apps, '_write_sidecar', side_effect=lambda vmid, data, **_: written.update(data)):
+            self.assertFalse(lxc_apps.ensure_oci_registration(152))
+        self.assertEqual(written['apps'][0]['name'], 'Sure')
+        self.assertEqual(written['apps'][0]['ports'][0]['port'], 3000)
+
+    def test_a_registration_the_user_named_is_left_alone(self):
+        self.stack()
+        sidecar = {'vmid': 152, 'apps': [{'id': 'a', 'name': 'Finances', 'installed_via': 'oci_image',
+                                          'logo_url': 'https://example.com/sure.webp', 'ports': []}]}
+        with patch.object(lxc_apps, '_read_sidecar', return_value=sidecar), \
+                patch.object(lxc_apps, '_write_sidecar') as write:
+            self.assertFalse(lxc_apps.ensure_oci_registration(152))
+        write.assert_not_called()
