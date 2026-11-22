@@ -179,7 +179,10 @@ def scan(vmid, run=read, guard_run=native.bounded_run):
     native._guard(vmid, deadline, guard_run)
     with native._scan_reservation(vmid):
         prefix = ['pct', 'exec', str(vmid), '--']
-        rc, _ = run(prefix + ['sh', '-c', 'command -v docker >/dev/null 2>&1'], deadline)
+        # The shell's command lookup may return 127 for an absent executable.
+        # Use 1 only when the probe starts and finds no Docker command.
+        rc, _ = run(prefix + ['sh', '-c',
+                             'if command -v docker >/dev/null 2>&1; then exit 0; else exit 1; fi'], deadline)
         if rc not in (0, 1):
             raise native.ProbeError('read_failed')
         records, issues = [], []

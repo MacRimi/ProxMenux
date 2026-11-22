@@ -49,7 +49,7 @@ class Scan(unittest.TestCase):
             self.calls.append(argv)
             self.assertEqual(argv[:4], ['pct', 'exec', '101', '--'])
             if argv[4] == 'sh':
-                self.assertEqual(argv[5:], ['-c', 'command -v docker >/dev/null 2>&1'])
+                self.assertEqual(argv[5], '-c')
                 return (0 if docker_present else 1), ''
             if argv[4:6] == ['docker', 'ps']:
                 return 0, '\n'.join(ids if ids is not None else [ONE])
@@ -121,6 +121,20 @@ class Scan(unittest.TestCase):
         result = self.scan(docker_present=False)
         self.assertEqual(result['candidates'], [])
         self.assertEqual(len(self.calls), 1)
+
+    def test_docker_absent_in_real_sh_is_empty_but_failed_shell_is_an_error(self):
+        def probe(argv, deadline):
+            self.assertEqual(argv[:5], ['pct', 'exec', '101', '--', 'sh'])
+            real = subprocess.run(['/bin/sh', *argv[5:]], env={'PATH': self.temp.name},
+                                  check=False, capture_output=True, text=True, timeout=2)
+            return real.returncode, real.stdout
+
+        running = lambda argv, deadline: 'status: running'
+        result = docker.scan(101, run=probe, guard_run=running)
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual(result['candidates'], [])
+        with self.assertRaisesRegex(native.ProbeError, 'read_failed'):
+            docker.scan(101, run=lambda argv, deadline: (127, ''), guard_run=running)
 
     def test_nonzero_inspect_retains_valid_stdout_and_marks_partial(self):
         result = self.scan(ids=[ONE, TWO], inspect_rc=1)
