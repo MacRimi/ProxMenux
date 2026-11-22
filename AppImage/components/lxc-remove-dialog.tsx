@@ -307,7 +307,9 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRe
           {terminal?.state === "unknown" && <Button type="button" variant="outline" onClick={refreshTask}>{t("vmLxc.remove.checkTask")}</Button>}
           {target && terminal?.state === "failed" && <Button type="button" variant="outline" onClick={reviewAfterFailure}>{t("vmLxc.remove.reviewAgain")}</Button>}
           {!terminal && (previewError || blocked) && <Button type="button" variant="outline" onClick={() => void refreshPreview()} disabled={loadingPreview || submitting}>{t("vmLxc.remove.checkAgain")}</Button>}
-          <Button type="button" variant="outline" onClick={() => changeOpen(false)}>{t("vmLxc.remove.cancel")}</Button>
+          <Button type="button" variant="outline" onClick={() => changeOpen(false)}>
+            {t(terminal?.state === "succeeded" ? "actions.close" : "vmLxc.remove.cancel")}
+          </Button>
           {target && !terminal && !blocked && !previewError && (
             <Button type="button" variant="destructive" disabled={!removeEnabled} onClick={() => void submit()}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t("vmLxc.remove.confirm")}

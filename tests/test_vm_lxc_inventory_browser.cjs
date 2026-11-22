@@ -400,7 +400,7 @@ async function verifyPlainLxcWizard() {
 
 async function verifyLxcRemoval() {
   const dialog = "[...document.querySelectorAll('[role=dialog]')].find(el => el.querySelector('h2')?.textContent.trim() === 'Remove LXC')"
-  const button = label => `[...(${dialog})?.querySelectorAll('button') ?? []].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
+  const button = label => `[...(${dialog})?.querySelectorAll(':scope > div:last-of-type button') ?? []].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
   const key = label => send("Input.dispatchKeyEvent", {type: "rawKeyDown", key: label, code: label,
     windowsVirtualKeyCode: label === "Escape" ? 27 : 13})
   const item = "[...document.querySelectorAll('[role=dialog] button')].find(el => el.textContent.trim() === 'Remove')"
@@ -416,8 +416,8 @@ async function verifyLxcRemoval() {
     await click(item)
     await waitFor(`Boolean(${dialog})`)
   }
-  const close = async () => {
-    await click(button("Cancel"))
+  const close = async (label = "Cancel") => {
+    await click(button(label))
     await waitFor(`!(${dialog})`)
     if (await evaluate("Boolean(document.querySelector('[role=dialog]'))")) await key("Escape")
     await waitFor("!document.querySelector('[role=dialog]')")
@@ -489,7 +489,8 @@ async function verifyLxcRemoval() {
   removalState = "succeeded"
   guests.splice(guests.findIndex(guest => guest.vmid === 300), 1)
   await waitFor(`(${dialog}).textContent.includes('LXC was removed')`)
-  await close()
+  assert.equal(await evaluate(`Boolean(${button("Cancel")})`), false, "Cancel is gone after verified removal")
+  await close("Close")
   await send("Emulation.setDeviceMetricsOverride", {width: 1440, height: 960, deviceScaleFactor: 1, mobile: false})
   await open("removal-fixture-second")
   await waitFor(`(${dialog}).textContent.includes('removal-fixture-second')`)
