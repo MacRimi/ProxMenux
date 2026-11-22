@@ -869,7 +869,8 @@ function PlainLxcWizard({ ref, onCreated, onEditing, onOpenTerminal }: {
   const yesNo = (enabled: boolean) => t(enabled ? "yes" : "no")
   const rows = summary ? [
     [t("system"), `${summary.node} · LXC ${summary.vmid} · ${summary.hostname}`, summary.template.volume_id,
-      `${t("nesting")} · ${yesNo(summary.nesting)} / ${t("onboot")} · ${yesNo(summary.onboot)}`],
+      `${t("nesting")} · ${yesNo(summary.nesting)} / ${t("onboot")} · ${yesNo(summary.onboot)}`,
+      `${t("start")} · ${yesNo(summary.start_after_create)} / ${t("prepare")} · ${yesNo(summary.prepare_system)}`],
     [t("access"), t("access_" + summary.access.mode)],
     [t("resources"), `${summary.rootfs.storage} · ${summary.rootfs.size_gib} GiB`,
       `${t("cores")} · ${summary.cpu.cores} / RAM · ${summary.memory.ram_mib} MiB / Swap · ${summary.memory.swap_mib} MiB`,
@@ -878,7 +879,6 @@ function PlainLxcWizard({ ref, onCreated, onEditing, onOpenTerminal }: {
     [t("network"), summary.network ? [summary.network.bridge, summary.network.vlan_tag && `VLAN ${summary.network.vlan_tag}`,
       summary.network.ipv4.cidr ?? "DHCP", summary.network.ipv4.gateway].filter(Boolean).join(" · ") : t("noNetwork"),
       ...(summary.network ? [`DNS · ${summary.dns.nameservers.join(", ") || t("hostDns")}`, summary.dns.search_domains.join(", ")] : [])],
-    [t("review"), `${t("start")} · ${yesNo(summary.start_after_create)} / ${t("prepare")} · ${yesNo(summary.prepare_system)}`],
   ] : []
 
   return <>
@@ -900,7 +900,10 @@ function PlainLxcWizard({ ref, onCreated, onEditing, onOpenTerminal }: {
           {!context.templates.length && <p role="status" className="text-sm text-muted-foreground">{t("noTemplates")}</p>}
           <TemplateDownload key={draft.template} context={context} busy={busy} onDownload={download} t={t} />
           {input("hostname", "hostname", { required: true, maxLength: 253 })}
-          <div className="space-y-2">{check("nesting", "nesting")}{check("onboot", "onboot")}</div>
+          <div className="space-y-2">
+            {check("nesting", "nesting")}{check("onboot", "onboot")}{check("start", "start")}{check("prepare", "prepare")}
+            <p className="pl-12 text-xs text-muted-foreground">{t("prepareHelp")}</p>
+          </div>
         </>}
         {step === 1 && <>
           {field("access", <Choice value={draft.access} label={t("access")} onChange={value => {
@@ -952,7 +955,6 @@ function PlainLxcWizard({ ref, onCreated, onEditing, onOpenTerminal }: {
           </>}
         </>}
         {step === 4 && <>
-          {check("start", "start")}{check("prepare", "prepare")}
           {!summary && busy && <p role="status" className="flex items-center gap-2 rounded-md border bg-card p-3 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t("checking")}
           </p>}

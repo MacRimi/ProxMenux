@@ -67,6 +67,7 @@
     "hostDns": "Use host settings",
     "start": "Start after creation",
     "prepare": "Prepare the system for its first boot",
+    "prepareHelp": "Before the first start, two known systemd units of the template are adjusted: the certificate is regenerated after ssl-cert, and waiting for the network is skipped when the container has no network. Nothing is installed or run inside the container.",
     "yes": "Yes",
     "no": "No",
     "cancel": "Cancel",

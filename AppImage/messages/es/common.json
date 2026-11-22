@@ -8671,6 +8671,7 @@
     "hostDns": "Usar los ajustes del host",
     "start": "Arrancar tras crearlo",
     "prepare": "Preparar el sistema para su primer arranque",
+    "prepareHelp": "Antes del primer arranque se ajustan dos servicios de systemd de la plantilla: el certificado se regenera después de ssl-cert y, si el contenedor no tiene red, no se espera a la red. No se instala ni se ejecuta nada dentro del contenedor.",
     "yes": "Sí",
     "no": "No",
     "cancel": "Cancelar",
