@@ -8725,6 +8725,6 @@
     "showLog": "Mostra il registro",
     "hideLog": "Nascondi il registro",
     "logUnavailable": "Il registro non è ancora disponibile.",
-    "prepareHelp": "prima del primo avvio, vengono modificate due unità systemd note del modello: il certificato viene rigenerato dopo ssl-cert e l'attesa della rete viene saltata quando il contenitore non ha rete.Niente è installato o eseguito all'interno del contenitore."
+    "prepareHelp": "Prima del primo avvio vengono modificate due unità systemd note del modello: il certificato viene rigenerato dopo ssl-cert e l'attesa della rete viene saltata quando il contenitore non ha rete. Nel contenitore non viene installato né eseguito nulla."
   }
 }

@@ -149,7 +149,7 @@
     "showLog": "Zobraziť denník",
     "hideLog": "Skryť denník",
     "logUnavailable": "Denník zatiaľ nie je k dispozícii.",
-    "prepareHelp": "Pred prvým spustením sa upravia dve známe systémové jednotky šablóny: certifikát sa vygeneruje po ssl-cert a čakanie na sieť sa preskočí, keď kontajner nemá žiadnu sieť.V kontajneri nie je nič nainštalované ani spustené."
+    "prepareHelp": "Pred prvým spustením sa upravia dve známe jednotky systemd šablóny: certifikát sa vygeneruje po ssl-cert a čakanie na sieť sa preskočí, ak kontajner nemá sieť. V kontajneri sa nič neinštaluje ani nespúšťa."
   },
   "catalog": {
     "searchPlaceholder": "Hľadať aplikácie a nástroje…",

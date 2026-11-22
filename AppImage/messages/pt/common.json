@@ -8725,6 +8725,6 @@
     "showLog": "Mostrar log",
     "hideLog": "Ocultar registro",
     "logUnavailable": "O log ainda não está disponível.",
-    "prepareHelp": "Antes da primeira inicialização, duas unidades systemd conhecidas do modelo são ajustadas: o certificado é regenerado após SSL-cert e a espera pela rede é ignorada quando o contêiner não tem rede.Nada é instalado ou executado dentro do contêiner."
+    "prepareHelp": "Antes da primeira inicialização, duas unidades systemd conhecidas do modelo são ajustadas: o certificado é regenerado após ssl-cert e a espera pela rede é ignorada quando o contêiner não tem rede. Nada é instalado nem executado dentro do contêiner."
   }
 }
