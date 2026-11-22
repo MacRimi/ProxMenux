@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-95 of 601 applications in the OCI catalog have been tested for real: 61 in the ProxMenux lab and 34 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+96 of 602 applications in the OCI catalog have been tested for real: 62 in the ProxMenux lab and 34 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -89,6 +89,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Immich | Media |
 | JDownloader | Downloads |
 | Jenkins CI/CD | AI / Coding & Dev-Tools |
+| Karakeep | Documents & Notes |
 | Linkwarden | Documents & Notes |
 | MariaDB | Databases |
 | Memos | Documents & Notes |

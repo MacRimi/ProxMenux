@@ -454,6 +454,9 @@
     },
     "unifi-network": {
       "status": "laboratory-validated"
+    },
+    "karakeep": {
+      "status": "laboratory-validated"
     }
   }
 }

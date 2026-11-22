@@ -1,18 +1,13 @@
 {
   "catalog_ui": {
-    "hidden": true,
-    "hidden_reason": "Pending multi-container adaptation; retained for future work"
-  },
-  "proxmox": {
-    "installer_profile": {
-      "volume_preparations": [
-        {
-          "container_path": "/data",
-          "remove_lost_found": true,
-          "owner_strategy": "mapped-root",
-          "only_when_mount_type": "managed-volume"
-        }
-      ]
-    }
+    "tagline": {
+      "en_US": "Save links, notes and images in one place, with full-text search and automatic tagging."
+    },
+    "description": {
+      "en_US": "Karakeep is a self-hosted application for saving links, notes and images, previously known as Hoarder. It fetches the title, description and images of each link, keeps a copy of the page and indexes everything for full-text search. Items can be organized in lists and tagged automatically with an optional AI provider, and browser extensions and mobile apps add them from anywhere."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/karakeep-app/karakeep/7d3a557e8df578f72f286a9fd2f8723caf78fc01/screenshots/homepage.png"
+    ]
   }
 }
