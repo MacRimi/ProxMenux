@@ -31,6 +31,7 @@ import subprocess
 import threading
 import time
 
+from lxc_check_job import check_control_task
 from oci_instance_info import OciStateError, check_plain_lxc
 
 TOTAL_SECONDS = 20
@@ -513,19 +514,19 @@ def _guard(vmid, deadline, run):
         raise ProbeError('guest_busy')
     update_lock = UPDATE_LOCK_ROOT / f'proxmenux-lxc-update-{vmid}.lock'
     try:
-        fd = os.open(update_lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        with os.fdopen(fd, 'rb') as handle:
-            info = os.fstat(handle.fileno())
-            if not stat.S_ISREG(info.st_mode):
+        fd = os.open(update_lock, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'r+', encoding='utf-8') as handle:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
                 raise ProbeError('lock_unavailable')
-            if info.st_size:
-                raise ProbeError('guest_busy')
             try:
-                fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
-            except BlockingIOError:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                if os.fstat(fd).st_size:
+                    # The previous guest's control task can outlive its config.
+                    # Re-read the marker under the exclusive lock before clearing it.
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    check_control_task(vmid, handle)
+            except (BlockingIOError, UnicodeError):
                 raise ProbeError('guest_busy') from None
-            finally:
-                fcntl.flock(handle, fcntl.LOCK_UN)
     except FileNotFoundError:
         pass
     except OSError:

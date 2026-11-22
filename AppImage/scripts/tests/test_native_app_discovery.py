@@ -513,6 +513,54 @@ class DiscoveryFixtures(unittest.TestCase):
         self.assertFalse(any(call[1] == 'exec' for call in self.calls))
         self.assertEqual(path.read_bytes(), original)
 
+    def test_reused_id_checks_removal_task_before_native_and_docker_probes(self):
+        import docker_app_discovery as docker
+        import lxc_check_job
+        import lxc_removal_receipts as receipts
+
+        path = self.root / 'proxmenux-lxc-update-101.lock'
+        task = 'UPID:homelab-2:00000001:00000002:00000003:vzdestroy:101:root@pam:'
+        operation = '1' * 32
+
+        def no_docker(argv, deadline):
+            self.calls.append(argv)
+            return 1, ''
+
+        scans = {
+            'native': lambda: native.scan(101, self.runner()),
+            'docker': lambda: docker.scan(101, no_docker, self.runner()),
+        }
+        with patch.object(receipts, 'DIRECTORY', self.root / 'receipts'):
+            receipt = receipts.begin(operation) / 'result'
+            receipt.write_text(task + '\n')
+            for source, scan in scans.items():
+                for state in ('running', 'unconfirmed', 'stopped'):
+                    with self.subTest(source=source, task=state):
+                        with path.open('w+') as handle:
+                            lxc_check_job.begin_removal(handle, 'homelab-2', operation)
+                        marker = path.read_bytes()
+                        inode = path.stat().st_ino
+                        self.calls.clear()
+                        status = {'status': 'running'} if state == 'running' else {
+                            'status': 'stopped', 'exitstatus': 'OK'}
+                        response = subprocess.CompletedProcess(
+                            [], int(state == 'unconfirmed'), stdout=json.dumps(status))
+                        with patch.object(lxc_check_job.subprocess, 'run', return_value=response) as check:
+                            if state == 'stopped':
+                                self.assertEqual(scan()['status'], 'complete')
+                                self.assertTrue(any(call[1] == 'exec' for call in self.calls))
+                                self.assertEqual(path.read_bytes(), b'')
+                            else:
+                                with self.assertRaisesRegex(native.ProbeError, 'guest_busy'):
+                                    scan()
+                                self.assertEqual(self.calls, [])
+                                self.assertEqual(path.read_bytes(), marker)
+                            check.assert_called_once_with(
+                                ['pvesh', 'get', f'/nodes/homelab-2/tasks/{task}/status',
+                                 '--output-format', 'json'],
+                                capture_output=True, text=True, timeout=5)
+                        self.assertEqual(path.stat().st_ino, inode)
+
     def test_guest_stop_during_scan_never_returns_complete(self):
         runner = self.runner()
         statuses = iter(['status: running', 'status: stopped'])
