@@ -96,6 +96,7 @@
       "ociHardware": "Enheter och acceleration",
       "ociStacks": "Program med flera containrar",
       "ociContributeApp": "Installera en app och bidra till katalogen",
+      "ociMigrateLxc": "Flytta en LXC-tjänst",
       "ociLifecycle": "Installera, uppdatera och ändra",
       "ociMonitor": "I ProxMenux Monitor",
       "proxmenuxScripts": "ProxMenux Scripts",

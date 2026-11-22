@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "title": "Presun služby z LXC do OCI manager Apps | ProxMenux",
+    "description": "Ako presunúť službu, ktorá beží v existujúcom LXC vytvorenom inštalátorom Community Scripts alebo nastavenom ručne, do aplikácie OCI manager Apps, s pokynmi pre agenta."
+  },
+  "header": {
+    "title": "Presun služby z LXC do OCI manager Apps",
+    "description": "Nástroj na konverziu neexistuje: rovnaká aplikácia sa nainštaluje z katalógu OCI a presunú sa do nej údaje starého LXC. Starý LXC zostane zastavený, kým sa nepotvrdí, že nová aplikácia funguje.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "what",
+      "title": "Čo znamená presun služby",
+      "blocks": [
+        {
+          "p": "Služba nainštalovaná v LXC inštalátorom Community Scripts alebo nastavená ručne spúšťa aplikáciu z balíkov alebo binárnych súborov vo všeobecnom systéme. Aplikácia OCI manager Apps spúšťa obraz, ktorý zverejňuje projekt, ako natívny LXC s údajmi na zväzkoch kontajnera alebo v adresároch hostiteľa. Jeden model sa nedá previesť na druhý: presun služby znamená nainštalovať rovnakú aplikáciu z katalógu OCI a preniesť do nej konfiguráciu a údaje starej služby."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Starý LXC",
+                "detail": "zálohovaný\nzastavený, nie odstránený"
+              },
+              {
+                "label": "Údaje",
+                "detail": "konfigurácia, databáza\nknižnice a súbory"
+              },
+              {
+                "label": "Aplikácia OCI",
+                "detail": "nový LXC\nnové VMID a adresa"
+              }
+            ],
+            "caption": "Starý LXC sa ponechá, kým sa nepotvrdí, že nová aplikácia funguje."
+          }
+        },
+        {
+          "p": "Aplikácia musí byť v katalógu. Karta <strong>Katalóg</strong> v ProxMenux Monitor označuje jej položky odznakom <strong>OCI</strong> a ponuka OCI manager Apps v ProxMenuxe ich zobrazuje podľa kategórií. Aplikáciu, ktorá v katalógu nie je, možno nainštalovať z jej obrazu alebo súboru Compose (<customLink>Obraz mimo katalógu</customLink>) alebo navrhnúť do katalógu (<contributeLink>Nainštalovať aplikáciu a pridať ju do katalógu</contributeLink>)."
+        },
+        {
+          "p": "Keď starý LXC spúšťa aplikáciu v Dockeri, jeho zväzky už zodpovedajú štruktúre obrazu: každý zväzok alebo pripojený adresár Dockeru zodpovedá ceste aplikácie OCI. Inštalácia z balíkov ukladá súbory inde a každý adresár potrebuje svoje miesto v novej štruktúre."
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Skôr než niečo zmeníte",
+      "intro": "Okrem zálohy nič v tomto kroku nemení starú službu.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Zálohujte starý LXC",
+                "body": "Zálohujte starý LXC v Proxmox VE, na jeho paneli záloh alebo príkazom <code>vzdump</code>, a skontrolujte, že úloha skončí bez chýb. Táto záloha je cesta späť, ak presun zlyhá. Adresár hostiteľa pripojený do LXC do nej nepatrí: jeho údaje potrebujú zálohu vlastného úložiska."
+              },
+              {
+                "title": "Zistite údaje a verziu",
+                "body": "<code>pct config</code> starého LXC ukáže jeho disky, body pripojenia, zariadenia a či je privilegovaný. Vo vnútri služba ukladá konfiguráciu, databázu a súbory v cestách, ktoré uvádza jej inštalátor alebo dokumentácia, často pod <code>/etc</code>, <code>/opt</code> alebo <code>/var/lib</code>. Zapíšte si nainštalovanú verziu aplikácie, veľkosť a vlastníka každej cesty, jej porty a spôsob, akým sa k nej pristupuje: adresa, názov DNS, reverzný proxy a ďalšie aplikácie, ktoré ju používajú."
+              },
+              {
+                "title": "Porovnajte s aplikáciou OCI",
+                "body": "Karta aplikácie v záložke <strong>Katalóg</strong> zobrazuje jej <strong>Obraz</strong> a v časti <strong>Úložisko</strong> každú cestu, ktorú aplikácia používa vo svojom kontajneri, napríklad <code>/config</code> alebo <code>/data</code>, spolu s miestom, kam môže ísť: zväzok kontajnera, adresár hostiteľa alebo ľubovoľné z nich. Dokumentácia obrazu vysvetľuje, čo obsahuje každá cesta."
+              },
+              {
+                "title": "Skontrolujte verzie a databázu",
+                "body": "Inštalácia použije verziu, ktorú obraz v tej chvíli zverejňuje, zvyčajne najnovšiu; po inštalácii ju zobrazí karta Aplikácie v ProxMenux Monitor. Nová verzia nesmie byť staršia ako verzia v starom LXC: aplikácie migrujú svoje údaje dopredu, len zriedka dozadu. Aplikácia s viacerými kontajnermi nainštaluje databázový engine a verziu zo svojej položky katalógu: karta zobrazuje obraz každého kontajnera v časti <strong>Vytvorené kontajnery</strong>. Stará databáza musí používať rovnaký engine."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Kedy nezačínať",
+            "body": "Chýbajúca vhodná aplikácia v katalógu, obraz starší ako nainštalovaná verzia alebo iný databázový engine sú dôvody presun nezačať. Starý LXC naďalej funguje tak, ako je."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Kam idú údaje v novej aplikácii",
+      "intro": "Každá cesta aplikácie OCI je na zväzku kontajnera alebo v adresári hostiteľa. Cesty so stavom aplikácie, napríklad s jej konfiguráciou, sú na zväzku kontajnera. Cesty s obsahom používateľa, napríklad médiá, fotografie, stiahnuté súbory alebo zálohy, môžu byť na ktoromkoľvek z týchto miest a oba režimy inštalácie sa pýtajú, kde.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "",
+              "Zväzok kontajnera",
+              "Adresár hostiteľa"
+            ],
+            "rows": [
+              [
+                "Záloha Proxmox VE",
+                "Zahrnutý",
+                "Nie je zahrnutý: potrebuje zálohu vlastného úložiska"
+              ],
+              [
+                "Pri odstránení aplikácie",
+                "Odstráni sa s aplikáciou",
+                "Zostane aj s obsahom"
+              ],
+              [
+                "Vhodný pre",
+                "Konfiguráciu, databázy a údaje strednej veľkosti",
+                "Veľké knižnice, ktoré už sú na hostiteľovi, dataset alebo sieťové zdieľanie; údaje, ktoré používa viacero aplikácií"
+              ],
+              [
+                "Údaje starého LXC",
+                "Skopírujú sa do zväzku",
+                "Adresár, ktorý pripájal starý LXC, možno zadať ako adresár hostiteľa novej aplikácie bez kopírovania"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Adresár hostiteľa, ktorý pripája starý LXC, sa v <code>pct config</code> zobrazuje ako riadok <code>mpN</code> s cestou na hostiteľovi. Ak tú istú cestu zadáte novej aplikácii, údaje sa použijú tam, kde sú. Existujúci adresár si zachová vlastníkov aj obsah: inštalácia ich nemení."
+        },
+        {
+          "p": "Aplikácie, ktoré ukladajú absolútne cesty do svojej databázy, napríklad mediálne servery alebo správcovia fotografií, nájdu svoje súbory aj naďalej, ak sa knižnica v novom kontajneri pripojí na rovnakú cestu. <strong>Inštalovať s pokročilým nastavením</strong> pridá ďalšie cesty na cestu v kontajneri, ktorú zvolíte, a neskôr <strong>Upraviť</strong> → <strong>Cesty</strong> pridá cesty alebo pomocou <strong>Zmeniť adresár hostiteľa</strong> presmeruje cestu v adresári hostiteľa na iný adresár hostiteľa. <storageLink>Dáta, cesty a sieť</storageLink> opisuje obe umiestnenia."
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Nainštalujte aplikáciu OCI",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Nainštalujte ju z karty <strong>Katalóg</strong> v ProxMenux Monitor tlačidlom <strong>Inštalovať</strong> alebo <strong>Pokročilá inštalácia</strong>, alebo z ponuky OCI manager Apps položkou <strong>Inštalovať so štandardnými nastaveniami</strong> alebo <strong>Inštalovať s pokročilým nastavením</strong>. Obe cesty vykonajú rovnaké kroky. Pokročilá inštalácia je tá správna, keď treba zvoliť VMID, úložisko každej cesty, ďalšie cesty alebo zariadenia.",
+              "Nová aplikácia je nový LXC s vlastným VMID, vlastnou adresou MAC a vlastnou adresou, cez DHCP alebo pevnou. Nepreberá adresu starého LXC: pevná adresa, ktorú používa starý LXC, sa novej aplikácii pridelí až po odstránení starého LXC, cez <strong>Upraviť</strong> → <strong>Sieť</strong> pri aplikácii s jedným kontajnerom.",
+              "Zariadenia, ktoré používal starý LXC, napríklad GPU, Coral alebo adaptér Zigbee, sa sprístupnia znova, ak ich profil aplikácie ponúka: profily akcelerácie sa zobrazia počas inštalácie a voliteľné zariadenia v pokročilej inštalácii. <strong>Upraviť</strong> → <strong>Zariadenia</strong> ich pridá neskôr. <hardwareLink>Zariadenia a akcelerácia</hardwareLink> uvádza profily.",
+              "Inštalácia spustí aplikáciu a overí, že odpovedá, takže aplikácia vytvorí svoju počiatočnú konfiguráciu. Toto prvé spustenie zanechá aj súbory s vlastníkom, pod ktorým aplikácia zapisuje.",
+              "Ak sa starý LXC spúšťa spolu s uzlom, <code>pct set OLD_ID --onboot 0</code> to vypne, aby reštart hostiteľa nespustil obe služby."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "move",
+      "title": "Presuňte údaje",
+      "intro": "Keď sú oba kontajnery zastavené, ich súbory sú dostupné z hostiteľa Proxmox. <code>pct mount</code> pripojí súborový systém zastaveného kontajnera aj s jeho zväzkami a adresármi hostiteľa pod <code>/var/lib/lxc/VMID/rootfs</code>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Zastavte starú službu",
+                "body": "Ak má služba databázový server, najprv zastavte aplikáciu v starom LXC a vytvorte výpis jej databázy nástrojom jej enginu, napríklad <code>pg_dump</code> pre PostgreSQL alebo <code>mariadb-dump</code> pre MariaDB. Potom starý LXC vypnite."
+              },
+              {
+                "title": "Zastavte novú aplikáciu",
+                "body": "Vypnite ju v Proxmox VE, v ProxMenux Monitor alebo príkazom <code>pct shutdown</code>; watchdog aplikáciu zastavenú týmto spôsobom znova nespustí. Pri aplikácii s viacerými kontajnermi zastavte len kontajner aplikácie: jej databáza beží ďalej, aby prijala import."
+              },
+              {
+                "title": "Pripojte a skopírujte",
+                "body": "Spustite <code>pct mount</code> pre obe VMID a skopírujte konfiguráciu a údaje starej služby do zodpovedajúcich ciest novej aplikácie príkazom <code>cp -a</code>, ktorý zachová oprávnenia, odkazy a dátumy. Dokumentácia projektu uvádza, ktoré súbory prechádzajú z inštalácie z balíkov do jeho obrazu a či niektoré nastavenie odkazuje na staré cesty."
+              },
+              {
+                "title": "Nastavte súborom vlastníka",
+                "body": "V neprivilegovanom kontajneri sa každé UID kontajnera stane na hostiteľovi hodnotou 100000 plus toto UID: používateľ 1000 kontajnera je na hostiteľovi 101000. Nastavte skopírovaným súborom vlastníka, pod ktorým zapisuje nová aplikácia – toho, ktorého jej prvé spustenie zanechalo na jej súboroch – príkazom <code>chown -R</code> na hostiteľovi. Starý LXC mohol používať iného používateľa alebo byť privilegovaný, s UID samotného hostiteľa."
+              },
+              {
+                "title": "Odpojte",
+                "body": "Pred spustením čohokoľvek spustite <code>pct unmount</code> pre obe VMID."
+              }
+            ]
+          }
+        },
+        {
+          "shell": {
+            "code": "pct shutdown OLD_ID\npct shutdown NEW_ID\npct mount OLD_ID\npct mount NEW_ID\nstat -c '%u:%g %n' /var/lib/lxc/NEW_ID/rootfs/config/*\ncp -a /var/lib/lxc/OLD_ID/rootfs/var/lib/app/. /var/lib/lxc/NEW_ID/rootfs/config/\nchown -R 101000:101000 /var/lib/lxc/NEW_ID/rootfs/config\npct unmount NEW_ID\npct unmount OLD_ID"
+          }
+        },
+        {
+          "p": "V príklade <code>/var/lib/app</code> predstavuje dátový adresár starej služby, <code>/config</code> cestu novej aplikácie a <code>101000:101000</code> vlastníka, ktorého <code>stat</code> ukáže na súboroch jej prvého spustenia. Každá aplikácia má vlastné cesty a vlastného vlastníka."
+        },
+        {
+          "calloutInfo": {
+            "title": "Adresár hostiteľa, ktorý si zachová vlastníkov",
+            "body": "Adresár hostiteľa prevzatý zo starého LXC má vlastníkov, ktorých mu pridelil tento LXC. Ak nová aplikácia zapisuje s iným UID, <code>chown -R</code> mu nastaví nového vlastníka. Ak si súbory musia na hostiteľovi zachovať vlastníka, pretože ich používa hostiteľ alebo iné kontajnery, <strong>Mapovanie používateľov bodu pripojenia (idmap)</strong> v pokročilej inštalácii alebo v Upraviť priradí používateľa aplikácie k tomuto vlastníkovi bez zmeny súborov. Táto možnosť je dostupná pre neprivilegované aplikácie s jedným kontajnerom, pre adresáre hostiteľa na ext4, XFS, Btrfs alebo ZFS (OpenZFS 2.2 alebo novší) bez ďalších pripojení vo vnútri, ak to Proxmox VE podporuje. Obrazy, ktoré čítajú <code>PUID</code> a <code>PGID</code>, spúšťajú aplikáciu s UID a GID z týchto premenných, ktoré sa dajú zmeniť v pokročilej inštalácii."
+          }
+        }
+      ]
+    },
+    {
+      "id": "database",
+      "title": "Aplikácie s databázou",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Aplikácia, ktorá má databázu v súbore, napríklad SQLite, ju presunie spolu s ostatnými súbormi.",
+              "Pri aplikácii s viacerými kontajnermi je databáza samostatný kontajner v súkromnej sieti aplikácie. Výpis sa importuje v tomto kontajneri pomocou <code>pct exec</code> a klienta jeho enginu, kým je kontajner aplikácie zastavený.",
+              "Nová aplikácia si pri prvom spustení vytvorila vlastné tabuľky. Postup zálohovania a obnovy projektu uvádza, či výpis patrí do prázdnej databázy a aké voľby potrebuje.",
+              "Výpis sa dá preniesť medzi verziami toho istého enginu, keď je nová verzia rovnaká alebo novšia. Kopírovanie dátových súborov databázového servera funguje len s rovnakým enginom a rovnakou hlavnou verziou, pri zastavených serveroch.",
+              "Pri ďalšom spustení aplikácia vykoná migrácie svojej verzie na importovaných údajoch. Karta Logy v ProxMenux Monitor medzitým zobrazuje jej výstup konzoly."
+            ]
+          }
+        },
+        {
+          "p": "<stacksLink>Aplikácie s viacerými kontajnermi</stacksLink> opisuje, ako sa spúšťajú členovia stacku a ako sa navzájom dosahujú."
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Spustite a overte",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Spustite novú aplikáciu. Aplikácia s viacerými kontajnermi sa spúšťa zo svojho kontajnera aplikácie a jej závislosti sa spustia skôr.",
+              "Overte, že odpovedá na novej adrese, že sa používatelia starej služby môžu prihlásiť a že údaje sú na mieste: knižnice, história a nastavenia. Karta Logy v ProxMenux Monitor zobrazuje výstup konzoly aplikácie.",
+              "Overte zariadenia priamo v aplikácii: hardvérové prekódovanie, detekciu na Corale, adaptér Zigbee.",
+              "Aktualizujte všetko, čo smerovalo na starú adresu: záznamy DNS, reverzný proxy, záložky a ďalšie aplikácie, ktoré službu používajú, napríklad správcu sťahovania, ktorý posiela súbory mediálnemu serveru.",
+              "Pridajte nové VMID, alebo všetky VMID aplikácie s viacerými kontajnermi, do úloh zálohovania Proxmox VE, ktoré zahŕňali starý LXC. Úloha pre všetkých hostí ich už zahŕňa. Adresáre hostiteľa naďalej potrebujú vlastnú zálohu.",
+              "Ako bod návratu použite zálohu, nie snímku: kým existuje snímka vytvorená používateľom, aktualizácia aplikácie sa zastaví skôr, než niečo zmení."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": "Odstráňte starý LXC",
+      "blocks": [
+        {
+          "p": "Starý LXC odstráňte až vtedy, keď nová aplikácia nejaký čas funguje so svojimi údajmi a používateľmi. Dovtedy je opätovné spustenie starého LXC cestou späť; najprv zastavte novú aplikáciu, pretože obe môžu používať rovnaké zariadenia a adresáre hostiteľa."
+        },
+        {
+          "list": {
+            "items": [
+              "Starý LXC je bežný LXC a odstraňuje sa v Proxmox VE. Jeho adresáre hostiteľa sa s ním neodstránia a nová aplikácia ich môže používať.",
+              "Zálohu vytvorenú pred presunom si nejaký čas ponechajte. Odstráňte ju, rovnako ako staršie zálohy starého LXC, až keď ich už nepotrebujete.",
+              "Keď starý LXC už neexistuje, jeho pevnú adresu možno prideliť aplikácii s jedným kontajnerom cez <strong>Upraviť</strong> → <strong>Sieť</strong>.",
+              "Ak sa nová aplikácia neskôr odstráni, <strong>Spravovať nainštalované aplikácie OCI</strong> → <strong>Odstrániť</strong> zmaže jej kontajnery a zväzky kontajnera a ponechá jej adresáre hostiteľa aj s obsahom (<lifecycleLink>Inštalácia, aktualizácia a úpravy</lifecycleLink>)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "brief",
+      "title": "Skopírujte tieto pokyny pre svojho agenta",
+      "blocks": [
+        {
+          "p": "Agent s prístupom k hostiteľovi Proxmox môže s týmito pokynmi presunúť jednu službu. Nahraďte údaje v hranatých zátvorkách; zvyšok agent zistí na hostiteľovi a pred akoukoľvek zmenou sa opýta."
+        },
+        {
+          "agentPrompt": {
+            "title": "Presun služby z LXC do OCI manager Apps",
+            "body": "Chcem presunúť jednu službu, ktorá beží v existujúcom LXC na mojom hostiteľovi Proxmox, do aplikácie OCI manager Apps (ProxMenux). Nástroj na konverziu neexistuje: nainštalujte rovnakú aplikáciu z katalógu OCI a presuňte jej údaje. Pracujte len s touto jednou službou.\n\nSlužba a VMID starého LXC: [SLUŽBA / VMID STARÉHO LXC]\nHostiteľ Proxmox: [HOSTITEĽ PROXMOX]\nKde majú byť údaje: [ZVÄZOK KONTAJNERA, ADRESÁR HOSTITEĽA ALEBO NEZNÁME]\n\nPostupujte podľa týchto krokov:\n1. Najprv všetko preskúmajte len na čítanie. Na hostiteľovi: `pct config` starého LXC s jeho diskami, bodmi pripojenia, zariadeniami, sieťou, voľbami spúšťania a informáciou, či je privilegovaný. Vo vnútri: bežiace služby, nainštalovanú verziu aplikácie, cesty jej konfigurácie, databázy a súborov s veľkosťou a vlastníkmi, porty, na ktorých počúva, a spôsob, akým sa k nej pristupuje (adresa, názov DNS, reverzný proxy, ďalšie aplikácie, ktoré ju používajú). V tomto kroku nič nemeňte.\n2. Nájdite zodpovedajúcu aplikáciu v katalógu OCI ProxMenuxu (karta Katalóg v ProxMenux Monitor alebo ponuka OCI manager Apps). Porovnajte jej obraz a verziu, jej cesty a miesto, kam môže ísť každá z nich, a pri aplikácii s viacerými kontajnermi jej databázový engine a jeho verziu s tým, čo ste zistili. Zastavte sa a podajte správu, ak neexistuje vhodná aplikácia, ak by nainštalovala staršiu verziu ako tú starú, alebo ak jej databáza nedokáže prijať staré údaje.\n3. Zálohujte starý LXC pomocou vzdump a potvrďte, že úloha skončila bez chýb. Adresáre hostiteľa pripojené do LXC v tejto zálohe nie sú; upozornite na to, ak obsahujú údaje, ktorých sa presun dotkne.\n4. Naplánujte presun a ukážte mi ho skôr, než niečo zmeníte: aplikáciu a režim inštalácie, miesto každej starej cesty v novej štruktúre, zväzok kontajnera alebo adresár hostiteľa pre každú cestu, úložisko, sieť (most, DHCP alebo pevná adresa), zariadenia na sprístupnenie, kroky pre databázu, očakávaný výpadok a spôsob návratu.\n5. Po mojom schválení nainštalujte aplikáciu cez OCI manager Apps, pomocou Inštalovať s pokročilým nastavením, keď treba zvoliť cesty, ďalšie cesty alebo zariadenia. Použite nové VMID; nikdy znova nepoužite VMID ani pevnú adresu starého LXC, kým starý LXC existuje. Ak sa starý LXC spúšťa spolu s uzlom, vypnite to.\n6. Presuňte údaje: zastavte starú službu a vytvorte výpis jej databázy nástrojom jej enginu, ak ju má; vypnite starý LXC a kontajner novej aplikácie; skopírujte súbory cez `pct mount` so zachovaním oprávnení; nastavte im vlastníka, pod ktorým zapisuje nová aplikácia (v neprivilegovanom kontajneri UID na hostiteľovi = 100000 + UID v kontajneri), alebo použite Mapovanie používateľov bodu pripojenia (idmap), kde sa dá; potom `pct unmount`. Importujte výpis do databázy novej aplikácie s rovnakým enginom podľa postupu obnovy projektu.\n7. Spustite novú aplikáciu a overte ju: odpovedá na svojej adrese, existujúci používatelia sa môžu prihlásiť, údaje sú na mieste, logy neukazujú chyby a zariadenia fungujú. Uveďte, čo ste pozorovali, nie čo očakávate.\n8. Povedzte mi, čo musím aktualizovať: záznamy DNS, reverzný proxy, záložky, ďalšie aplikácie, ktoré smerujú na starú adresu, a úlohy zálohovania, ktoré teraz musia zahŕňať nové VMID alebo nové VMID.\n9. Starý LXC nechajte zastavený, nie odstránený. Pred odstránením jeho, akejkoľvek zálohy alebo akýchkoľvek údajov sa ma opýtajte.\n\nNikdy nesprístupňujte službu na internete, nemeňte pravidlá firewallu a neodstraňujte údaje bez toho, aby ste sa ma najprv opýtali. Do svojich správ nedávajte heslá, tokeny ani iné tajomstvá. Na záver uveďte novú adresu, čo sa presunulo a kam, vykonané kontroly a ich výsledky a kroky, ktoré mi zostávajú."
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "Jedna služba naraz",
+            "body": "Každý presun má vlastnú zálohu, vlastné kontroly a vlastnú cestu späť. Presun služieb po jednej obmedzí zlyhanie na jedinú z nich."
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Súvisiace stránky",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Dáta, cesty a sieť",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "zväzky kontajnera, adresáre hostiteľa, vlastníci a adresy."
+              },
+              {
+                "label": "Aplikácie s viacerými kontajnermi",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "aplikácia, databáza a cache ako koordinované LXC."
+              },
+              {
+                "label": "Zariadenia a akcelerácia",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, Coral, USB a sériové zariadenia."
+              },
+              {
+                "label": "Inštalácia, aktualizácia a úpravy",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "úpravy, zálohy, obnova a odstránenie."
+              },
+              {
+                "label": "Nainštalovať aplikáciu a pridať ju do katalógu",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "keď aplikácia ešte nie je v katalógu."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

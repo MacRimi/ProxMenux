@@ -96,6 +96,7 @@
       "ociHardware": "Zariadenia a akcelerácia",
       "ociStacks": "Aplikácie s viacerými kontajnermi",
       "ociContributeApp": "Nainštalovať aplikáciu a pridať ju do katalógu",
+      "ociMigrateLxc": "Presun služby z LXC",
       "ociLifecycle": "Inštalácia, aktualizácia a vytvorenie znova",
       "ociMonitor": "V ProxMenux Monitore",
       "proxmenuxScripts": "Skripty ProxMenux",

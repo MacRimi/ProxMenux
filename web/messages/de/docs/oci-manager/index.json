@@ -200,6 +200,11 @@
                 "tail": "Anleitung für Agenten, Tests und Katalog-Pull-Request."
               },
               {
+                "label": "Einen LXC-Dienst zu OCI manager Apps umziehen",
+                "href": "/docs/oci-manager/migrate-lxc",
+                "tail": "aus dem Katalog installieren, Daten übertragen und den alten LXC bis zur Bestätigung behalten."
+              },
+              {
                 "label": "Installieren, aktualisieren und ändern",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Der Instanzvertrag und seine Vorgänge."

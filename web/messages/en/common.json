@@ -96,6 +96,7 @@
       "ociHardware": "Devices and acceleration",
       "ociStacks": "Multi-container applications",
       "ociContributeApp": "Install an app and contribute it",
+      "ociMigrateLxc": "Move an LXC service",
       "ociLifecycle": "Install, update and modify",
       "ociMonitor": "In ProxMenux Monitor",
       "proxmenuxScripts": "ProxMenux Scripts",

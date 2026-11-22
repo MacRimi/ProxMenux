@@ -200,6 +200,11 @@
                 "tail": "pokyny pre agenta, testy a príspevok do katalógu."
               },
               {
+                "label": "Presun služby z LXC do OCI manager Apps",
+                "href": "/docs/oci-manager/migrate-lxc",
+                "tail": "inštalácia z katalógu, presun údajov a ponechanie starého LXC do overenia."
+              },
+              {
                 "label": "Inštalácia, aktualizácia a úpravy",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Uložená konfigurácia inštalácie a operácie, ktoré ju používajú."

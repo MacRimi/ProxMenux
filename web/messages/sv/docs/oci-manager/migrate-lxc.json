@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "title": "Flytta en LXC-tjänst till OCI manager Apps | ProxMenux",
+    "description": "Så flyttar du en tjänst som körs i en befintlig LXC, skapad av ett installationsskript från Community Scripts eller konfigurerad för hand, till ett program i OCI manager Apps, med instruktioner för en agent."
+  },
+  "header": {
+    "title": "Flytta en LXC-tjänst till OCI manager Apps",
+    "description": "Det finns inget konverteringsverktyg: samma program installeras från OCI-katalogen och data från den gamla LXC:n flyttas dit. Den gamla LXC:n förblir stoppad tills det är bekräftat att det nya programmet fungerar.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "what",
+      "title": "Vad det innebär att flytta en tjänst",
+      "blocks": [
+        {
+          "p": "En tjänst som installerats i en LXC av ett installationsskript från Community Scripts, eller konfigurerats för hand, kör programmet från paket eller binärfiler i ett allmänt system. Ett program i OCI manager Apps kör den avbild som projektet publicerar, som en inbyggd LXC med sina data på containervolymer eller i kataloger på värden. Den ena modellen kan inte konverteras till den andra: att flytta en tjänst innebär att installera samma program från OCI-katalogen och flytta den gamla tjänstens konfiguration och data dit."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Gammal LXC",
+                "detail": "säkerhetskopierad\nstoppad, inte borttagen"
+              },
+              {
+                "label": "Data",
+                "detail": "konfiguration, databas\nbibliotek och filer"
+              },
+              {
+                "label": "OCI-program",
+                "detail": "ny LXC\nnytt VMID och ny adress"
+              }
+            ],
+            "caption": "Den gamla LXC:n behålls tills det är bekräftat att det nya programmet fungerar."
+          }
+        },
+        {
+          "p": "Programmet måste finnas i katalogen. Fliken <strong>Katalog</strong> i ProxMenux Monitor märker dess poster med märket <strong>OCI</strong>, och menyn för OCI manager Apps i ProxMenux listar dem per kategori. Ett program som inte finns i katalogen kan installeras från sin avbild eller sin Compose-fil (<customLink>Avbildning utanför katalogen</customLink>), eller föreslås för katalogen (<contributeLink>Installera en app och bidra till katalogen</contributeLink>)."
+        },
+        {
+          "p": "När den gamla LXC:n kör programmet med Docker följer dess volymer redan avbildens struktur: varje Docker-volym eller monterad katalog motsvarar en sökväg i OCI-programmet. En installation från paket lägger sina filer på andra ställen, och varje katalog behöver sin plats i den nya strukturen."
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Innan du ändrar något",
+      "intro": "Förutom säkerhetskopian ändrar inget i det här steget den gamla tjänsten.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Säkerhetskopiera den gamla LXC:n",
+                "body": "Säkerhetskopiera den gamla LXC:n i Proxmox VE, från dess panel för säkerhetskopior eller med <code>vzdump</code>, och kontrollera att uppgiften avslutas utan fel. Den säkerhetskopian är vägen tillbaka om flytten misslyckas. En katalog på värden som är monterad i LXC:n ingår inte: dess data behöver en säkerhetskopia av sin egen lagring."
+              },
+              {
+                "title": "Hitta data och version",
+                "body": "<code>pct config</code> för den gamla LXC:n visar dess diskar, monteringspunkter, enheter och om den är privilegierad. Inuti den lagrar tjänsten sin konfiguration, databas och sina filer i de sökvägar som dess installationsskript eller dokumentation anger, ofta under <code>/etc</code>, <code>/opt</code> eller <code>/var/lib</code>. Anteckna programmets installerade version, storlek och ägare för varje sökväg, dess portar och hur den nås: adress, DNS-namn, omvänd proxy och andra program som använder den."
+              },
+              {
+                "title": "Jämför med OCI-programmet",
+                "body": "Programmets blad på fliken <strong>Katalog</strong> visar dess <strong>Avbild</strong> och, under <strong>Lagring</strong>, varje sökväg som programmet använder i sin container, till exempel <code>/config</code> eller <code>/data</code>, med platsen där den kan ligga: en containervolym, en katalog på värden eller valfritt av dem. Avbildens dokumentation beskriver vad varje sökväg innehåller."
+              },
+              {
+                "title": "Kontrollera versioner och databas",
+                "body": "Installationen tar den version som avbilden publicerar i det ögonblicket, oftast den senaste; efter installationen visar fliken App i ProxMenux Monitor den. Den nya versionen får inte vara äldre än den i den gamla LXC:n: program migrerar sina data framåt, sällan bakåt. Ett program med flera containrar installerar databasmotorn och versionen från sin katalogpost: bladet visar avbilden för varje container under <strong>Containrar som skapas</strong>. Den gamla databasen måste använda samma motor."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "När du inte ska börja",
+            "body": "Inget lämpligt program i katalogen, en avbild som är äldre än den installerade versionen eller en annan databasmotor är skäl att inte börja flytten. Den gamla LXC:n fortsätter att fungera som den är."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Var data hamnar i det nya programmet",
+      "intro": "Varje sökväg i OCI-programmet ligger på en containervolym eller i en katalog på värden. Sökvägar med programmets tillstånd, till exempel dess konfiguration, ligger på en containervolym. Sökvägar med användarens innehåll, till exempel media, foton, nedladdningar eller säkerhetskopior, kan ligga på vilken som helst av dem, och båda installationslägena frågar var.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "",
+              "Containervolym",
+              "Katalog på värden"
+            ],
+            "rows": [
+              [
+                "Säkerhetskopia i Proxmox VE",
+                "Ingår",
+                "Ingår inte: den behöver en säkerhetskopia av sin egen lagring"
+              ],
+              [
+                "När programmet tas bort",
+                "Tas bort med programmet",
+                "Behålls, med sitt innehåll"
+              ],
+              [
+                "Passar för",
+                "Konfiguration, databaser och data av måttlig storlek",
+                "Stora bibliotek som redan ligger på värden, ett dataset eller en nätverksdelning; data som flera program använder"
+              ],
+              [
+                "Data från den gamla LXC:n",
+                "Kopieras till volymen",
+                "Katalogen som den gamla LXC:n monterade kan anges som katalog på värden för det nya programmet, utan att kopieras"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "En katalog på värden som den gamla LXC:n monterar syns i <code>pct config</code> som en rad <code>mpN</code> med en sökväg på värden. Om du anger samma sökväg för det nya programmet används data där de ligger. En befintlig katalog behåller sina ägare och sitt innehåll: installationen ändrar dem inte."
+        },
+        {
+          "p": "Program som sparar absoluta sökvägar i sin databas, till exempel mediaservrar eller fotohanterare, hittar fortfarande sina filer när biblioteket monteras på samma sökväg i den nya containern. <strong>Installera med avancerade inställningar</strong> lägger till extra sökvägar på den sökväg i containern som du väljer, och senare lägger <strong>Ändra</strong> → <strong>Sökvägar</strong> till sökvägar eller pekar, med <strong>Ändra värdkatalog</strong>, en sökväg i en katalog på värden mot en annan katalog på värden. <storageLink>Data, sökvägar och nätverk</storageLink> beskriver båda platserna."
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Installera OCI-programmet",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Installera från fliken <strong>Katalog</strong> i ProxMenux Monitor, med <strong>Installera</strong> eller <strong>Avancerad installation</strong>, eller från menyn för OCI manager Apps, med <strong>Installera med standardinställningar</strong> eller <strong>Installera med avancerade inställningar</strong>. Båda vägarna kör samma steg. Den avancerade installationen är den som gäller när VMID, lagring för varje sökväg, extra sökvägar eller enheter ska väljas.",
+              "Det nya programmet är en ny LXC, med eget VMID, egen MAC-adress och egen adress, via DHCP eller fast. Det tar inte över den gamla LXC:ns adress: en fast adress som den gamla LXC:n använder ges till det nya programmet först när den gamla LXC:n har tagits bort, via <strong>Ändra</strong> → <strong>Nätverk</strong> för ett program med en enda container.",
+              "Enheter som den gamla LXC:n använde, till exempel en GPU, en Coral eller en Zigbee-adapter, skickas vidare igen när programmets profil erbjuder dem: accelerationsprofiler visas under installationen och valfria enheter i den avancerade installationen. <strong>Ändra</strong> → <strong>Enheter</strong> lägger till dem senare. <hardwareLink>Enheter och acceleration</hardwareLink> listar profilerna.",
+              "Installationen startar programmet och kontrollerar att det svarar, så programmet skapar sin första konfiguration. Den första starten lämnar också filer med den ägare som programmet skriver som.",
+              "Om den gamla LXC:n startar med noden stänger <code>pct set OLD_ID --onboot 0</code> av det, så att en omstart av värden inte startar båda tjänsterna."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "move",
+      "title": "Flytta data",
+      "intro": "När båda containrarna är stoppade nås deras filer från Proxmox-värden. <code>pct mount</code> monterar filsystemet för en stoppad container, med dess volymer och kataloger på värden, under <code>/var/lib/lxc/VMID/rootfs</code>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Stoppa den gamla tjänsten",
+                "body": "Om tjänsten har en databasserver stoppar du först programmet i den gamla LXC:n och gör en dump av databasen med motorns verktyg, till exempel <code>pg_dump</code> för PostgreSQL eller <code>mariadb-dump</code> för MariaDB. Stäng sedan av den gamla LXC:n."
+              },
+              {
+                "title": "Stoppa det nya programmet",
+                "body": "Stäng av det i Proxmox VE, i ProxMenux Monitor eller med <code>pct shutdown</code>; watchdog lämnar ett program som stoppats på det sättet i fred. I ett program med flera containrar stoppar du bara programcontainern: dess databas fortsätter att köra för att ta emot importen."
+              },
+              {
+                "title": "Montera och kopiera",
+                "body": "Kör <code>pct mount</code> för båda VMID och kopiera den gamla tjänstens konfiguration och data till motsvarande sökvägar i det nya programmet med <code>cp -a</code>, som behåller behörigheter, länkar och datum. Projektets dokumentation anger vilka filer som går från en installation från paket till dess avbild och om någon inställning hänvisar till gamla sökvägar."
+              },
+              {
+                "title": "Ge filerna deras ägare",
+                "body": "I en oprivilegierad container blir varje UID i containern på värden 100000 plus det UID:t: användare 1000 i containern är 101000 på värden. Ge de kopierade filerna den ägare som det nya programmet skriver som, den som dess första start lämnade på sina filer, med <code>chown -R</code> på värden. Den gamla LXC:n kan ha använt en annan användare, eller varit privilegierad, med värdens egna UID."
+              },
+              {
+                "title": "Avmontera",
+                "body": "Kör <code>pct unmount</code> för båda VMID innan du startar något."
+              }
+            ]
+          }
+        },
+        {
+          "shell": {
+            "code": "pct shutdown OLD_ID\npct shutdown NEW_ID\npct mount OLD_ID\npct mount NEW_ID\nstat -c '%u:%g %n' /var/lib/lxc/NEW_ID/rootfs/config/*\ncp -a /var/lib/lxc/OLD_ID/rootfs/var/lib/app/. /var/lib/lxc/NEW_ID/rootfs/config/\nchown -R 101000:101000 /var/lib/lxc/NEW_ID/rootfs/config\npct unmount NEW_ID\npct unmount OLD_ID"
+          }
+        },
+        {
+          "p": "I exemplet står <code>/var/lib/app</code> för den gamla tjänstens datakatalog, <code>/config</code> för det nya programmets sökväg och <code>101000:101000</code> för den ägare som <code>stat</code> visar på filerna från dess första start. Varje program har sina egna sökvägar och sin egen ägare."
+        },
+        {
+          "calloutInfo": {
+            "title": "En katalog på värden som behåller sina ägare",
+            "body": "En katalog på värden som återanvänds från den gamla LXC:n har de ägare som den LXC:n gav den. Om det nya programmet skriver med ett annat UID ger <code>chown -R</code> den den nya ägaren. Om filerna måste behålla sin ägare på värden, eftersom värden eller andra containrar använder dem, mappar <strong>Användarmappning för monteringspunkten (idmap)</strong>, i den avancerade installationen eller i Ändra, programmets användare till den ägaren utan att ändra filerna. Alternativet erbjuds för oprivilegierade program med en enda container, för kataloger på värden på ext4, XFS, Btrfs eller ZFS (OpenZFS 2.2 eller senare) utan andra monteringar inuti, när Proxmox VE stöder det. Avbilder som läser <code>PUID</code> och <code>PGID</code> kör programmet med UID och GID från de variablerna, som går att ändra i den avancerade installationen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "database",
+      "title": "Program med databas",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Ett program som har sin databas i en fil, till exempel SQLite, flyttar den tillsammans med resten av sina filer.",
+              "I ett program med flera containrar är databasen en egen container i programmets privata nätverk. Dumpen importeras i den containern, med <code>pct exec</code> och motorns klient, medan programcontainern är stoppad.",
+              "Det nya programmet skapade sina egna tabeller vid första starten. Projektets rutin för säkerhetskopiering och återställning anger om dumpen ska in i en tom databas och vilka alternativ den behöver.",
+              "En dump kan flyttas mellan versioner av samma motor när den nya versionen är densamma eller nyare. Att kopiera en databasservers datafiler fungerar bara med samma motor och samma huvudversion, med båda servrarna stoppade.",
+              "Vid nästa start kör programmet sin versions migreringar på de importerade data. Fliken Loggar i ProxMenux Monitor visar dess konsolutdata medan de körs."
+            ]
+          }
+        },
+        {
+          "p": "<stacksLink>Program med flera containrar</stacksLink> beskriver hur medlemmarna i en stack startar och hur de når varandra."
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Starta och kontrollera",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Starta det nya programmet. Ett program med flera containrar startas från sin programcontainer, och dess beroenden startar först.",
+              "Kontrollera att det svarar på sin nya adress, att den gamla tjänstens användare kan logga in och att data finns där: bibliotek, historik och inställningar. Fliken Loggar i ProxMenux Monitor visar programmets konsolutdata.",
+              "Kontrollera enheterna från själva programmet: hårdvaruomkodning, detektering på en Coral, Zigbee-adaptern.",
+              "Uppdatera det som nådde den gamla adressen: DNS-poster, den omvända proxyn, bokmärken och andra program som använder tjänsten, till exempel en nedladdningshanterare som skickar filer till en mediaserver.",
+              "Lägg till det nya VMID:t, eller alla VMID i ett program med flera containrar, i de säkerhetskopieringsjobb i Proxmox VE som omfattade den gamla LXC:n. Ett jobb för alla gäster omfattar dem redan. Kataloger på värden behöver fortfarande en egen säkerhetskopia.",
+              "Använd en säkerhetskopia som återställningspunkt, inte en ögonblicksbild: så länge en ögonblicksbild som användaren skapat finns stoppas en uppdatering av programmet innan något ändras."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": "Ta bort den gamla LXC:n",
+      "blocks": [
+        {
+          "p": "Ta bort den gamla LXC:n först när det nya programmet har fungerat en tid med sina data och sina användare. Fram till dess är det vägen tillbaka att starta den gamla LXC:n igen; stoppa först det nya programmet, eftersom båda kan använda samma enheter och kataloger på värden."
+        },
+        {
+          "list": {
+            "items": [
+              "Den gamla LXC:n är en vanlig LXC och tas bort i Proxmox VE. Dess kataloger på värden tas inte bort med den, och det nya programmet kan använda dem.",
+              "Behåll säkerhetskopian från före flytten en tid. Ta bort den, liksom äldre säkerhetskopior av den gamla LXC:n, först när de inte längre behövs.",
+              "När den gamla LXC:n inte längre finns kan dess fasta adress ges till ett program med en enda container via <strong>Ändra</strong> → <strong>Nätverk</strong>.",
+              "Om det nya programmet tas bort senare tar <strong>Hantera installerade OCI-program</strong> → <strong>Ta bort</strong> bort dess containrar och containervolymer och behåller dess kataloger på värden med sitt innehåll (<lifecycleLink>Installera, uppdatera och ändra</lifecycleLink>)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "brief",
+      "title": "Kopiera de här instruktionerna till din agent",
+      "blocks": [
+        {
+          "p": "En agent med åtkomst till Proxmox-värden kan flytta en tjänst med de här instruktionerna. Ersätt uppgifterna inom hakparentes; agenten tar reda på resten på värden och frågar innan den ändrar något."
+        },
+        {
+          "agentPrompt": {
+            "title": "Flytta en LXC-tjänst till OCI manager Apps",
+            "body": "Jag vill flytta en tjänst som körs i en befintlig LXC på min Proxmox-värd till ett program i OCI manager Apps (ProxMenux). Det finns inget konverteringsverktyg: installera samma program från OCI-katalogen och flytta dess data. Arbeta bara med den här tjänsten.\n\nTjänst och VMID för den gamla LXC:n: [TJÄNST / VMID FÖR GAMLA LXC:N]\nProxmox-värd: [PROXMOX-VÄRD]\nVar data ska ligga: [CONTAINERVOLYM, KATALOG PÅ VÄRDEN ELLER OKÄNT]\n\nGå igenom de här stegen:\n1. Undersök först utan att ändra något. På värden: `pct config` för den gamla LXC:n, med diskar, monteringspunkter, enheter, nätverk, startalternativ och om den är privilegierad. Inuti den: de tjänster som körs, programmets installerade version, sökvägarna till dess konfiguration, databas och filer med storlek och ägare, portarna den lyssnar på och hur den nås (adress, DNS-namn, omvänd proxy, andra program som använder den). Ändra inget i det här steget.\n2. Hitta motsvarande program i ProxMenux OCI-katalog (fliken Katalog i ProxMenux Monitor eller menyn för OCI manager Apps). Jämför dess avbild och version, dess sökvägar och var var och en kan ligga och, för ett program med flera containrar, dess databasmotor och version med det du hittade. Avbryt och rapportera om det inte finns något lämpligt program, om det skulle installera en äldre version än den gamla eller om dess databas inte kan ta emot de gamla data.\n3. Säkerhetskopiera den gamla LXC:n med vzdump och bekräfta att uppgiften avslutades utan fel. Kataloger på värden som är monterade i den ingår inte i säkerhetskopian; säg till om de innehåller data som kommer att påverkas.\n4. Planera flytten och visa den för mig innan du ändrar något: programmet och installationsläget, platsen för varje gammal sökväg i den nya strukturen, containervolym eller katalog på värden för varje sökväg, lagringen, nätverket (brygga, DHCP eller fast adress), enheterna som ska skickas vidare, stegen för databasen, förväntat avbrott och hur man går tillbaka.\n5. Efter mitt godkännande installerar du programmet med OCI manager Apps, med Installera med avancerade inställningar när sökvägar, extra sökvägar eller enheter ska väljas. Använd ett nytt VMID; återanvänd aldrig den gamla LXC:ns VMID eller fasta adress så länge den gamla LXC:n finns. Om den gamla LXC:n startar med noden, stäng av det.\n6. Flytta data: stoppa den gamla tjänsten och gör en dump av dess databas med motorns verktyg om den har en; stäng av den gamla LXC:n och det nya programmets container; kopiera filerna med `pct mount` och behåll behörigheterna; ge dem den ägare som det nya programmet skriver som (i en oprivilegierad container: UID på värden = 100000 + UID i containern) eller använd Användarmappning för monteringspunkten (idmap) där det går; kör sedan `pct unmount`. Importera dumpen i det nya programmets databas, med samma motor, enligt projektets återställningsrutin.\n7. Starta det nya programmet och kontrollera det: det svarar på sin adress, befintliga användare kan logga in, data finns, loggarna visar inga fel och enheterna fungerar. Rapportera vad du har observerat, inte vad du förväntar dig.\n8. Berätta vad jag måste uppdatera: DNS-poster, omvänd proxy, bokmärken, andra program som pekar på den gamla adressen och de säkerhetskopieringsjobb som nu måste omfatta det nya VMID:t eller de nya VMID:na.\n9. Låt den gamla LXC:n vara stoppad, inte borttagen. Fråga mig innan du tar bort den, en säkerhetskopia eller data.\n\nExponera aldrig en tjänst mot internet, ändra inte brandväggsregler och ta inte bort data utan att fråga mig först. Skriv inte lösenord, token eller andra hemligheter i dina rapporter. Avsluta med den nya adressen, vad som flyttades och vart, de kontroller som gjordes och deras resultat, och de steg som återstår för mig."
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "En tjänst i taget",
+            "body": "Varje flytt har sin egen säkerhetskopia, sina egna kontroller och sin egen väg tillbaka. Att flytta tjänsterna en och en begränsar ett fel till en av dem."
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Relaterade sidor",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Data, sökvägar och nätverk",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "containervolymer, kataloger på värden, ägare och adresser."
+              },
+              {
+                "label": "Program med flera containrar",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "program, databas och cache som samordnade LXC."
+              },
+              {
+                "label": "Enheter och acceleration",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, Coral, USB- och serieenheter."
+              },
+              {
+                "label": "Installera, uppdatera och ändra",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "Ändra, säkerhetskopior, återställning och borttagning."
+              },
+              {
+                "label": "Installera en app och bidra till katalogen",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "när programmet ännu inte finns i katalogen."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

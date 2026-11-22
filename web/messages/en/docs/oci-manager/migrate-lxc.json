@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "title": "Move an LXC service to OCI manager Apps | ProxMenux",
+    "description": "How to move a service that runs in an existing LXC, created by a Community Scripts installer or set up by hand, to an application of OCI manager Apps, with a brief for an agent."
+  },
+  "header": {
+    "title": "Move an LXC service to OCI manager Apps",
+    "description": "There is no conversion tool: the same application is installed from the OCI catalog and the data of the old LXC is moved to it. The old LXC stays stopped until the new application is confirmed to work.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "what",
+      "title": "What moving a service means",
+      "blocks": [
+        {
+          "p": "A service installed in an LXC by a Community Scripts installer, or set up by hand, runs the application from packages or binaries inside a general-purpose system. An application of OCI manager Apps runs the image the project publishes, as a native LXC with its data on container volumes or host directories. One model cannot be converted into the other: moving a service means installing the same application from the OCI catalog and moving the configuration and data of the old service to it."
+        },
+        {
+          "flow": {
+            "nodes": [
+              {
+                "label": "Old LXC",
+                "detail": "backed up\nstopped, not deleted"
+              },
+              {
+                "label": "Data",
+                "detail": "configuration, database\nlibraries and files"
+              },
+              {
+                "label": "OCI application",
+                "detail": "new LXC\nnew VMID and address"
+              }
+            ],
+            "caption": "The old LXC is kept until the new application is confirmed to work."
+          }
+        },
+        {
+          "p": "The application has to exist in the catalog. The <strong>Catalog</strong> tab of ProxMenux Monitor marks its entries with an <strong>OCI</strong> badge, and the OCI manager Apps menu of ProxMenux lists them by category. An application that is not in the catalog can be installed from its image or its Compose file (<customLink>Image not in the catalog</customLink>), or proposed for the catalog (<contributeLink>Install an app and contribute it</contributeLink>)."
+        },
+        {
+          "p": "When the old LXC runs the application with Docker, its volumes already follow the layout of the image: each Docker volume or bind directory corresponds to a path of the OCI application. An installation from packages keeps its files elsewhere, and each directory needs its place in the new layout."
+        }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Before changing anything",
+      "intro": "Apart from the backup, nothing in this step changes the old service.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Back up the old LXC",
+                "body": "Back up the old LXC from Proxmox VE, from its Backup panel or with <code>vzdump</code>, and check that the task ends without errors. That backup is the way back if the move fails. A host directory mounted in the LXC is not part of it: its data needs a backup of its own storage."
+              },
+              {
+                "title": "Find the data and the version",
+                "body": "<code>pct config</code> of the old LXC shows its disks, its mount points, its devices and whether it is privileged. Inside it, the service keeps its configuration, database and files in the paths its installer or its documentation names, often under <code>/etc</code>, <code>/opt</code> or <code>/var/lib</code>. Note the installed version of the application, the size and owner of each path, its ports and how it is reached: address, DNS name, reverse proxy and other applications that use it."
+              },
+              {
+                "title": "Compare with the OCI application",
+                "body": "The sheet of the application in the <strong>Catalog</strong> tab shows its <strong>Image</strong> and, under <strong>Storage</strong>, each path the application uses inside its container, such as <code>/config</code> or <code>/data</code>, with the place it can go: a container volume, a host directory or either. The documentation of the image says what each path holds."
+              },
+              {
+                "title": "Check versions and database",
+                "body": "The installation takes the version the image publishes at that moment, usually the latest one; once installed, the App tab of ProxMenux Monitor shows it. The new version must not be older than the one in the old LXC: applications migrate their data forward, rarely backward. A multi-container application installs the database engine and version of its catalog entry: the sheet shows the image of each container under <strong>Containers it creates</strong>. The old database has to use the same engine."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "When not to start",
+            "body": "No suitable application in the catalog, an image older than the installed version, or a different database engine are reasons not to start the move. The old LXC keeps working as it is."
+          }
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "title": "Where the data goes in the new application",
+      "intro": "Each path of the OCI application goes on a container volume or on a host directory. Paths with the state of the application, such as its configuration, go on a container volume. Paths with content of the user, such as media, photos, downloads or backups, can go on either, and both installation modes ask which.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "",
+              "Container volume",
+              "Host directory"
+            ],
+            "rows": [
+              [
+                "Proxmox VE backup",
+                "Included",
+                "Not included: it needs a backup of its own storage"
+              ],
+              [
+                "Removing the application",
+                "Deleted with the application",
+                "Kept, with its content"
+              ],
+              [
+                "Suited to",
+                "Configuration, databases and data of moderate size",
+                "Large libraries already on the host, a dataset or a network share; data several applications use"
+              ],
+              [
+                "Data of the old LXC",
+                "Copied into the volume",
+                "The directory the old LXC mounted can be given as the host directory of the new application, without copying it"
+              ]
+            ]
+          }
+        },
+        {
+          "p": "A host directory the old LXC mounts appears in <code>pct config</code> as an <code>mpN</code> line with a host path. Giving that same path to the new application reuses the data where it is. An existing directory keeps its owners and its content: the installation does not change them."
+        },
+        {
+          "p": "Applications that store absolute paths in their database, such as media servers or photo managers, keep finding their files when the library is mounted at the same path inside the new container. <strong>Install with advanced settings</strong> adds extra paths at the container path you choose, and later <strong>Modify</strong> → <strong>Paths</strong> adds paths or, with <strong>Change the host directory</strong>, points a host-directory path to another directory of the host. <storageLink>Data, paths and networking</storageLink> describes both locations."
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Install the OCI application",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Install from the <strong>Catalog</strong> tab of ProxMenux Monitor, with <strong>Install</strong> or <strong>Advanced installation</strong>, or from the OCI manager Apps menu, with <strong>Install with default settings</strong> or <strong>Install with advanced settings</strong>. Both run the same steps. The advanced installation is the one to use when the VMID, the storage of each path, extra paths or devices have to be chosen.",
+              "The new application is a new LXC, with its own VMID, MAC address and address, by DHCP or fixed. It does not take over the address of the old LXC: a fixed address in use by the old LXC is given to the new application only once the old LXC has been removed, from <strong>Modify</strong> → <strong>Network</strong> on a single application.",
+              "Devices the old LXC used, such as a GPU, a Coral or a Zigbee adapter, are passed again when the profile of the application offers them: acceleration profiles appear during the installation, and optional devices in the advanced installation. <strong>Modify</strong> → <strong>Devices</strong> adds them later. <hardwareLink>Devices and acceleration</hardwareLink> lists the profiles.",
+              "The installation starts the application and checks that it responds, so the application creates its initial configuration. That first start also leaves files with the owner the application writes with.",
+              "When the old LXC starts with the node, <code>pct set OLD_ID --onboot 0</code> disables it, so a reboot of the host does not start both services."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "move",
+      "title": "Move the data",
+      "intro": "With both containers stopped, their files are reached from the Proxmox host. <code>pct mount</code> mounts the filesystem of a stopped container, with its volumes and host directories, under <code>/var/lib/lxc/VMID/rootfs</code>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Stop the old service",
+                "body": "If the service has a database server, stop the application inside the old LXC first and dump its database with the tool of its engine, such as <code>pg_dump</code> for PostgreSQL or <code>mariadb-dump</code> for MariaDB. Then shut the old LXC down."
+              },
+              {
+                "title": "Stop the new application",
+                "body": "Shut it down from Proxmox VE, from ProxMenux Monitor or with <code>pct shutdown</code>; the watchdog leaves an application stopped this way alone. In a multi-container application, stop only the application container: its database keeps running to receive the import."
+              },
+              {
+                "title": "Mount and copy",
+                "body": "Run <code>pct mount</code> on both VMIDs and copy the configuration and data of the old service into the matching paths of the new application with <code>cp -a</code>, which keeps permissions, links and dates. The documentation of the project says which files move from an installation from packages to its image and whether any setting refers to old paths."
+              },
+              {
+                "title": "Give the files their owner",
+                "body": "In an unprivileged container, each UID inside the container becomes 100000 plus that UID on the host: user 1000 of the container is 101000 on the host. Give the copied files the owner the new application writes with, the one its first start left on its files, with <code>chown -R</code> on the host. The old LXC may have used another user, or been privileged, with the UIDs of the host itself."
+              },
+              {
+                "title": "Unmount",
+                "body": "Run <code>pct unmount</code> on both VMIDs before starting anything."
+              }
+            ]
+          }
+        },
+        {
+          "shell": {
+            "code": "pct shutdown OLD_ID\npct shutdown NEW_ID\npct mount OLD_ID\npct mount NEW_ID\nstat -c '%u:%g %n' /var/lib/lxc/NEW_ID/rootfs/config/*\ncp -a /var/lib/lxc/OLD_ID/rootfs/var/lib/app/. /var/lib/lxc/NEW_ID/rootfs/config/\nchown -R 101000:101000 /var/lib/lxc/NEW_ID/rootfs/config\npct unmount NEW_ID\npct unmount OLD_ID"
+          }
+        },
+        {
+          "p": "In the example, <code>/var/lib/app</code> stands for the data directory of the old service, <code>/config</code> for the path of the new application and <code>101000:101000</code> for the owner that <code>stat</code> shows on the files of its first start. Each application has its own paths and owner."
+        },
+        {
+          "calloutInfo": {
+            "title": "A host directory that keeps its owners",
+            "body": "A host directory reused from the old LXC has the owners that LXC gave it. When the new application writes with another UID, <code>chown -R</code> gives it the new owner. When the files must keep their owner on the host, because the host or other containers use them, <strong>Mount user mapping (idmap)</strong> in the advanced installation or in Modify maps the user of the application to that owner without changing the files. It is offered for single unprivileged applications, on host directories on ext4, XFS, Btrfs or ZFS (OpenZFS 2.2 or newer) with no other mounts inside them, when Proxmox VE supports it. Images that read <code>PUID</code> and <code>PGID</code> run the application with the UID and GID set in those variables, which the advanced installation lets you change."
+          }
+        }
+      ]
+    },
+    {
+      "id": "database",
+      "title": "Applications with a database",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "An application that keeps its database in a file, such as SQLite, moves it with the rest of its files.",
+              "In a multi-container application, the database is a container of its own on the private network of the application. The dump is imported inside that container, with <code>pct exec</code> and the client of its engine, while the application container is stopped.",
+              "The new application created its own tables on its first start. The backup and restore procedure of the project says whether the dump goes into an empty database and which options it needs.",
+              "A dump moves between versions of the same engine when the new version is the same or newer. Copying the data files of a database server works only with the same engine and major version, with both servers stopped.",
+              "On its next start, the application runs the migrations of its version on the imported data. The Logs tab of ProxMenux Monitor shows its console output while they run."
+            ]
+          }
+        },
+        {
+          "p": "<stacksLink>Multi-container applications</stacksLink> describes how the members of a stack start and how they reach each other."
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "title": "Start and check",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Start the new application. A multi-container application is started from its application container, and its dependencies start first.",
+              "Check that it responds at its new address, that the users of the old service can sign in and that the data is there: libraries, history and settings. The Logs tab of ProxMenux Monitor shows the console output of the application.",
+              "Check the devices from the application itself: hardware transcoding, detection on a Coral, the Zigbee adapter.",
+              "Update what reached the old address: DNS records, the reverse proxy, bookmarks and other applications that use the service, such as a download manager that sends files to a media server.",
+              "Add the new VMID, or every VMID of a multi-container application, to the Proxmox VE backup jobs that included the old LXC. A job for all guests already includes them. Host directories still need a backup of their own.",
+              "Keep the safety copy as a backup, not as a snapshot: while a snapshot made by the user exists, an update of the application stops before changing anything."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": "Remove the old LXC",
+      "blocks": [
+        {
+          "p": "Remove the old LXC only after the new application has worked for some time with its data and its users. Until then, starting the old LXC again is the way back; stop the new application first, since both may use the same devices and host directories."
+        },
+        {
+          "list": {
+            "items": [
+              "The old LXC is an ordinary LXC and is removed from Proxmox VE. Its host directories are not deleted with it, and the new application may be using them.",
+              "Keep the backup taken before the move for some time. Delete it, and the older backups of the old LXC, only when they are no longer needed.",
+              "Once the old LXC no longer exists, its fixed address can be given to a single application from <strong>Modify</strong> → <strong>Network</strong>.",
+              "If the new application is removed later, <strong>Manage installed OCI applications</strong> → <strong>Remove</strong> deletes its containers and container volumes and keeps its host directories with their content (<lifecycleLink>Install, update and modify</lifecycleLink>)."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "brief",
+      "title": "Copy this brief to your agent",
+      "blocks": [
+        {
+          "p": "An agent with access to the Proxmox host can move one service with this brief. Replace the bracketed details; the agent finds the rest on the host and asks before changing anything."
+        },
+        {
+          "agentPrompt": {
+            "title": "Move one LXC service to OCI manager Apps",
+            "body": "I want to move one service that runs in an existing LXC on my Proxmox host to an application of OCI manager Apps (ProxMenux). There is no conversion tool: install the same application from the OCI catalog and move its data. Work on this one service only.\n\nService and old LXC VMID: [SERVICE / OLD LXC VMID]\nProxmox host: [PROXMOX HOST]\nWhere the data should live: [CONTAINER VOLUME, HOST DIRECTORY OR UNKNOWN]\n\nPlease work through these steps:\n1. Inspect read-only first. On the host: `pct config` of the old LXC, with its disks, mount points, devices, network, start options and whether it is privileged. Inside it: the running services, the installed version of the application, the paths of its configuration, database and files with their sizes and owners, the ports it listens on and how it is reached (address, DNS name, reverse proxy, other applications that use it). Change nothing in this step.\n2. Find the matching application in the OCI catalog of ProxMenux (Catalog tab of ProxMenux Monitor or the OCI manager Apps menu). Compare its image and version, its paths and where each one can go, and for a multi-container application its database engine and version, with what you found. Stop and report if there is no suitable application, if it would install an older version than the old one, or if its database cannot take the old data.\n3. Back up the old LXC with vzdump and confirm the task ended without errors. Host directories mounted in it are not in that backup; say so if they hold data that will be touched.\n4. Plan the move and show it to me before changing anything: the application and installation mode, the place of each old path in the new layout, container volume or host directory for each path, the storage, the network (bridge, DHCP or fixed address), the devices to pass, the database steps, the expected downtime and how to go back.\n5. After my approval, install the application with OCI manager Apps, with Install with advanced settings when paths, extra paths or devices have to be chosen. Use a new VMID; never reuse the VMID or the fixed address of the old LXC while the old LXC exists. If the old LXC starts with the node, disable that.\n6. Move the data: stop the old service and dump its database with the tool of its engine if it has one; shut down the old LXC and the new application container; copy the files with `pct mount`, preserving permissions; give them the owner the new application writes with (in an unprivileged container, host UID = 100000 + container UID) or use Mount user mapping (idmap) where it applies; then `pct unmount`. Import the dump into the database of the new application, same engine, following the restore procedure of the project.\n7. Start the new application and verify it: it responds at its address, the existing users can sign in, the data is present, the logs show no errors and the devices work. Report what you observed, not what you expect.\n8. Tell me what I must update: DNS records, reverse proxy, bookmarks, other applications that point to the old address, and the backup jobs that must now include the new VMID or VMIDs.\n9. Leave the old LXC stopped, not deleted. Ask me before removing it, any backup or any data.\n\nNever expose a service to the internet, change firewall rules or delete data without asking me first. Do not put passwords, tokens or other secrets in your reports. Finish with the new address, what was moved and where, the checks done and their results, and the steps that remain for me."
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "One service at a time",
+            "body": "Each move has its own backup, its own checks and its own way back. Moving services one by one keeps a failure limited to one of them."
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Related pages",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Data, paths and networking",
+                "href": "/docs/oci-manager/storage-network",
+                "tail": "container volumes, host directories, ownership and addresses."
+              },
+              {
+                "label": "Multi-container applications",
+                "href": "/docs/oci-manager/stacks",
+                "tail": "application, database and cache as coordinated LXCs."
+              },
+              {
+                "label": "Devices and acceleration",
+                "href": "/docs/oci-manager/hardware",
+                "tail": "GPU, Coral, USB and serial devices."
+              },
+              {
+                "label": "Install, update and modify",
+                "href": "/docs/oci-manager/lifecycle",
+                "tail": "Modify, backups, restore and removal."
+              },
+              {
+                "label": "Install an app and contribute it",
+                "href": "/docs/oci-manager/contribute-app",
+                "tail": "when the application is not in the catalog yet."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

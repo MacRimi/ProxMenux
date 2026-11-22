@@ -112,6 +112,7 @@ export const sidebarItems: MenuItem[] = [
       { title: "Devices and acceleration", i18nKey: "ociHardware", href: "/docs/oci-manager/hardware" },
       { title: "Multi-container applications", i18nKey: "ociStacks", href: "/docs/oci-manager/stacks" },
       { title: "Install an app and contribute it", i18nKey: "ociContributeApp", href: "/docs/oci-manager/contribute-app" },
+      { title: "Move an LXC service", i18nKey: "ociMigrateLxc", href: "/docs/oci-manager/migrate-lxc" },
       { title: "Install, update and recreate", i18nKey: "ociLifecycle", href: "/docs/oci-manager/lifecycle" },
       { title: "In ProxMenux Monitor", i18nKey: "ociMonitor", href: "/docs/oci-manager/monitor" },
     ],

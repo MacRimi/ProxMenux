@@ -200,6 +200,11 @@
                 "tail": "instructions pour l’agent, tests et demande de fusion."
               },
               {
+                "label": "Migrer un service LXC vers OCI manager Apps",
+                "href": "/docs/oci-manager/migrate-lxc",
+                "tail": "l’installer depuis le catalogue, déplacer ses données et garder l’ancien LXC jusqu’à confirmation."
+              },
+              {
                 "label": "Installer, mettre à jour et modifier",
                 "href": "/docs/oci-manager/lifecycle",
                 "tail": "Le contrat de l’instance et ses opérations."
