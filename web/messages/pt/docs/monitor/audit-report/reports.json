@@ -29,10 +29,10 @@
             "items": [
               {
                 "title": "Auditoria completa",
-                "body": "Documenta todo o nó como registo técnico.",
+                "body": "Documenta todo o nó como registro técnico.",
                 "facts": [
                   {
-                    "label": "Controlos",
+                    "label": "Controles",
                     "value": "Todas as verificações disponíveis."
                   },
                   {
@@ -46,8 +46,8 @@
                 "body": "Mostra o que precisa de atenção sem o inventário completo.",
                 "facts": [
                   {
-                    "label": "Controlos",
-                    "value": "Os mesmos controlos que a auditoria completa."
+                    "label": "Controles",
+                    "value": "Os mesmos controles que a auditoria completa."
                   },
                   {
                     "label": "Conteúdo",
@@ -60,12 +60,12 @@
                 "body": "Descreve o que existe no nó sem avaliá-lo.",
                 "facts": [
                   {
-                    "label": "Controlos",
+                    "label": "Controles",
                     "value": "Nenhum; nenhum achado é classificado."
                   },
                   {
                     "label": "Conteúdo",
-                    "value": "Identidade; cluster; CPU e memória; placa, BIOS e controladores; rede; armazenamento; VMs e LXCs; passthrough; aplicações e elementos geridos pelo ProxMenux."
+                    "value": "Identidade; cluster; CPU e memória; placa, BIOS e controladores; rede; armazenamento; VMs e LXCs; passthrough; aplicações e elementos gerenciados pelo ProxMenux."
                   }
                 ]
               },
@@ -74,7 +74,7 @@
                 "body": "Cobre a exposição e os controles sobre o acesso ao nó.",
                 "facts": [
                   {
-                    "label": "Controlos",
+                    "label": "Controles",
                     "value": "A área de segurança, além de privilégios de contêiner, atualizações, repositórios e a cadeia APT."
                   },
                   {
@@ -88,12 +88,12 @@
                 "body": "Verifica que a proteção declarada existe e que seus backups são utilizáveis.",
                 "facts": [
                   {
-                    "label": "Controlos",
+                    "label": "Controles",
                     "value": "A área de backup, além de conectividade de armazenamento e entrega de notificação."
                   },
                   {
                     "label": "Conteúdo",
-                    "value": "Cobertura por sistema convidado; objetivo de recuperação declarado; antiguidade e resultado; destino; retenção; verificação; tarefas falhadas; recuperação e fontes incompletas."
+                    "value": "Cobertura por sistema convidado; objetivo de recuperação declarado; antiguidade e resultado; destino; retenção; verificação; tarefas malsucedidas; recuperação e fontes incompletas."
                   }
                 ]
               },
@@ -102,7 +102,7 @@
                 "body": "Mede a margem de crescimento e os sinais de esgotamento ou envelhecimento.",
                 "facts": [
                   {
-                    "label": "Controlos",
+                    "label": "Controles",
                     "value": "As áreas de armazenamento e hardware, além de memória, swap, diário e o sistema de arquivos host."
                   },
                   {
@@ -140,7 +140,7 @@
               },
               {
                 "title": "Imprimir",
-                "body": "<strong>Imprimir ou guardar como PDF</strong> abre o diálogo de impressão do navegador para escolher uma impressora ou <em>Guardar como PDF</em>."
+                "body": "<strong>Imprimir ou salvar como PDF</strong> abre o diálogo de impressão do navegador para escolher uma impressora ou <em>Salvar como PDF</em>."
               }
             ]
           }
@@ -182,8 +182,8 @@
                 "Já não são apresentados e ninguém os aceitou."
               ],
               [
-                "Aceites",
-                "Não mais contado porque um risco foi aceito, não porque o hospedeiro mudou."
+                "Aceitos",
+                "Não mais contado porque um risco foi aceito, não porque o host mudou."
               ],
               [
                 "Já não avaliados",

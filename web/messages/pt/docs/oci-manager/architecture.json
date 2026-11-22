@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Como é adaptada uma imagem OCI | ProxMenux",
-    "description": "Do repositório da imagem e do respetivo ficheiro Compose a um modelo que pode ser revisto, um plano de implementação e um LXC nativo do Proxmox VE, sem Docker no seu interior."
+    "description": "Do repositório da imagem e do respectivo arquivo Compose a um modelo que pode ser revisto, um plano de implementação e um LXC nativo do Proxmox VE, sem Docker no seu interior."
   },
   "header": {
     "title": "Como é adaptada uma imagem OCI",
-    "description": "Do repositório da imagem e do respetivo ficheiro Compose a um modelo que pode ser revisto, um plano de implementação e um LXC nativo, sem instalar Docker no seu interior.",
+    "description": "Do repositório da imagem e do respectivo arquivo Compose a um modelo que pode ser revisto, um plano de implementação e um LXC nativo, sem instalar Docker no seu interior.",
     "section": "OCI manager Apps"
   },
   "sections": [
@@ -30,7 +30,7 @@
           }
         },
         {
-          "p": "O conversor lê a imagem e o ficheiro Compose publicados pelo projeto e gera um modelo JSON. Se houver requisitos ainda não adaptados que impeçam a instalação, o modelo é revisto antes de ser publicado no catálogo. Um ficheiro de ajustes revistos, chamado overlay, resolve esses impedimentos. Só os modelos sem impedimentos pendentes são propostos para instalação."
+          "p": "O conversor lê a imagem e o arquivo Compose publicados pelo projeto e gera um modelo JSON. Se houver requisitos ainda não adaptados que impeçam a instalação, o modelo é revisto antes de ser publicado no catálogo. Um arquivo de ajustes revistos, chamado overlay, resolve esses impedimentos. Só os modelos sem impedimentos pendentes são propostos para instalação."
         }
       ]
     },
@@ -48,13 +48,13 @@
               },
               {
                 "icon": "braces",
-                "title": "Contrato do contentor",
-                "body": "Entrypoint, Cmd, ambiente, utilizador, diretório de trabalho, sinal de paragem, portas e volumes."
+                "title": "Contrato do contêiner",
+                "body": "Entrypoint, Cmd, ambiente, usuário, diretório de trabalho, sinal de parada, portas e volumes."
               },
               {
                 "icon": "layers",
                 "title": "Adaptação ao Proxmox VE",
-                "body": "Recursos, segurança, pontos de montagem, dispositivos, sysctls, verificações de estado e as adaptações necessárias em cada caso, com a respetiva justificação."
+                "body": "Recursos, segurança, pontos de montagem, dispositivos, sysctls, verificações de estado e as adaptações necessárias em cada caso, com a respectiva justificação."
               },
               {
                 "icon": "shield",
@@ -94,7 +94,7 @@
                 "Perguntas e adaptações revistas"
               ],
               [
-                "Utilizador",
+                "Usuário",
                 "VMID, armazenamento, rede",
                 "O contrato da instância"
               ]
@@ -112,31 +112,31 @@
             "items": [
               {
                 "title": "Resolver a referência",
-                "body": "O registo é consultado, a arquitetura do host é selecionada e é fixado o digest exato para o qual aponta a tag de atualização contínua."
+                "body": "O registro é consultado, a arquitetura do host é selecionada e é fixado o digest exato para o qual aponta a tag de atualização contínua."
               },
               {
-                "title": "Descarregar e verificar",
-                "body": "O Skopeo descarrega a imagem como um arquivo OCI. Antes de criar qualquer recurso, cada camada é verificada através do respetivo digest e descomprimida. Se a descarga estiver danificada, é repetida uma vez antes de a instalação ser interrompida."
+                "title": "Baixar e verificar",
+                "body": "O Skopeo baixa a imagem como um arquivo OCI. Antes de criar qualquer recurso, cada camada é verificada através do respectivo digest e descomprimida. Se a descarga estiver danificada, é repetida uma vez antes de a instalação ser interrompida."
               },
               {
-                "title": "Criar o sistema de ficheiros",
+                "title": "Criar o sistema de arquivos",
                 "body": "O <code>pct create</code> cria o rootfs a partir do arquivo e preserva os metadados oficiais do processo da imagem."
               },
               {
-                "title": "Ligar os recursos",
+                "title": "Conectar os recursos",
                 "body": "São aplicados os volumes, a rede, o ambiente, os dispositivos e os perfis de segurança declarados."
               },
               {
-                "title": "Consola",
-                "body": "A saída da consola do contentor é guardada no host. A consola do Proxmox VE abre uma shell se a imagem incluir uma."
+                "title": "Console do contêiner",
+                "body": "A saída do console do contêiner é salva no host. O console do Proxmox VE abre uma shell se a imagem incluir uma."
               },
               {
                 "title": "Verificar",
-                "body": "No primeiro arranque, aguarda-se que o contentor tenha um endereço e que o serviço responda. Em caso de falha, a instalação não é apresentada como concluída com sucesso."
+                "body": "Na primeira inicialização, aguarda-se que o contêiner tenha um endereço e que o serviço responda. Em caso de falha, a instalação não é apresentada como concluída com sucesso."
               },
               {
-                "title": "Registar a configuração",
-                "body": "A configuração efetiva é guardada no contrato da instância utilizado nas atualizações e recriações."
+                "title": "Registrar a configuração",
+                "body": "A configuração efetiva é salva no contrato da instância utilizado nas atualizações e recriações."
               }
             ]
           }
@@ -163,7 +163,7 @@
           }
         },
         {
-          "p": "O <code>mp0</code> é um segundo disco pertencente ao contentor, com o nome <code>vm-VMID-disk-N</code> no armazenamento selecionado. É montado em <code>/config</code> e, com <code>backup=1</code>, incluído na cópia de segurança do contentor. O <code>mp1</code> não cria um disco: monta o diretório do host <code>/srv/downloads</code> em <code>/downloads</code> dentro do LXC. A porta 8080 não é mapeada: o LXC tem um endereço próprio e o serviço responde nesse endereço."
+          "p": "O <code>mp0</code> é um segundo disco pertencente ao contêiner, com o nome <code>vm-VMID-disk-N</code> no armazenamento selecionado. É montado em <code>/config</code> e, com <code>backup=1</code>, incluído no backup do contêiner. O <code>mp1</code> não cria um disco: monta o diretório do host <code>/srv/downloads</code> em <code>/downloads</code> dentro do LXC. A porta 8080 não é mapeada: o LXC tem um endereço próprio e o serviço responde nesse endereço."
         }
       ]
     }

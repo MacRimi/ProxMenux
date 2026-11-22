@@ -7,16 +7,16 @@
   },
   "header": {
     "title": "Cliente Samba em LXC",
-    "description": "Monte compartilhamentos Samba (SMB / CIFS) diretamente de dentro de um recipiente Proxmox LXC. O container torna-se um cliente CIFS real — fala com o servidor Samba através da rede, executa mount.cifs, armazena credenciais com segurança e escreve para /etc/fstab. ProxMenux instala cifs-utils + smbclient para você e valida credenciais contra o servidor antes de montar.",
+    "description": "Monte compartilhamentos Samba (SMB / CIFS) diretamente de dentro de um contêiner Proxmox LXC. O container torna-se um cliente CIFS real — fala com o servidor Samba através da rede, executa mount.cifs, armazena credenciais com segurança e escreve para /etc/fstab. ProxMenux instala cifs-utils + smbclient para você e valida credenciais contra o servidor antes de montar.",
     "section": "Armazenamento e Compartilhamento · LXC"
   },
   "privReq": {
-    "title": "Recipiente privilegiado necessário",
-    "body": "O cliente do kernel <code>mount.cifs</code> precisa de recursos (<code>SYS_ADMIN</code> no mínimo) que os recipientes LXC desprivilegiados não expõem. O script impõe isso — ele pede que você escolha um CT e <strong>interrompe a execução se ele não for privilegiado</strong>. Se você precisar da partilha dentro de um CT sem privilégios, monte-a no host Proxmox primeiro (com a partilha <hostSambaLink>Samba / CIFS como armazenamento Proxmox</hostSambaLink>) e ligue-a ao CT com o gestor de montagem <mountLink>LXC</mountLink>."
+    "title": "Contêiner privilegiado necessário",
+    "body": "O cliente do kernel <code>mount.cifs</code> precisa de recursos (<code>SYS_ADMIN</code> no mínimo) que os contêineres LXC desprivilegiados não expõem. O script impõe isso — ele pede que você escolha um CT e <strong>interrompe a execução se ele não for privilegiado</strong>. Se você precisar do compartilhamento dentro de um CT sem privilégios, monte-a no host Proxmox primeiro (com o compartilhamento <hostSambaLink>Samba / CIFS como armazenamento Proxmox</hostSambaLink>) e vincule-a ao CT com o gerenciador de montagem <mountLink>LXC</mountLink>."
   },
   "what": {
     "heading": "O que isto faz",
-    "body": "O contêiner fala CIFS através da rede e monta a partilha por conta própria. O host Proxmox é apenas a ponte de rede — ele não vê ou gerencia a montagem.",
+    "body": "O contêiner fala CIFS através da rede e monta o compartilhamento por conta própria. O host Proxmox é apenas a ponte de rede — ele não vê ou gerencia a montagem.",
     "diagramServerLabel": "Servidor Samba",
     "diagramServerDetail": "//srv/share",
     "diagramHostLabel": "Host Proxmox",
@@ -24,7 +24,7 @@
     "diagramCtLabel": "LXC (com privilégios)",
     "diagramCtDetail": "/mnt/share\nmount.cifs dentro de CT",
     "diagramArrow": "CIFS",
-    "twoWaysTitle": "Duas maneiras de dar um CT uma quota Samba — escolha uma",
+    "twoWaysTitle": "Duas maneiras de dar um CT uma cota Samba — escolha uma",
     "twoWaysBind": "<strong>Bind mount pelo host</strong> (<mountLink>LXC Mount Manager</mountLink>): o host monta CIFS uma vez e cada CT recebe o mesmo caminho por bind mount. Funciona com CTs sem privilégios. Recomendado quando vários CTs precisam do mesmo compartilhamento.",
     "twoWaysDirect": "<strong>Montagem CIFS direta no CT</strong> (esta página): o CT monta CIFS por conta própria. Exige um CT com privilégios. Útil quando cada CT deve gerenciar suas credenciais ou usar um servidor diferente."
   },
@@ -77,7 +77,7 @@
       },
       {
         "option": "x-systemd.automount",
-        "effect": "Montagem preguiçosa: apenas monta no primeiro acesso. O servidor CIFS não acessível no arranque não para o CT."
+        "effect": "Montagem preguiçosa: apenas monta no primeiro acesso. O servidor CIFS não acessível na inicialização não para o CT."
       },
       {
         "option": "noauto",
@@ -97,7 +97,7 @@
     "body": "Lista cada ponto de montagem CIFS ativo dentro do CT (<code>mount -t cifs</code>) mais cada linha CIFS no CT <code>/etc/fstab</code>. Para cada entrada do fstab é mostrado o status de montagem ao vivo — útil para detectar montagens permanentes que não apareceram no boot."
   },
   "unmount": {
-    "heading": "Desmontar a partilha do Samba",
+    "heading": "Desmontar o compartilhamento do Samba",
     "body": "Combina as montagens ao vivo e as entradas fstab em uma lista, permite que você escolha uma, e <strong> remove a linha correspondente de <code>/etc/fstab</code></strong> mais o arquivo de credenciais correspondentes. O script não executa <code>umount</code> na montagem ao vivo — em vez disso, ele lhe diz que uma reinicialização CT é necessária para que a desmontagem faça efeito.",
     "warnTitle": "O script remove entradas do fstab, sem desmontar os sistemas de arquivos ativos",
     "warnBody": "O mesmo design do cliente NFS: <code>umount</code> em uma montagem movimentada falha com o \"dispositivo ocupado\". A remoção da entrada do fstab garante que a montagem desapareça de forma limpa no próximo início do CT. Se você quiser o <em>agora</em>, execute <code>pct exec &lt;ctid&gt; -- umount /mnt/&lt;path&gt;</code> à mão depois que o script terminar."
@@ -124,7 +124,7 @@
     "denyBody": "As credenciais foram validadas, mas o compartilhamento nega acesso. Verifique no lado do servidor se o usuário tem permissões nesse compartilhamento específico (a validação só confirma login, não ACLs por compartilhamento). Verifique também se o servidor requer uma versão específica do protocolo SMB: anexe <code>vers=3.0</code> (ou <code>2.1</code>, <code>2.0</code>) às opções de montagem.",
     "utf8Title": "Nomes de arquivos UTF-8 / não ASCII aparecem corrompidos",
     "utf8Body": "As opções padrão incluem <code>iocharset=utf8</code>, mas algumas configurações de servidor reportam uma página de código inesperada. Se nomes de arquivos com acentos / símbolos olhar errado, também tente <code>nounix</code> (alguns servidores Linux Samba precisam disso quando o cliente também é Linux) ou definir o lado do servidor para <code>unix extensions = no</code>.",
-    "bootTitle": "A montagem permanente tem sucesso mas não aparece no arranque",
+    "bootTitle": "A montagem permanente tem sucesso mas não aparece na inicialização",
     "bootBody": "Quase sempre uma de: a rede não está pronta quando o CT monta (as bandeiras <code>_netdev,x-systemd.automount,noauto</code> do script corrigem isso), o servidor é inacessível no boot (auto-mount espera pelo primeiro acesso – isso é normal), ou DNS não está resolvido no boot (use o IP do servidor, não seu hostname)."
   },
   "related": {
@@ -133,7 +133,7 @@
       {
         "href": "/docs/storage-share/lxc-mount-points",
         "label": "Pontos de montagem LXC (Host ↔ Container)",
-        "tail": " — a alternativa para os TAC não privilegiados: montagem no hospedeiro, ligação em CT."
+        "tail": " — a alternativa para os TAC não privilegiados: montagem no host, conexão em CT."
       },
       {
         "href": "/docs/storage-share/lxc-nfs-client",

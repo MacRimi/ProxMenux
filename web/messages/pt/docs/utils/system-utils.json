@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Instalador de utilitários de sistema | Documentação ProxMenux",
-    "description": "Instalador de utilitários CLI para Proxmox VE, com 25 pacotes na lista de referência (htop, btop, iperf3, tmux, ...). Seleção personalizada, instalação completa e grupos predefinidos (básico, desenvolvimento, compressão, multiplexadores, análise e rede). Os grupos podem incluir pacotes adicionais. Usa ensure_repositories + install_single_package.",
+    "description": "Instalador de utilitários CLI para Proxmox VE, com 25 pacotes na lista de referência (htop, btop, iperf3, tmux, ...). Seleção personalizada, instalação completa e grupos padrão (básico, desenvolvimento, compressão, multiplexadores, análise e rede). Os grupos podem incluir pacotes adicionais. Usa ensure_repositories + install_single_package.",
     "ogTitle": "Instalador de utilitários de sistema | Documentação ProxMenux",
     "ogDescription": "Instale ferramentas CLI com curadoria em Proxmox VE com um clique ou seleção personalizada."
   },
   "header": {
     "title": "Instalador de utilitários de sistema",
-    "description": "Seletor dos 25 utilitários CLI da lista de referência PROXMENUX_UTILS. Oferece seleção personalizada, instalação completa, seis grupos predefinidos e verificação das instalações. Os grupos podem incluir ferramentas fora da lista. Usa as funções partilhadas ensure_repositories() + install_single_package() para gerir repositórios e mensagens por pacote de forma coerente.",
+    "description": "Seletor dos 25 utilitários CLI da lista de referência PROXMENUX_UTILS. Oferece seleção personalizada, instalação completa, seis grupos padrão e verificação das instalações. Os grupos podem incluir ferramentas fora da lista. Usa as funções compartilhadas ensure_repositories() + install_single_package() para gerenciar repositórios e mensagens por pacote de forma coerente.",
     "section": "Utilitários"
   },
   "info": {
@@ -17,7 +17,7 @@
   "opening": {
     "heading": "Abrir o instalador",
     "intro": "No menu Utilities, escolha <strong>System Utilities Installer</strong>. O menu principal tem nove opções:",
-    "imageAlt": "Menu Instalador de Utilitários de Sistema com seleção personalizada, ALL, grupos predefinidos e verificar"
+    "imageAlt": "Menu Instalador de Utilitários de Sistema com seleção personalizada, ALL, grupos padrão e verificar"
   },
   "actions": {
     "heading": "As 9 ações do menu",
@@ -64,7 +64,7 @@
   },
   "packages": {
     "heading": "Os 25 pacotes",
-    "intro": "Definidos no ficheiro partilhado <code>scripts/global/utils-install-functions.sh</code> como <code>PROXMENUX_UTILS</code> (formato: <code>package:verify_command:description</code>). Outros scripts ProxMenux, como os que iniciam iftop / iptraf-ng / iperf3, reutilizam estas entradas para manter os pacotes e comandos de verificação sincronizados.",
+    "intro": "Definidos no arquivo compartilhado <code>scripts/global/utils-install-functions.sh</code> como <code>PROXMENUX_UTILS</code> (formato: <code>package:verify_command:description</code>). Outros scripts ProxMenux, como os que iniciam iftop / iptraf-ng / iperf3, reutilizam estas entradas para manter os pacotes e comandos de verificação sincronizados.",
     "headerPackage": "Pacote",
     "headerVerify": "Comando de verificação",
     "headerDescription": "Descrição",
@@ -72,7 +72,7 @@
       {
         "package": "axel",
         "verify": "axel",
-        "description": "Acelerador de transferências"
+        "description": "Acelerador de downloads"
       },
       {
         "package": "aria2",
@@ -142,7 +142,7 @@
       {
         "package": "iptraf-ng",
         "verify": "iptraf-ng",
-        "description": "Ferramenta de monitorização da rede"
+        "description": "Ferramenta de monitoramento da rede"
       },
       {
         "package": "libguestfs-tools",
@@ -152,7 +152,7 @@
       {
         "package": "msr-tools",
         "verify": "rdmsr",
-        "description": "Acesso aos registos MSR da CPU"
+        "description": "Acesso aos registros MSR da CPU"
       },
       {
         "package": "net-tools",
@@ -199,7 +199,7 @@
   "howItWorks": {
     "heading": "Como funciona a instalação de um pacote",
     "items": [
-      "<code>ensure_repositories</code> deteta PVE 8 ou 9 e lê os repositórios através da API Proxmox. Com um repositório Proxmox utilizável, nada muda. Um host sem subscrição ativa que use apenas Enterprise tem de confirmar a mudança para no-subscription; <code>apt-get update</code> é executado após a mudança aceite.",
+      "<code>ensure_repositories</code> detecta PVE 8 ou 9 e lê os repositórios através da API Proxmox. Com um repositório Proxmox utilizável, nada muda. Um host sem assinatura ativa que use apenas Enterprise tem de confirmar a mudança para no-subscription; <code>apt-get update</code> é executado após a mudança aceite.",
       "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> executa <code>apt-get install -y \"$pkg\"</code> com feedback (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
     ],
     "verifyIntro": "Após a instalação, o comando é verificado com <code>command -v \"$verify_cmd\"</code>. Três resultados possíveis:",
@@ -212,21 +212,21 @@
   },
   "verify": {
     "heading": "Verifique as instalações",
-    "intro": "A opção 9 é só de leitura: percorre <code>PROXMENUX_UTILS</code> e executa <code>command -v</code> para cada comando de verificação. O resultado é semelhante a:",
+    "intro": "A opção 9 é somente leitura: percorre <code>PROXMENUX_UTILS</code> e executa <code>command -v</code> para cada comando de verificação. O resultado é semelhante a:",
     "code": "Total: 25\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
-    "outro": "Útil antes de executar scripts que dependem destas ferramentas (por exemplo. <code>uup_dump_iso_creator.sh</code> precisa de <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). Se algo estiver faltando, execute a instalação do grupo correspondente ou escolha os pacotes em falta através da seleção personalizada."
+    "outro": "Útil antes de executar scripts que dependem destas ferramentas (por exemplo. <code>uup_dump_iso_creator.sh</code> precisa de <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). Se algo estiver faltando, execute a instalação do grupo correspondente ou escolha os pacotes ausentes através da seleção personalizada."
   },
   "troubleshoot": {
     "heading": "Resolução de Problemas",
     "reposTitle": "\"Falhou em configurar repositórios. Instalação cancelada.\"",
     "reposBody": "A verificação do repositório não passou: a mudança para o repositório sem assinatura foi recusada, o status da assinatura não pôde ser lido, ou uma entrada de repositório precisa de atenção. A mensagem impressa acima indica a causa. Os repositórios estão listados em <em>Node → Atualizações → Repositórios</em> e <code>apt-get update</code> de um console mostra os relatórios de erro apt.",
     "warningsTitle": "Um pacote é relatado \"Com avisos\", mas o comando funciona depois de fechar o menu",
-    "warningsBody": "Após <code>apt-get install</code>, a função executa <code>hash -r</code>, espera brevemente e verifica o comando esperado com <code>command -v</code>. Um aviso significa que essa verificação continua a falhar, sem identificar a causa. Experimente uma nova shell e verifique a instalação do pacote e PATH se o comando continuar em falta.",
+    "warningsBody": "Após <code>apt-get install</code>, a função executa <code>hash -r</code>, espera brevemente e verifica o comando esperado com <code>command -v</code>. Um aviso significa que essa verificação continua falhando, sem identificar a causa. Experimente uma nova shell e verifique a instalação do pacote e PATH se o comando continuar ausente.",
     "hangsTitle": "Uma instalação apt trava",
-    "hangsBody": "Provavelmente há uma pergunta debconf oculta pela saída silenciada. O script usa <code>DEBIAN_FRONTEND=noninteractive</code> nas chamadas apt, o que normalmente evita perguntas, mas alguns pacotes ainda exigem dados. Cancele com <kbd>Ctrl</kbd>+<kbd>C</kbd> e execute <code>apt-get install -y &lt;pkg&gt;</code> manualmente numa shell para ver a pergunta e decidir."
+    "hangsBody": "Provavelmente há uma pergunta debconf oculta pela saída silenciada. O script usa <code>DEBIAN_FRONTEND=noninteractive</code> nas chamadas apt, o que normalmente evita perguntas, mas alguns pacotes ainda exigem dados. Cancele com <kbd>Ctrl</kbd>+<kbd>C</kbd> e execute <code>apt-get install -y &lt;pkg&gt;</code> manualmente em uma shell para ver a pergunta e decidir."
   },
   "files": {
-    "heading": "Ficheiros envolvidos",
+    "heading": "Arquivos envolvidos",
     "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
   },
   "related": {
@@ -235,17 +235,17 @@
       {
         "href": "/docs/utils/system-update",
         "label": "Atualização do sistema Proxmox",
-        "tailRich": " — para o <code>apt full-upgrade</code> efectivo no hospedeiro."
+        "tailRich": " — para o <code>apt full-upgrade</code> efetivo no host."
       },
       {
         "href": "/docs/network/monitoring",
-        "label": "Ferramentas de monitorização ao vivo (rede)",
+        "label": "Ferramentas de monitoramento ao vivo (rede)",
         "tailRich": " — utiliza iftop / iptraf-ng / iperf3 desta mesma lista."
       },
       {
         "href": "/docs/utils",
         "label": "Visão geral dos utilitários",
-        "tailRich": " — voltar ao panorama da secção."
+        "tailRich": " — voltar ao panorama da seção."
       }
     ]
   }

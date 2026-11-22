@@ -2,7 +2,7 @@
   "meta": {
     "title": "Trabalhos agendados — temporizadores, modo de anexação, retenção ProxMenux",
     "description": "Trabalhos de backup programados do host ProxMenux. Dois modos de criação (horário systemd próprio ou anexar a um trabalho existente PVE vzdump), valores de retenção aplicados por trabalho via proxmox-backup-client/borg/local prune, layout de armazenamento sob /var/lib/proxmenux/backup-jobs, e o script de execução que produz arquivos idênticos ao fluxo interativo.",
-    "ogTitle": "Cópia de segurança ProxMenux — tarefas agendadas",
+    "ogTitle": "Backup ProxMenux — tarefas agendadas",
     "ogDescription": "Backups de host agendados não vigiados com modo de anexação, retenção e os mesmos três destinos do fluxo interativo.",
     "twitterTitle": "Trabalhos agendados | ProxMenux",
     "twitterDescription": "Trabalhos de backup agendados sem acompanhamento com modo de anexação e retenção."
@@ -10,7 +10,7 @@
   "header": {
     "title": "Trabalhos agendados",
     "description": "Trabalhos de backup da máquina não vigiados. Dois modelos de criação: um novo trabalho independente com sua própria programação, ou um trabalho anexado a uma tarefa existente PVE vzdump que herda o cronograma e retenção dessa tarefa. Ambos produzem arquivos idênticos ao fluxo interativo.",
-    "section": "Cópias de segurança e restauro"
+    "section": "Backups e restauração"
   },
   "intro": {
     "title": "Os dois modelos de trabalho programados",
@@ -51,7 +51,7 @@
     "steps": [
       {
         "step": "1",
-        "detail": "Durante a criação do trabalho, ProxMenux lista tarefas PVE pai compatíveis via <code>hb_pve_list_vzdump_jobs_for_backend</code>. O utilizador escolhe uma."
+        "detail": "Durante a criação do trabalho, ProxMenux lista tarefas PVE pai compatíveis via <code>hb_pve_list_vzdump_jobs_for_backend</code>. O usuário escolhe uma."
       },
       {
         "step": "2",
@@ -78,7 +78,7 @@
       },
       {
         "path": "/var/lib/proxmenux/backup-jobs/JOB_ID.paths",
-        "content": "Um caminho absoluto por linha — a seleção congelada resolvido a partir do perfil no tempo de criação de emprego. A edição do ficheiro volta a executar o trabalho com a nova selecção no próximo temporizador."
+        "content": "Um caminho absoluto por linha — a seleção congelada resolvido a partir do perfil no tempo de criação de emprego. A edição do arquivo volta a executar o trabalho com a nova seleção no próximo temporizador."
       },
       {
         "path": "/etc/systemd/system/proxmenux-backup-JOB_ID.timer + .service",
@@ -109,7 +109,7 @@
         "detail": "Chama imediatamente o script de execução, sem esperar o temporizador ou o hook vzdump. Útil para verificar a configuração sem aguardar a próxima execução agendada."
       },
       {
-        "action": "Activar / Desactivar",
+        "action": "Ativar / Desactivar",
         "detail": "Novo modo: <code>systemctl enable/disable --now</code> o temporizador. Modo Anexar: altera o sinalizador <code>ENABLED</code> no env de trabalho — o script gancho honra-o na próxima execução PVE."
       },
       {
@@ -121,14 +121,14 @@
         "detail": "Remove o env do trabalho, o arquivo de caminhos, o temporizador e o serviço systemd (modo novo) e desativa a associação ao hook (modo de anexação). Não altera os arquivos já existentes no destino."
       },
       {
-        "action": "Ver registo (apenas no Monitor)",
+        "action": "Ver registro (apenas no Monitor)",
         "detail": "Mostra em tempo real <code>/var/log/proxmenux/backup-jobs/JOB_ID-YYYYMMDD_HHMMSS.log</code> — um arquivo de log por execução. O executor também emite uma linha de status compacta para journald no serviço systemd."
       }
     ]
   },
   "notifications": {
     "heading": "Notificações",
-    "body": "Cada execução agendada dispara os mesmos eventos <code>hb_notify_lifecycle</code> que o fluxo interativo (<code>start</code>, <code>complete</code>, <code>fail</code>). Se houver canais de notificação configurados no Monitor, as tarefas não vigiadas comunicam os seus resultados da mesma forma que os backups manuais: um utilizador não precisa de consultar o registo para saber se uma tarefa foi bem-sucedida."
+    "body": "Cada execução agendada dispara os mesmos eventos <code>hb_notify_lifecycle</code> que o fluxo interativo (<code>start</code>, <code>complete</code>, <code>fail</code>). Se houver canais de notificação configurados no Monitor, as tarefas não vigiadas comunicam seus resultados da mesma forma que os backups manuais: um usuário não precisa de consultar o registro para saber se uma tarefa foi bem-sucedida."
   },
   "whereNext": {
     "heading": "Para onde ir a seguir",
@@ -136,7 +136,7 @@
       {
         "label": "Criando backups",
         "href": "/docs/backup-restore/creating-backups",
-        "tail": " — o fluxo interactivo que partilha a infra-estrutura com o agendador."
+        "tail": " — o fluxo interactivo que compartilha a infra-estrutura com o agendador."
       },
       {
         "label": "Destinos",

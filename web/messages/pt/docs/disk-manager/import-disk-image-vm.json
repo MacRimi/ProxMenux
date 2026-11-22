@@ -12,11 +12,11 @@
   },
   "intro": {
     "title": "O que isto faz",
-    "body": "Ao contrário de <em>Importar disco para VM</em>, que atribui um disco físico diretamente, este processo utiliza um <strong>ficheiro</strong> no host, exportado de outro hipervisor, transferido como imagem cloud ou extraído de uma cópia de segurança. Converte-o num disco de VM Proxmox no armazenamento escolhido. O original é preservado: o ProxMenux copia-o, não o move."
+    "body": "Ao contrário de <em>Importar disco para VM</em>, que atribui um disco físico diretamente, este processo utiliza um <strong>arquivo</strong> no host, exportado de outro hipervisor, baixado como imagem cloud ou extraído de um backup. Converte-o em um disco de VM Proxmox no armazenamento escolhido. O original é preservado: o ProxMenux copia-o, não o move."
   },
   "howRuns": {
     "heading": "Como o script é executado",
-    "body": "O fluxo tem duas fases. A fase 1 recolhe todas as decisões (VM, armazenamento, directório de origem, imagens, opções de imagem) à frente através de diálogos. Fase 2 executa <code>qm importdisk</code> para cada imagem selecionada. A fase 2 começa logo após a última pergunta por imagem, sem uma confirmação final separada; até lá, nada é copiado e a configuração VM não é tocada."
+    "body": "O fluxo tem duas fases. A fase 1 recolhe todas as decisões (VM, armazenamento, diretório de origem, imagens, opções de imagem) à frente através de diálogos. Fase 2 executa <code>qm importdisk</code> para cada imagem selecionada. A fase 2 começa logo após a última pergunta por imagem, sem uma confirmação final separada; até lá, nada é copiado e a configuração VM não é tocada."
   },
   "prereqs": {
     "heading": "Pré-requisitos",
@@ -53,12 +53,12 @@
         "items": [
           "<strong>Interface</strong> — <code>scsi</code> (padrão), <code>virtio</code>, <code>sata</code> ou <code>ide</code>. Corresponde à forma como o hóspede vai ver o disco.",
           "<strong>Emulação SSD</strong>: apenas para interfaces que não sejam VirtIO. Adiciona <code>ssd=1</code> para o sistema convidado reconhecer um disco de estado sólido. O suporte de discard/TRIM tem de ser configurado separadamente.",
-          "<strong>De arranque</strong>: se responder sim, o ProxMenux adiciona o disco à ordem de arranque como dispositivo principal da VM."
+          "<strong>De inicialização</strong>: se responder sim, o ProxMenux adiciona o disco à ordem de inicialização como dispositivo principal da VM."
         ]
       },
       {
         "title": "Importar e anexar",
-        "bodyRich": "O ProxMenux executa o <code>qm importdisk</code> para cada imagem (formato de conversão na hora, onde necessário), liga o disco resultante ao próximo slot livre (<code>scsiN</code>, <code>sataN</code>, ...) com as opções escolhidas e — se você marcou qualquer disco como inicializável — atualiza a ordem de inicialização. O progresso mostra-se no terminal."
+        "bodyRich": "O ProxMenux executa o <code>qm importdisk</code> para cada imagem (formato de conversão na hora, onde necessário), anexa o disco resultante ao próximo slot livre (<code>scsiN</code>, <code>sataN</code>, ...) com as opções escolhidas e — se você marcou qualquer disco como inicializável — atualiza a ordem de inicialização. O progresso mostra-se no terminal."
       }
     ]
   },
@@ -71,10 +71,10 @@
   "troubleshoot": {
     "heading": "Resolução de Problemas",
     "noImagesTitle": "\"Nenhuma imagem de disco compatível encontrada\"",
-    "noImagesBody": "O script não encontrou ficheiros <code>.img</code>, <code>.qcow2</code>, <code>.vmdk</code> ou <code>.raw</code>. Verifique a extensão, distinguindo maiúsculas e minúsculas, se o ficheiro está diretamente no diretório escolhido (os subdiretórios não são pesquisados) e se root o pode ler.",
+    "noImagesBody": "O script não encontrou arquivos <code>.img</code>, <code>.qcow2</code>, <code>.vmdk</code> ou <code>.raw</code>. Verifique a extensão, distinguindo maiúsculas e minúsculas, se o arquivo está diretamente no diretório escolhido (os subdiretórios não são pesquisados) e se root o pode ler.",
     "slowTitle": "A importação é lenta",
     "slowBody": "As conversões entre VMDK, QCOW2 e raw podem ser limitadas pela CPU e E/S. A velocidade depende das leituras na origem, das escritas no destino e da eventual descompressão. Prefira fontes raw ou qcow2 quando possível.",
-    "uefiTitle": "O disco importado arranca na shell UEFI",
+    "uefiTitle": "O disco importado inicia na shell UEFI",
     "uefiBody": "A imagem foi construída para legado (SeaBIOS), mas o VM usa OVMF (ou vice-versa). Alternar o VM do BIOS no Proxmox para corresponder à imagem, ou reconstruir a imagem no modo correto antes de importar."
   },
   "related": {

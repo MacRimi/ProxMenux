@@ -3,7 +3,7 @@
   "stepLabel": "Etapa",
   "intro": {
     "heading": "Introdução",
-    "intro": "ProxMenux fornece um script automatizado que cria e configura uma máquina virtual (VM) para instalar Synology DSM (DiskStation Manager) em Proxmox VE. Este script simplifica o processo baixando e adicionando um dos carregadores disponíveis à inicialização VM, dando-lhe a opção entre quatro opções diferentes:",
+    "intro": "ProxMenux fornece um script automatizado que cria e configura uma máquina virtual (VM) para instalar Synology DSM (DiskStation Manager) em Proxmox VE. Este script simplifica o processo baixando e adicionando um dos carregadores disponíveis à inicialização VM, oferecendo quatro opções diferentes:",
     "loaders": [
       {
         "name": "AuxXxilium Arc",
@@ -30,7 +30,7 @@
     ]
   },
   "config": {
-    "heading": "Configuração predefinida e avançada",
+    "heading": "Configuração padrão e avançada",
     "intro": "O script oferece dois modos de configuração:",
     "defaultHeading": "Configuração padrão",
     "defaultIntro": "Se você selecionar a configuração padrão, o script aplicará automaticamente os seguintes valores:",
@@ -114,25 +114,25 @@
     ]
   },
   "diskSelection": {
-    "heading": "Selecção do Disco",
+    "heading": "Seleção do Disco",
     "intro": "O plano de armazenamento permite adicionar discos virtuais, discos físicos e controladores PCI ou dispositivos NVMe. As opções de disco são explicadas abaixo.",
     "virtualHeading": "Disco Virtual",
     "virtualItems": [
       "O script lista as opções de armazenamento disponíveis no Proxmox",
       "O usuário seleciona o disco e tamanho em GB",
-      "Os discos virtuais são ligados como <strong>SATA</strong> (sata0, sata1, etc.). Os discos de dados virtuais e físicos partilham as seis posições SATA numeradas de 0 a 5; o carregador utiliza uma posição IDE separada."
+      "Os discos virtuais são anexados como <strong>SATA</strong> (sata0, sata1, etc.). Os discos de dados virtuais e físicos compartilham as seis posições SATA numeradas de 0 a 5; o carregador utiliza uma posição IDE separada."
     ],
     "physicalHeading": "Passagem de Disco Físico",
     "physicalItems": [
       "O programa detecta todos os discos físicos disponíveis",
       "O usuário seleciona o disco físico ou discos que deseja usar.",
-      "Os discos físicos são ligados como dispositivos <strong>SATA</strong>. Partilham as seis posições SATA numeradas de 0 a 5 com os discos de dados virtuais; não há mais seis posições reservadas para discos físicos."
+      "Os discos físicos são anexados como dispositivos <strong>SATA</strong>. Compartilham as seis posições SATA numeradas de 0 a 5 com os discos de dados virtuais; não há mais seis posições reservadas para discos físicos."
     ]
   },
   "loaderInstall": {
     "heading": "Instalação do Carregador",
     "intro1": "O script baixa automaticamente e extrai o carregador do repositório do desenvolvedor. Se o download falhar, o script exibirá uma mensagem de erro.",
-    "intro2Rich": "<strong>AuxXxilium Arc</strong>, <strong>RedPill RR</strong> e <strong>Alpine RedPill M-shell</strong> são transferidos e extraídos automaticamente.",
+    "intro2Rich": "<strong>AuxXxilium Arc</strong>, <strong>RedPill RR</strong> e <strong>Alpine RedPill M-shell</strong> são baixados e extraídos automaticamente.",
     "customRich": "Para <strong>Carregador personalizado</strong>, o script procura por arquivos em <code>/var/lib/vz/template/iso</code>. Se vários arquivos forem encontrados, você será solicitado a selecionar o arquivo desejado.",
     "uploadIntro": "Você pode enviar carregadores personalizados das opções de armazenamento local:",
     "imageAlt": "Adicionar Carregador Personalizado",
@@ -143,14 +143,14 @@
     "intro": "Uma vez que o carregador é baixado, o script cria o VM usando os seguintes comandos:",
     "items": [
       "<code>qm create</code> – Cria a máquina virtual com os parâmetros configurados",
-      "<code>qm importdisk</code> importa a imagem do carregador para o armazenamento Proxmox. O script liga-a depois à VM como ide0 para compatibilidade.",
+      "<code>qm importdisk</code> importa a imagem do carregador para o armazenamento Proxmox. O script anexa-a depois à VM como ide0 para compatibilidade.",
       "<code>qm set</code> – Atribui valores de configuração como CPU, RAM e armazenamento",
-      "<code>qm set VMID --boot order=ide0</code> define o carregador como dispositivo de arranque. Substitua VMID pelo ID da VM."
+      "<code>qm set VMID --boot order=ide0</code> define o carregador como dispositivo de inicialização. Substitua VMID pelo ID da VM."
     ]
   },
   "stepGuide": {
     "heading": "Guia de configuração do carregador de inicialização passo a passo",
-    "intro": "Cada carregador tem menus e métodos de configuração próprios. Os seis passos abaixo explicam o processo comum; siga as indicações do carregador atual quando forem diferentes. As capturas M-shell mostram uma interface TinyCore anterior, enquanto o script atual transfere Alpine RedPill M-shell.",
+    "intro": "Cada carregador tem menus e métodos de configuração próprios. Os seis passos abaixo explicam o processo comum; siga as indicações do carregador atual quando forem diferentes. As capturas M-shell mostram uma interface TinyCore anterior, enquanto o script atual baixa Alpine RedPill M-shell.",
     "selectorHeading": "Selecione seu tipo de carregador:",
     "loaderButtons": {
       "arc": "Arc Loader",
@@ -172,7 +172,7 @@
             "caption": "Interface Web Arc Loader"
           },
           {
-            "htmlBefore": "<strong>Interface de terminal</strong>: aceda diretamente pela consola da VM.",
+            "htmlBefore": "<strong>Interface de terminal</strong>: acesse diretamente pelo console da VM.",
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_1_1.png",
             "alt": "Interface de Terminal Arc Loader",
             "caption": "Interface de Terminal Arc Loader"
@@ -186,7 +186,7 @@
             "caption": "Interface Web do Carregador RR"
           },
           {
-            "htmlBefore": "<strong>Interface de terminal</strong>: escreva <strong>menu.sh</strong> na consola da VM para a abrir.",
+            "htmlBefore": "<strong>Interface de terminal</strong>: escreva <strong>menu.sh</strong> no console da VM para a abrir.",
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_1_1.png",
             "alt": "Interface de Carregador RR",
             "caption": "Interface de terminal do RR Loader"
@@ -292,13 +292,13 @@
       "loaders": {
         "arc": [
           {
-            "htmlBefore": "<strong>Arc</strong> dá-lhe a opção de configurar automaticamente ou manualmente ajustar as configurações. Se a configuração automática for selecionada, o carregador começará a aplicar as configurações necessárias e reiniciará automaticamente quando o processo estiver concluído.",
+            "htmlBefore": "<strong>Arc</strong> oferece a opção de configurar automaticamente ou manualmente ajustar as configurações. Se a configuração automática for selecionada, o carregador começará a aplicar as configurações necessárias e reiniciará automaticamente quando o processo estiver concluído.",
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_1.png",
             "alt": "Configuração automática do Arc",
             "caption": "Configuração automática do Arc"
           },
           {
-            "htmlBefore": "Se optarmos por não usar o modo automático, introduzimos o menu para configurar as diferentes opções necessárias para o carregador:",
+            "htmlBefore": "Se optarmos por não usar o modo automático, entramos no menu para configurar as diferentes opções necessárias para o carregador:",
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_2.png",
             "alt": "Configuração manual do Arc",
             "caption": "Configuração manual do Arc"
@@ -391,27 +391,27 @@
     {
       "id": "step6",
       "title": "Iniciar o Carregador",
-      "intro": "Uma vez que o carregador foi construído, ele irá pedir-lhe para iniciar. O VM reiniciará com a configuração criada e iniciará a instalação do DSM.",
+      "intro": "Uma vez que o carregador foi construído, ele pedirá para iniciar. O VM reiniciará com a configuração criada e iniciará a instalação do DSM.",
       "loaders": {
         "arc": [
           {
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_6_1.png",
-            "alt": "Arranque do carregador no Arc",
-            "caption": "Arranque do carregador no Arc"
+            "alt": "Inicialização do carregador no Arc",
+            "caption": "Inicialização do carregador no Arc"
           }
         ],
         "rr": [
           {
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_6_1.png",
-            "alt": "Arranque do carregador no RR",
-            "caption": "Arranque do carregador no RR"
+            "alt": "Inicialização do carregador no RR",
+            "caption": "Inicialização do carregador no RR"
           }
         ],
         "tinycore": [
           {
             "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_6_1.png",
-            "alt": "Arranque do carregador no TinyCore",
-            "caption": "Arranque do carregador no TinyCore"
+            "alt": "Inicialização do carregador no TinyCore",
+            "caption": "Inicialização do carregador no TinyCore"
           }
         ]
       }
@@ -420,10 +420,10 @@
   "dsmInstall": {
     "heading": "Iniciando a Instalação DSM",
     "intro": "Uma vez que o carregador é inicializado, você pode encontrar seu dispositivo Synology usando:",
-    "afterCode": "Siga os passos no ecrã para concluir a instalação do DSM.",
+    "afterCode": "Siga os passos na tela para concluir a instalação do DSM.",
     "setupAlt": "Configuração do DSM",
-    "setupCaption": "Ecrã de configuração do DSM",
-    "patience": "Por favor, seja paciente – O processo pode levar alguns minutos para ser concluído. A percentagem de progresso será atualizada automaticamente à medida que a configuração progride. Uma contagem regressiva começará assim que a instalação estiver se aproximando da conclusão.",
+    "setupCaption": "Tela de configuração do DSM",
+    "patience": "Por favor, seja paciente – O processo pode levar alguns minutos para ser concluído. A porcentagem de progresso será atualizada automaticamente à medida que a configuração progride. Uma contagem regressiva começará assim que a instalação estiver se aproximando da conclusão.",
     "finishAlt": "Instalação concluída",
     "finishCaption": "Instalação concluída"
   },

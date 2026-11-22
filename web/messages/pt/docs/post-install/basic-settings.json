@@ -9,7 +9,7 @@
   },
   "intro": {
     "title": "O que esta categoria abrange",
-    "body": "Cinco opções de base para um host Proxmox novo: usar repositórios comunitários sem subscrição, atualizar todo o sistema, configurar automaticamente o fuso horário e NTP, desativar traduções APT para poupar largura de banda e espaço e escolher entre 25 utilitários comuns."
+    "body": "Cinco opções de base para um host Proxmox novo: usar repositórios comunitários sem assinatura, atualizar todo o sistema, configurar automaticamente o fuso horário e NTP, desativar traduções APT para poupar largura de banda e espaço e escolher entre 25 utilitários comuns."
   },
   "upgrade": {
     "heading": "Atualizar listas de pacotes e sistema",
@@ -33,9 +33,9 @@
     "officialBody": "A própria orientação de atualização da Proxmox é executar, nesta ordem exata:",
     "officialOutro": "É o comando habitual para atualizações dentro da versão principal instalada do Proxmox VE. Verifique os repositórios e as alterações propostas aos pacotes <em>antes</em> de continuar. A mudança de versão principal exige o procedimento oficial de migração.",
     "doesTitle": "O que a opção ProxMenux faz — verificado contra o script",
-    "doesIntro": "A atualização ProxMenux executa os comandos apt acima e acrescenta passos prévios e posteriores que teria de gerir manualmente. Cada item abaixo corresponde ao script de seleção; consulte <link>Atualização do sistema Proxmox</link> para o detalhe completo.",
+    "doesIntro": "A atualização ProxMenux executa os comandos apt acima e acrescenta passos prévios e posteriores que teria de gerenciar manualmente. Cada item abaixo corresponde ao script de seleção; consulte <link>Atualização do sistema Proxmox</link> para o detalhe completo.",
     "doesItems": [
-      "<strong>Primeiro, organizar os repositórios.</strong> No PVE 9: desativa as fontes Enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, remove ficheiros antigos de versões PVE anteriores e cria um <code>proxmox.sources</code> limpo para o canal gratuito <em>pve-no-subscription</em> do trixie. No PVE 8: comenta <code>pve-enterprise.list</code> / <code>ceph.list</code> e escreve <code>pve-public-repo.list</code> com <em>pve-no-subscription</em> para o bookworm.",
+      "<strong>Primeiro, organizar os repositórios.</strong> No PVE 9: desativa as fontes Enterprise <code>pve-enterprise.sources</code> / <code>ceph.sources</code>, remove arquivos antigos de versões PVE anteriores e cria um <code>proxmox.sources</code> limpo para o canal gratuito <em>pve-no-subscription</em> do trixie. No PVE 8: comenta <code>pve-enterprise.list</code> / <code>ceph.list</code> e escreve <code>pve-public-repo.list</code> com <em>pve-no-subscription</em> para o bookworm.",
       "<strong>Reescreve os repositórios Debian</strong> (no PVE 8, <code>/etc/apt/sources.list</code> após uma cópia com timestamp) com main / updates / security e <code>non-free-firmware</code>, para eliminar o aviso de firmware durante a atualização.",
       "<strong>Executa a atualização oficial.</strong> <code>apt-get update</code> seguido por <code>apt full-upgrade -y</code> (PVE 9) ou <code>apt dist-upgrade -y</code> (PVE 8), ambos lançados não-interactivamente com <code>--force-confdef --force-confold</code> para que quaisquer arquivos de configuração que você personalizou permaneçam seus.",
       "<strong>Instala pacotes essenciais</strong> se estiverem faltando: <code>zfsutils-linux</code>, <code>proxmox-backup-restore-image</code>, <code>chrony</code>.",
@@ -44,10 +44,10 @@
     ],
     "shortTitle": "Em suma",
     "shortBody": "A opção executa o comando de atualização recomendado pelo Proxmox (<code>apt full-upgrade</code> no PVE 9, <code>dist-upgrade</code> no PVE 8), com a organização dos repositórios e a limpeza final indicadas no guia oficial, e pede reinício no fim. Consulte <link>Atualização do sistema Proxmox</link> para o diagrama completo; o mesmo atualizador está disponível separadamente no menu principal.",
-    "subTitle": "Não aplicar a um host com subscrição",
+    "subTitle": "Não aplicar a um host com assinatura",
     "subBody": "Se você realmente tiver uma assinatura Proxmox e quiser continuar usando os repositórios empresariais, pule esta opção. Executando-o desabilita o repositório corporativo e encaminha o host para o canal comunitário. A atualização do pacote e reescrita do repositório não são apresentadas como reversíveis em Desinstalar Otimizações; restaure sua configuração do repositório deliberadamente se você precisar mudar de canal mais tarde.",
-    "safetyTitle": "Controlo de segurança pós-atualização",
-    "safetyBody": "Após a atualização, o script procura metadados antigos de volumes físicos (PV) nos discos. Pode acontecer quando uma VM com passthrough escreve cabeçalhos LVM num disco em bruto. Se detetar algo suspeito, avisa e sugere <code>pvs</code> para inspeção. Não altera nada automaticamente."
+    "safetyTitle": "Controle de segurança pós-atualização",
+    "safetyBody": "Após a atualização, o script procura metadados antigos de volumes físicos (PV) nos discos. Pode acontecer quando uma VM com passthrough escreve cabeçalhos LVM em um disco em bruto. Se detectar algo suspeito, avisa e sugere <code>pvs</code> para inspeção. Não altera nada automaticamente."
   },
   "time": {
     "heading": "Sincronizar a hora automaticamente",
@@ -55,11 +55,11 @@
     "depTitle": "Depende de dois serviços externos",
     "depBody": "A pesquisa depende de OpenDNS e <code>ipapi.co</code> serem alcançáveis, e de suas respostas serem corretas. Se você executar o Proxmox atrás de uma VPN ou em um VLAN que sai de uma região diferente, o fuso horário detectado automaticamente pode estar errado. Nesse caso, ignore esta opção e defina o fuso- horário à mão:",
     "revertTitle": "Reversível do menu Desinstalar",
-    "revertBody": "<link>Desinstalar otimizações</link> repõe o fuso horário em UTC, um valor seguro. NTP continua ativo: o relógio sincroniza e mostra UTC até definir outro fuso manualmente."
+    "revertBody": "<link>Desinstalar otimizações</link> redefine o fuso horário em UTC, um valor seguro. NTP continua ativo: o relógio sincroniza e mostra UTC até definir outro fuso manualmente."
   },
   "languages": {
     "heading": "ignorar o download de idiomas adicionais",
-    "intro": "Durante <code>apt update</code>, o APT pode transferir descrições de pacotes traduzidas além dos metadados principais. A opção desativa-as para poupar largura de banda e espaço. Antes, o ProxMenux <strong>confirma que as definições regionais do host foram geradas</strong>: lê <code>/etc/default/locale</code> ou <code>/etc/environment</code>, acrescenta a <code>/etc/locale.gen</code> se faltar e executa <code>locale-gen</code>. Assim mantém as definições regionais da shell.",
+    "intro": "Durante <code>apt update</code>, o APT pode baixar descrições de pacotes traduzidas além dos metadados principais. A opção desativa-as para poupar largura de banda e espaço. Antes, o ProxMenux <strong>confirma que as configurações regionais do host foram geradas</strong>: lê <code>/etc/default/locale</code> ou <code>/etc/environment</code>, acrescenta a <code>/etc/locale.gen</code> se faltar e executa <code>locale-gen</code>. Assim mantém as configurações regionais da shell.",
     "writtenTitle": "O que é escrito",
     "revertTitle": "Reversível do menu Desinstalar",
     "revertBody": "Excluindo <code>/etc/apt/apt.conf.d/99-disable-translations</code> (quer manualmente ou a partir do menu Desinstalar) restaura o comportamento padrão e APT baixa arquivos de idioma novamente."
@@ -85,11 +85,11 @@
           },
           {
             "pkg": "s-tui",
-            "desc": "Interface de terminal para testes de esforço e monitorização da CPU"
+            "desc": "Interface de terminal para testes de esforço e monitoramento da CPU"
           },
           {
             "pkg": "iftop",
-            "desc": "Utilização de largura de banda ao vivo por ligação"
+            "desc": "Utilização de largura de banda ao vivo por conexão"
           },
           {
             "pkg": "iotop",
@@ -119,11 +119,11 @@
         ]
       },
       {
-        "group": "Transferências e arquivos",
+        "group": "Downloads e arquivos",
         "items": [
           {
             "pkg": "axel",
-            "desc": "Acelerador de transferência paralelo leve"
+            "desc": "Acelerador de download paralelo leve"
           },
           {
             "pkg": "aria2",
@@ -152,7 +152,7 @@
         ]
       },
       {
-        "group": "Texto e ficheiros",
+        "group": "Texto e arquivos",
         "items": [
           {
             "pkg": "dos2unix",
@@ -186,7 +186,7 @@
         "items": [
           {
             "pkg": "msr-tools",
-            "desc": "Ler/escrever registos específicos do modelo de CPU (rdmsr, wrmsr)"
+            "desc": "Ler/escrever registros específicos do modelo de CPU (rdmsr, wrmsr)"
           },
           {
             "pkg": "intel-gpu-tools",
@@ -208,7 +208,7 @@
         ]
       }
     ],
-    "actionTitle": "Alguns deles em acção",
+    "actionTitle": "Alguns deles em ação",
     "noBulkTitle": "Apenas os utilitários instalados pelo ProxMenux são removidos",
     "noBulkBody": "ProxMenux registra apenas os pacotes utilitários selecionados que ainda não estavam instalados antes desta ação. Desinstalar Otimizações pode purgar esses pacotes mais tarde, enquanto utilitários que já estavam presentes no host são deixados intocados. A atualização geral do sistema APT não é intencionalmente rastreada como reversível porque os pacotes atualizados não têm retorno atômico seguro."
   },

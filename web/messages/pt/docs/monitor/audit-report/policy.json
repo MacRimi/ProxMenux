@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Política | Auditoria e relatórios",
-    "description": "Política do nó em Auditoria e relatórios: cópia de segurança, arranque automático e objetivo de recuperação de cada sistema convidado, função de cada armazenamento e limiares das verificações."
+    "description": "Política do nó em Auditoria e relatórios: backup, inicialização automática e objetivo de recuperação de cada sistema convidado, função de cada armazenamento e limiares das verificações."
   },
   "header": {
     "title": "Política",
@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Sem declaração o relatório descreve; com ela avalia",
-            "body": "Uma avaliação vê o que o anfitrião faz, não para que serve. Um convidado sem backup cuja finalidade não é declarada é relatado como uma observação. Caso seu backup seja declarado necessário, a mesma ausência é reportada como advertência. Nada precisa ser declarado."
+            "body": "Uma avaliação vê o que o host faz, não para que serve. Um convidado sem backup cuja finalidade não é declarada é relatado como uma observação. Caso seu backup seja declarado necessário, a mesma ausência é reportada como advertência. Nada precisa ser declarado."
           }
         }
       ]
@@ -34,14 +34,14 @@
             ],
             "rows": [
               [
-                "Cópia de Segurança",
+                "Backups",
                 "Necessário, Não exigido, Não indicado",
                 "Um backup ausente é um aviso quando é necessário, uma observação quando não é indicado, e é deixado fora da contagem quando não é necessário."
               ],
               [
-                "Arranque automático",
+                "Inicialização automática",
                 "Necessário, Não exigido, Não indicado",
-                "Indica se o sistema convidado deve arrancar com o anfitrião."
+                "Indica se o sistema convidado deve iniciar com o host."
               ],
               [
                 "Objetivo de recuperação",
@@ -66,7 +66,7 @@
     {
       "id": "thresholds",
       "title": "Limiares",
-      "intro": "Um limiar vazio utiliza o valor predefinido incluído, apresentado como texto indicativo.",
+      "intro": "Um limiar vazio utiliza o valor padrão incluído, apresentado como texto indicativo.",
       "blocks": [
         {
           "list": {
@@ -74,12 +74,12 @@
               "Verificação da capacidade de armazenamento (%) e do preenchimento do thin pool (%).",
               "Rácio de sobreaprovisionamento thin e rácio de sobrealocação de memória.",
               "Intervalo de scrub ZFS (dias).",
-              "Limite de recurso para a antiguidade das cópias de segurança (dias) e margem sobre o calendário (rácio).",
+              "Limite de recurso para a antiguidade dos backups (dias) e margem sobre o calendário (rácio).",
               "Aviso de validade do certificado (dias).",
               "Vida útil do disco (horas) e janela de erro do disco recente (dias).",
               "Antiguidade do relatório Lynis (dias) e do índice de pacotes (dias).",
               "Utilização do journal face ao seu limite (%).",
-              "Verificação do espaço (%) e dos inodes (%) do sistema de ficheiros."
+              "Verificação do espaço (%) e dos inodes (%) do sistema de arquivos."
             ]
           }
         }
@@ -90,12 +90,12 @@
       "title": "Como a política é salva",
       "blocks": [
         {
-          "p": "A declaração é validada e guardada atomicamente em <code>/usr/local/share/proxmenux/audit_policy.json</code>. Cada gravação inclui uma revisão: se outra sessão tiver alterado a declaração, o rascunho não é guardado e a vista propõe recarregar a versão gravada."
+          "p": "A declaração é validada e salva atomicamente em <code>/usr/local/share/proxmenux/audit_policy.json</code>. Cada gravação inclui uma revisão: se outra sessão tiver alterado a declaração, o rascunho não é salvo e a vista propõe recarregar a versão gravada."
         },
         {
           "calloutWarning": {
             "title": "A política nunca é inferida",
-            "body": "O ProxMenux não acrescenta requisitos por iniciativa própria. Um campo vazio mantém o valor predefinido ou fica não indicado; uma declaração parcial só afeta os elementos que menciona."
+            "body": "O ProxMenux não acrescenta requisitos por iniciativa própria. Um campo vazio mantém o valor padrão ou fica não indicado; uma declaração parcial só afeta os elementos que menciona."
           }
         }
       ]

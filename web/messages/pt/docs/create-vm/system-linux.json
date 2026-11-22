@@ -8,12 +8,12 @@
   },
   "header": {
     "title": "Criar VM: sistema Linux",
-    "description": "Crie uma VM Linux no Proxmox VE. O ProxMenux inclui um catálogo de ISO Linux oficiais para transferência, um seletor de ISO locais e os scripts Cloud-Init da comunidade. Todos os percursos passam pelo assistente comum de VM, pelo plano de armazenamento e pelo assistente opcional de passthrough GPU.",
+    "description": "Crie uma VM Linux no Proxmox VE. O ProxMenux inclui um catálogo de ISO Linux oficiais para download, um seletor de ISO locais e os scripts Cloud-Init da comunidade. Todos os percursos passam pelo assistente comum de VM, pelo plano de armazenamento e pelo assistente opcional de passthrough GPU.",
     "section": "Máquinas Virtuais"
   },
   "intro": {
     "title": "O que este script faz",
-    "body": "O seletor Linux oferece três opções: uma ISO oficial da lista selecionada (transferência automática), uma ISO local que você carregou ou um script Cloud-Init dos Helper-Scripts da comunidade (Arch, Debian, Ubuntu). Nas duas primeiras, o resto do fluxo é o assistente comum: CPU / RAM / BIOS → plano de armazenamento → passthrough GPU opcional → criação da VM."
+    "body": "O seletor Linux oferece três opções: uma ISO oficial da lista selecionada (download automático), uma ISO local que você carregou ou um script Cloud-Init dos Helper-Scripts da comunidade (Arch, Debian, Ubuntu). Nas duas primeiras, o resto do fluxo é o assistente comum: CPU / RAM / BIOS → plano de armazenamento → passthrough GPU opcional → criação da VM."
   },
   "image": {
     "alt": "Opções de instalação do Linux ProxMenux",
@@ -108,22 +108,22 @@
     "virtualDiskItems": [
       "Lista os volumes de armazenamento Proxmox disponíveis na máquina.",
       "Você escolhe o armazenamento de destino e o tamanho em GB.",
-      "O disco utiliza o bus escolhido: SCSI (predefinido), SATA, VirtIO ou IDE. SATA tem seis posições numeradas de 0 a 5: <code>sata0</code>, <code>sata1</code>, …."
+      "O disco utiliza o bus escolhido: SCSI (padrão), SATA, VirtIO ou IDE. SATA tem seis posições numeradas de 0 a 5: <code>sata0</code>, <code>sata1</code>, …."
     ],
     "importDiskTitle": "b. Adicionar disco de importação",
     "importDiskItems": [
       "Detecta discos físicos que são seguros de importar (sistema e discos protegidos estão escondidos).",
       "Você seleciona um ou mais discos através de uma lista de verificação.",
-      "Os discos importados utilizam o bus escolhido e são ligados através de <code>qm set</code>."
+      "Os discos importados utilizam o bus escolhido e são anexados através de <code>qm set</code>."
     ],
     "pciTitle": "c. Adicionar Controlador ou NVMe (passagem PCI)",
     "pciItems": [
-      "Deteta HBA SATA/SAS e dispositivos NVMe e permite atribuir um <em>controlador completo</em> à VM. O IOMMU tem de estar ativo; o script oferece a ativação e um reinício se necessário.",
+      "Detecta HBA SATA/SAS e dispositivos NVMe e permite atribuir um <em>controlador completo</em> à VM. O IOMMU tem de estar ativo; o script oferece a ativação e um reinício se necessário.",
       "Um passo de confirmação avisa sobre o risco de todo o controlador (o cartão inteiro, incluindo cada disco nele, deixa o host).",
       "Os dispositivos PCI são atribuídos com comandos como <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. Substitua VMID e PCI_ADDRESS pelo ID da VM e endereço PCI e utilize um índice hostpci livre para cada dispositivo."
     ],
-    "resetTitle": "Repor e terminar",
-    "resetBody": "O menu oferece <strong>r</strong> para repor a seleção e recomeçar e <strong>d</strong> para terminar e continuar. Não é possível terminar com um plano vazio."
+    "resetTitle": "Redefinir e terminar",
+    "resetBody": "O menu oferece <strong>r</strong> para redefinir a seleção e recomeçar e <strong>d</strong> para terminar e continuar. Não é possível terminar com um plano vazio."
   },
   "gpu": {
     "heading": "Passagem de GPU opcional",
@@ -141,11 +141,11 @@
   "installOptions": {
     "heading": "Opções de instalação do Linux",
     "officialHeading": "ISO oficial (instalação tradicional)",
-    "officialBody": "O ProxMenux inclui uma seleção de ISO Linux oficiais. Escolha uma: o script transfere-a do espelho do projeto para <code>/var/lib/vz/template/iso</code> e liga-a à VM.",
+    "officialBody": "O ProxMenux inclui uma seleção de ISO Linux oficiais. Escolha uma: o script baixa-a do espelho do projeto para <code>/var/lib/vz/template/iso</code> e anexa-a à VM.",
     "officialImageAlt": "Seleção de distribuição Linux",
     "officialImageCaption": "Seleção de distribuição Linux",
     "localHeading": "ISO Local",
-    "localBody": "Usa qualquer ISO Linux já presente num armazenamento Proxmox com conteúdo ISO (local, NFS, CIFS…). O script lista cada ISO que encontrar, com o seu armazenamento, e permite que você escolha uma.",
+    "localBody": "Usa qualquer ISO Linux já presente em um armazenamento Proxmox com conteúdo ISO (local, NFS, CIFS…). O script lista cada ISO que encontrar, com seu armazenamento, e permite que você escolha uma.",
     "localImageAlt": "Menu de seleção ISO local",
     "localImageCaption": "Menu de seleção ISO local",
     "distros": [
@@ -278,10 +278,10 @@
     "items": [
       "Obtém a ISO Linux (download oficial ou arquivo local).",
       "Aplica a configuração padrão ou avançada CPU / RAM / BIOS / tipo de máquina.",
-      "Abre o plano de armazenamento e liga os discos virtuais selecionados, discos importados e dispositivos PCI.",
+      "Abre o plano de armazenamento e anexa os discos virtuais selecionados, discos importados e dispositivos PCI.",
       "Cria o disco EFI quando UEFI é selecionado.",
       "Monta a ISO Linux em <code>ide2</code>.",
-      "Define a ordem de arranque: primeiro disco, depois ISO.",
+      "Define a ordem de inicialização: primeiro disco, depois ISO.",
       "Habilita o canal QEMU Guest Agent.",
       "Opcionalmente executa o assistente de passagem GPU.",
       "Gera uma descrição HTML com estilo anexada ao VM.",
@@ -291,7 +291,7 @@
   "postInstall": {
     "heading": "Dicas após a instalação",
     "guestAgentHeading": "Instale o agente convidado QEMU na VM",
-    "guestAgentBody": "O ProxMenux ativa o canal do agente na configuração da VM, mas o agente tem de ser instalado no sistema convidado. Permite o encerramento controlado e congelar os sistemas de ficheiros durante as cópias de segurança para melhorar a consistência dos dados.",
+    "guestAgentBody": "O ProxMenux ativa o canal do agente na configuração da VM, mas o agente tem de ser instalado no sistema convidado. Permite o encerramento controlado e congelar os sistemas de arquivos durante os backups para melhorar a consistência dos dados.",
     "debian": "Debian / Ubuntu",
     "fedora": "Fedora / Rocky / RHEL",
     "arch": "Arch Linux",
@@ -301,7 +301,7 @@
     "virtioWarnTitle": "Distribuição muito antiga",
     "virtioWarnBody": "Os instaladores muito antigos podem não incluir os controladores VirtIO necessários. Nesse caso, utilize um controlador SATA / SCSI emulado ou forneça os controladores adequados.",
     "trimHeading": "Ativar TRIM / discard no armazenamento SSD",
-    "trimBody": "Se a VM utiliza armazenamento Proxmox baseado em SSD e o disco foi ligado com a opção <code>discard</code>, pode encaminhar comandos TRIM a partir do sistema convidado. Duas opções:",
+    "trimBody": "Se a VM utiliza armazenamento Proxmox baseado em SSD e o disco foi anexado com a opção <code>discard</code>, pode encaminhar comandos TRIM a partir do sistema convidado. Duas opções:",
     "trimItems": [
       "Executar <code>fstrim -av</code> periodicamente (ou ativar a unidade <code>fstrim.timer</code> em distribuições systemd).",
       "Ou monte sistemas de arquivos com a opção <code>discard</code> em <code>/etc/fstab</code>."
@@ -315,7 +315,7 @@
       {
         "href": "/docs/disk-manager/import-disk-image-vm",
         "label": "Importar imagem de disco para VM",
-        "tail": " — ligar uma imagem Linux existente .qcow2 / .img / .raw a uma nova VM."
+        "tail": " — anexar uma imagem Linux existente .qcow2 / .img / .raw a uma nova VM."
       },
       {
         "href": "/docs/utils/import-vm",

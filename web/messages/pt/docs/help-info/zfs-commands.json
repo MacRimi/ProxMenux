@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Duas famílias de comando",
-    "body": "O <code>zpool *</code> gere os conjuntos de armazenamento (camada física — discos, vdevs, redundância). <code>zfs *</code> gerencia os conjuntos de dados e instantâneos que vivem dentro desses pools (camada lógica — sistemas de arquivos, volumes, instantâneos, propriedades)."
+    "body": "O <code>zpool *</code> gerencia os conjuntos de armazenamento (camada física — discos, vdevs, redundância). <code>zfs *</code> gerencia os conjuntos de dados e instantâneos que vivem dentro desses pools (camada lógica — sistemas de arquivos, volumes, instantâneos, propriedades)."
   },
   "commandGroups": [
     {
@@ -55,7 +55,7 @@
         },
         {
           "command": "zfs list -r <pool>",
-          "description": "Listar todos os conjuntos de dados num pool recursivamente"
+          "description": "Listar todos os conjuntos de dados em um pool recursivamente"
         },
         {
           "command": "zfs create <pool>/<dataset>",
@@ -75,7 +75,7 @@
         },
         {
           "command": "zfs set compression=on <pool>/<dataset>",
-          "description": "Activar a compressão num conjunto de dados"
+          "description": "Ativar a compressão em um conjunto de dados"
         }
       ]
     },
@@ -125,7 +125,7 @@
         },
         {
           "command": "zfs receive <pool>/<dataset> < backup.zfs",
-          "description": "Receber um instantâneo a partir de um ficheiro"
+          "description": "Receber um instantâneo a partir de um arquivo"
         },
         {
           "command": "zfs send -i <pool>/<dataset>@<snap1> <pool>/<dataset>@<snap2> > incr.zfs",
@@ -150,15 +150,15 @@
         },
         {
           "command": "zpool clear <pool>",
-          "description": "Repor os contadores de erros do pool"
+          "description": "Redefinir os contadores de erros do pool"
         },
         {
           "command": "zpool clear <pool> <device>",
-          "description": "Limpar erros num dispositivo específico"
+          "description": "Limpar erros em um dispositivo específico"
         },
         {
           "command": "zpool replace <pool> <old-device> <new-device>",
-          "description": "Substituir um dispositivo falhado"
+          "description": "Substituir um dispositivo malsucedido"
         },
         {
           "command": "zpool offline <pool> <device>",
@@ -202,7 +202,7 @@
   ],
   "bestPractices": {
     "title": "Melhores práticas operacionais",
-    "bodyRich": "Agende regularmente <code>zpool scrub</code> para verificar as somas de controlo e analise o resultado. Mantenha capacidade livre: o efeito de um pool quase cheio depende da carga e da estrutura. Use <code>zpool replace</code> para um dispositivo avariado e siga o procedimento do respetivo tipo de vdev. Detach + add não é equivalente e pode alterar a topologia ou eliminar redundância."
+    "bodyRich": "Agende regularmente <code>zpool scrub</code> para verificar as somas de controle e analise o resultado. Mantenha capacidade livre: o efeito de um pool quase cheio depende da carga e da estrutura. Use <code>zpool replace</code> para um dispositivo avariado e siga o procedimento do respectivo tipo de vdev. Detach + add não é equivalente e pode alterar a topologia ou eliminar redundância."
   },
   "related": {
     "heading": "Relacionado",
@@ -214,7 +214,7 @@
       },
       {
         "href": "/docs/help-info/backup-commands",
-        "label": "Cópias de segurança e restauro",
+        "label": "Backups e restauração",
         "tail": " — vzdump, qmrestore."
       },
       {

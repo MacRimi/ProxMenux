@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Auditoria e relatórios | ProxMenux Monitor",
-    "description": "Avalie um nó Proxmox VE, registe as alterações do ProxMenux e declare o que se espera dos sistemas convidados e do armazenamento, com relatórios imprimíveis."
+    "description": "Avalie um nó Proxmox VE, registre as alterações do ProxMenux e declare o que se espera dos sistemas convidados e do armazenamento, com relatórios imprimíveis."
   },
   "header": {
     "title": "Auditoria e relatórios",
-    "description": "Avaliação do nó, registo das alterações do ProxMenux e declaração das expectativas, com documentos que podem ser impressos ou guardados em PDF.",
+    "description": "Avaliação do nó, registro das alterações do ProxMenux e declaração das expectativas, com documentos que podem ser impressos ou salvos em PDF.",
     "section": "ProxMenux Monitor"
   },
   "sections": [
@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Três vistas, três perguntas",
-            "body": "Auditoria e relatórios distingue os factos do nó, as intervenções do ProxMenux e as expectativas declaradas. Uma configuração que não possa ser avaliada face a um objetivo declarado é descrita sem ser assinalada como falha."
+            "body": "Auditoria e relatórios distingue os fatos do nó, as intervenções do ProxMenux e as expectativas declaradas. Uma configuração que não possa ser avaliada face a um objetivo declarado é descrita sem ser assinalada como falha."
           }
         },
         {
@@ -29,12 +29,12 @@
               {
                 "icon": "refresh",
                 "title": "Alterações — o que fez o ProxMenux?",
-                "body": "Lista os ficheiros, pacotes, serviços e comandos alterados pelos scripts ProxMenux instrumentados, incluindo o estado anterior quando foi capturado."
+                "body": "Lista os arquivos, pacotes, serviços e comandos alterados pelos scripts ProxMenux instrumentados, incluindo o estado anterior quando foi capturado."
               },
               {
                 "icon": "fileText",
                 "title": "Política — o que se espera?",
-                "body": "Declara quais os sistemas convidados que necessitam de cópia de segurança ou devem arrancar com o anfitrião, qual o armazenamento essencial e os limiares das verificações."
+                "body": "Declara quais os sistemas convidados que necessitam de backup ou devem iniciar com o host, qual o armazenamento essencial e os limiares das verificações."
               }
             ]
           }
@@ -44,7 +44,7 @@
             "nodes": [
               {
                 "label": "Avaliação",
-                "detail": "factos"
+                "detail": "fatos"
               },
               {
                 "label": "Política",
@@ -55,7 +55,7 @@
                 "detail": "intervenções"
               }
             ],
-            "caption": "A avaliação fornece os factos, a política dá-lhes contexto e o registo documenta as ações do ProxMenux."
+            "caption": "A avaliação fornece os fatos, a política lhes dá contexto e o registro documenta as ações do ProxMenux."
           }
         }
       ]
@@ -80,8 +80,8 @@
                 "Executa uma avaliação a pedido, documenta o nó e compara as execuções entre si."
               ],
               [
-                "Registo de alterações",
-                "Regista as operações realizadas pelo ProxMenux através das suas primitivas de auditoria."
+                "Registro de alterações",
+                "Registra as operações realizadas pelo ProxMenux através das suas primitivas de auditoria."
               ]
             ]
           }
@@ -90,7 +90,7 @@
     },
     {
       "id": "pages",
-      "title": "Páginas desta secção",
+      "title": "Páginas desta seção",
       "blocks": [
         {
           "next": {
@@ -98,7 +98,7 @@
               {
                 "label": "Avaliação e inventário",
                 "href": "/docs/monitor/audit-report/assessment",
-                "tail": "Perfis, resultados, riscos aceites e inventário."
+                "tail": "Perfis, resultados, riscos aceitos e inventário."
               },
               {
                 "label": "Alterações",

@@ -5,7 +5,7 @@
     "ogTitle": "Comandos de atualização e pacotes Proxmox — apt, pveupgrade, dpkg",
     "ogDescription": "comandos apt, pveupgrade e dpkg para manter o Proxmox VE atualizado — atualizações do sistema, gerenciamento de pacotes, configuração do repositório.",
     "twitterTitle": "Comandos de atualização Proxmox | ProxMenux",
-    "twitterDescription": "Comandos apt e pveupgrade para gerir atualizações e pacotes em anfitriões Proxmox VE."
+    "twitterDescription": "Comandos apt e pveupgrade para gerenciar atualizações e pacotes em hosts Proxmox VE."
   },
   "header": {
     "title": "Atualizações e pacotes",
@@ -59,7 +59,7 @@
         },
         {
           "command": "ceph versions",
-          "description": "Mostrar as versões dos serviços Ceph antes de planear uma atualização"
+          "description": "Mostrar as versões dos serviços Ceph antes de planejar uma atualização"
         }
       ]
     },
@@ -76,7 +76,7 @@
         },
         {
           "command": "apt autoclean",
-          "description": "Limpar apenas os ficheiros de pacotes desactualizados"
+          "description": "Limpar apenas os arquivos de pacotes desactualizados"
         },
         {
           "command": "apt install <package>",
@@ -88,7 +88,7 @@
         },
         {
           "command": "apt purge <package>",
-          "description": "Remover um pacote e os seus ficheiros de configuração"
+          "description": "Remover um pacote e seus arquivos de configuração"
         }
       ]
     },
@@ -130,11 +130,11 @@
         },
         {
           "command": "ls -la /etc/apt/sources.list.d/",
-          "description": "Listar ficheiros adicionais de configuração de repositórios"
+          "description": "Listar arquivos adicionais de configuração de repositórios"
         },
         {
           "command": "cat /etc/apt/sources.list.d/pve-enterprise.list",
-          "description": "Mostrar a configuração do repositório Proxmox Enterprise no ficheiro .list do PVE 8"
+          "description": "Mostrar a configuração do repositório Proxmox Enterprise no arquivo .list do PVE 8"
         },
         {
           "command": "apt-key list",
@@ -145,7 +145,7 @@
   ],
   "backupWarn": {
     "title": "Faça um backup antes das principais atualizações",
-    "bodyRich": "Para atualizações correntes, o Proxmox recomenda <code>apt update &amp;&amp; apt full-upgrade</code>; reveja as alterações de pacotes antes de confirmar. Para <strong>atualizações de versão principal</strong> (PVE 8 → 9), use o procedimento ProxMenux <upgradeLink>Atualizar PVE 8 para PVE 9</upgradeLink>. Inclui verificações prévias, migração de repositórios e validação final. Faça primeiro uma cópia de segurança."
+    "bodyRich": "Para atualizações correntes, o Proxmox recomenda <code>apt update &amp;&amp; apt full-upgrade</code>; reveja as alterações de pacotes antes de confirmar. Para <strong>atualizações de versão principal</strong> (PVE 8 → 9), use o procedimento ProxMenux <upgradeLink>Atualizar PVE 8 para PVE 9</upgradeLink>. Inclui verificações prévias, migração de repositórios e validação final. Faça primeiro um backup."
   },
   "related": {
     "heading": "Relacionado",

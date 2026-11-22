@@ -1,18 +1,18 @@
 {
   "meta": {
     "title": "Glossário | Documentação ProxMenux",
-    "description": "Definições dos termos utilizados na documentação ProxMenux: Proxmox, armazenamento, redes e virtualização.",
+    "description": "Configurações dos termos utilizados na documentação ProxMenux: Proxmox, armazenamento, redes e virtualização.",
     "ogTitle": "Glossário | Documentação ProxMenux",
     "ogDescription": "Referência rápida para os termos técnicos utilizados na documentação ProxMenux."
   },
   "header": {
     "title": "Glossário",
-    "description": "Definições breves dos termos utilizados no ProxMenux e para descrever o funcionamento interno do Proxmox.",
+    "description": "Configurações breves dos termos utilizados no ProxMenux e para descrever o funcionamento interno do Proxmox.",
     "section": "Glossário"
   },
   "callout": {
     "title": "Como usar esta página",
-    "bodyRich": "Cada entrada inclui a categoria e uma definição breve. As ligações <em>Ver também</em> abrem a documentação relacionada. Utilize a navegação A–Z para ir diretamente para uma letra."
+    "bodyRich": "Cada entrada inclui a categoria e uma definição breve. Os links <em>Ver também</em> abrem a documentação relacionada. Utilize a navegação A–Z para ir diretamente para uma letra."
   },
   "jumpHeading": "Saltar para a letra",
   "seeAlsoLabel": "Ver também:",
@@ -29,7 +29,7 @@
         "Substituição ACS"
       ],
       "category": "Virtualização",
-      "definitionRich": "Funções de controlo de acesso PCIe que ajudam a isolar o tráfego entre dispositivos. Os grupos IOMMU dependem do hardware e da topologia. A alteração <em>ACS override</em> pode dividir os grupos apresentados pelo Linux, mas não acrescenta isolamento físico; atribuí-los a VM distintas implica um risco de segurança.",
+      "definitionRich": "Funções de controle de acesso PCIe que ajudam a isolar o tráfego entre dispositivos. Os grupos IOMMU dependem do hardware e da topologia. A alteração <em>ACS override</em> pode dividir os grupos apresentados pelo Linux, mas não acrescenta isolamento físico; atribuí-los a VM distintas implica um risco de segurança.",
       "seeAlso": [
         {
           "label": "Adicionar Controlador ou NVMe ao VM",
@@ -43,7 +43,7 @@
         "Adaptive Replacement Cache"
       ],
       "category": "Armazenamento",
-      "definitionRich": "Cache de leitura ZFS na RAM do anfitrião, com blocos utilizados recentemente ou com frequência. O limite predefinido depende da versão e da instalação do Proxmox. A pós-instalação do ProxMenux permite limitá-la.",
+      "definitionRich": "Cache de leitura ZFS na RAM do host, com blocos utilizados recentemente ou com frequência. O limite padrão depende da versão e da instalação do Proxmox. A pós-instalação do ProxMenux permite limitá-la.",
       "seeAlso": [
         {
           "label": "Pós-instalação: armazenamento",
@@ -58,7 +58,7 @@
     {
       "term": "Bind mount",
       "category": "Linux",
-      "definitionRich": "Funcionalidade Linux que disponibiliza parte do sistema de ficheiros noutro caminho. O ProxMenux utiliza bind mounts para partilhar diretórios do anfitrião com contentores LXC através de <code>pct set -mpN</code>.",
+      "definitionRich": "Funcionalidade Linux que disponibiliza parte do sistema de arquivos em outro caminho. O ProxMenux utiliza bind mounts para compartilhar diretórios do host com contêineres LXC através de <code>pct set -mpN</code>.",
       "seeAlso": [
         {
           "label": "Pontos de montagem LXC",
@@ -70,10 +70,10 @@
       "term": "Bond de rede",
       "aliases": [
         "Agregação de interfaces de rede",
-        "Agregação de ligações"
+        "Agregação de links"
       ],
       "category": "Rede",
-      "definitionRich": "Agrupa várias interfaces físicas numa interface lógica para redundância (active-backup), débito agregado (LACP / 802.3ad) ou ambos. Configura-se em <code>/etc/network/interfaces</code>."
+      "definitionRich": "Agrupa várias interfaces físicas em uma interface lógica para redundância (active-backup), débito agregado (LACP / 802.3ad) ou ambos. Configura-se em <code>/etc/network/interfaces</code>."
     },
     {
       "term": "Ponte",
@@ -83,7 +83,7 @@
         "Ponte Linux"
       ],
       "category": "Rede",
-      "definitionRich": "Comutador virtual de camada 2 no anfitrião. <code>vmbr0</code> liga normalmente os sistemas convidados à rede física. Outras pontes (<code>vmbr1</code>, <code>vmbr2</code>...) podem separar redes conforme as ligações físicas e a configuração.",
+      "definitionRich": "Comutador virtual de camada 2 no host. <code>vmbr0</code> conecta normalmente os sistemas convidados à rede física. Outras pontes (<code>vmbr1</code>, <code>vmbr2</code>...) podem separar redes conforme as conexões físicas e a configuração.",
       "seeAlso": [
         {
           "label": "Análise de ponte e reparo guiado",
@@ -94,7 +94,7 @@
     {
       "term": "Ceph",
       "category": "Armazenamento",
-      "definitionRich": "Armazenamento distribuído integrado no Proxmox para clusters hiperconvergentes. Os OSD (Object Storage Daemons) sustentam o armazenamento de objetos, blocos e ficheiros. A versão Ceph necessária depende da versão do Proxmox e do percurso de atualização; consulte o guia correspondente.",
+      "definitionRich": "Armazenamento distribuído integrado no Proxmox para clusters hiperconvergentes. Os OSD (Object Storage Daemons) sustentam o armazenamento de objetos, blocos e arquivos. A versão Ceph necessária depende da versão do Proxmox e do percurso de atualização; consulte o guia correspondente.",
       "seeAlso": [
         {
           "label": "Atualize PVE 8 para PVE 9",
@@ -105,14 +105,14 @@
     {
       "term": "CT",
       "aliases": [
-        "Contentor",
-        "Contentor LXC"
+        "Contêiner",
+        "Contêiner LXC"
       ],
       "category": "Proxmox",
-      "definitionRich": "Abreviatura de «contentor» no Proxmox para uma instância LXC. O CTID numérico corresponde a <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Consulte também <strong>LXC</strong>.",
+      "definitionRich": "Abreviatura de «contêiner» no Proxmox para uma instância LXC. O CTID numérico corresponde a <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code>. Consulte também <strong>LXC</strong>.",
       "seeAlso": [
         {
-          "label": "Gestão de VM e contentores",
+          "label": "Gestão de VM e contêineres",
           "href": "/docs/help-info/vm-ct-commands"
         }
       ]
@@ -120,7 +120,7 @@
     {
       "term": "deb822",
       "category": "Linux",
-      "definitionRich": "Formato moderno de fontes APT: ficheiros <code>.sources</code> com blocos estruturados e campos Types, URIs, Suites, Components e Signed-By. Substitui o formato de linha única <code>.list</code>; é o padrão desde PVE 9 / Debian Trixie.",
+      "definitionRich": "Formato moderno de fontes APT: arquivos <code>.sources</code> com blocos estruturados e campos Types, URIs, Suites, Components e Signed-By. Substitui o formato de linha única <code>.list</code>; é o padrão desde PVE 9 / Debian Trixie.",
       "seeAlso": [
         {
           "label": "Atualize PVE 8 para PVE 9",
@@ -134,7 +134,7 @@
         "GPU dedicada"
       ],
       "category": "Virtualização",
-      "definitionRich": "Placa gráfica independente, normalmente ligada por PCIe, ao contrário de um <strong>iGPU</strong>. Pode ser atribuída a uma VM com VFIO ou utilizada por vários contentores LXC através dos dispositivos e do controlador do anfitrião, conforme a compatibilidade do hardware e das aplicações.",
+      "definitionRich": "Placa gráfica independente, normalmente conectada por PCIe, ao contrário de um <strong>iGPU</strong>. Pode ser atribuída a uma VM com VFIO ou utilizada por vários contêineres LXC através dos dispositivos e do controlador do host, conforme a compatibilidade do hardware e das aplicações.",
       "seeAlso": [
         {
           "label": "Adicionar GPU a VM (passagem direta)",
@@ -153,7 +153,7 @@
         "Suporte dinâmico ao módulo Kernel"
       ],
       "category": "Linux",
-      "definitionRich": "Sistema para recompilar módulos externos registados, como NVIDIA ou ZFS, quando o kernel muda. A compilação exige código do módulo compatível e os cabeçalhos correspondentes.",
+      "definitionRich": "Sistema para recompilar módulos externos registrados, como NVIDIA ou ZFS, quando o kernel muda. A compilação exige código do módulo compatível e os cabeçalhos correspondentes.",
       "seeAlso": [
         {
           "label": "Instalar o Coral TPU (Host)",
@@ -164,7 +164,7 @@
     {
       "term": "Fail2Ban",
       "category": "Linux",
-      "definitionRich": "Serviço que deteta falhas repetidas de autenticação nos registos e bloqueia os IP responsáveis através da firewall. O ProxMenux inclui jails pré-configuradas para SSH, a interface Proxmox e o Monitor.",
+      "definitionRich": "Serviço que detecta falhas repetidas de autenticação nos registros e bloqueia os IP responsáveis através da firewall. O ProxMenux inclui jails pré-configuradas para SSH, a interface Proxmox e o Monitor.",
       "seeAlso": [
         {
           "label": "Fail2Ban",
@@ -175,7 +175,7 @@
     {
       "term": "Fastfetch",
       "category": "Linux",
-      "definitionRich": "Ferramenta de informação do sistema com arte ASCII apresentada ao iniciar sessão na consola. Substitui o <code>neofetch</code> e pode ser ativada na pós-instalação do ProxMenux.",
+      "definitionRich": "Ferramenta de informação do sistema com arte ASCII apresentada ao fazer login no console. Substitui o <code>neofetch</code> e pode ser ativada na pós-instalação do ProxMenux.",
       "seeAlso": [
         {
           "label": "Após a instalação: opções",
@@ -189,7 +189,7 @@
         "GRand Unified Bootloader"
       ],
       "category": "Linux",
-      "definitionRich": "Gestor de arranque das instalações Linux baseadas em GRUB. Configura-se em <code>/etc/default/grub</code> e <code>/boot/grub/</code>; aplique as alterações com <code>update-grub</code>. O Proxmox também pode utilizar systemd-boot: verifique o gestor ativo antes de alterar parâmetros do kernel.",
+      "definitionRich": "Gerenciador de inicialização das instalações Linux baseadas em GRUB. Configura-se em <code>/etc/default/grub</code> e <code>/boot/grub/</code>; aplique as alterações com <code>update-grub</code>. O Proxmox também pode utilizar systemd-boot: verifique o gerenciador ativo antes de alterar parâmetros do kernel.",
       "seeAlso": [
         {
           "label": "Comandos de passagem GPU",
@@ -203,7 +203,7 @@
         "GPU integrada"
       ],
       "category": "Virtualização",
-      "definitionRich": "Processador gráfico integrado no encapsulamento da CPU, como Intel UHD / Iris ou Radeon nas APU Ryzen. É frequentemente partilhado entre vários LXC através de <code>/dev/dri</code>, em vez de atribuído exclusivamente a uma VM.",
+      "definitionRich": "Processador gráfico integrado no encapsulamento da CPU, como Intel UHD / Iris ou Radeon nas APU Ryzen. É frequentemente compartilhado entre vários LXC através de <code>/dev/dri</code>, em vez de atribuído exclusivamente a uma VM.",
       "seeAlso": [
         {
           "label": "Adicionar GPU ao LXC",
@@ -214,12 +214,12 @@
     {
       "term": "ifupdown / ifupdown2",
       "category": "Rede",
-      "definitionRich": "Sistema clássico de configuração de rede Debian, baseado em <code>/etc/network/interfaces</code>. O Proxmox utiliza por predefinição a versão reescrita <code>ifupdown2</code>, que permite recarregar a configuração em funcionamento com <code>ifreload -a</code>."
+      "definitionRich": "Sistema clássico de configuração de rede Debian, baseado em <code>/etc/network/interfaces</code>. O Proxmox utiliza por padrão a versão reescrita <code>ifupdown2</code>, que permite recarregar a configuração em funcionamento com <code>ifreload -a</code>."
     },
     {
       "term": "initramfs",
       "category": "Linux",
-      "definitionRich": "Sistema de ficheiros inicial em RAM utilizado antes de montar a raiz real. Contém os controladores necessários ao arranque. Após alterações a VFIO, IOMMU ou controladores de armazenamento, regenera-se com <code>update-initramfs -u -k all</code>."
+      "definitionRich": "Sistema de arquivos inicial em RAM utilizado antes de montar a raiz real. Contém os controladores necessários à inicialização. Após alterações a VFIO, IOMMU ou controladores de armazenamento, regenera-se com <code>update-initramfs -u -k all</code>."
     },
     {
       "term": "IOMMU",
@@ -229,7 +229,7 @@
         "AMD-Vi"
       ],
       "category": "Virtualização",
-      "definitionRich": "Funcionalidade de hardware (Intel VT-d / AMD-Vi) necessária para passagem direta de PCIe para VM. Ative-a no firmware e confirme o suporte no kernel. Conforme a plataforma e os valores predefinidos, podem ser necessários <code>intel_iommu=on</code> ou <code>amd_iommu=on</code>.",
+      "definitionRich": "Funcionalidade de hardware (Intel VT-d / AMD-Vi) necessária para passagem direta de PCIe para VM. Ative-a no firmware e confirme o suporte no kernel. Conforme a plataforma e os valores padrão, podem ser necessários <code>intel_iommu=on</code> ou <code>amd_iommu=on</code>.",
       "seeAlso": [
         {
           "label": "Post-Install: Virtualização",
@@ -252,7 +252,7 @@
         "Internet SCSI"
       ],
       "category": "Armazenamento",
-      "definitionRich": "Protocolo de armazenamento em blocos sobre IP: um disco remoto surge como dispositivo SCSI local. Regista-se no Proxmox com <code>pvesm add iscsi</code>.",
+      "definitionRich": "Protocolo de armazenamento em blocos sobre IP: um disco remoto surge como dispositivo SCSI local. Registra-se no Proxmox com <code>pvesm add iscsi</code>.",
       "seeAlso": [
         {
           "label": "Adicionar o alvo iSCSI como armazenamento Proxmox",
@@ -266,7 +266,7 @@
         "Máquina Virtual baseada em Kernel"
       ],
       "category": "Virtualização",
-      "definitionRich": "Módulo do kernel Linux que transforma o anfitrião num hipervisor. Em conjunto com o <strong>QEMU</strong> para emulação de dispositivos, constitui a base das VM Proxmox."
+      "definitionRich": "Módulo do kernel Linux que transforma o host em um hipervisor. Em conjunto com o <strong>QEMU</strong> para emulação de dispositivos, constitui a base das VM Proxmox."
     },
     {
       "term": "LVM",
@@ -288,10 +288,10 @@
         "Linux Containers"
       ],
       "category": "Linux",
-      "definitionRich": "Virtualização ao nível do sistema operativo: espaços de utilizador isolados partilham o kernel do anfitrião. Geralmente tem menos sobrecarga que as VM, com uma fronteira de isolamento diferente. O Proxmox gere LXC com <code>pct</code>.",
+      "definitionRich": "Virtualização ao nível do sistema operacional: espaços de usuário isolados compartilham o kernel do host. Geralmente tem menos sobrecarga que as VM, com uma fronteira de isolamento diferente. O Proxmox gerencia LXC com <code>pct</code>.",
       "seeAlso": [
         {
-          "label": "Gestão de VM e contentores",
+          "label": "Gestão de VM e contêineres",
           "href": "/docs/help-info/vm-ct-commands"
         }
       ]
@@ -299,7 +299,7 @@
     {
       "term": "Lynis",
       "category": "Linux",
-      "definitionRich": "Ferramenta de auditoria de segurança de código aberto da CISOfy. Analisa o anfitrião e apresenta uma pontuação de segurança e recomendações concretas. O ProxMenux instala a versão do repositório GitHub original em vez do pacote Debian mais antigo.",
+      "definitionRich": "Ferramenta de auditoria de segurança de código aberto da CISOfy. Analisa o host e apresenta uma pontuação de segurança e recomendações concretas. O ProxMenux instala a versão do repositório GitHub original em vez do pacote Debian mais antigo.",
       "seeAlso": [
         {
           "label": "Lynis",
@@ -327,7 +327,7 @@
         "Mensagem do Dia"
       ],
       "category": "Linux",
-      "definitionRich": "Texto apresentado após iniciar sessão por SSH, guardado em <code>/etc/motd</code>. A pós-instalação do ProxMenux pode adicionar um cabeçalho; o desinstalador restaura o ficheiro anterior se existir uma cópia."
+      "definitionRich": "Texto apresentado após fazer login por SSH, salvo em <code>/etc/motd</code>. A pós-instalação do ProxMenux pode adicionar um cabeçalho; o desinstalador restaura o arquivo anterior se existir uma cópia."
     },
     {
       "term": "NFS",
@@ -335,7 +335,7 @@
         "Sistema de arquivos de rede"
       ],
       "category": "Armazenamento",
-      "definitionRich": "Protocolo de partilha de ficheiros em rede originário do Unix. Regista-se como armazenamento Proxmox com <code>pvesm add nfs</code>; o ProxMenux também permite configurar clientes e servidores NFS em LXC.",
+      "definitionRich": "Protocolo de compartilhamento de arquivos em rede originário do Unix. Registra-se como armazenamento Proxmox com <code>pvesm add nfs</code>; o ProxMenux também permite configurar clientes e servidores NFS em LXC.",
       "seeAlso": [
         {
           "label": "Gerenciador de armazenamento e compartilhamento",
@@ -368,7 +368,7 @@
     {
       "term": "Repositório no-subscription",
       "category": "Proxmox",
-      "definitionRich": "Repositório de pacotes Proxmox disponível sem subscrição empresarial. Os pacotes passam por menos validação do que no repositório enterprise, recomendado pelo Proxmox para produção. A pós-instalação do ProxMenux permite configurar repositórios.",
+      "definitionRich": "Repositório de pacotes Proxmox disponível sem assinatura empresarial. Os pacotes passam por menos validação do que no repositório enterprise, recomendado pelo Proxmox para produção. A pós-instalação do ProxMenux permite configurar repositórios.",
       "seeAlso": [
         {
           "label": "Post- Install: Configuração Básica",
@@ -382,7 +382,7 @@
         "Open Virtualization Format"
       ],
       "category": "Virtualização",
-      "definitionRich": "Formatos DMTF para distribuir VM portáteis. <strong>OVA</strong> reúne os ficheiros num arquivo TAR; <strong>OVF</strong> descreve a VM em XML com ficheiros de disco associados, geralmente VMDK. A compatibilidade de importação depende do hipervisor de destino e da configuração.",
+      "definitionRich": "Formatos DMTF para distribuir VM portáteis. <strong>OVA</strong> reúne os arquivos em um arquivo TAR; <strong>OVF</strong> descreve a VM em XML com arquivos de disco associados, geralmente VMDK. A compatibilidade de importação depende do hipervisor de destino e da configuração.",
       "seeAlso": [
         {
           "label": "Exportar VM para OVA / OVF",
@@ -415,15 +415,15 @@
         "Proxmox Backup Server"
       ],
       "category": "Proxmox",
-      "definitionRich": "Produto de cópias Proxmox separado, com transferências incrementais, desduplicação e encriptação opcional no cliente para VM e CT. Pode ser destino do vzdump; um servidor separado é preferível a guardar cópias no próprio anfitrião protegido."
+      "definitionRich": "Produto de cópias Proxmox separado, com transferências incrementais, desduplicação e criptografia opcional no cliente para VM e CT. Pode ser destino do vzdump; um servidor separado é preferível a salvar cópias no próprio host protegido."
     },
     {
       "term": "pct",
       "category": "Proxmox",
-      "definitionRich": "Ferramenta de linha de comandos para gerir contentores LXC no Proxmox: <code>pct list / start / stop / shutdown / config / enter / exec / push / pull / destroy</code>.",
+      "definitionRich": "Ferramenta de linha de comandos para gerenciar contêineres LXC no Proxmox: <code>pct list / start / stop / shutdown / config / enter / exec / push / pull / destroy</code>.",
       "seeAlso": [
         {
-          "label": "Gestão de VM e contentores",
+          "label": "Gestão de VM e contêineres",
           "href": "/docs/help-info/vm-ct-commands"
         }
       ]
@@ -434,15 +434,15 @@
         "Proxmox Cluster Filesystem"
       ],
       "category": "Proxmox",
-      "definitionRich": "Sistema de ficheiros virtual baseado em FUSE, montado em <code>/etc/pve/</code>. Replica alterações de configuração entre os nós do cluster: as edições em <code>/etc/pve/</code> são propagadas automaticamente."
+      "definitionRich": "Sistema de arquivos virtual baseado em FUSE, montado em <code>/etc/pve/</code>. Replica alterações de configuração entre os nós do cluster: as edições em <code>/etc/pve/</code> são propagadas automaticamente."
     },
     {
       "term": "pveam",
       "aliases": [
-        "Gestor de dispositivos virtuais Proxmox VE"
+        "Gerenciador de dispositivos virtuais Proxmox VE"
       ],
       "category": "Proxmox",
-      "definitionRich": "Ferramenta do catálogo local de modelos CT. <code>pveam update</code> atualiza o índice; <code>pveam available</code> lista os modelos e <code>pveam download &lt;storage&gt; &lt;template&gt;</code> descarrega um."
+      "definitionRich": "Ferramenta do catálogo local de modelos CT. <code>pveam update</code> atualiza o índice; <code>pveam available</code> lista os modelos e <code>pveam download &lt;storage&gt; &lt;template&gt;</code> baixa um."
     },
     {
       "term": "pveproxy",
@@ -452,7 +452,7 @@
     {
       "term": "pvesm",
       "aliases": [
-        "Gestor de armazenamento Proxmox"
+        "Gerenciador de armazenamento Proxmox"
       ],
       "category": "Proxmox",
       "definitionRich": "Ferramenta CLI para gerenciar armazenamento Proxmox. O <code>pvesm status</code> mostra todos os armazenamentos configurados; o <code>pvesm add &lt;type&gt;</code> registra os novos (NFS, Samba, iSCSI, dir, ZFS, LVM, ...).",
@@ -466,12 +466,12 @@
     {
       "term": "Contêiner privilegiado",
       "category": "Linux",
-      "definitionRich": "Contentor LXC cujo root <em>corresponde ao UID 0 do anfitrião</em>, mantendo namespaces e outras restrições. Tem menor isolamento do que um contentor sem privilégios. GPU, USB e Samba não exigem sempre este modo: permissões e mapeamentos UID são relevantes."
+      "definitionRich": "Contêiner LXC cujo root <em>corresponde ao UID 0 do host</em>, mantendo namespaces e outras restrições. Tem menor isolamento do que um contêiner sem privilégios. GPU, USB e Samba não exigem sempre este modo: permissões e mapeamentos UID são relevantes."
     },
     {
       "term": "ProxMenux Monitor",
       "category": "ProxMenux",
-      "definitionRich": "Painel web opcional do ProxMenux. Apresenta estatísticas do anfitrião em tempo real (CPU, RAM, discos e rede), uma vista de VM e LXC e início de sessão com 2FA, na porta TCP <code>8008</code>.",
+      "definitionRich": "Painel web opcional do ProxMenux. Apresenta estatísticas do host em tempo real (CPU, RAM, discos e rede), uma vista de VM e LXC e login com 2FA, na porta TCP <code>8008</code>.",
       "seeAlso": [
         {
           "label": "ProxMenux Monitor",
@@ -490,13 +490,13 @@
     {
       "term": "qm",
       "aliases": [
-        "Gestor de QEMU"
+        "Gerenciador de QEMU"
       ],
       "category": "Proxmox",
-      "definitionRich": "Ferramenta para gerir VM no Proxmox: <code>qm list / start / stop / shutdown / config / set / destroy / importdisk / migrate</code>. Equivale ao <code>pct</code> para contentores.",
+      "definitionRich": "Ferramenta para gerenciar VM no Proxmox: <code>qm list / start / stop / shutdown / config / set / destroy / importdisk / migrate</code>. Equivale ao <code>pct</code> para contêineres.",
       "seeAlso": [
         {
-          "label": "Gestão de VM e contentores",
+          "label": "Gestão de VM e contêineres",
           "href": "/docs/help-info/vm-ct-commands"
         }
       ]
@@ -514,7 +514,7 @@
     {
       "term": "rclone",
       "category": "Linux",
-      "definitionRich": "Ferramenta de linha de comandos compatível com vários serviços, incluindo Google Drive, Dropbox, OneDrive, Mega e S3. O guia de cópias na nuvem utiliza-a para montar armazenamento remoto num diretório para arquivos vzdump.",
+      "definitionRich": "Ferramenta de linha de comandos compatível com vários serviços, incluindo Google Drive, Dropbox, OneDrive, Mega e S3. O guia de cópias na nuvem utiliza-a para montar armazenamento remoto em um diretório para arquivos vzdump.",
       "seeAlso": [
         {
           "label": "Cópias para a nuvem pessoal",
@@ -525,7 +525,7 @@
     {
       "term": "Samba / SMB / CIFS",
       "category": "Armazenamento",
-      "definitionRich": "Família de protocolos Microsoft para partilha de ficheiros. <strong>SMB</strong> é o protocolo, <strong>Samba</strong> a implementação aberta para Linux e <strong>CIFS</strong> um dialeto SMB antigo. Regista-se no Proxmox com <code>pvesm add cifs</code>.",
+      "definitionRich": "Família de protocolos Microsoft para compartilhamento de arquivos. <strong>SMB</strong> é o protocolo, <strong>Samba</strong> a implementação aberta para Linux e <strong>CIFS</strong> um dialeto SMB antigo. Registra-se no Proxmox com <code>pvesm add cifs</code>.",
       "seeAlso": [
         {
           "label": "Gerenciador de armazenamento e compartilhamento",
@@ -536,7 +536,7 @@
     {
       "term": "SeaBIOS",
       "category": "Virtualização",
-      "definitionRich": "Implementação aberta de BIOS clássico utilizada pelo QEMU. Firmware predefinido de novas VM, salvo escolha de OVMF. Adequado a sistemas antigos e instalações Linux que não exigem UEFI."
+      "definitionRich": "Implementação aberta de BIOS clássico utilizada pelo QEMU. Firmware padrão de novas VM, salvo escolha de OVMF. Adequado a sistemas antigos e instalações Linux que não exigem UEFI."
     },
     {
       "term": "smartctl / SMART",
@@ -559,12 +559,12 @@
     {
       "term": "systemd / systemctl / journalctl",
       "category": "Linux",
-      "definitionRich": "Sistema de inicialização Debian / Proxmox. <code>systemctl</code> gere serviços: iniciar, parar, ativar e consultar o estado. <code>journalctl</code> lê o registo binário do <code>systemd-journald</code>."
+      "definitionRich": "Sistema de inicialização Debian / Proxmox. <code>systemctl</code> gerencia serviços: iniciar, parar, ativar e consultar o estado. <code>journalctl</code> lê o registro binário do <code>systemd-journald</code>."
     },
     {
       "term": "sysctl",
       "category": "Linux",
-      "definitionRich": "Ferramenta para ler e alterar parâmetros do kernel. As definições persistentes ficam normalmente em <code>/etc/sysctl.d/*.conf</code>; o suporte de <code>/etc/sysctl.conf</code> depende do serviço de carregamento. A pós-instalação do ProxMenux oferece um perfil sysctl.",
+      "definitionRich": "Ferramenta para ler e alterar parâmetros do kernel. As configurações persistentes ficam normalmente em <code>/etc/sysctl.d/*.conf</code>; o suporte de <code>/etc/sysctl.conf</code> depende do serviço de carregamento. A pós-instalação do ProxMenux oferece um perfil sysctl.",
       "seeAlso": [
         {
           "label": "Pós- instalação: Rede",
@@ -586,7 +586,7 @@
     {
       "term": "udev",
       "category": "Linux",
-      "definitionRich": "Gestor de dispositivos Linux. Responde a eventos de hardware e cria ou remove entradas em <code>/dev</code>. As regras em <code>/etc/udev/rules.d/</code> podem fixar nomes de interface por MAC, criar dispositivos NVIDIA ao carregar o controlador e outras tarefas."
+      "definitionRich": "Gerenciador de dispositivos Linux. Responde a eventos de hardware e cria ou remove entradas em <code>/dev</code>. As regras em <code>/etc/udev/rules.d/</code> podem fixar nomes de interface por MAC, criar dispositivos NVIDIA ao carregar o controlador e outras tarefas."
     },
     {
       "term": "UID / GID idmap",
@@ -594,7 +594,7 @@
         "Mudança UID"
       ],
       "category": "Linux",
-      "definitionRich": "Com o mapeamento predefinido dos LXC <strong>sem privilégios</strong>, UID e GID no anfitrião são deslocados em <code>+100000</code>: UID 0 corresponde a 100000 e 1000 a 101000. Mapeamentos personalizados podem diferir; os proprietários nos bind mounts devem corresponder ao mapeamento.",
+      "definitionRich": "Com o mapeamento padrão dos LXC <strong>sem privilégios</strong>, UID e GID no host são deslocados em <code>+100000</code>: UID 0 corresponde a 100000 e 1000 a 101000. Mapeamentos personalizados podem diferir; os proprietários nos bind mounts devem corresponder ao mapeamento.",
       "seeAlso": [
         {
           "label": "Pontos de montagem LXC",
@@ -605,7 +605,7 @@
     {
       "term": "Contêiner sem privilégios",
       "category": "Linux",
-      "definitionRich": "Contentor LXC cujo root corresponde a um UID sem privilégios no anfitrião, normalmente 100000. Reduz os privilégios, embora partilhe o kernel. O acesso ao hardware pode ser configurado com permissões e mapeamentos adequados; o modo privilegiado não é sempre necessário."
+      "definitionRich": "Contêiner LXC cujo root corresponde a um UID sem privilégios no host, normalmente 100000. Reduz os privilégios, embora compartilhe o kernel. O acesso ao hardware pode ser configurado com permissões e mapeamentos adequados; o modo privilegiado não é sempre necessário."
     },
     {
       "term": "VFIO",
@@ -613,7 +613,7 @@
         "Função virtual E/S"
       ],
       "category": "Virtualização",
-      "definitionRich": "Sistema do kernel Linux para controladores seguros no espaço de utilizador, usado na atribuição direta de dispositivos PCIe a VM. Utiliza <code>vfio</code>, <code>vfio_iommu_type1</code> e <code>vfio_pci</code>, configurados em <code>/etc/modprobe.d/vfio.conf</code>.",
+      "definitionRich": "Sistema do kernel Linux para controladores seguros no espaço de usuário, usado na atribuição direta de dispositivos PCIe a VM. Utiliza <code>vfio</code>, <code>vfio_iommu_type1</code> e <code>vfio_pci</code>, configurados em <code>/etc/modprobe.d/vfio.conf</code>.",
       "seeAlso": [
         {
           "label": "Post-Install: Virtualização",
@@ -624,7 +624,7 @@
     {
       "term": "VirtIO",
       "category": "Virtualização",
-      "definitionRich": "Família de controladores paravirtualizados para rede, armazenamento, memória dinâmica e GPU. Evitam a sobrecarga de emular hardware antigo, como e1000 ou IDE. O convidado precisa dos controladores: integrados no Linux e disponíveis numa ISO separada para Windows."
+      "definitionRich": "Família de controladores paravirtualizados para rede, armazenamento, memória dinâmica e GPU. Evitam a sobrecarga de emular hardware antigo, como e1000 ou IDE. O convidado precisa dos controladores: integrados no Linux e disponíveis em uma ISO separada para Windows."
     },
     {
       "term": "VLAN",
@@ -640,10 +640,10 @@
         "Máquina Virtual"
       ],
       "category": "Proxmox",
-      "definitionRich": "Máquina virtual gerida pelo Proxmox com QEMU/KVM, com kernel próprio. O VMID numérico corresponde a <code>/etc/pve/qemu-server/&lt;VMID&gt;.conf</code>. Geralmente tem mais sobrecarga que LXC, com isolamento através de um kernel separado.",
+      "definitionRich": "Máquina virtual gerenciada pelo Proxmox com QEMU/KVM, com kernel próprio. O VMID numérico corresponde a <code>/etc/pve/qemu-server/&lt;VMID&gt;.conf</code>. Geralmente tem mais sobrecarga que LXC, com isolamento através de um kernel separado.",
       "seeAlso": [
         {
-          "label": "Gestão de VM e contentores",
+          "label": "Gestão de VM e contêineres",
           "href": "/docs/help-info/vm-ct-commands"
         }
       ]
@@ -651,10 +651,10 @@
     {
       "term": "vzdump",
       "category": "Proxmox",
-      "definitionRich": "Ferramenta de cópias Proxmox para VM e CT. Os arquivos em ficheiros <strong>não são incrementais</strong>; os destinos PBS permitem transferências incrementais. As tarefas configuram modo (snapshot / suspend / stop), compressão (como zstd, gzip ou lzo), retenção e notificações.",
+      "definitionRich": "Ferramenta de cópias Proxmox para VM e CT. Os arquivos em arquivos <strong>não são incrementais</strong>; os destinos PBS permitem transferências incrementais. As tarefas configuram modo (snapshot / suspend / stop), compressão (como zstd, gzip ou lzo), retenção e notificações.",
       "seeAlso": [
         {
-          "label": "Comandos de cópias e restauro",
+          "label": "Comandos de cópias e restauração",
           "href": "/docs/help-info/backup-commands"
         }
       ]
@@ -665,7 +665,7 @@
         "Zettabyte File System"
       ],
       "category": "Armazenamento",
-      "definitionRich": "Sistema de ficheiros e gestor de volumes com snapshots, replicação send/receive, somas de verificação e compressão. Pode reparar dados corrompidos se existir uma cópia redundante válida. A cache <strong>ARC</strong> utiliza RAM e pode ser limitada.",
+      "definitionRich": "Sistema de arquivos e gerenciador de volumes com snapshots, replicação send/receive, somas de verificação e compressão. Pode reparar dados corrompidos se existir uma cópia redundante válida. A cache <strong>ARC</strong> utiliza RAM e pode ser limitada.",
       "seeAlso": [
         {
           "label": "Comandos de gestão ZFS",

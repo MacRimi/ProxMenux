@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "Host: montar compartilhamento NFS | Documentação ProxMenux",
-    "description": "Monte uma exportação NFS externa no host Proxmox como armazenamento Proxmox com pvesm add nfs, como montagem fstab independente que não aparece em Datacenter > Storage ou das duas formas. O método fstab é adequado para partilhar o caminho com contentores LXC por bind mount sem o registar como armazenamento Proxmox.",
+    "description": "Monte uma exportação NFS externa no host Proxmox como armazenamento Proxmox com pvesm add nfs, como montagem fstab independente que não aparece em Datacenter > Storage ou das duas formas. O método fstab é adequado para compartilhar o caminho com contêineres LXC por bind mount sem o registrar como armazenamento Proxmox.",
     "ogTitle": "Host: montar compartilhamento NFS | Documentação ProxMenux",
     "ogDescription": "Monte uma exportação NFS externa no host Proxmox via pvesm, fstab ou ambos. A opção fstab é ideal para bind mounts LXC."
   },
   "header": {
     "title": "Host: montar compartilhamento NFS no host",
-    "description": "Montar uma exportação NFS externa (de um NAS, outro servidor, uma partilha homelab...) na máquina Proxmox. Escolha um ou ambos os métodos: registre-o como armazenamento Proxmox (visível no Datacenter > Armazenamento) e/ou adicione uma montagem /etc/fstab simples em um caminho que você escolher (útil para montar o compartilhamento em recipientes LXC sem expô-lo como armazenamento Proxmox).",
+    "description": "Montar uma exportação NFS externa (de um NAS, outro servidor, um compartilhamento homelab...) na máquina Proxmox. Escolha um ou ambos os métodos: registre-o como armazenamento Proxmox (visível no Datacenter > Armazenamento) e/ou adicione uma montagem /etc/fstab simples em um caminho que você escolher (útil para montar o compartilhamento em contêineres LXC sem expô-lo como armazenamento Proxmox).",
     "section": "Armazenamento e Compartilhamento · Máquina"
   },
   "intro": {
@@ -17,15 +17,15 @@
   "opening": {
     "heading": "Abrir a ferramenta",
     "body": "No menu principal do ProxMenux, abra <strong>Storage &amp; Share Manager → Add NFS share as Proxmox Storage</strong>. Você verá este sub-menu com quatro opções (mais Exit):",
-    "imageAlt": "Menu do gestor de máquinas NFS — Montar / Ver / Remover / Teste de conectividade"
+    "imageAlt": "Menu do gerenciador de máquinas NFS — Montar / Ver / Remover / Teste de conectividade"
   },
   "howRuns": {
     "heading": "Como o script é executado",
-    "body": "O fluxo tem duas fases com separação clara entre \"descobrir, validar e escolher\" e \"na verdade montagem / gravação config\". Depois de seleccionar uma exportação, escolha os métodos de montagem através de uma lista de verificação; o resto das janelas só pede parâmetros para os métodos que seleccionou. Até à confirmação final, nem <code>/etc/pve/storage.cfg</code> nem <code>/etc/fstab</code> são tocados."
+    "body": "O fluxo tem duas fases com separação clara entre \"descobrir, validar e escolher\" e \"na verdade montagem / gravação config\". Depois de selecionar uma exportação, escolha os métodos de montagem através de uma lista de verificação; o resto das janelas só pede parâmetros para os métodos que selecionou. Até à confirmação final, nem <code>/etc/pve/storage.cfg</code> nem <code>/etc/fstab</code> são tocados."
   },
   "modes": {
     "heading": "Selector de métodos de montagem (duas opções, marca uma ou ambas)",
-    "intro": "Após selecionar e validar a exportação, o ProxMenux mostra uma lista de verificação com os dois métodos de montagem. Pode marcar um ou ambos. Se carregar em OK sem marcar nada, a janela reaparece até escolher pelo menos uma opção ou carregar em Cancelar para sair do fluxo.",
+    "intro": "Após selecionar e validar a exportação, o ProxMenux mostra uma lista de verificação com os dois métodos de montagem. Pode marcar um ou ambos. Se pressionar OK sem marcar nada, a janela reaparece até escolher pelo menos uma opção ou pressionar Cancelar para sair do fluxo.",
     "imageAlt": "Lista de verificação do método de montagem com opções pvesm e fstab",
     "headerMethod": "Método",
     "headerMount": "Caminho de montagem",
@@ -34,7 +34,7 @@
     "rows": [
       {
         "method": "<strong>Como armazenamento Proxmox (pvesm)</strong>",
-        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (gerido pela Proxmox)",
+        "mountRich": "<code>/mnt/pve/&lt;storage-id&gt;</code> (gerenciado pela Proxmox)",
         "ui": "Sim",
         "useCase": "Imagens de disco VM, backups, ISOs, modelos LXC — qualquer coisa que precise aparecer na interface Proxmox."
       },
@@ -58,8 +58,8 @@
     "heading": "Método A — Armazenagem Proxmox (pvesm)",
     "intro": "Se o <em>Como armazenamento Proxmox</em> estiver marcado, o ProxMenux roda o fluxo original do pvesm:",
     "items": [
-      "<strong>Storage ID</strong> — o que o Proxmox chamará de armazenamento. O padrão é <code>nfs-&lt;server-ip-with-dashes&gt;</code>. Apenas são aceites letras, dígitos, <code>-</code> e <code>_</code>.",
-      "<strong>Tipos de conteúdo</strong> — Proxmox liga as categorias de conteúdo aos volumes de armazenamento; escolha o que este NFS pode conter:"
+      "<strong>Storage ID</strong> — o que o Proxmox chamará de armazenamento. O padrão é <code>nfs-&lt;server-ip-with-dashes&gt;</code>. Apenas são aceitos letras, dígitos, <code>-</code> e <code>_</code>.",
+      "<strong>Tipos de conteúdo</strong> — Proxmox vincula as categorias de conteúdo aos volumes de armazenamento; escolha o que este NFS pode conter:"
     ],
     "headerType": "Tipo de conteúdo",
     "headerAllows": "O que permite",
@@ -101,7 +101,7 @@
     "heading": "Método B — Montagem fstab da máquina",
     "intro": "Se <em>Somente montagem fstab no host</em> está marcada, ProxMenux pede um caminho de montagem do host e opções persistentes, então monta e escreve a entrada para <code>/etc/fstab</code>:",
     "items": [
-      "<strong>Caminho de montagem no host</strong> — padrão <code>/mnt/&lt;export-basename&gt;</code>. Deve ser um caminho absoluto. Se algo já estiver montado lá, ou se existir uma entrada fstab para o mesmo caminho, o ProxMenux avisa-o e oferece-lhe para o substituir.",
+      "<strong>Caminho de montagem no host</strong> — padrão <code>/mnt/&lt;export-basename&gt;</code>. Deve ser um caminho absoluto. Se algo já estiver montado lá, ou se existir uma entrada fstab para o mesmo caminho, o ProxMenux avisa e oferece substituí-la.",
       "<strong>Opções de montagem</strong> — <em>Leitura/gravação</em> (padrão: <code>rw,hard,nofail,_netdev,rsize=131072,wsize=131072,timeo=600,retrans=2</code>), <em>Somente leitura</em>, <em>Personalizado</em> (informe suas opções)."
     ],
     "appliesIntro": "Uma vez confirmado, o script:",
@@ -115,7 +115,7 @@
     "lxcTitle": "Usando a montagem fstab de um LXC",
     "lxcBody": "O script mostra um comando <code>pct set</code> para bind mount, como <code>pct set &lt;ctid&gt; -mp0 /mnt/&lt;path&gt;,mp=/mnt/&lt;ct-path&gt;,shared=1,backup=0</code>. Ou use o <mountLink>LXC Mount Manager</mountLink>, que detecta montagens fstab. <strong>Nada é alterado dentro do contêiner</strong>. O acesso de um CT sem privilégios depende das permissões do servidor para seus UIDs/GIDs mapeados. O script apenas tenta ajustar permissões pelo host; não garante exportações graváveis nem padrões de fabricantes. Consulte Solução de problemas se o acesso falhar.",
     "noUiTitle": "A montagem do fstab NÃO é um armazenamento Proxmox",
-    "noUiBody": "A montagem de fstab do hospedeiro é invisível para a interface web Proxmox — por design. Ele não aparece no <em>Datacenter > Storage</em>, você não pode selecioná-lo no criador do VM / CT, e as tarefas de backup do Proxmox não podem segmentá-lo. É puramente um caminho do sistema de arquivos host. Se você também quiser integração com UI, marque os métodos <em>ambos</em> no coletor."
+    "noUiBody": "A montagem de fstab do host é invisível para a interface web Proxmox — por design. Ele não aparece no <em>Datacenter > Storage</em>, você não pode selecioná-lo no criador do VM / CT, e as tarefas de backup do Proxmox não podem segmentá-lo. É puramente um caminho do sistema de arquivos host. Se você também quiser integração com UI, marque os métodos <em>ambos</em> no coletor."
   },
   "manual": {
     "heading": "Equivalente manual",
@@ -162,12 +162,12 @@
       {
         "href": "/docs/storage-share/lxc-mount-points",
         "label": "Gerenciador de montagem LXC",
-        "tailRich": " — montar a via apenas para fstab <code>/mnt/&lt;path&gt;</code> num ou mais contentores."
+        "tailRich": " — montar a via apenas para fstab <code>/mnt/&lt;path&gt;</code> em um ou mais contêineres."
       },
       {
         "href": "/docs/storage-share/lxc-nfs-client",
         "label": "Cliente NFS em LXC",
-        "tail": " — alternativa: montagem NFS directamente a partir de dentro de um contentor privilegiado (sem passar pelo host)."
+        "tail": " — alternativa: montagem NFS diretamente a partir de dentro de um contêiner privilegiado (sem passar pelo host)."
       }
     ]
   }

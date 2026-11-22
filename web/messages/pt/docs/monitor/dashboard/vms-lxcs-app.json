@@ -1,24 +1,24 @@
 {
   "meta": {
-    "title": "Separador App LXC: deteção, ligações e versões | ProxMenux",
+    "title": "Aba App LXC: detecção, links e versões | ProxMenux",
     "description": "Descubra e registre aplicativos LXC, crie links web e, opcionalmente, rastreie versões instaladas e disponíveis."
   },
   "header": {
-    "title": "Separador App LXC: deteção, ligações e versões",
-    "description": "Dê a cada aplicação LXC uma identidade persistente, acesso web e dados opcionais de versão sem ligar o registo às atualizações."
+    "title": "Aba App LXC: detecção, links e versões",
+    "description": "Dê a cada aplicação LXC uma identidade persistente, acesso web e dados opcionais de versão sem vincular o registro às atualizações."
   },
   "intro": {
     "p1": "A aba <strong>App</strong> registra quais aplicativos pertencem a um LXC. Um registro pode conter apenas um nome e web link, ou também incluir um detector de versão instalado e uma fonte upstream.",
-    "p2": "O procedimento que altera o software configura-se no <link>separador Atualizações</link>. Guardar uma aplicação nunca executa um instalador nem atualizador.",
+    "p2": "O procedimento que altera o software configura-se na <link>aba Atualizações</link>. Salvar uma aplicação nunca executa um instalador nem atualizador.",
     "callout": "Registro, rastreamento de versões e atualização são três capacidades independentes. Qualquer um pode ser usado sem exigir os outros dois.",
-    "dashboardTitle": "Desde o registo até ao lançador Apps",
-    "dashboard": "Cada ligação web guardada aqui aparece também como cartão no <appsLink>separador Apps</appsLink> principal. Esta página LXC continua a ser a referência para nome, logótipo, ligações e acompanhamento de versões."
+    "dashboardTitle": "Desde o registro até ao lançador Apps",
+    "dashboard": "Cada link web salva aqui aparece também como cartão na <appsLink>aba Apps</appsLink> principal. Esta página LXC continua sendo a referência para nome, logotipo, links e acompanhamento de versões."
   },
   "overview": {
     "heading": "O que um registro de aplicação pode fornecer",
     "lead": "Um único registro salvo pode incluir:",
     "items": [
-      "Um nome visível e um logótipo adaptado ao tema.",
+      "Um nome visível e um logotipo adaptado ao tema.",
       "Um ou mais links web clicáveis construídos a partir do endereço LXC, esquema e porta salva.",
       "Um detector opcional para a versão atualmente instalada dentro do LXC.",
       "Uma fonte opcional GitHub, HTTP JSON ou Docker Hub para a última versão disponível.",
@@ -27,37 +27,37 @@
     ]
   },
   "discovery": {
-    "heading": "Deteção em cache e Procurar aplicações",
+    "heading": "Detecção em cache e Procurar aplicações",
     "lead": "As sugestões de aplicação fazem parte do cache modal per-LXC. A varredura inicial prepara-os em segundo plano para que a abertura da aba App possa mostrar resultados em cache imediatamente.",
     "items": [
       "Abrir a guia Aplicativo <strong>não</strong> inicia uma nova varredura de catálogo e não consulta repetidamente o LXC.",
-      "<strong>Procurar aplicações</strong> executa uma nova deteção nesse LXC. Utilize após instalar software enquanto o ProxMenux já está em execução.",
+      "<strong>Procurar aplicações</strong> executa uma nova detecção nesse LXC. Utilize após instalar software enquanto o ProxMenux já está em execução.",
       "A lista anterior permanece visível enquanto a varredura explícita é executada. Novas correspondências são adicionadas quando terminar.",
-      "Se não houver novas correspondências, o resultado aparece junto às ações e <strong>Registar aplicação</strong> continua disponível para introdução manual.",
+      "Se não houver novas correspondências, o resultado aparece junto às ações e <strong>Registrar aplicação</strong> continua disponível para introdução manual.",
       "Salvar, remover ou restaurar um aplicativo atualiza o mesmo cache imediatamente. Iniciando ou restaurando um LXC atualiza apenas esse hóspede através de seu evento de ciclo de vida existente."
     ],
-    "callout": "Uma sugestão não é um registo. Mantém-se só de leitura até premir <strong>Registar</strong> e guardar o formulário."
+    "callout": "Uma sugestão não é um registro. Mantém-se somente leitura até pressionar <strong>Registrar</strong> e salvar o formulário."
   },
   "registration": {
-    "heading": "Registar uma aplicação",
+    "heading": "Registrar uma aplicação",
     "lead": "Uma sugestão detectada e um registro manual usam o mesmo editor:",
     "steps": [
-      "Prima <strong>Registar</strong> numa sugestão ou <strong>Registar aplicação</strong> para escolher no catálogo ou introduzir um nome personalizado.",
+      "Pressione <strong>Registrar</strong> em uma sugestão ou <strong>Registrar aplicação</strong> para escolher no catálogo ou inserir um nome personalizado.",
       "Reveja o nome e logotipo propostos pelo catálogo.",
       "Adicione os links da web necessários. Portas de escuta detectadas são oferecidas como atalhos, mas nenhuma é salva automaticamente.",
-      "Deixe <strong>Acompanhar versão disponível</strong> desativado em registos só com ligações ou ative-o e reveja o detetor da versão instalada e a origem da versão disponível.",
-      "Com acompanhamento ativo, utilize <strong>Testar detetor</strong> e guarde o registo.",
-      "Prima <strong>Concluído</strong> após editar. App e Atualizações usam o mesmo registo atualizado em cache."
+      "Deixe <strong>Acompanhar versão disponível</strong> desativado em registros só com links ou ative-o e reveja o detector da versão instalada e a origem da versão disponível.",
+      "Com acompanhamento ativo, utilize <strong>Testar detector</strong> e salve o registro.",
+      "Pressione <strong>Concluído</strong> após editar. App e Atualizações usam o mesmo registro atualizado em cache."
     ]
   },
   "catalog": {
-    "heading": "Registo assistido por catálogo",
+    "heading": "Registro assistido por catálogo",
     "lead": "O catálogo fornece padrões, mas o registro salvo permanece editável.",
     "items": [
       "Os resultados da pesquisa podem preencher o nome canônico, logotipo e portas web comuns.",
       "Detectores de versão conhecidos são baseados em nomes de pacotes reais, binários, arquivos, distribuições Python, etiquetas OCI ou comandos em vez de uma suposição universal <code>/root/.app</code>.",
       "As sobreposições de tempo de execução verificadas têm precedência quando uma instalação usa um caminho que difere dos metadados do instalador.",
-      "Marcadores Community Scripts como <code>/root/.slug</code> continuam a ser um sinal de compatibilidade para novas instalações auxiliares, não o único detector.",
+      "Marcadores Community Scripts como <code>/root/.slug</code> continuam sendo um sinal de compatibilidade para novas instalações auxiliares, não o único detector.",
       "Cada valor proposto pode ser editado antes de salvar para cobrir instaladores oficiais e instalações manuais."
     ]
   },
@@ -66,7 +66,7 @@
     "lead": "Para um LXC cuja plataforma primária é Docker, <strong>Docker</strong> é o aplicativo registrado no nível LXC.",
     "items": [
       "Uma carga de trabalho containerizada como Portainer, Frigate ou Vaultwarden não é sugerida como uma aplicação nativa independente LXC.",
-      "Os serviços Docker em execução com portas TCP publicadas são propostos como ligações web opcionais no editor Docker.",
+      "Os serviços Docker em execução com portas TCP publicadas são propostos como links web opcionais no editor Docker.",
       "Cada link sugerido mostra o serviço, porta host e porta container. Apenas os links que fornecem uma interface web devem ser salvos.",
       "O logotipo Docker global é usado quando um link não tem logotipo específico. Um logotipo por-link substitui-o quando um está configurado.",
       "Após o registro do Docker, o Docker Engine e as atualizações de imagem são mostradas juntos em sua seção na aba Atualizações."
@@ -74,7 +74,7 @@
     "callout": "Esta estrutura impede que uma carga de trabalho Docker pareça um software instalado diretamente no LXC preservando links rápidos para suas interfaces."
   },
   "webLinks": {
-    "heading": "Ligações Web e logotipos",
+    "heading": "Links Web e logotipos",
     "lead": "Os links Web funcionam com ou sem rastreamento de versões.",
     "items": [
       "Cada link armazena um esquema, porta, descrição opcional e URL de logotipo opcional.",
@@ -86,7 +86,7 @@
   },
   "tracking": {
     "heading": "Rastreamento opcional da versão",
-    "lead": "O acompanhamento combina um detetor da versão instalada com uma origem opcional da versão disponível. Os dois lados são verificados separadamente.",
+    "lead": "O acompanhamento combina um detector da versão instalada com uma origem opcional da versão disponível. Os dois lados são verificados separadamente.",
     "colMethod": "Método de versão instalada",
     "colUse": "Usar",
     "detectorRows": [
@@ -104,7 +104,7 @@
       },
       {
         "method": "docker label / docker exec",
-        "use": "Lê um rótulo de versão OCI ou executa um comando de versão dentro de um recipiente Docker."
+        "use": "Lê um rótulo de versão OCI ou executa um comando de versão dentro de um contêiner Docker."
       },
       {
         "method": "python distribution",
@@ -120,7 +120,7 @@
       },
       {
         "method": "OCI image",
-        "use": "Para contentores instalados por OCI manager Apps. Lê as versões da aplicação e da imagem no registo da instalação e compara o digest instalado com o publicado pelo registo de imagens. Não requer configuração."
+        "use": "Para contêineres instalados por OCI manager Apps. Lê as versões da aplicação e da imagem no registro da instalação e compara o digest instalado com o publicado pelo registro de imagens. Não requer configuração."
       }
     ],
     "sourcesHeading": "Origens da versão disponível",
@@ -133,11 +133,11 @@
     "regexHeading": "Escrever a expressão de captura",
     "regexLead": "A expressão regular tem de devolver a versão no <strong>primeiro grupo de captura</strong>.",
     "regexRules": [
-      "Coincidir com o texto emitido pelo binário, ficheiro, comando ou origem da marca seleccionado; não adivinhar um caminho genérico.",
+      "Coincidir com o texto emitido pelo binário, arquivo, comando ou origem da marca selecionado; não adivinhar um caminho genérico.",
       "Escape os pontos literais como <code>\\.</code> para não corresponderem a caracteres arbitrários.",
       "Permita um <code>v</code> inicial apenas se a origem o puder incluir.",
       "Inclua sufixos como pré-lançamento ou revisões distro apenas quando eles são significativos para a comparação.",
-      "Utilize <strong>Testar detetor</strong> antes de guardar e confirme que a versão instalada apresentada corresponde ao LXC."
+      "Utilize <strong>Testar detector</strong> antes de salvar e confirme que a versão instalada apresentada corresponde ao LXC."
     ],
     "regexExampleLead": "Captura comum de versão semântica:",
     "regexExample": "v?(\\d+\\.\\d+\\.\\d+)",
@@ -145,7 +145,7 @@
   },
   "updater": {
     "heading": "Rastreamento e atualização de versões são independentes",
-    "lead": "O <link>separador Atualizações</link> cria uma secção de aplicação logo que um registo é guardado.",
+    "lead": "A <link>aba Atualizações</link> cria uma seção de aplicação logo que um registro é salvo.",
     "items": [
       "Um registro somente de links mostra que o rastreamento de versões não está configurado, mas ainda pode receber um comando de atualização personalizado.",
       "Um aplicativo com rastreamento mas sem um método executável mostra uma mensagem neutra pedindo um comando personalizado.",
@@ -176,13 +176,13 @@
       },
       {
         "state": "Rastreamento desativado",
-        "display": "Apenas ligações Web; nenhum bloco de comparação de versões",
+        "display": "Apenas links Web; nenhum bloco de comparação de versões",
         "meaning": "O registro permanece válido e ainda pode ter um updater."
       },
       {
         "state": "Erro de verificação",
         "display": "Explicação a âmbar no cartão",
-        "meaning": "O estado guardado anterior continua visível enquanto é comunicado o erro do detetor ou da origem da versão disponível."
+        "meaning": "O estado salvo anterior continua visível enquanto é comunicado o erro do detector ou da origem da versão disponível."
       }
     ]
   },
@@ -190,11 +190,11 @@
     "heading": "Gerenciar aplicativos salvos e sugeridos",
     "lead": "As ações na parte inferior da aba têm papéis distintos:",
     "items": [
-      "<strong>Procurar aplicações</strong> atualiza a deteção apenas neste LXC.",
-      "<strong>Registe outra aplicação</strong> abre o catálogo e o editor manual sem voltar a analisar o LXC.",
+      "<strong>Procurar aplicações</strong> atualiza a detecção apenas neste LXC.",
+      "<strong>Registre outra aplicação</strong> abre o catálogo e o editor manual sem voltar a analisar o LXC.",
       "<strong>Editar</strong> mostra em cada cartão Remover, Verificar, notificações e Editar campos.",
-      "<strong>Ocultar</strong> remove uma sugestão indesejada. As deteções ocultas podem ser restauradas na vista de registo.",
-      "<strong>Verificar</strong> atualiza os dados de versão da aplicação guardada selecionada; não procura novas aplicações."
+      "<strong>Ocultar</strong> remove uma sugestão indesejada. As detecções ocultas podem ser restauradas na vista de registro.",
+      "<strong>Verificar</strong> atualiza os dados de versão da aplicação salva selecionada; não procura novas aplicações."
     ]
   },
   "troubleshooting": {
@@ -204,7 +204,7 @@
     "rows": [
       {
         "problem": "O software foi instalado após o início do ProxMenux",
-        "resolution": "Prima Procurar aplicações. A análise explícita atualiza as sugestões em cache desse LXC."
+        "resolution": "Pressione Procurar aplicações. A análise explícita atualiza as sugestões em cache desse LXC."
       },
       {
         "problem": "Nenhuma aplicação foi detectada",
@@ -212,7 +212,7 @@
       },
       {
         "problem": "O detector sugerido devolve a versão errada",
-        "resolution": "Abra Editar campos, escolha o pacote, binário ou caminho de ficheiro real e teste o detetor antes de guardar."
+        "resolution": "Abra Editar campos, escolha o pacote, binário ou caminho de arquivo real e teste o detector antes de salvar."
       },
       {
         "problem": "Uma carga de trabalho Docker não é oferecida como uma aplicação LXC",
@@ -231,10 +231,10 @@
     },
     "webLinks": {
       "alt": "Cartão de aplicação LXC salvo contendo um link web clicável",
-      "caption": "Um registo só com ligações é válido: o acompanhamento pode ficar desativado e o atualizador pode ser adicionado separadamente."
+      "caption": "Um registro só com links é válido: o acompanhamento pode ficar desativado e o atualizador pode ser adicionado separadamente."
     },
     "tracking": {
-      "alt": "Campos opcionais do detetor da versão instalada e da origem da versão disponível",
+      "alt": "Campos opcionais do detector da versão instalada e da origem da versão disponível",
       "caption": "A detecção de versão instalada e a fonte upstream são configuradas e testadas separadamente."
     },
     "card": {

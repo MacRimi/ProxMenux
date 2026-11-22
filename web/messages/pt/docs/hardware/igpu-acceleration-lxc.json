@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "Adicionar GPU ao LXC | Documentação ProxMenux",
-    "description": "Partilhe GPU Intel, AMD ou NVIDIA com LXC. O ProxMenux configura dispositivos, grupos e bibliotecas conforme a distribuição; a aplicação tem de suportar e configurar a aceleração."
+    "description": "Compartilhe GPU Intel, AMD ou NVIDIA com LXC. O ProxMenux configura dispositivos, grupos e bibliotecas conforme a distribuição; a aplicação tem de suportar e configurar a aceleração."
   },
   "header": {
     "title": "Adicionar GPU ao LXC",
-    "description": "Partilha acesso GPU com LXC através dos dispositivos do anfitrião. O controlador permanece no anfitrião; as aplicações exigem bibliotecas compatíveis e configuração própria.",
+    "description": "Compartilhamento acesso GPU com LXC através dos dispositivos do host. O controlador permanece no host; as aplicações exigem bibliotecas compatíveis e configuração própria.",
     "section": "Hardware: GPUs e Coral-TPU"
   },
   "intro": {
     "title": "O que faz",
-    "body": "Adiciona entradas <code>dev&lt;N&gt;</code> a <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> para os nós <code>/dev/dri/*</code>, <code>/dev/kfd</code> ou <code>/dev/nvidia*</code> aplicáveis. Inicia o contentor, instala pacotes userspace da sua distribuição e, para Intel/AMD, alinha os grupos <code>video</code> e <code>render</code>. A aceleração das aplicações continua a exigir hardware, bibliotecas e configuração da aplicação compatíveis."
+    "body": "Adiciona entradas <code>dev&lt;N&gt;</code> a <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> para os nós <code>/dev/dri/*</code>, <code>/dev/kfd</code> ou <code>/dev/nvidia*</code> aplicáveis. Inicia o contêiner, instala pacotes userspace da sua distribuição e, para Intel/AMD, alinha os grupos <code>video</code> e <code>render</code>. A aceleração das aplicações continua exigindo hardware, bibliotecas e configuração da aplicação compatíveis."
   },
   "compare": {
-    "heading": "Partilha LXC ou atribuição direta a uma VM",
-    "intro": "O LXC partilha o kernel e pode <em>partilhar</em> a GPU entre anfitrião e contentores. Com <vmLink>atribuição completa a uma VM</vmLink>, o dispositivo fica dedicado à VM e indisponível para o controlador do anfitrião.",
+    "heading": "Compartilhamento LXC ou atribuição direta a uma VM",
+    "intro": "O LXC compartilha o kernel e pode <em>compartilhar</em> a GPU entre host e contêineres. Com <vmLink>atribuição completa a uma VM</vmLink>, o dispositivo fica dedicado à VM e indisponível para o controlador do host.",
     "headerFeature": "Característica",
     "headerLxc": "LXC (esta página)",
     "headerVm": "VM",
@@ -25,7 +25,7 @@
         "vm": "Não — exclusiva do VM"
       },
       {
-        "feature": "Vários contentores a partilhar um GPU?",
+        "feature": "Vários contêineres a compartilhar um GPU?",
         "lxc": "Sim",
         "vm": "Não"
       },
@@ -37,10 +37,10 @@
       {
         "feature": "É necessário reiniciar?",
         "lxc": "Normalmente não (apenas reinicie o CT)",
-        "vm": "Se mudar o controlador ou IOMMU do anfitrião; não a cada atribuição"
+        "vm": "Se mudar o controlador ou IOMMU do host; não a cada atribuição"
       },
       {
-        "feature": "Sistemas operativos convidados",
+        "feature": "Sistemas operacionais convidados",
         "lxc": "Apenas Linux (LXC é somente Linux)",
         "vm": "SO convidado suportado com controlador GPU compatível"
       }
@@ -48,16 +48,16 @@
   },
   "prereqs": {
     "title": "Antes de começar",
-    "gpu": "<strong>GPU no anfitrião</strong> Intel, AMD ou NVIDIA, detetada via <code>lspci</code>.",
+    "gpu": "<strong>GPU no host</strong> Intel, AMD ou NVIDIA, detectada via <code>lspci</code>.",
     "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
-    "vfio": "<strong>A GPU não deve estar associada a vfio-pci.</strong> Precisa do controlador nativo do anfitrião. Se atribuída a uma VM, o script propõe <switchLink>Alterar modo da GPU</switchLink>.",
-    "nvidia": "<strong>Para NVIDIA:</strong> instale primeiro o controlador no anfitrião. As bibliotecas do contentor têm de corresponder à versão. Use <nvidiaLink>Instalar controladores NVIDIA no anfitrião</nvidiaLink>.",
+    "vfio": "<strong>A GPU não deve estar associada a vfio-pci.</strong> Precisa do controlador nativo do host. Se atribuída a uma VM, o script propõe <switchLink>Alterar modo da GPU</switchLink>.",
+    "nvidia": "<strong>Para NVIDIA:</strong> instale primeiro o controlador no host. As bibliotecas do contêiner têm de corresponder à versão. Use <nvidiaLink>Instalar controladores NVIDIA no host</nvidiaLink>.",
     "nvidiaCheck": "nvidia-smi",
-    "container": "<strong>Um LXC existente.</strong> O script não o cria. Suporta ambos os modos; um contentor <strong>privilegiado</strong> não é sempre necessário. Dispositivos e permissões numéricas da aplicação têm de corresponder."
+    "container": "<strong>Um LXC existente.</strong> O script não o cria. Suporta ambos os modos; um contêiner <strong>privilegiado</strong> não é sempre necessário. Dispositivos e permissões numéricas da aplicação têm de corresponder."
   },
   "unpriv": {
-    "title": "Suporta contentores privilegiados e sem privilégios",
-    "body": "O script escreve entradas <code>dev&lt;N&gt;</code> para a configuração LXC e, em recipientes não privilegiados, alinha os GIDs <code>video</code> e <code>render</code> entre o host e o recipiente para que os nós do dispositivo GPU sejam alcançáveis de dentro sem que você tenha que editar manualmente <code>lxc.idmap</code>."
+    "title": "Suporta contêineres privilegiados e sem privilégios",
+    "body": "O script escreve entradas <code>dev&lt;N&gt;</code> para a configuração LXC e, em contêineres não privilegiados, alinha os GIDs <code>video</code> e <code>render</code> entre o host e o contêiner para que os nós do dispositivo GPU sejam alcançáveis de dentro sem que você tenha que editar manualmente <code>lxc.idmap</code>."
   },
   "running": {
     "heading": "Executar o instalador",
@@ -66,25 +66,25 @@
   },
   "howRuns": {
     "heading": "Como funciona o script",
-    "body": "Escolha contentor e famílias GPU e passe as verificações. Depois para e altera o contentor sem confirmação final adicional. A limpeza VFIO opcional tem confirmação separada e pode alterar antes o anfitrião."
+    "body": "Escolha contêiner e famílias GPU e passe as verificações. Depois para e altera o contêiner sem confirmação final adicional. A limpeza VFIO opcional tem confirmação separada e pode alterar antes o host."
   },
   "walkthrough": {
     "heading": "Procedimento passo a passo",
     "detect": {
       "title": "Detectar GPUs da máquina",
-      "body": "Procura controladores GPU com <code>lspci</code>. Para NVIDIA verifica o módulo <code>nvidia</code> e <code>nvidia-smi</code>; a versão detetada determina o instalador <code>.run</code> do contentor.",
+      "body": "Procura controladores GPU com <code>lspci</code>. Para NVIDIA verifica o módulo <code>nvidia</code> e <code>nvidia-smi</code>; a versão detectada determina o instalador <code>.run</code> do contêiner.",
       "tipTitle": "O NVIDIA não está pronto?",
-      "tipBody": "Se faltar o módulo ou NVIDIA não funcionar no anfitrião, use primeiro <nvidiaLink>Instalar controladores NVIDIA no anfitrião</nvidiaLink> e verifique o controlador."
+      "tipBody": "Se faltar o módulo ou NVIDIA não funcionar no host, use primeiro <nvidiaLink>Instalar controladores NVIDIA no host</nvidiaLink> e verifique o controlador."
     },
     "pickCt": {
-      "title": "Escolha um contentor LXC",
-      "body": "Lista os contentores LXC elegíveis por ID e nome; os contentores OCI são excluídos e utilizam OCI manager Apps para os dispositivos. O contentor é parado se estiver em execução, iniciado para a instalação dos controladores e normalmente reposto no estado original (em execução/parado).",
-      "imageAlt": "Seleção de um contentor LXC existente"
+      "title": "Escolha um contêiner LXC",
+      "body": "Lista os contêineres LXC elegíveis por ID e nome; os contêineres OCI são excluídos e utilizam OCI manager Apps para os dispositivos. O contêiner é parado se estiver em execução, iniciado para a instalação dos controladores e normalmente devolvido ao estado original (em execução/parado).",
+      "imageAlt": "Seleção de um contêiner LXC existente"
     },
     "selectGpu": {
       "title": "Selecione as famílias GPU",
       "body": "A lista seleciona famílias por fabricante, não um dispositivo PCI isolado. Intel/AMD adicionam os nós DRI previstos; NVIDIA os dispositivos disponíveis, eventualmente de várias placas. Uma única família é selecionada automaticamente. Verifique a lista final, sobretudo com várias GPU.",
-      "imageAlt": "Lista de famílias GPU detetadas com nome e endereço PCI"
+      "imageAlt": "Lista de famílias GPU detectadas com nome e endereço PCI"
     },
     "preflight": {
       "title": "Verificações prévias",
@@ -93,17 +93,17 @@
       "items": [
         "<strong>Proteção SR-IOV.</strong> O assistente bloqueia VF ou PF com VF ativas. É uma limitação da seleção ampla de dispositivos, não uma proibição geral em LXC. Configure-os separadamente.",
         "<strong>Associada a vfio-pci.</strong> O controlador nativo não pode criar <code>/dev/dri/*</code> ou <code>/dev/nvidia*</code>. Propõe <switchLink>Alterar modo da GPU</switchLink>; siga as indicações de reinício e volte depois.",
-        "<strong>Já configurada.</strong> Se todos os dispositivos estiverem presentes, termina sem reinstalar bibliotecas. Continua apenas com as famílias selecionadas em falta."
+        "<strong>Já configurada.</strong> Se todos os dispositivos estiverem presentes, termina sem reinstalar bibliotecas. Continua apenas com as famílias selecionadas ausentes."
       ]
     },
     "applyConfig": {
       "title": "Aplicar as alterações de configuração do LXC",
-      "body1": "Para o contentor, se estiver em execução, e altera <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. As entradas numeradas <code>dev&lt;N&gt;</code> incluem o GID do anfitrião de <code>video</code> ou <code>render</code>. As linhas bind <code>lxc.mount.entry</code> existentes para <code>/dev/dri</code> são substituídas por entradas <code>dev:</code>; verifique a configuração e as permissões resultantes.",
-      "body2": "Exemplo após Intel + NVIDIA no mesmo recipiente:"
+      "body1": "Para o contêiner, se estiver em execução, e altera <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>. As entradas numeradas <code>dev&lt;N&gt;</code> incluem o GID do host de <code>video</code> ou <code>render</code>. As linhas bind <code>lxc.mount.entry</code> existentes para <code>/dev/dri</code> são substituídas por entradas <code>dev:</code>; verifique a configuração e as permissões resultantes.",
+      "body2": "Exemplo após Intel + NVIDIA no mesmo contêiner:"
     },
     "installDrivers": {
-      "title": "Iniciar o recipiente e instalar drivers dentro",
-      "body": "Inicia o contentor e espera até cerca de 30 segundos pela resposta de <code>pct exec</code>. Deteta a distribuição por <code>/etc/os-release</code> e instala os pacotes adequados.",
+      "title": "Iniciar o contêiner e instalar drivers dentro",
+      "body": "Inicia o contêiner e espera até cerca de 30 segundos pela resposta de <code>pct exec</code>. Detecta a distribuição por <code>/etc/os-release</code> e instala os pacotes adequados.",
       "headerDistro": "Distribuição",
       "headerInt": "Intel / AMD",
       "headerNvidia": "NVIDIA",
@@ -121,41 +121,41 @@
       ],
       "debianDistro": "Debian / Ubuntu / outros",
       "debianIntel": "apt-get install va-driver-all intel-opencl-icd vainfo",
-      "debianNvidia": "Extrai <code>.run</code> no anfitrião → <code>pct push</code> → instala com <code>--no-kernel-modules --no-dkms</code>.",
+      "debianNvidia": "Extrai <code>.run</code> no host → <code>pct push</code> → instala com <code>--no-kernel-modules --no-dkms</code>.",
       "whyTitle": "Porque utiliza o instalador NVIDIA .run no Debian",
-      "whyBody": "Os pacotes podem não corresponder ao anfitrião. As bibliotecas <strong>têm de corresponder ao módulo carregado</strong> para NVML e <code>nvidia-smi</code>. Debian/glibc usa o <code>.run</code> dessa versão em cache, extrai e arquiva no anfitrião, transfere com <code>pct push</code> e instala com <code>--no-kernel-modules --no-dkms</code>. Alpine e Arch usam repositórios: verifique as versões."
+      "whyBody": "Os pacotes podem não corresponder ao host. As bibliotecas <strong>têm de corresponder ao módulo carregado</strong> para NVML e <code>nvidia-smi</code>. Debian/glibc usa o <code>.run</code> dessa versão em cache, extrai e arquiva no host, transfere com <code>pct push</code> e instala com <code>--no-kernel-modules --no-dkms</code>. Alpine e Arch usam repositórios: verifique as versões."
     },
     "alignGids": {
       "title": "Alinhar GIDs e restaurar o estado",
-      "body1": "Para Intel/AMD, lê os GID do anfitrião de <code>video</code> e <code>render</code>, usando 44/104 apenas como alternativa, e depois altera <code>/etc/group</code> no contentor para corresponderem; as execuções apenas com NVIDIA saltam este passo. Entradas como <code>video:44</code> e <code>render:104</code> são exemplos, não ID universais. Verifique a pertença da aplicação aos grupos e as permissões efetivas dos dispositivos.",
-      "body2": "Ao concluir normalmente, volta a parar o contentor se estava parado; se estava ativo mantém-no ativo. Se falhar o arranque ou a instalação, verifique o estado final e o registo."
+      "body1": "Para Intel/AMD, lê os GID do host de <code>video</code> e <code>render</code>, usando 44/104 apenas como alternativa, e depois altera <code>/etc/group</code> no contêiner para corresponderem; as execuções apenas com NVIDIA saltam este passo. Entradas como <code>video:44</code> e <code>render:104</code> são exemplos, não ID universais. Verifique a pertença da aplicação aos grupos e as permissões efetivas dos dispositivos.",
+      "body2": "Ao concluir normalmente, volta a parar o contêiner se estava parado; se estava ativo mantém-no ativo. Se falhar a inicialização ou a instalação, verifique o estado final e o registro."
     }
   },
   "vendors": {
     "heading": "Notas por fabricante",
     "intelHeading": "Intel iGPU",
-    "intelBody": "A aceleração multimédia Intel, incluindo <em>Quick Sync</em>, depende da geração do GPU, dos codecs e da configuração da aplicação. O script partilha os que existirem de entre <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> e <code>renderD129</code>; outros números de nó não são adicionados. O anfitrião tem de os disponibilizar já através do seu controlador nativo, por exemplo <code>i915</code>.",
+    "intelBody": "A aceleração multimédia Intel, incluindo <em>Quick Sync</em>, depende da geração do GPU, dos codecs e da configuração da aplicação. O script compartilha os que existirem de entre <code>/dev/dri/card0</code>, <code>card1</code>, <code>renderD128</code> e <code>renderD129</code>; outros números de nó não são adicionados. O host tem de os disponibilizar já através do seu controlador nativo, por exemplo <code>i915</code>.",
     "amdHeading": "AMD",
-    "amdBody": "AMD usa DRI para Mesa/VA-API. Se existir <code>/dev/kfd</code> no anfitrião, também o partilha. ROCm/OpenCL exige hardware e bibliotecas compatíveis; partilhar o dispositivo não instala toda a pilha ROCm.",
+    "amdBody": "AMD usa DRI para Mesa/VA-API. Se existir <code>/dev/kfd</code> no host, também o compartilhamento. ROCm/OpenCL exige hardware e bibliotecas compatíveis; compartilhar o dispositivo não instala toda a pilha ROCm.",
     "nvidiaHeading": "NVIDIA",
-    "nvidiaBody": "Partilha os dispositivos <code>/dev/nvidia*</code>. <strong>As versões do controlador têm de corresponder</strong> para <code>nvidia-smi</code>. Debian/glibc usa o <code>.run</code> da versão do anfitrião; Alpine/Arch os repositórios. Abaixo de 2048 MiB de RAM configurada propõe um aumento temporário e depois restaura; exige também 1500 MiB livres em disco.",
-    "updateTitle": "Após atualizar NVIDIA no anfitrião, verifique as bibliotecas LXC",
-    "updateBody": "Bibliotecas antigas podem causar erros em <code>nvidia-smi</code>. O <nvidiaLink>instalador NVIDIA do anfitrião</nvidiaLink> propõe atualizar contentores. Repetir a adição pode terminar se já existirem dispositivos: não garante atualizar bibliotecas. Verifique versões e atualize os pacotes ou a instalação de utilizador adequada."
+    "nvidiaBody": "Compartilha os dispositivos <code>/dev/nvidia*</code>. <strong>As versões do controlador têm de corresponder</strong> para <code>nvidia-smi</code>. Debian/glibc usa o <code>.run</code> da versão do host; Alpine/Arch os repositórios. Abaixo de 2048 MiB de RAM configurada propõe um aumento temporário e depois restaura; exige também 1500 MiB livres em disco.",
+    "updateTitle": "Após atualizar NVIDIA no host, verifique as bibliotecas LXC",
+    "updateBody": "Bibliotecas antigas podem causar erros em <code>nvidia-smi</code>. O <nvidiaLink>instalador NVIDIA do host</nvidiaLink> propõe atualizar contêineres. Repetir a adição pode terminar se já existirem dispositivos: não garante atualizar bibliotecas. Verifique versões e atualize os pacotes ou a instalação de usuário adequada."
   },
   "verification": {
     "heading": "Verificação",
-    "body": "No contentor verifique se a GPU está visível e utilizável."
+    "body": "No contêiner verifique se a GPU está visível e utilizável."
   },
   "troubleshoot": {
     "heading": "Resolução de problemas",
     "mismatchTitle": "nvidia-smi: Failed to initialize NVML: Driver/library version mismatch",
-    "mismatchBody": "As bibliotecas não correspondem ao módulo carregado. Verifique versões e atualize o espaço de utilizador LXC. O <code>.run</code> em cache serve para Debian/glibc, mas a adição pode terminar se todos os dispositivos já existirem.",
-    "denyTitle": "Permissão negada em /dev/dri/renderD128 dentro do recipiente",
-    "denyBody": "Verifique dispositivo e permissões numéricas de <code>render</code>, depois se o utilizador pertence a <code>render</code>. Se disponível, adicione-o a <code>render</code> com <code>usermod -aG render &lt;user&gt;</code>, substituindo o marcador pela conta real. Reinicie a sessão. Mudar privilégios não é uma solução geral.",
+    "mismatchBody": "As bibliotecas não correspondem ao módulo carregado. Verifique versões e atualize o espaço de usuário LXC. O <code>.run</code> em cache serve para Debian/glibc, mas a adição pode terminar se todos os dispositivos já existirem.",
+    "denyTitle": "Permissão negada em /dev/dri/renderD128 dentro do contêiner",
+    "denyBody": "Verifique dispositivo e permissões numéricas de <code>render</code>, depois se o usuário pertence a <code>render</code>. Se disponível, adicione-o a <code>render</code> com <code>usermod -aG render &lt;user&gt;</code>, substituindo o marcador pela conta real. Reinicie a sessão. Mudar privilégios não é uma solução geral.",
     "vainfoTitle": "vainfo indica: VA-API version 1.xx; failed to initialize",
     "vainfoBody": "Verifique acesso e controlador VA-API. Os nomes variam por distribuição: por exemplo <code>intel-media-driver</code> para Intel recentes suportadas, <code>i965-va-driver</code> para antigas compatíveis e <code>mesa-va-drivers</code> para AMD. A mensagem só por si não prova que falte um pacote.",
-    "logTitle": "Registo de instalação",
-    "logBody": "Cada execução escreve <code>/tmp/add_gpu_lxc.log</code> no anfitrião. Anexe o registo ao pedir ajuda."
+    "logTitle": "Registro de instalação",
+    "logBody": "Cada execução escreve <code>/tmp/add_gpu_lxc.log</code> no host. Anexe o registro ao pedir ajuda."
   },
   "related": {
     "heading": "Relacionados",
@@ -163,7 +163,7 @@
       {
         "label": "Instalar Drivers NVIDIA (Host)",
         "href": "/docs/hardware/nvidia-host",
-        "tail": " — instale o controlador do anfitrião antes de partilhar NVIDIA."
+        "tail": " — instale o controlador do host antes de compartilhar NVIDIA."
       },
       {
         "label": "Adicionar GPU a VM (passthrough)",
@@ -173,7 +173,7 @@
       {
         "label": "Alterar modo da GPU (VM ↔ LXC)",
         "href": "/docs/hardware/switch-gpu-mode",
-        "tail": " — alterna a GPU entre partilha LXC e atribuição VM."
+        "tail": " — alterna a GPU entre compartilhamento LXC e atribuição VM."
       },
       {
         "label": "Comandos de passagem GPU",

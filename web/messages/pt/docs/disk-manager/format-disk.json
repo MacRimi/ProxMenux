@@ -46,13 +46,13 @@
         "mode": "1. Limpar tudo",
         "part": "Destruído",
         "data": "Assinaturas apagadas",
-        "useCase": "Remove a tabela de partições e os metadados de sistemas de ficheiros e RAID, preenche com zeros os primeiros e os últimos 16 MiB e, nas unidades que suportam discard, aplica TRIM a todo o disco. O resto dos dados não é sobrescrito e ainda pode ser recuperável num HDD; não é um apagamento seguro."
+        "useCase": "Remove a tabela de partições e os metadados de sistemas de arquivos e RAID, preenche com zeros os primeiros e os últimos 16 MiB e, nas unidades que suportam discard, aplica TRIM a todo o disco. O resto dos dados não é sobrescrito e ainda pode ser recuperável em um HDD; não é um apagamento seguro."
       },
       {
         "mode": "2. Remover rótulos FS",
         "part": "Preservado",
         "data": "Preservado",
-        "useCase": "Remove assinaturas antigas de ZFS / LVM / RAID para evitar a utilização automática do disco. Os dados do utilizador não são sobrescritos em bloco, mas a remoção das assinaturas pode torná-los inacessíveis."
+        "useCase": "Remove assinaturas antigas de ZFS / LVM / RAID para evitar a utilização automática do disco. Os dados do usuário não são sobrescritos em bloco, mas a remoção das assinaturas pode torná-los inacessíveis."
       },
       {
         "mode": "3. Sobrescrever os dados com zeros",
@@ -64,12 +64,12 @@
         "mode": "4. Formato completo",
         "part": "Novo GPT",
         "data": "Destruído",
-        "useCase": "Disco pronto a usar com uma única partição nova e um novo sistema de ficheiros ou pool ZFS."
+        "useCase": "Disco pronto a usar com uma única partição nova e um novo sistema de arquivos ou pool ZFS."
       }
     ],
     "fullFormatOutro": "O <strong>Formato completo</strong> faz mais uma pergunta após a confirmação:",
     "fullFormatItems": [
-      "<strong>Filesystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portátil), <code>btrfs</code> ou <code>zfs</code>. Se <code>mkfs.exfat</code> estiver em falta, o ProxMenux instala <code>exfatprogs</code>; se <code>mkfs.btrfs</code> estiver em falta, a execução é interrompida com uma dica.",
+      "<strong>Filesystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portátil), <code>btrfs</code> ou <code>zfs</code>. Se <code>mkfs.exfat</code> estiver ausente, o ProxMenux instala <code>exfatprogs</code>; se <code>mkfs.btrfs</code> estiver ausente, a execução é interrompida com uma dica.",
       "<strong>Nome do pool ZFS</strong> (apenas ZFS): sugerido como <code>pool_&lt;disk&gt;</code>. O pool é criado com <code>ashift=12</code> e compressão <code>lz4</code>."
     ]
   },
@@ -79,7 +79,7 @@
     "list": [
       {
         "title": "Escolha um disco livre",
-        "body": "O ProxMenux lista todos os discos que passam no filtro de visibilidade acima, com o seu modelo e tamanho. Quaisquer metadados encontrados no disco (assinaturas ZFS / LVM / RAID, partições montadas, referências de convidados) são mostrados no resumo de confirmação para saber o que vai sobrescrever."
+        "body": "O ProxMenux lista todos os discos que passam no filtro de visibilidade acima, com seu modelo e tamanho. Quaisquer metadados encontrados no disco (assinaturas ZFS / LVM / RAID, partições montadas, referências de convidados) são mostrados no resumo de confirmação para saber o que vai sobrescrever."
       },
       {
         "title": "Escolha um modo de operação",
@@ -87,10 +87,10 @@
       },
       {
         "title": "Confirmar duas vezes",
-        "bodyRich": "O ProxMenux mostra um resumo da operação. Aceite no diálogo sim/não e <strong>introduza o caminho completo do disco</strong> exatamente como indicado, por exemplo <code>/dev/sdc</code>. Qualquer outra entrada cancela a operação."
+        "bodyRich": "O ProxMenux mostra um resumo da operação. Aceite no diálogo sim/não e <strong>insira o caminho completo do disco</strong> exatamente como indicado, por exemplo <code>/dev/sdc</code>. Qualquer outra entrada cancela a operação."
       },
       {
-        "title": "(Apenas formato completo) Escolher o sistema de ficheiros",
+        "title": "(Apenas formato completo) Escolher o sistema de arquivos",
         "body": "ext4 / xfs / exfat / btrfs / zfs. Para ZFS, também o nome do pool."
       },
       {
@@ -107,7 +107,7 @@
     "notListedTitle": "Disco não listado no menu",
     "notListedBody": "Foi filtrado por segurança. Apenas os discos de sistema são ocultados: um disco com uma montagem de sistema (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), uma partição swap ativa ou membro do pool ZFS raiz, ou um dispositivo somente leitura. Montagens de dados, referências de convidados e a pertença a ZFS / LVM / RAID não ocultam um disco. Execute <code>lsblk -f</code>, <code>swapon --show</code> e <code>zpool status</code> no host para entender o porquê.",
     "busyTitle": "\"Disk may be busy\" / falha ao desmontar",
-    "busyBody": "Algo ainda está segurando um arquivo aberto em uma partição desse disco — na maioria das vezes um recipiente ou uma shell cujo cwd está dentro de um ponto de montagem. Identifique-o com <code>lsof | grep /dev/sdX</code> ou <code>fuser -vm /dev/sdX1</code>, pare-o e, em seguida, execute novamente a ferramenta."
+    "busyBody": "Algo ainda está segurando um arquivo aberto em uma partição desse disco — na maioria das vezes um contêiner ou uma shell cujo cwd está dentro de um ponto de montagem. Identifique-o com <code>lsof | grep /dev/sdX</code> ou <code>fuser -vm /dev/sdX1</code>, pare-o e, em seguida, execute novamente a ferramenta."
   },
   "related": {
     "heading": "Relacionado",
@@ -125,7 +125,7 @@
       {
         "href": "/docs/storage-share/host-local-disk",
         "label": "Adicionar o disco local como armazenamento Proxmox",
-        "tail": " — registar um disco apagado como conjunto de armazenamento Proxmox."
+        "tail": " — registrar um disco apagado como conjunto de armazenamento Proxmox."
       },
       {
         "href": "/docs/help-info/storage-commands",
