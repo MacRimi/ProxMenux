@@ -301,9 +301,9 @@ sub dispatch {
     # The CLI RPC mode waits in the handler and can lose the UPID on timeout.
     # Use the same asynchronous worker mode as the local privileged API.
     my $rpc_class = 'PVE::RPCEnvironment';
-    if ($action eq 'remove') {
+    if ($action eq 'remove' || $action eq 'remove-disk-status') {
         require(File::Basename::dirname(__FILE__) . '/PlainLxcRemoval.pm');
-        $rpc_class = 'PlainLxcRemoval';
+        $rpc_class = 'PlainLxcRemoval' if $action eq 'remove';
     }
     my $rpcenv = $rpc_class->init('priv', atfork => sub {
         close($response) if defined(fileno($response));
@@ -338,8 +338,12 @@ sub dispatch {
     my $marker = qr/\AProxMenux request [a-f0-9]{32}\z/;
     my $storage_id = qr/[A-Za-z][A-Za-z0-9_.-]{0,63}/;
     if ($action eq 'remove') {
-        $rpcenv->prepare($node, $params);
-        return handle('DELETE', "$prefix/lxc/$vmid", {});
+        my $options = $rpcenv->prepare($node, $params);
+        return handle('DELETE', "$prefix/lxc/$vmid", $options);
+    }
+    if ($action eq 'remove-disk-status') {
+        die unless join(',', sort keys %$params) eq 'vmid,volume';
+        return PlainLxcRemoval::root_volume_exists($vmid, $params->{volume});
     }
     if ($action eq 'inventory') {
         return inventory($node, $params);

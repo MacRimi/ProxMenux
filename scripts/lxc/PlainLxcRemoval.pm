@@ -46,14 +46,31 @@ sub check_disk {
     die "Target is a container template\n" if $config->{template};
     my $root = PVE::LXC::Config->parse_volume('rootfs', $config->{rootfs});
     die "Reviewed root volume changed\n" unless $root && $root->{volume} eq $expected;
+    die "Reviewed root volume unavailable\n" unless root_volume_exists($vmid, $expected);
+}
+
+sub root_volume_exists {
+    my ($vmid, $expected) = @_;
+    die "Invalid reviewed volume request\n" unless ($vmid // '') =~ /\A[1-9][0-9]{2,8}\z/
+        && ($expected // '') =~ m{\A[A-Za-z0-9][A-Za-z0-9_.-]*:[A-Za-z0-9][A-Za-z0-9_.+:/@-]*\z};
+    require PVE::Storage;
     my $storage = PVE::Storage::config();
     my ($sid) = PVE::Storage::parse_volume_id($expected);
+    my $content = PVE::Storage::storage_config($storage, $sid)->{content};
+    die "Reviewed storage no longer supports guest disks\n" unless $content->{rootdir} || $content->{images};
     my (undef, undef, $owner, undef, undef, $base) = PVE::Storage::parse_volname($storage, $expected);
     die "Reviewed root volume has no unambiguous owner\n"
         unless defined($owner) && $owner == $vmid && !$base;
-    my $volumes = PVE::Storage::volume_list($storage, $sid, $vmid, undef);
-    die "Reviewed root volume unavailable\n"
-        unless grep { ($_->{volid} // '') eq $expected && ($_->{vmid} // -1) == $vmid } @$volumes;
+    # An orphaned LXC disk may no longer be classified as rootdir once its
+    # config is gone. Query the exact volume via the native disk inventory.
+    my $volumes = PVE::Storage::vdisk_list($storage, $sid, $vmid)->{$sid};
+    die "Reviewed root volume inventory unavailable\n" unless ref($volumes) eq 'ARRAY'
+        && !grep { ref($_) ne 'HASH' || !defined($_->{volid}) } @$volumes;
+    my @matches = grep { $_->{volid} eq $expected } @$volumes;
+    return 0 unless @matches;
+    die "Reviewed root volume inventory is ambiguous\n"
+        unless @matches == 1 && ($matches[0]->{vmid} // -1) == $vmid;
+    return 1;
 }
 
 sub publish_task {
@@ -71,8 +88,12 @@ sub publish_task {
 
 sub prepare {
     my ($self, $node, $params) = @_;
-    my ($vmid, $operation, $guard, $volume) = @$params{qw(vmid operation guard volume)};
-    die "Invalid removal request\n" unless join(',', sort keys %$params) eq 'guard,operation,vmid,volume'
+    my ($vmid, $operation, $guard, $volume, $purge, $destroy_unreferenced) =
+        @$params{qw(vmid operation guard volume purge destroy_unreferenced_disks)};
+    die "Invalid removal request\n" unless join(',', sort keys %$params)
+            eq 'destroy_unreferenced_disks,guard,operation,purge,vmid,volume'
+        && !ref($purge) && ($purge // '') =~ /\A[01]\z/
+        && !ref($destroy_unreferenced) && ($destroy_unreferenced // '') =~ /\A[01]\z/
         && ($vmid // '') =~ /\A[1-9][0-9]{2,8}\z/
         && ($operation // '') =~ /\A[0-9a-f]{32}\z/
         && ($volume // '') =~ m{\A[A-Za-z0-9][A-Za-z0-9_.-]*:[A-Za-z0-9][A-Za-z0-9_.+:/@-]*\z}
@@ -86,11 +107,14 @@ sub prepare {
     require PVE::Storage;
     check_identity($guard, $node, $vmid);
     $self->{plain_lxc_removal} = [$vmid, $node, $operation, $guard, $volume];
-    return;
+    return { purge => 0 + $purge, 'destroy-unreferenced-disks' => 0 + $destroy_unreferenced };
 }
 
 sub fork_worker {
     my ($self, $type, $id, $user, $worker, @rest) = @_;
+    if ($self->{plain_lxc_native_worker}) {
+        return $self->SUPER::fork_worker($type, $id, $user, $worker, @rest);
+    }
     my ($vmid, $node, $operation, $guard, $volume) = @{$self->{plain_lxc_removal}};
     die "Unexpected removal worker\n" unless $type eq 'vzdestroy' && $id eq $vmid && $user eq 'root@pam';
     return $self->SUPER::fork_worker($type, $id, $user, sub {
@@ -104,6 +128,8 @@ sub fork_worker {
         PVE::LXC::Config->lock_config($vmid, sub {
             check_identity($guard, $node, $vmid);
             check_disk($vmid, $volume);
+            # Storage plugins may start their own cleanup worker (imgdel).
+            local $self->{plain_lxc_native_worker} = 1;
             $worker->($upid);
         });
     }, @rest);

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
@@ -7895,10 +7895,19 @@ export function VirtualMachines() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem variant="destructive" onSelect={() => setRemoveLxcOpen(true)}>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={selectedVM?.status !== "stopped" || controlLoading}
+                              onSelect={() => setRemoveLxcOpen(true)}
+                            >
                               <Trash2 className="h-4 w-4" />
                               {t("vmLxc.remove.action")}
                             </DropdownMenuItem>
+                            {selectedVM?.status === "running" && (
+                              <DropdownMenuLabel className="max-w-56 whitespace-normal text-xs font-normal text-muted-foreground">
+                                {t("vmLxc.remove.reasons.container_running")}
+                              </DropdownMenuLabel>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -7924,10 +7933,6 @@ export function VirtualMachines() {
         target={selectedVM?.type === "lxc" ? selectedVM : null}
         open={removeLxcOpen}
         onOpenChange={setRemoveLxcOpen}
-        onCreateBackup={() => {
-          setRemoveLxcOpen(false)
-          openBackupModal()
-        }}
         onRemoved={(vmid) => {
           vmModalCacheRef.current.details.delete(vmid)
           vmModalCacheRef.current.backups.delete(vmid)

@@ -1,10 +1,10 @@
 """Guarded removal of one stopped, ordinary LXC through the native PVE task.
 
 This deliberately does not try to be a generic ``pct destroy`` wrapper.  The
-route accepts only a locally hosted, stopped LXC with a single ordinary rootfs
-volume and no extra mounts, OCI identity, HA, replication, lock, pending
-change, active backup or unreadable safety input.  The same preflight runs
-before the preview and again while holding the shared LXC-operation lock.
+route accepts only a locally hosted, stopped ordinary LXC with an owned rootfs
+and no extra configured volumes, OCI identity, lock or pending changes.
+Archive browsing is independent of removal. The lightweight preview binds
+the target, and confirmation checks dependencies under the shared LXC lock.
 """
 
 from __future__ import annotations
@@ -166,95 +166,15 @@ def _contains_oci(vmid: int, config_text: str) -> bool:
     ))
 
 
-def _backup_inventory(node: str, vmid: int):
-    storages = _pvesh_json(["get", "/storage"])
-    if not isinstance(storages, list):
-        raise RemovalError("backup_state_unavailable", 503)
-    backups = []
-    for storage in storages:
-        if not isinstance(storage, dict):
-            raise RemovalError("backup_state_unavailable", 503)
-        name = storage.get("storage")
-        content = str(storage.get("content") or "")
-        if not isinstance(name, str) or not name:
-            continue
-        if "backup" not in content.split(",") and storage.get("type") != "pbs":
-            continue
-        nodes = storage.get("nodes")
-        if nodes is not None and not isinstance(nodes, str):
-            raise RemovalError("backup_state_unavailable", 503)
-        if _truthy(storage.get("disable")) or (nodes and node not in re.split(r"[,\s]+", nodes.strip())):
-            continue
-        items = _pvesh_json([
-            "get", f"/nodes/{node}/storage/{name}/content", "--vmid", str(vmid), "--content", "backup",
-        ], timeout=20)
-        if not isinstance(items, list):
-            raise RemovalError("backup_state_unavailable", 503)
-        for item in items:
-            if not isinstance(item, dict) or item.get("content") != "backup":
-                continue
-            volid = str(item.get("volid") or "")
-            subtype = str(item.get("subtype") or "")
-            if subtype not in ("", "lxc"):
-                continue
-            if subtype != "lxc" and f"vzdump-lxc-{vmid}-" not in volid:
-                continue
-            backups.append({
-                "storage": name, "volid": volid, "size": item.get("size", 0),
-                "timestamp": item.get("ctime", 0), "protected": bool(item.get("protected")),
-            })
-    backups.sort(key=lambda item: item["timestamp"] if isinstance(item["timestamp"], int) else 0,
-                 reverse=True)
-    # The Monitor has archive presence, not a fresh isolated restore proof.
-    return {"state": "unverified" if backups else "none", "archives": backups}
-
-
 def _root_volume_exists(node, vmid, volume):
-    sid = volume.split(":", 1)[0]
-    rows = _pvesh_json(["get", f"/nodes/{node}/storage/{sid}/content", "--vmid", str(vmid)])
-    if not isinstance(rows, list) or any(
-        not isinstance(row, dict) or not isinstance(row.get("volid"), str) for row in rows
-    ):
+    exists = _native_request("remove-disk-status", node, {"vmid": vmid, "volume": volume})
+    if type(exists) is not int or exists not in (0, 1):
         raise RemovalError("rootfs_state_unavailable", 503)
-    found = [row for row in rows if row["volid"] == volume]
-    if not found:
-        return False
-    if (len(found) != 1 or type(found[0].get("vmid")) is not int or found[0]["vmid"] != vmid
-            or found[0].get("content") not in ("rootdir", "images")):
-        raise RemovalError("rootfs_state_unavailable", 503)
-    return True
-
-
-def _active_backup_tasks(node: str, vmid: int):
-    tasks = _pvesh_json([
-        "get", f"/nodes/{node}/tasks", "--source", "active", "--typefilter", "vzdump",
-    ])
-    if not isinstance(tasks, list):
-        raise RemovalError("backup_task_state_unavailable", 503)
-    selected = []
-    for task in tasks:
-        if not isinstance(task, dict):
-            continue
-        upid = str(task.get("upid") or "")
-        target = str(task.get("id") or "")
-        upid_target = re.search(r":vzdump:(?P<target>[^:]*):", upid)
-        # A node-wide `all` job can include this LXC.  If PVE returned an
-        # active vzdump task without a usable target at all, fail closed
-        # rather than treating another backup as unrelated.
-        if target != str(vmid):
-            if upid_target and upid_target["target"] not in {str(vmid), "", "all"}:
-                continue
-            if not upid_target and target:
-                continue
-        selected.append({
-            "upid": upid, "status": str(task.get("status") or ""),
-            "starttime": task.get("starttime"),
-        })
-    return selected
+    return bool(exists)
 
 
 def _preflight(vmid: int):
-    """Collect all independent safety facts; uncertainty is a blocker."""
+    """Read the identity, state and configured disk without probing storage."""
     resources = _pvesh_json(["get", "/cluster/resources", "--type", "vm"])
     if not isinstance(resources, list):
         raise RemovalError("target_state_unavailable", 503)
@@ -294,9 +214,19 @@ def _preflight(vmid: int):
     except RemovalError:
         reasons.append("rootfs_ambiguous")
         disk = {"storage": "", "volume": "", "size": ""}
-    if not reasons and not _root_volume_exists(node, vmid, disk["volume"]):
-        reasons.append("rootfs_ambiguous")
+    return {
+        "eligible": not reasons,
+        "reasons": reasons,
+        "guard": {"file": file_identity, "generation": generation, "digest": sha256(raw).hexdigest()},
+        "target": {
+            "vmid": vmid, "name": str(resource.get("name") or f"CT {vmid}"), "node": node,
+            "status": str(resource.get("status") or "unknown"),
+        },
+        "disk": disk,
+    }
 
+
+def _check_jobs(node, vmid, reasons):
     ha = _pvesh_json(["get", "/cluster/ha/resources"])
     if not isinstance(ha, list):
         raise RemovalError("ha_state_unavailable", 503)
@@ -315,6 +245,15 @@ def _preflight(vmid: int):
     if any(job["guest"] == vmid for job in replication):
         reasons.append("replication_configured")
 
+
+def _check_dependencies(preflight, purge):
+    target, disk = preflight["target"], preflight["disk"]
+    node, vmid = target["node"], target["vmid"]
+    reasons = preflight["reasons"]
+    if not _root_volume_exists(node, vmid, disk["volume"]):
+        reasons.append("rootfs_ambiguous")
+    if not purge:
+        _check_jobs(node, vmid, reasons)
     pending = _pvesh_json(["get", f"/nodes/{node}/lxc/{vmid}/pending"])
     if not isinstance(pending, list) or any(
         not isinstance(row, dict) or not isinstance(row.get("key"), str) or not row["key"]
@@ -327,23 +266,7 @@ def _preflight(vmid: int):
     if any("pending" in row or row.get("delete", 0) for row in pending):
         reasons.append("pending_changes")
 
-    backup = _backup_inventory(node, vmid)
-    tasks = _active_backup_tasks(node, vmid)
-    if tasks:
-        reasons.append("backup_running")
-
-    return {
-        "eligible": not reasons,
-        "reasons": reasons,
-        "guard": {"file": file_identity, "generation": generation, "digest": sha256(raw).hexdigest()},
-        "target": {
-            "vmid": vmid, "name": str(resource.get("name") or f"CT {vmid}"), "node": node,
-            "status": str(resource.get("status") or "unknown"),
-        },
-        "disk": disk,
-        "backup": backup,
-        "backup_tasks": tasks,
-    }
+    preflight["eligible"] = not reasons
 
 
 def _invalidate(vmid: int):
@@ -423,7 +346,11 @@ def preview(actor: str, vmid: int):
 @_admin
 def remove(actor: str, vmid: int):
     body = request.get_json(silent=True)
-    if not isinstance(body, dict) or set(body) - {"check", "confirm_vmid", "confirm_no_backup"}:
+    if not isinstance(body, dict) or set(body) - {"check", "confirm_vmid", "purge", "destroy_unreferenced_disks"}:
+        return jsonify(error="invalid_request"), 400
+    purge = body.get("purge", False)
+    destroy_unreferenced = body.get("destroy_unreferenced_disks", False)
+    if type(purge) is not bool or type(destroy_unreferenced) is not bool:
         return jsonify(error="invalid_request"), 400
     if body.get("confirm_vmid") != str(vmid):
         return jsonify(error="confirmation_required"), 422
@@ -445,10 +372,10 @@ def remove(actor: str, vmid: int):
             if (check["guard"] != guard or check["node"] != preflight["target"]["node"]
                     or check["volume"] != preflight["disk"]["volume"]):
                 return jsonify(error="target_changed", preview=preflight), 409
+            if preflight["eligible"]:
+                _check_dependencies(preflight, purge)
             if not preflight["eligible"]:
                 return jsonify(error="removal_blocked", preview=preflight), 409
-            if preflight["backup"]["state"] == "none" and body.get("confirm_no_backup") is not True:
-                return jsonify(error="no_backup_confirmation_required"), 422
 
             if time.time() >= check["expires"]:
                 raise RemovalError("check_expired")
@@ -460,7 +387,7 @@ def remove(actor: str, vmid: int):
                 receipts.seal_unstarted(operation)
                 raise RemovalError("check_expired")
             lxc_check_job.begin_removal(reservation, check["node"], operation)
-            if not _dispatch(check):
+            if not _dispatch(check, purge, destroy_unreferenced):
                 receipts.seal_unstarted(operation)
         finally:
             reservation.close()
@@ -485,16 +412,22 @@ def _load_check(token, actor, vmid, max_age):
     return check
 
 
-def _dispatch(check):
+def _dispatch(check, purge, destroy_unreferenced):
     params = {key: check[key] for key in ("vmid", "operation", "guard", "volume")}
+    params.update(purge=int(purge), destroy_unreferenced_disks=int(destroy_unreferenced))
+    task = _native_request("remove", check["node"], params)
+    return receipts.task_for(task, check["node"], check["vmid"])
+
+
+def _native_request(action, node, params):
     try:
         result = subprocess.run(
             ["/usr/bin/perl", NATIVE_BRIDGE], capture_output=True, text=True, timeout=12,
-            input=json.dumps({"action": "remove", "node": check["node"], "params": params}),
+            input=json.dumps({"action": action, "node": node, "params": params}),
         )
-        return result.returncode == 0 and receipts.task_for(json.loads(result.stdout), check["node"], check["vmid"])
+        return json.loads(result.stdout) if result.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired, ValueError):
-        return False
+        return None
 
 
 def _operation_status(check):

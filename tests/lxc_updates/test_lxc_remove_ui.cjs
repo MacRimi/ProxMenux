@@ -12,10 +12,13 @@ const dialog = fs.readFileSync(path.join(root, 'components/lxc-remove-dialog.tsx
 const vmPage = fs.readFileSync(path.join(root, 'components/virtual-machines.tsx'), 'utf8')
 
 assert.match(vmPage, /capabilities\.admin && selectedVM\?\.type === "lxc"/, 'only administrators see the LXC action')
-assert.match(vmPage, /DropdownMenuItem variant="destructive" onSelect=\{\(\) => setRemoveLxcOpen\(true\)\}/,
+assert.match(vmPage, /disabled=\{selectedVM\?\.status !== "stopped" \|\| controlLoading\}\s+onSelect=\{\(\) => setRemoveLxcOpen\(true\)\}/,
   'the menu opens a review dialog; it does not submit a remove request')
 assert.match(dialog, /typedVmid === String\(preview\.target\.vmid\)/, 'the exact VMID gates the submit button')
-assert.match(dialog, /preview\.backup\.state !== "none" \|\| noBackupConfirmed/, 'no-backup removal needs a separate acknowledgement')
+assert.match(dialog, /const \[purge, setPurge\] = useState\(false\)/, 'purging job configuration defaults to off')
+assert.match(dialog, /const \[destroyUnreferenced, setDestroyUnreferenced\] = useState\(false\)/,
+  'unreferenced disk removal defaults to off')
+assert.doesNotMatch(dialog, /confirm_no_backup|createBackup/, 'backup inventory is outside the removal flow')
 assert.match(dialog, /submitRef\.current\) return/, 'a duplicate click cannot submit again')
 assert.match(dialog, /saveLxcRemovalReceipt\(receipt\)[\s\S]*method: "POST"/,
   'the recovery receipt is saved before the destructive request')

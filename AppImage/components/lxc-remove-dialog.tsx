@@ -25,10 +25,7 @@ interface RemovalPreview {
   eligible: boolean
   reasons: string[]
   check: string | null
-  target: { vmid: number; name: string; node: string; status: string }
-  disk: { storage: string; volume: string; size: string }
-  backup: { state: "none" | "unverified"; archives: Array<{ storage: string; volid: string }> }
-  backup_tasks: Array<{ upid: string; status: string }>
+  target: { vmid: number; name: string }
 }
 
 interface TrackedRemoval extends LxcRemovalReceipt {
@@ -39,7 +36,6 @@ interface LxcRemoveDialogProps {
   target: LxcTarget | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCreateBackup: () => void
   onRemoved: (vmid: number) => void
 }
 
@@ -59,13 +55,14 @@ function errorBody(error: unknown): { error?: string; preview?: RemovalPreview }
   return null
 }
 
-export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, onRemoved }: LxcRemoveDialogProps) {
+export function LxcRemoveDialog({ target, open, onOpenChange, onRemoved }: LxcRemoveDialogProps) {
   const t = useT()
   const [preview, setPreview] = useState<RemovalPreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [typedVmid, setTypedVmid] = useState("")
-  const [noBackupConfirmed, setNoBackupConfirmed] = useState(false)
+  const [purge, setPurge] = useState(false)
+  const [destroyUnreferenced, setDestroyUnreferenced] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [tracked, setTracked] = useState<TrackedRemoval | null>(null)
   const submitRef = useRef(false)
@@ -92,9 +89,12 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
     setPreviewError(null)
     setPreview(null)
     setTypedVmid("")
-    setNoBackupConfirmed(false)
+    setPurge(false)
+    setDestroyUnreferenced(false)
     try {
-      const result = await fetchApi<RemovalPreview>(`/api/vms/${target.vmid}/remove-preview`)
+      const result = await fetchApi<RemovalPreview>(`/api/vms/${target.vmid}/remove-preview`, {
+        signal: AbortSignal.timeout(10_000),
+      })
       if (previewRequest.current === request) setPreview(result)
     } catch (error) {
       if (previewRequest.current === request) setPreviewError(error instanceof Error ? error.message : String(error))
@@ -176,18 +176,19 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
         body: JSON.stringify({
           check: preview.check,
           confirm_vmid: typedVmid,
-          confirm_no_backup: noBackupConfirmed,
+          purge,
+          destroy_unreferenced_disks: destroyUnreferenced,
         }),
       })
       setTracked({ ...receipt, result })
     } catch (error) {
       const body = errorBody(error)
       if (body?.error && ["target_changed", "removal_blocked", "check_expired", "check_mismatch",
-        "confirmation_required", "no_backup_confirmation_required"].includes(body.error)) {
+        "confirmation_required"].includes(body.error)) {
         clearLxcRemovalReceipt(receipt.vmid)
         if (previewRequest.current === request) {
           if (body.preview) setPreview(body.preview)
-          setPreviewError(body.error)
+          setPreviewError(body.error === "removal_blocked" ? null : body.error)
         }
       } else {
         setTracked({ ...receipt, result: { state: "unknown", task: null, reason: "submission_unconfirmed" } })
@@ -199,9 +200,7 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
   }
 
   const displayTarget = preview?.target.vmid === target?.vmid ? preview?.target : null
-  const displayStatus = displayTarget?.status === "stopped" ? t("vmLxc.stopped")
-    : displayTarget?.status === "running" ? t("vmLxc.running")
-      : displayTarget?.status
+  const blocked = Boolean(displayTarget && preview && !preview.eligible)
   const terminal = active?.result
   const previewErrorText = previewError === "target_changed"
     ? t("vmLxc.remove.targetChanged")
@@ -211,7 +210,6 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
     preview?.eligible
     && preview.check && displayTarget
     && typedVmid === String(preview.target.vmid)
-    && (preview.backup.state !== "none" || noBackupConfirmed)
     && !previewError
     && !submitting,
   )
@@ -229,7 +227,12 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
   }
 
   const changeOpen = (nextOpen: boolean) => {
-    if (!nextOpen && active?.result.state === "succeeded") setTracked(null)
+    if (!nextOpen) {
+      setTypedVmid("")
+      setPurge(false)
+      setDestroyUnreferenced(false)
+      if (active?.result.state === "succeeded") setTracked(null)
+    }
     onOpenChange(nextOpen)
   }
 
@@ -241,7 +244,9 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
             <Trash2 className="h-5 w-5 text-red-500" />
             {t("vmLxc.remove.title")}
           </DialogTitle>
-          <DialogDescription>{t("vmLxc.remove.description")}</DialogDescription>
+          <DialogDescription>{target
+            ? t("vmLxc.remove.target", { name: displayTarget?.name || target.name, vmid: target.vmid })
+            : t("vmLxc.remove.description")}</DialogDescription>
         </DialogHeader>
 
         {terminal ? (
@@ -260,60 +265,36 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
               </div>
             </div>
           </div>
-        ) : loadingPreview ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> {t("vmLxc.remove.checking")}
+        ) : blocked && preview ? (
+          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-sm" role="alert">
+            <p className="font-medium text-red-400">{t("vmLxc.remove.blocked")}</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+              {preview.reasons.map(reason => <li key={reason}>{t(`vmLxc.remove.reasons.${reason}`)}</li>)}
+            </ul>
           </div>
-        ) : preview && displayTarget ? (
+        ) : target && !previewError ? (
           <div className="space-y-4">
-            {displayTarget && (
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border p-3 text-sm">
-                <div><dt className="text-xs text-muted-foreground">{t("vmLxc.remove.container")}</dt><dd className="font-medium break-words">{displayTarget.name} <span className="text-xs text-blue-400">LXC {displayTarget.vmid}</span></dd></div>
-                <div><dt className="text-xs text-muted-foreground">{t("vmLxc.remove.node")}</dt><dd className="font-medium break-words">{displayTarget.node}</dd></div>
-                <div><dt className="text-xs text-muted-foreground">{t("vmLxc.remove.status")}</dt><dd className="font-medium">{displayStatus}</dd></div>
-                <div><dt className="text-xs text-muted-foreground">{t("vmLxc.remove.rootDisk")}</dt><dd className="font-medium break-all">{preview.disk.storage}{preview.disk.size ? ` · ${preview.disk.size}` : ""}</dd></div>
-              </dl>
-            )}
-
-            {!preview.eligible ? (
-              <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-sm" role="alert">
-                <p className="font-medium text-red-400">{t("vmLxc.remove.blocked")}</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                  {preview.reasons.map(reason => <li key={reason}>{t(`vmLxc.remove.reasons.${reason}`)}</li>)}
-                </ul>
-              </div>
-            ) : (
-              <>
-                <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-sm text-muted-foreground">
-                  <strong className="text-red-400">{t("vmLxc.remove.irreversibleTitle")}</strong> {t("vmLxc.remove.irreversible")}
-                </div>
-                <div className="rounded-md border p-3 text-sm">
-                  <p className="font-medium">{t("vmLxc.remove.backup")}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {preview.backup.state === "none"
-                      ? t("vmLxc.remove.noBackup")
-                      : t("vmLxc.remove.unverifiedBackup", { count: preview.backup.archives.length })}
-                  </p>
-                  {preview.backup.state === "none" && (
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <Button type="button" variant="outline" size="sm" onClick={onCreateBackup} disabled={submitting}>{t("vmLxc.remove.createBackup")}</Button>
-                      <Label className="flex items-center gap-2 text-xs font-normal">
-                        <Checkbox checked={noBackupConfirmed} onCheckedChange={value => setNoBackupConfirmed(value === true)} />
-                        {t("vmLxc.remove.confirmNoBackup")}
-                      </Label>
-                    </div>
-                  )}
-                </div>
-                {preview.backup_tasks.length > 0 && (
-                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-400">
-                    {t("vmLxc.remove.backupTaskRunning")}
-                  </div>
-                )}
-                <div>
-                  <Label htmlFor="remove-lxc-vmid">{t("vmLxc.remove.typeVmid", { vmid: preview.target.vmid })}</Label>
-                  <Input id="remove-lxc-vmid" className="mt-2" inputMode="numeric" autoComplete="off" value={typedVmid} onChange={event => setTypedVmid(event.target.value)} />
-                </div>
-              </>
+            <div>
+              <Label htmlFor="remove-lxc-vmid">{t("vmLxc.remove.typeVmid", { vmid: target.vmid })}</Label>
+              <Input
+                id="remove-lxc-vmid" className="mt-2" inputMode="numeric" autoComplete="off" value={typedVmid}
+                disabled={submitting} onChange={event => setTypedVmid(event.target.value)}
+                onKeyDown={event => { if (event.key === "Enter") void submit() }}
+              />
+            </div>
+            <Label className="flex items-start gap-2 font-normal">
+              <Checkbox checked={purge} disabled={submitting} onCheckedChange={value => setPurge(value === true)} />
+              <span>{t("vmLxc.remove.purge")}<span className="mt-1 block text-xs text-muted-foreground">{t("vmLxc.remove.purgeHint")}</span></span>
+            </Label>
+            <Label className="flex items-start gap-2 font-normal">
+              <Checkbox checked={destroyUnreferenced} disabled={submitting} onCheckedChange={value => setDestroyUnreferenced(value === true)} />
+              <span>{t("vmLxc.remove.destroyUnreferenced")}<span className="mt-1 block text-xs text-muted-foreground">{t("vmLxc.remove.destroyUnreferencedHint")}</span></span>
+            </Label>
+            <p className="text-sm text-amber-400">{t("vmLxc.remove.referencedDisks")}</p>
+            {loadingPreview && (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("vmLxc.remove.checking")}
+              </p>
             )}
           </div>
         ) : (
@@ -322,15 +303,12 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
           </div>
         )}
 
-        {previewError && preview && (
-          <p className="text-xs text-red-400" role="alert">{previewErrorText}</p>
-        )}
         <DialogFooter className="gap-2 sm:gap-0">
           {terminal?.state === "unknown" && <Button type="button" variant="outline" onClick={refreshTask}>{t("vmLxc.remove.checkTask")}</Button>}
           {target && terminal?.state === "failed" && <Button type="button" variant="outline" onClick={reviewAfterFailure}>{t("vmLxc.remove.reviewAgain")}</Button>}
-          {!terminal && <Button type="button" variant="outline" onClick={() => void refreshPreview()} disabled={loadingPreview || submitting}>{t("vmLxc.remove.checkAgain")}</Button>}
+          {!terminal && (previewError || blocked) && <Button type="button" variant="outline" onClick={() => void refreshPreview()} disabled={loadingPreview || submitting}>{t("vmLxc.remove.checkAgain")}</Button>}
           <Button type="button" variant="outline" onClick={() => changeOpen(false)}>{t("vmLxc.remove.cancel")}</Button>
-          {preview?.eligible && displayTarget && !terminal && (
+          {target && !terminal && !blocked && !previewError && (
             <Button type="button" variant="destructive" disabled={!removeEnabled} onClick={() => void submit()}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t("vmLxc.remove.confirm")}
             </Button>

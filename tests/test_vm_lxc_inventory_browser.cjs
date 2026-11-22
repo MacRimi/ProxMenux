@@ -26,6 +26,7 @@ const removalRequests = []
 const removalTask = "UPID:fixture:0000000A:0000000B:0000000C:vzdestroy:300:root@pam:"
 let removalState = "awaiting"
 let rejectPreviousRemoval
+let releaseFirstRemovalPreview
 const lxcBase = "/api/plain-lxc/v1/"
 const lxcTemplate = "local:vztmpl/debian-13-standard_13_amd64.tar.zst"
 const catalogTemplate = "ubuntu-24.04-standard_24.04_amd64.tar.zst"
@@ -68,20 +69,26 @@ async function respond({ requestId, request }) {
     removalRequests.push([vmid, action, request.method])
     const json = (value, status = 200) => reply(status, JSON.stringify(value), "application/json")
     const check = "fixture-removal-" + vmid
-    if (action === "remove-preview" && request.method === "GET") return json({
-      eligible: vmid !== 100, reasons: vmid === 100 ? ["container_running"] : [],
-      check: vmid === 100 ? null : check,
-      target: { vmid, name: guests.find(guest => guest.vmid === vmid)?.name, node: "fixture", status: vmid === 100 ? "running" : "stopped" },
-      disk: {storage: "local-lvm", volume: "local-lvm:subvol-" + vmid + "-disk-0", size: "8G"},
-      backup: {state: "none", archives: []}, backup_tasks: [],
-    })
+    if (action === "remove-preview" && request.method === "GET") {
+      const preview = {
+        eligible: vmid !== 100, reasons: vmid === 100 ? ["container_running"] : [],
+        check: vmid === 100 ? null : check,
+        target: { vmid, name: guests.find(guest => guest.vmid === vmid)?.name, node: "fixture", status: vmid === 100 ? "running" : "stopped" },
+        disk: {storage: "local-lvm", volume: "local-lvm:subvol-" + vmid + "-disk-0", size: "8G"},
+      }
+      if (vmid === 300 && !releaseFirstRemovalPreview) {
+        releaseFirstRemovalPreview = () => json(preview)
+        return
+      }
+      return json(preview)
+    }
     if (vmid === 300 && action === "remove" && request.method === "POST") {
-      assert.deepEqual(JSON.parse(request.postData), {check, confirm_vmid: "300", confirm_no_backup: true})
+      assert.deepEqual(JSON.parse(request.postData), {check, confirm_vmid: "300", purge: false, destroy_unreferenced_disks: false})
       removalState = "running"
       return send("Fetch.failRequest", {requestId, errorReason: "ConnectionReset"})
     }
     if (vmid === 301 && action === "remove" && request.method === "POST") {
-      assert.deepEqual(JSON.parse(request.postData), {check, confirm_vmid: "301", confirm_no_backup: true})
+      assert.deepEqual(JSON.parse(request.postData), {check, confirm_vmid: "301", purge: true, destroy_unreferenced_disks: true})
       rejectPreviousRemoval = () => json({error: "target_changed"}, 409)
       return
     }
@@ -379,15 +386,18 @@ async function verifyLxcRemoval() {
   const button = label => `[...(${dialog})?.querySelectorAll('button') ?? []].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
   const key = label => send("Input.dispatchKeyEvent", {type: "rawKeyDown", key: label, code: label,
     windowsVirtualKeyCode: label === "Escape" ? 27 : 13})
-  const open = async name => {
+  const item = "[...document.querySelectorAll('[role=menuitem]')].find(el => el.textContent.trim() === 'Remove LXC')"
+  const openMenu = async name => {
     const guest = `${guestTargets("View details for ")}.find(el => el.getAttribute('aria-label').endsWith(${JSON.stringify(name)}))`
     await waitFor(`Boolean(${guest})`)
     await click(guest)
     await waitFor(`Boolean(${labelled("Additional actions")})`)
     await evaluate(`(${labelled("Additional actions")}).focus()`)
     await key("Enter")
-    const item = "[...document.querySelectorAll('[role=menuitem]')].find(el => el.textContent.trim() === 'Remove LXC')"
     await waitFor(`Boolean(${item})`)
+  }
+  const open = async name => {
+    await openMenu(name)
     await click(item)
     await waitFor(`Boolean(${dialog})`)
   }
@@ -397,10 +407,15 @@ async function verifyLxcRemoval() {
     if (await evaluate("Boolean(document.querySelector('[role=dialog]'))")) await key("Escape")
     await waitFor("!document.querySelector('[role=dialog]')")
   }
-  await open(guests[0].name)
-  await waitFor(`(${dialog})?.textContent.includes('The container is running.')`)
-  assert.equal(await evaluate(`Boolean(${button("Remove LXC")})`), false)
-  await close()
+  await openMenu(guests[0].name)
+  await waitFor("document.querySelector('[role=menu]')?.textContent.includes('Shut it down before removing it.')")
+  assert.equal(await evaluate(`(${item}).getAttribute('aria-disabled')`), "true")
+  assert.equal(await evaluate(`Boolean(${dialog})`), false)
+  assert.equal(removalRequests.length, 0)
+  await key("Escape")
+  await waitFor("!document.querySelector('[role=menu]')")
+  if (await evaluate("Boolean(document.querySelector('[role=dialog]'))")) await key("Escape")
+  await waitFor("!document.querySelector('[role=dialog]')")
 
   guests.push({ ...guests[0], vmid: 300, name: "removal-fixture-first", status: "stopped" },
     { ...guests[0], vmid: 301, name: "removal-fixture-second", status: "stopped" },
@@ -410,7 +425,11 @@ async function verifyLxcRemoval() {
   await openInventory()
   await open("removal-fixture-first")
   const confirm = button("Remove LXC")
+  const options = `[...(${dialog}).querySelectorAll('[role=checkbox]')]`
+  const optionStates = () => evaluate(`${options}.map(box => box.getAttribute('aria-checked'))`)
   await waitFor(`Boolean(${confirm})`)
+  await waitFor(`(${dialog}).textContent.includes('removal-fixture-first (LXC 300)')`)
+  assert.deepEqual(await optionStates(), ["false", "false"])
   assert.ok(await evaluate(`(() => {
     const panel = (${dialog}); const bounds = panel.getBoundingClientRect();
     return bounds.left >= 0 && bounds.right <= innerWidth && panel.scrollWidth <= panel.clientWidth + 1;
@@ -428,7 +447,11 @@ async function verifyLxcRemoval() {
   })()`)
   await fill("300")
   assert.equal(await evaluate(`(${confirm}).disabled`), true)
-  await click(`(${dialog}).querySelector('[role=checkbox]')`)
+  for (let attempt = 0; !releaseFirstRemovalPreview && attempt < 100; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 20))
+  }
+  assert.equal(typeof releaseFirstRemovalPreview, "function")
+  await releaseFirstRemovalPreview()
   await fill("301")
   assert.equal(await evaluate(`(${confirm}).disabled`), true)
   await fill("300")
@@ -452,19 +475,22 @@ async function verifyLxcRemoval() {
   await open("removal-fixture-second")
   await waitFor(`(${dialog}).textContent.includes('removal-fixture-second')`)
   assert.equal(await evaluate(`(${dialog}).textContent.includes('LXC was removed')`), false)
-  await click(`(${dialog}).querySelector('[role=checkbox]')`)
+  assert.deepEqual(await optionStates(), ["false", "false"])
+  await click(`${options}[0]`)
+  await click(`${options}[1]`)
+  assert.deepEqual(await optionStates(), ["true", "true"])
   await fill("301")
   await waitFor(`!(${confirm}).disabled`)
   await click(confirm)
   assert.equal(await evaluate("Boolean(sessionStorage.getItem('proxmenux.lxc-removal.301'))"), true)
-  assert.equal(await evaluate(`(${button("Create backup")}).disabled`), true)
+  assert.equal(await evaluate(`${options}.every(box => box.disabled)`), true)
   await close()
   await open("removal-fixture-third")
   await waitFor(`(${dialog}).textContent.includes('removal-fixture-third')`)
   assert.equal(typeof rejectPreviousRemoval, "function")
   await rejectPreviousRemoval()
   await waitFor("!sessionStorage.getItem('proxmenux.lxc-removal.301')")
-  await click(`(${dialog}).querySelector('[role=checkbox]')`)
+  assert.deepEqual(await optionStates(), ["false", "false"])
   await fill("302")
   await waitFor(`!(${confirm}).disabled`)
   await close()
@@ -475,7 +501,7 @@ async function verifyLxcRemoval() {
   guests.splice(guests.findIndex(guest => guest.vmid === 302), 1)
   await send("Page.reload")
   await openInventory()
-  console.log("LXC removal: blocked running LXC, desktop and mobile confirmation, one POST per target, lost reply, task recovery, stale rejection, cancel")
+  console.log("LXC removal: running menu guard, immediate target, exact ID, both native options, mobile, task recovery, stale rejection and cancel")
 }
 
 async function run() {
