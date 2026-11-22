@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Resolve a saved image channel and invoke the native update transaction."""
 import argparse
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -8,13 +9,17 @@ import re
 import shlex
 import subprocess
 import sys
+import tarfile
 import tempfile
+import time
 
 import oci_instances as instances
+import oci_native_reads as native_reads
 import oci_instance_transaction as transaction
 import oci_work_backup as work_backup
+import oci_layer_cache as layer_cache
 from oci_installation_state import image_from_archive, same_image
-from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
+from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2, msg_progress
 
 # A registry login saved by ProxMenux lets skopeo read private images.
 REGISTRY_AUTH_FILE = '/etc/pve/priv/proxmenux/registry-auth.json'
@@ -29,8 +34,26 @@ def repository(reference):
     return repo
 
 
+# What the next run_quiet shows on screen while it runs: set by showing().
+_shown = None
+
+
+@contextlib.contextmanager
+def showing(show, env=None):
+    """Within it, run_quiet reports the progress of its helper with
+    show(pid, seconds, output_path) every second, with `env` added."""
+    global _shown
+    previous, _shown = _shown, (show, env or {})
+    try:
+        yield
+    finally:
+        _shown = previous
+
+
 def run_quiet(args, error, capture=False):
     """Runs a helper with its output in the private log; error is the message of a failure."""
+    if _shown is not None and not capture:
+        return run_shown(args, error, *_shown)
     transaction.log('$ ' + shlex.join(args))
     process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                env=dict(os.environ, PYTHONPATH=str(Path(__file__).parent)))
@@ -56,7 +79,90 @@ def run_quiet(args, error, capture=False):
                 process.wait()
 
 
-def resolve_archive(desired, config, current=None, check=None, required_digest=None):
+def run_shown(args, error, show, env=None):
+    """Like run_quiet, while show(pid, seconds, output_path) reports its
+    progress on screen every second (see showing())."""
+    transaction.log('$ ' + shlex.join(args))
+    with tempfile.NamedTemporaryFile(prefix='.proxmenux-run-', suffix='.log') as output:
+        process = subprocess.Popen(args, stdout=output, stderr=subprocess.STDOUT,
+                                   env=dict(os.environ, PYTHONPATH=str(Path(__file__).parent), **(env or {})))
+        started = time.monotonic()
+        try:
+            while process.poll() is None:
+                show(process.pid, int(time.monotonic() - started), output.name)
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    pass
+            output.seek(0)
+            transaction.log_output(output.read())
+            if process.returncode:
+                transaction.log(f'  exit {process.returncode}')
+                raise RuntimeError(error)
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+
+
+def _bytes_read(pid):
+    """What a process has read so far, network included."""
+    try:
+        with open(f'/proc/{pid}/io', encoding='ascii') as io:
+            for line in io:
+                if line.startswith('rchar:'):
+                    return int(line.split()[1])
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
+def show_download(candidate):
+    """The download progress of an image, as the installer shows it: MiB of
+    its compressed layers, percentage, layers started and seconds."""
+    total, count = int(candidate.get('size') or 0), len(candidate.get('layers') or [])
+
+    def show(pid, seconds, output_path):
+        done = _bytes_read(pid)
+        if total > 0:
+            done = min(done, total * 99 // 100)
+            try:
+                with open(output_path, encoding='utf-8', errors='replace') as output:
+                    started = output.read().count('Copying blob ')
+            except OSError:
+                started = 0
+            text = (f"{translate('Downloading the image:')} {done >> 20} / {(total + 1048575) >> 20} MiB "
+                    f"({done * 100 // total}%), {translate('layers')} {min(started, count)}/{count}, {seconds}s")
+        else:
+            text = f"{translate('Downloading the image:')} {done >> 20} MiB, {seconds}s"
+        msg_progress(transaction.fit(text))
+    return show
+
+
+def verify_shown(verifier, path, error):
+    """Verifies an archive showing how much of it is checked; the detail of
+    each blob goes to the private log."""
+    msg_info(translate('Verifying the image integrity...'))
+    with tempfile.TemporaryDirectory(prefix='.proxmenux-verify-') as directory:
+        status = Path(directory) / 'status'
+
+        def show(pid, seconds, output_path):
+            try:
+                checked, total = (int(value) for value in status.read_text(encoding='ascii').split()[:2])
+            except (OSError, ValueError):
+                return
+            if total > 0:
+                msg_progress(transaction.fit(f"{translate('Verifying the image integrity:')} {checked >> 20} / "
+                                             f"{(total + 1048575) >> 20} MiB ({checked * 100 // total}%), {seconds}s"))
+        with showing(show, {'OCI_VERIFY_STATUS': str(status)}):
+            run_quiet([sys.executable, str(verifier), str(path)], error)
+
+
+def resolve_archive(desired, config, current=None, check=None, required_digest=None, local_archives=()):
     # Shared by individual and coordinated operations; no guest mutation here.
     # When the registry still serves the current digest nothing is downloaded.
     reference = desired['template']['container_contract']['image']['reference']
@@ -66,8 +172,10 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     if required_digest is not None and not re.fullmatch(r'sha256:[a-f0-9]{64}', required_digest):
         raise ValueError(translate('Invalid saved image digest'))
     lookup = repository(reference) + '@' + required_digest if required_digest else reference
-    code = ('import json,sys; from oci_installation_state import resolve_candidate; '
-            'print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))')
+    # The reason of a failure reaches the log as one line, not as a traceback.
+    code = ('import json,sys; from oci_installation_state import resolve_candidate\n'
+            'try: print(json.dumps(resolve_candidate(sys.argv[1],sys.argv[2])))\n'
+            'except (RuntimeError, ValueError, OSError) as error: sys.exit(str(error))')
     candidate = json.loads(run_quiet([sys.executable, '-c', code, lookup, architecture],
                                      translate('Could not query the image registry'), capture=True))
     digest = candidate['manifest_digest']
@@ -83,6 +191,33 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         return None, digest
     if check:
         check()
+    verifier = Path(__file__).with_name('verify_oci_archive.py')
+
+    def intact(path):
+        try:
+            # Metadata is only a rejection filter. A stale archive is never
+            # read/decompressed in full just to discover it is the old image.
+            if not same_image(candidate, image_from_archive(str(path))):
+                return False
+            verify_shown(verifier, path, translate('The image did not pass the integrity check'))
+            # Recheck the contract after verification as well: a candidate
+            # must still match before it can be returned to the transaction.
+            return same_image(candidate, image_from_archive(str(path)))
+        # An unverified archive may hold well-formed JSON of the wrong shape;
+        # it is rejected and downloaded again, never a reason to stop.
+        except (RuntimeError, OSError, ValueError, KeyError, TypeError, AttributeError, tarfile.TarError):
+            return False
+
+    # Initial installations and updates use different archive names. The
+    # instance record knows the actual archive; validate it before looking
+    # only for the deterministic update-cache name. Never delete a rejected
+    # recorded path: another instance may still refer to it.
+    for saved in local_archives:
+        path = Path(saved) if saved else None
+        if path and not path.is_symlink() and path.is_file():
+            if intact(path):
+                msg_ok(translate('Using the verified image from the cache'))
+                return path, digest
     storage = desired['deployment']['template_storage']
     if not re.fullmatch(r'[A-Za-z0-9_-]+', storage):
         raise ValueError(translate('Invalid template storage'))
@@ -91,18 +226,7 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
     archive.parent.mkdir(parents=True, exist_ok=True)
     if archive.is_symlink():
         raise ValueError(translate('Unsafe OCI archive path'))
-    verifier = Path(__file__).with_name('verify_oci_archive.py')
-
-    def intact(path):
-        try:
-            run_quiet([sys.executable, str(verifier), str(path)],
-                      translate('The image did not pass the integrity check'))
-        except RuntimeError:
-            return False
-        return same_image(candidate, image_from_archive(str(path)))
-
     if archive.exists():
-        msg_info(translate('Verifying the image integrity...'))
         if intact(archive):
             msg_ok(translate('Using the verified image from the cache'))
             return archive, digest
@@ -110,9 +234,10 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         archive.unlink()
     # The compressed layers are what the download writes; nothing was changed yet.
     size, free = int(candidate.get('size') or 0), work_backup.available(archive.parent)
-    if size and free < int(size * 1.1) + 256 * 1024**2:
+    required = int(size * 1.1) + 256 * 1024**2
+    if size and free < required:
         raise ValueError(f"{translate('The new image does not fit on the storage where images are downloaded:')} {storage}. "
-                         f"{translate('Needed:')} {work_backup.gib(int(size * 1.1) + 256 * 1024**2)}. "
+                         f"{translate('Needed:')} {work_backup.gib(required)}. "
                          f"{translate('Free:')} {work_backup.gib(free)}. {translate('The application was not modified.')}")
     # A download can come back complete yet damaged when the connection drops
     # and the transfer resumes; the integrity check catches it, and a second
@@ -124,11 +249,24 @@ def resolve_archive(desired, config, current=None, check=None, required_digest=N
         os.close(fd)
         partial = Path(name)
         try:
-            run_quiet(['skopeo', 'copy', '--override-arch', architecture,
-                'docker://' + repository(reference) + '@' + digest,
-                'oci-archive:' + str(partial)], translate('Could not download the image'))
+            source = 'docker://' + repository(reference) + '@' + digest
+            cached = False
+            if layer_cache.enabled():
+                try:
+                    with showing(show_download(candidate)):
+                        layer_cache.pull(source, architecture, partial, local_archives, candidate,
+                            lambda args: run_quiet(args, translate('Could not download the image')),
+                            available=work_backup.available)
+                    cached = True
+                except layer_cache.CacheUnavailable as error:
+                    transaction.log(f'optional layer cache unavailable: {error}')
+                    msg_warn(translate('The shared layer cache is unavailable; downloading the image normally.'))
+                    partial.unlink(missing_ok=True)
+            if not cached:
+                with showing(show_download(candidate)):
+                    run_quiet(['skopeo', 'copy', '--override-arch', architecture, source,
+                        'oci-archive:' + str(partial)], translate('Could not download the image'))
             msg_ok(translate('Image downloaded'))
-            msg_info(translate('Verifying the image integrity...'))
             if intact(partial):
                 partial.chmod(0o644)
                 os.replace(partial, archive)
@@ -148,13 +286,16 @@ def kept_settings(changes, deployment):
     """Names of the settings changed in Proxmox that the new container keeps."""
     labels = {'memory': translate('Memory'), 'swap': translate('Swap'), 'cores': translate('CPU cores'),
               'cpulimit': translate('CPU cores'), 'cpuunits': translate('CPU priority'),
-              'onboot': translate('Start with Proxmox')}
+              'onboot': translate('Start with Proxmox'), 'hostname': translate('Hostname'),
+              'entrypoint': translate('Start command'),
+              'bridge': translate('Network'), 'ipv4': translate('Network'), 'gateway': translate('Network'),
+              'firewall': translate('Network'), 'vlan_tag': translate('VLAN tag')}
     kept = []
     for key, value in changes.items():
         section, name = transaction.ADOPTABLE[key]
         if (deployment.get(section, {}) if section else deployment).get(name) == value:
             kept.append(labels[key])
-    return kept
+    return list(dict.fromkeys(kept))
 
 
 def application_name(record, vmid):
@@ -168,22 +309,64 @@ def application_name(record, vmid):
     return f'CT {vmid}'
 
 
+def backup_native_settings(vmid, storage):
+    """An optional retained backup does not require rebuilding the guest."""
+    if storage:
+        import oci_keep_backup
+        oci_keep_backup.validate(storage)
+        transaction.run('vzdump', str(vmid), '--storage', storage, '--mode', 'snapshot',
+                        '--compress', 'zstd', '--notes-template',
+                        'ProxMenux OCI: before modifying container settings')
+
+
 def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=None):
     operation = 'recreate' if proposal is not None else 'update'
     msg_info(translate('Checking the container before the update...') if operation == 'update'
              else translate('Checking the container before modifying it...'))
-    with instances.locked(instances.ROOT):
+    with native_reads.session(log=transaction.log), instances.locked(instances.ROOT):
         record = instances.read(instances.ROOT, vmid)
         if record['status'] != 'installed' or record.get('pending_transaction') or record.get('pending_stack_transaction'):
             raise ValueError(translate('The instance is not ready to be updated'))
         config = instances.command('pct', 'config', str(vmid))
         desired = transaction.candidate_contract(record, operation, proposal)
         changes = transaction.external_changes(record, config)
+        resource_changes = None
+        if operation == 'recreate' and not changes:
+            import oci_resource_modify
+            resource_changes = oci_resource_modify.changes(record, desired, config)
+        # CPU/RAM edits retain the installed image and all unrelated native
+        # settings. They do not implicitly update the application or depend
+        # on the registry and the narrower recreation profile.
+        if resource_changes:
+            msg_ok(translate('Container checked'))
+            import oci_operation_notice
+            with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                backup_native_settings(vmid, keep_backup)
+                return oci_resource_modify.apply(instances.ROOT, record, desired, config, resource_changes)
+        if operation == 'recreate' and not changes:
+            import oci_native_modify
+            if oci_native_modify.changes(record, desired, config):
+                import oci_operation_notice
+                with oci_operation_notice.operation([vmid], 'modify', application_name(record, vmid)):
+                    # Validate the native plan before an optional full backup.
+                    oci_native_modify.plan(record, desired, config)
+                    backup_native_settings(vmid, keep_backup)
+                    return oci_native_modify.apply(instances.ROOT, record, desired, config,
+                                                   acknowledge_external_data=acknowledge_external_data)
+        # An unsupported native edit still uses the existing installer. Decide
+        # the route before changing anything; actual validation/API failures
+        # must not silently switch to a destructive fallback.
+        # Also refuses a container that HA manages, before the image is downloaded.
         transaction.preflight(record, desired, config)
         msg_ok(translate('Container checked'))
         current = record['observed']['image'] if operation == 'update' else None
-        archive, digest = resolve_archive(desired, config, current, lambda: work_backup.locate(
-            instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid))
+        check = lambda: work_backup.locate(
+            instances.location(instances.ROOT, vmid).parent / 'transactions' / 'check', [vmid], record, vmid)
+        if operation == 'recreate' or layer_cache.enabled():
+            archive, digest = resolve_archive(desired, config, current, check,
+                local_archives=[record['observed'].get('archive_path')])
+        else:
+            archive, digest = resolve_archive(desired, config, current, check)
         if archive is None:
             msg_ok(translate('The image is already up to date; nothing was changed.'))
             return
@@ -206,7 +389,10 @@ def update(vmid, acknowledge_external_data=False, proposal=None, keep_backup=Non
         with oci_operation_notice.operation([vmid], kind, application_name(record, vmid)):
             transaction.apply(instances.ROOT, vmid, archive, operation, proposal=proposal,
                               registry_digest=digest, acknowledge_external_data=acknowledge_external_data,
-                              keep_backup=file_storage)
+                              keep_backup=file_storage, **({'force_archive': True} if keep_backup else {}))
+    marker = os.environ.get('OCI_RECREATED_MARKER')
+    if marker:
+        Path(marker).touch()
 
 
 def main():
@@ -228,7 +414,7 @@ def main():
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         transaction.report_error(error, f'update-{args.vmid}')
         journal = transaction.pending_journal()
-        if journal and not transaction.recover_untouched(instances.ROOT, journal):
+        if journal and not transaction.recover_failed_update(instances.ROOT, journal):
             transaction.recovery_hint()
         return 1
 

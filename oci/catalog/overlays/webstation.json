@@ -19,5 +19,26 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Webstation is a web native emulation focused LXQt desktop based on Ubuntu."
+    },
+    "description": {
+      "en_US": "Webstation is a web-native, emulation-focused LXQt desktop environment based on Ubuntu that streams directly to a web browser. It provides access to a complete graphical desktop tailored for running video game emulators. The environment supports audio, microphone input, clipboard synchronization, file transfers, and gamepad controls for interactive gaming and remote desktop use."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

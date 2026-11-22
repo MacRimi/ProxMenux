@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run a standalone Qdrant vector database with persistent local storage, a REST API and the built-in web dashboard."
+    },
+    "description": {
+      "en_US": "Qdrant is a vector similarity search engine and vector database. It provides an API to store, search, and manage vector embeddings alongside structured payload data. Tailored for advanced filtering and hybrid search, it enables matching, semantic search, and recommendation systems. It also includes a built-in web dashboard to inspect collections and manage data."
+    },
+    "screenshots": [
+      "https://qdrant.tech/docs/gettingstarted/web-ui.png"
+    ]
+  }
+}

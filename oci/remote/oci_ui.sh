@@ -115,6 +115,27 @@ oci_quiet() {
   fi
 }
 
+# Verifies an OCI archive with VERIFY_OCI_ARCHIVE, showing how much of it is
+# already checked; the detail of each blob goes to the private log.
+# Returns the status of the verifier.
+oci_verify_archive() {
+  local path=$1 status_file pid status=0 elapsed=0 checked total
+  status_file=$(mktemp) || return 1
+  msg_info "$(translate "Verifying the image integrity...")"
+  OCI_VERIFY_STATUS=$status_file python3 "$VERIFY_OCI_ARCHIVE" "$path" >>"${OCI_LOG:-/dev/null}" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    read -r checked total _ <"$status_file" 2>/dev/null || continue
+    [[ $checked =~ ^[0-9]+$ && $total =~ ^[0-9]+$ && $total -gt 0 ]] || continue
+    msg_progress "$(translate "Verifying the image integrity:") $((checked / 1048576)) / $(( (total + 1048575) / 1048576 )) MiB ($((checked * 100 / total))%), ${elapsed}s"
+  done
+  wait "$pid" || status=$?
+  rm -f "$status_file" "${status_file}.tmp"
+  return "$status"
+}
+
 # `pct create` of an OCI archive, showing how much of the image is already
 # unpacked into the rootfs. Arguments: VMID ARCHIVE [pct create options...]
 oci_create_container() {
@@ -127,13 +148,16 @@ oci_create_container() {
     total_mib=$(python3 "$VERIFY_OCI_ARCHIVE" --extracted-mib "$path" 2>/dev/null || printf '0')
     [[ $total_mib =~ ^[0-9]+$ ]] || total_mib=0
   fi
-  pct create "$vmid" "$archive" "$@" >>"$log" 2>&1 &
+  python3 "${SCRIPT_DIR}/oci_native_import.py" "$vmid" "$archive" "$path" "$@" >>"$log" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
-    if mountpoint -q "$rootfs" 2>/dev/null; then
+    # Proxmox unmounts the rootfs when it finishes: nothing here may keep it
+    # open, so the mount is read from mountinfo and the size with one statfs.
+    if awk -v point="$rootfs" '$5 == point { found = 1 } END { exit !found }' /proc/self/mountinfo 2>/dev/null; then
       mounted=1
-      used_mib=$(df -BM --output=used "$rootfs" 2>/dev/null | tail -n 1 | tr -dc '0-9' || true)
-      used_mib=${used_mib:-0}
+      used_mib=$(stat -f -c '%b %f %S' "$rootfs" 2>/dev/null \
+        | awk '{ if ($3 > 0) printf "%d", ($1 - $2) * $3 / 1048576 }' || true)
+      [[ $used_mib =~ ^[0-9]+$ ]] || used_mib=0
       base_mib=${base_mib:-$used_mib}
       extracted_mib=$(( used_mib > base_mib ? used_mib - base_mib : 0 ))
       (( extracted_mib > 0 )) && extracting=1
@@ -208,7 +232,8 @@ oci_apply_extra_devices() {
       || die "$(translate "Invalid device path:") $path"
     [[ -c $path ]] || die "$(translate "The character device does not exist:") $path"
     [[ $mode =~ ^0?[0-7]{3}$ ]] || die "$(translate "Invalid device mode:") $mode"
-    pct config "$vmid" | grep -Eq "^dev[0-9]+: (.*,)?path=${path}(,|$)" && continue
+    # Proxmox may write the path without `path=` when it was added from its interface.
+    pct config "$vmid" | grep -Eq "^dev[0-9]+: ((.*,)?path=)?${path}(,|$)" && continue
     index=0
     while pct config "$vmid" | grep -q "^dev${index}:"; do index=$((index + 1)); done
     gid=$(stat -c '%g' "$path")
@@ -216,6 +241,20 @@ oci_apply_extra_devices() {
       || die "$(translate "Could not add the device to the container:") $path"
     count=$((count + 1))
   done < <(jq -r '.extra_devices[]? | select(.kind == "character-device") | [.host_path, (.mode // "0660"), (if .deny_write then 1 else 0 end)] | @tsv' "$DEPLOYMENT_FILE")
+  # USB devices recorded by their identity: the lines of the container and
+  # the udev rule that lets it write to them, whatever number they get.
+  local usb_count usb_file
+  usb_count=$(jq '[.extra_devices[]? | select(.kind == "usb")] | length' "$DEPLOYMENT_FILE")
+  if (( usb_count > 0 )); then
+    usb_file=$(mktemp)
+    jq '{devices: [.extra_devices[] | select(.kind == "usb")]}' "$DEPLOYMENT_FILE" >"$usb_file"
+    if ! oci_quiet python3 "${SCRIPT_DIR}/oci_usb_passthrough.py" apply "$vmid" "$usb_file"; then
+      rm -f "$usb_file"
+      die "$(translate "Could not add the USB devices to the container")"
+    fi
+    rm -f "$usb_file"
+    count=$((count + usb_count))
+  fi
   if (( count > 0 )); then
     msg_ok "$(translate "Devices added:") $count"
   fi
@@ -226,6 +265,29 @@ oci_apply_extra_devices() {
 oci_log_tail() {
   [[ -n $OCI_LOG && -s $OCI_LOG ]] || return 0
   tail -n "${1:-15}" "$OCI_LOG" | sed "s/^/${_OCI_TAB}  /"
+}
+
+# The host may have no route to the VLAN of an interface: there curl runs
+# inside the network of the container.
+oci_curl() {
+  local vmid=$1
+  shift
+  if grep -Eq '^net[0-9]+:.*,tag=' "/etc/pve/lxc/${vmid}.conf" 2>/dev/null; then
+    nsenter --net="/proc/$(lxc-info -n "$vmid" -pH)/ns/net" curl "$@"
+  else
+    curl "$@"
+  fi
+}
+
+# tag= option of an access interface from the given network key of the
+# deployment, in OCI_VLAN_OPTION. Returns 1 when the tag is not valid.
+oci_vlan_option() {
+  local tag
+  OCI_VLAN_OPTION=""
+  tag=$(jq -r --arg key "$1" '.network[$key] // empty' "$DEPLOYMENT_FILE")
+  [[ -z $tag ]] && return 0
+  [[ $tag =~ ^[0-9]+$ ]] && (( tag >= 1 && tag <= 4094 )) || return 1
+  OCI_VLAN_OPTION=",tag=${tag}"
 }
 
 # ip= and gw= options of an access interface, DHCP or a static IPv4 with an

@@ -60,7 +60,7 @@
               ],
               [
                 "Network",
-                "Private bridge, subnet, a fixed address per service and LAN access for the main member",
+                "Private bridge, subnet, a fixed address per service and LAN access for the members that need it",
                 "No collision with existing bridges or subnets and no repeated address"
               ],
               [
@@ -104,7 +104,7 @@
               },
               {
                 "title": "Private network",
-                "body": "A bridge and subnet are created and each member gets its fixed address; only the main member also gets the LAN interface."
+                "body": "A bridge and subnet are created and each member gets its fixed address. The main member also gets the LAN interface, and so does any other member that publishes a port or that the recipe of the application asks for."
               },
               {
                 "title": "Persistence",
@@ -368,7 +368,7 @@
         },
         {
           "mermaid": {
-            "chartCode": "flowchart LR\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
+            "chartCode": "flowchart TB\n P[\"{{prepare}}\"] --> S[\"{{stop}}\"]\n S --> B[\"{{backup}}\"]\n B --> R[\"{{replace}}\"]\n R --> H{\"{{healthy}}\"}\n H -- \"{{yes}}\" --> C[\"{{commit}}\"]\n H -- \"{{no}}\" --> X[\"{{rollback}}\"]",
             "labels": {
               "prepare": "Prepare every image",
               "stop": "Stop, main member first",

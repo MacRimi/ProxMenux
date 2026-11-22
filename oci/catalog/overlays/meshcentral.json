@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web-based platform for managing and remotely accessing computers and other devices. The slim image uses the built-in NeDB database, so a separate MongoDB service is not required."
+    },
+    "description": {
+      "en_US": "MeshCentral is a computer management web platform designed to remotely monitor and control devices on a local network or over the internet. Once agents are installed on target machines, they connect back to the server for administration. The platform provides full web-based remote desktop, remote terminal, and file management capabilities directly in the browser."
+    },
+    "screenshots": [
+      "https://meshcentral.com/main-images/main01.png",
+      "https://meshcentral.com/main-images/main04.png",
+      "https://meshcentral.com/main-images/main03.png",
+      "https://meshcentral.com/main-images/main06.png"
+    ]
+  }
+}

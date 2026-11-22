@@ -22,7 +22,7 @@
         "name": "community-scripts / ProxmoxVE",
         "url": "https://community-scripts.github.io/ProxmoxVE/",
         "description": "Spiritual successor to tteck's helper scripts. Large catalog of one-shot scripts to deploy LXCs (Home Assistant, Plex, Frigate, …), VMs, addons and PVE tweaks.",
-        "usedIn": "Helper Scripts launcher, Network (NIC offloading fix for Intel e1000e)"
+        "usedIn": "Community Scripts launcher, Network (NIC offloading fix for Intel e1000e)"
       }
     ]
   },

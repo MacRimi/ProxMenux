@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted scheduling and booking app with a built-in admin interface and SQLite database."
+    },
+    "description": {
+      "en_US": "Calnode is a self-hosted scheduling engine and booking platform. It provides public booking pages, team availability routing, and calendar synchronization with external providers. The system also features an administrative management interface, an integrated Model Context Protocol server for automated booking with AI agents, and optional in-browser video meetings."
+    }
+  }
+}

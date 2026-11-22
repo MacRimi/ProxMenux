@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage database changes, access and workflows through a browser-based workspace. The image contains its own database, so this profile does not require a second service."
+    },
+    "description": {
+      "en_US": "Bytebase is an open-source database governance platform that serves as a central control plane between users and databases. It unifies change management, access control, and compliance into a single web workspace. Teams use it to review and automate schema migrations, enforce SQL standards, manage role-based database permissions, and maintain complete audit trails of database operations."
+    }
+  }
+}

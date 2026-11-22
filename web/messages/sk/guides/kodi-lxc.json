@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Inštalácia Kodi v LXC s akceleráciou GPU | Návody ProxMenux",
+    "description": "Spustite Kodi v privilegovanom kontajneri LXC na Proxmox VE, sprístupnite mu iGPU a vstupné USB zariadenia hostiteľa a používajte server ako multimediálne centrum pripojené priamo k televízoru.",
+    "ogTitle": "Inštalácia Kodi v LXC s akceleráciou GPU",
+    "ogDescription": "Spustite Kodi v privilegovanom kontajneri LXC na Proxmox VE s prístupom k iGPU a vstupným USB zariadeniam hostiteľa a vytvorte zo servera multimediálne centrum."
+  },
+  "header": {
+    "title": "Inštalácia Kodi v LXC s akceleráciou GPU a pripojením k monitoru alebo televízoru",
+    "description": "Spustite Kodi v privilegovanom kontajneri LXC na Proxmox VE, sprístupnite mu iGPU a vstupné USB zariadenia hostiteľa a používajte server ako multimediálne centrum pripojené priamo k televízoru.",
+    "section": "Návody"
+  },
+  "intro": {
+    "calloutTitle": "Upozornenie",
+    "calloutBody": "Tento návod používa externý komunitný skript na prípravu kontajnera Kodi. Prístup k iGPU hostiteľa dokáže nastaviť aj ProxMenux: <strong>GPU a Coral-TPU → Pridať GPU do LXC</strong> nakonfiguruje <code>/dev/dri</code> a nainštaluje ovládače v kontajneri. Skript nižšie navyše nainštaluje Kodi a nastaví automatické spustenie na <code>tty7</code>. Použite ho na hotové multimediálne centrum v LXC; <gpuLink>postup ProxMenuxu</gpuLink> zvoľte, ak potrebujete iba prístup ku GPU pre ručne nastavený kontajner.",
+    "credit": "Pôvodný skript Kodi pre LXC vytvoril <authorLink>mrrudy</authorLink>.",
+    "stepsTitle": "Čo budete robiť",
+    "steps": [
+      "Pomocou skriptu vytvoriť privilegovaný kontajner LXC s Kodi.",
+      "Sprístupniť kontajneru USB klávesnicu, myš alebo herný ovládač.",
+      "Voliteľne aktualizovať Kodi z repozitárov nastavených v kontajneri."
+    ]
+  },
+  "createCt": {
+    "heading": "1. Vytvoriť kodi LXC",
+    "body": "Pre tento postup zvoľte <strong>Privileged</strong> v rozšírených nastaveniach skriptu. Skript predvolene vytvára neprivilegované kontajnery, ktoré potrebujú vhodné oprávnenia zariadení a mapovanie identifikátorov. Nastaví prístup ku GPU, Kodi a automatické spustenie na <code>tty7</code>:",
+    "code": "bash -c \"$(wget -qLO - https://raw.githubusercontent.com/mrrudy/proxmoxHelper/main/ct/kodi-v1.sh)\"",
+    "after": "Inštalácia chvíľu trvá. Keď sa Kodi spustí na <code>tty7</code>, pripojte monitor alebo televízor k výstupu HDMI/DisplayPort hostiteľa. Malo by sa zobraziť rozhranie Kodi."
+  },
+  "addInput": {
+    "heading": "2. Pridanie klávesnice, myši alebo USB ovládača",
+    "body": "Vstupné zariadenia nájdete na hostiteľovi v <code>/dev/input/</code>. Zistite ich hlavné číslo zariadenia (major):",
+    "listCode": "ls -l /dev/input",
+    "imageAlt": "Zoznam vstupných zariadení",
+    "afterList": "Pri znakových zariadeniach použite hlavné číslo pred čiarkou, v príklade <code>13</code>. Na hostiteľovi upravte konfiguráciu kontajnera Kodi. Nahraďte <code>'<'CTID'>'</code> jeho ID, napríklad <code>102</code>:",
+    "editCode": "nano /etc/pve/lxc/CTID.conf",
+    "addLines": "Pridajte nasledujúce riadky a upravte <code>13</code> podľa čísla na <strong>vašom</strong> hostiteľovi:",
+    "configCode": "lxc.cgroup2.devices.allow: c 13:* rwm\nlxc.mount.entry: /dev/input dev/input none bind,optional,create=dir",
+    "imageConfigAlt": "Konfigurácia LXC",
+    "save": "Uložte súbor, ukončite editor pomocou <code>Ctrl+X</code> a reštartujte <strong>iba kontajner</strong>. Hostiteľa Proxmox reštartovať netreba:",
+    "restartCode": "pct reboot CTID",
+    "plug": "Pripojte klávesnicu, myš alebo USB ovládač. Kodi by mal reagovať."
+  },
+  "updateKodi": {
+    "heading": "3. Voliteľná aktualizácia Kodi z nastavených repozitárov",
+    "calloutTitle": "Dôležité",
+    "calloutBody": "PPA team-xbmc je <strong>iba pre Ubuntu</strong> a Kodi uvádza, že už nie je udržiavaný. Chýbajúci príkaz <code>add-apt-repository</code> neurčuje distribúciu. Skontrolujte <code>cat /etc/os-release</code> a hľadajte <code>NAME=\"Ubuntu\"</code>; nepridávajte Ubuntu PPA do Debianu. Príkazy nižšie aktualizujú balíky z repozitárov nastavených v kontajneri.",
+    "body": "V kontajneri (<code>pct enter '<'CTID'>'</code>):",
+    "code": "apt update\napt install --only-upgrade kodi kodi-bin",
+    "after": "Po aktualizácii reštartujte kontajner. Kodi použije verziu dostupnú v nastavených repozitároch, ktorá sa môže líšiť od najnovšieho vydania projektu."
+  },
+  "screenshots": {
+    "heading": "Snímky obrazovky",
+    "image1Alt": "Kodi rozhranie 1",
+    "image2Alt": "Kodi rozhranie 2"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "items": [
+      "<strong>Kontajner Kodi sa spustí, ale na televízore nič nevidno:</strong> možno nemá prístup k iGPU. V kontajneri skontrolujte <code>ls /dev/dri</code>; mali by sa zobraziť <code>card0</code> a <code>renderD128</code>. Ak je adresár prázdny, skontrolujte priame priradenie GPU alebo použite <strong>Pridať GPU do LXC</strong> v ProxMenuxe.",
+      "<strong>Klávesnica alebo myš sa po reštarte nezistí:</strong> skontrolujte pripojenie <code>/dev/input</code> a oprávnenie Kodi čítať zariadenia. Spustite <code>ls -l /dev/input</code> na hostiteľovi aj v kontajneri a overte pravidlo <code>lxc.cgroup2.devices.allow</code>.",
+      "<strong>Prehrávanie s hardvérovou akceleráciou používa CPU namiesto GPU:</strong> nainštalujte alebo aktualizujte ovládače VA-API v kontajneri: <code>intel-media-va-driver</code> pre novšie Intel iGPU, <code>i965-va-driver</code> pre staršie a <code>mesa-va-drivers</code> pre AMD.",
+      "<strong><code>add-apt-repository: command not found</code>:</strong> príkaz nie je nainštalovaný; to nedokazuje, že kontajner používa Debian. Skontrolujte distribúciu a dostupné balíky. Na Debiane použite jeho balíky Kodi bez pridávania Ubuntu PPA."
+    ]
+  },
+  "further": {
+    "heading": "Ďalšie informácie",
+    "konpatRich": "<konpatLink>Konpatov blogový príspevok</konpatLink> s ďalšími informáciami o sprístupnení Intel iGPU v LXC."
+  }
+}

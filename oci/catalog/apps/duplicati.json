@@ -166,7 +166,7 @@
           "managed-volume",
           "host-bind"
         ],
-        "default": "managed-volume",
+        "default": "host-bind",
         "managed_volume": {
           "backup": true,
           "default_size_gb": 8

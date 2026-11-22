@@ -69,5 +69,18 @@
         "Flowise 3.0.1 and later create the administrator account from the web interface, the first time it is opened."
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Flowise is a generative AI development platform for building AI agents and LLM workflows. An intuitive interface with a visual editor simplifies complex workflow design, ideal for developers creating diverse AI applications, from chatbots to data processing pipelines.\n\nCore features include visual orchestration and data integration. Support for various models, custom code, and branching, looping, and routing logic enables complex workflow creation. Connection to over 100 data sources, vector databases, and memory modules ensures flexible data ingestion. Monitoring capabilities provide execution logs and visual debugging for workflow transparency and maintenance. Self-hosted and air-gapped deployment options accommodate diverse infrastructure needs.\n\nIt offers data processing with transforms, filters, aggregates, and RAG indexing pipelines. Memory optimization and planning techniques enhance performance, while MCP integration supports tool connections and authentication. Security controls include role-based access, single sign-on, and encrypted credentials for data protection. API, JavaScript and Python SDKs, and command-line interface enable extensibility, with embedded chat components and a template marketplace accelerating development. Scalability supports high-throughput workflows, and evaluation features optimize performance. With flexibility and efficiency at the core, the platform delivers a modern solution for AI development.\n\n**Key Features:**\n- Visual editor supporting multiple models, custom code, branching looping routing logic\n- Connection to over 100 data sources, vector databases, and memory modules\n- Execution logs and visual debugging for enhanced monitoring\n- Data processing with transforms, filters, aggregates, and RAG indexing pipelines\n- Various memory optimization technique and integrations\n- MCP client and server nodes for tool integration\n- Input moderation and output post-processing for safety\n- API, JavaScript and Python SDKs, and command-line interface\n- Customizable embedded chat components\n- Template marketplace and reusable components\n- Role-based access control, single sign-on, encrypted credentials\n- Vertical and horizontal scalability for high-throughput workflows\n- Datasets and evaluation features for workflow optimization\n\n**Learn More:**\n- [Flowise Official Website](https://flowiseai.com/)\n- [Flowise GitHub](https://github.com/flowiseai/flowise)\n- [Flowise Documentation](https://docs.flowiseai.com/)\n"
+    },
+    "description": {
+      "en_US": "Flowise is a visual platform designed for building artificial intelligence agents and Large Language Model workflows. It provides a drag-and-drop canvas to orchestrate nodes, language models, memory modules, and integrations. Users can visually design, iterate, and run complex conversational pipelines and automated logic."
+    },
+    "repository": "https://github.com/FlowiseAI/Flowise",
+    "screenshots": [
+      "https://flowiseai.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ffeature4.425d00e9.png&w=1080&q=75",
+      "https://flowiseai.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ffeature2b.08d7b79b.png&w=750&q=75"
+    ]
   }
 }

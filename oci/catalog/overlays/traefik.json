@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Route HTTP services through a configurable reverse proxy and inspect routers and middleware in its dashboard."
+    },
+    "description": {
+      "en_US": "Traefik is an HTTP reverse proxy and load balancer designed to facilitate microservice deployments. It integrates with existing infrastructure and orchestrators to automatically and dynamically configure routing without requiring service restarts. It also handles HTTPS certificates and provides a web dashboard to monitor active routers and services."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/traefik/traefik/HEAD/docs/content/assets/img/webui-dashboard.png"
+    ]
+  }
+}

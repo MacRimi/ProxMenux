@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -24,7 +24,6 @@ export default async function PostInstallPerformancePage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.postInstall.performance" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -132,7 +131,7 @@ dd if=/dev/urandom of=/tmp/test.bin bs=1M count=1024 status=none
 time gzip -k /tmp/test.bin       # uses pigz — parallel
 rm /tmp/test.bin.gz
 
-time /bin/gzip.original -k /tmp/test.bin   # original single-threaded gzip
+time /usr/bin/gzip.distrib -k /tmp/test.bin   # original single-threaded gzip (/bin/ on PVE 8)
 rm /tmp/test.bin /tmp/test.bin.gz`}
         className="my-4"
       />

@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Build, organize and run API requests in a self-hosted web interface."
+    },
+    "description": {
+      "en_US": "Yaade is an open-source, collaborative API development environment designed for self-hosting. It allows teams to create, organize, and execute REST and WebSocket requests while keeping sensitive information secure. The platform also supports multi-user permissions, Markdown documentation, and executing JavaScript test scripts."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/Esperotech/yaade/HEAD/assets/dark-mode.png",
+      "https://raw.githubusercontent.com/Esperotech/yaade/HEAD/assets/light-mode.png",
+      "https://raw.githubusercontent.com/Esperotech/yaade/HEAD/assets/environments.png",
+      "https://raw.githubusercontent.com/Esperotech/yaade/HEAD/assets/user-management.png"
+    ]
+  }
+}

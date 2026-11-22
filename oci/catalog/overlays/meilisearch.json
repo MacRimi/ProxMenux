@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted full-text search engine with an HTTP API and a built-in API explorer. This profile stores the index data persistently and generates a master key."
+    },
+    "description": {
+      "en_US": "Meilisearch is an open-source search engine designed for fast full-text, semantic, and hybrid search. It provides search-as-you-type results with built-in typo tolerance, sorting, and faceted filtering. Applications connect to it through a RESTful API to index documents and retrieve relevant results."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/meilisearch/meilisearch/HEAD/assets/demo-light.gif#gh-light-mode-only",
+      "https://raw.githubusercontent.com/meilisearch/meilisearch/HEAD/assets/demo-dark.gif#gh-dark-mode-only"
+    ]
+  }
+}

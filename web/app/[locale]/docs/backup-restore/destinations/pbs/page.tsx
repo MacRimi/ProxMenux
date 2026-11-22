@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Star, ExternalLink, BookOpen } from "lucide-react"
 import Image from "next/image"
 import { Link } from "@/i18n/navigation"
@@ -50,7 +50,6 @@ export default async function PbsDestinationPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.backupRestore.destinations.pbs" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -241,7 +240,7 @@ export default async function PbsDestinationPage({
             alt={t("encryption.blobUploadImageAlt")}
             width={1400}
             height={700}
-            className="rounded-lg border border-gray-200 shadow-sm w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">

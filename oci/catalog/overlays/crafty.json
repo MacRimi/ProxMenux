@@ -56,5 +56,14 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Crafty is an open source Minecraft control panel built using Tornado and AdminLTE, featuring server scheduling, a interactive console and the ability to run almost any type of Minecraft server"
+    },
+    "description": {
+      "en_US": "Crafty Controller is a control panel and launcher for Minecraft servers. It runs Minecraft servers in the background while presenting an accessible web interface for administration. Server administrators can use it to supervise and interact with their servers easily."
+    },
+    "repository": "https://gitlab.com/crafty-controller/crafty-4"
   }
 }

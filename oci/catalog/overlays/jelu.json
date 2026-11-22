@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted reading tracker for keeping a to-read list, recording reading history, importing Goodreads data and organizing books with tags and shelves. It includes SQLite and does not need a separate database service."
+    },
+    "description": {
+      "en_US": "Jelu is a self-hosted reading tracker designed to record reading history, track current books, and manage a to-read list. It allows users to import reading logs from Goodreads or ISBN lists, search and import book metadata automatically, and organize libraries using tags and custom shelves. Users can also view reading statistics, write and share reviews, and inspect reading activity across multiple accounts."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/bayang/jelu/HEAD/screenshots/home-page.png",
+      "https://raw.githubusercontent.com/bayang/jelu/HEAD/screenshots/book-list.png",
+      "https://raw.githubusercontent.com/bayang/jelu/HEAD/screenshots/book-detail-1.png",
+      "https://raw.githubusercontent.com/bayang/jelu/HEAD/screenshots/author-page.png"
+    ]
+  }
+}

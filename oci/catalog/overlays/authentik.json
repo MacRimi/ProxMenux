@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Authentik is an open-source identity provider and access platform. This recipe follows the official three-service deployment with PostgreSQL, the server and a worker, each in its own Proxmox OCI LXC."
+    },
+    "description": {
+      "en_US": "authentik is an open-source Identity Provider for single sign-on. It supports authentication protocols including SAML, OAuth2, OIDC, LDAP, and RADIUS. The application handles identity and access management for environments ranging from small labs to large production clusters."
+    },
+    "screenshots": [
+      "https://docs.goauthentik.io/img/screen_apps_light.jpg",
+      "https://docs.goauthentik.io/img/screen_apps_dark.jpg",
+      "https://docs.goauthentik.io/img/screen_admin_light.jpg",
+      "https://docs.goauthentik.io/img/screen_admin_dark.jpg"
+    ]
+  }
+}

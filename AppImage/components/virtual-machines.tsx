@@ -2,16 +2,17 @@
 
 import type React from "react"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useId } from "react"
 import { fetchLxcApps, getLxcAppsCached, invalidateLxcApps, seedLxcAppsCache, setLxcAppsCached, syncLxcAppsState } from "../lib/lxc-apps-cache"
 import { getUpdateActionButtonClass } from "../lib/update-action-style"
 import { parseTags, stringifyTags, tagToColor } from "../lib/pve-tag-color"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Badge } from "./ui/badge"
+import { Badge, badgeVariants } from "./ui/badge"
+import { cn } from "@/lib/utils"
 import { Progress } from "./ui/progress"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog"
-import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Clock, Database, Shield, Bell, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, HardDrive, Network, Power, RotateCcw, StopCircle, Container, ChevronDown, ChevronUp, ChevronRight, Terminal, Archive, Plus, PlusCircle, Loader2, Database, Shield, FileText, Settings2, Activity, Package, RefreshCw, EthernetPort, ArrowUpCircle, Info, CheckCircle2, EyeOff, Eye, Trash2, Check, X, AlertTriangle, AlertCircle, Search, Pin, Tag as TagIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Checkbox } from "./ui/checkbox"
 import { Switch } from "./ui/switch"
@@ -22,6 +23,10 @@ import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
 import { ScriptTerminalModal } from "./script-terminal-modal"
+import { LxcUpdateJobs } from "./lxc-update-jobs"
+import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow, VmListToolbar, VmListTransfer } from "./vm-list-layout"
+import { markUpdateJobViewed, type LxcUpdateJob } from "../lib/lxc-update-jobs"
+import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
 import { GuestBackupList } from "./guest-backup-list"
 import type { GuestBackup } from "../lib/guest-backup-archives"
@@ -30,6 +35,7 @@ import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
 import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
+import { useAccess } from "../lib/access"
 import { waitForVmControlTask } from "../lib/vm-control"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
 import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
@@ -282,6 +288,13 @@ interface VMData {
   modal_cache_revision?: number
 }
 
+const inventoryTypes = ["all", "lxc", "qemu"] as const
+type InventoryType = (typeof inventoryTypes)[number]
+const inventoryTypeKey = "proxmenux.vmListType"
+const inventoryFilterButton = "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto"
+const inventoryFilterActive = "bg-blue-500 text-white shadow-sm"
+const inventoryFilterIdle = "text-muted-foreground hover:text-foreground hover:bg-background/60"
+
 function hasLxcPendingUpdates(vm: VMData): boolean {
   if (vm.type !== "lxc") return false
   const osUpdates = vm.update_check?.count ?? 0
@@ -423,6 +436,7 @@ interface LxcMountPoint {
   runtime_fstype?: string
   runtime_options?: string
   runtime_readonly?: boolean
+  runtime_readonly_expected?: boolean
   runtime_reachable?: boolean
   runtime_error?: string | null
   // Sprint 14.x: host-side bind source state. Detects the case where the
@@ -452,12 +466,24 @@ const formatBytes = (bytes: number | undefined, isNetwork: boolean = false): str
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
-const formatUptime = (seconds: number, t: (key: string, params?: Record<string, string | number>) => string) => {
+const formatUptime = (seconds: number, t: (key: string, params?: Record<string, string | number>) => string, compact = false) => {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
+  if (compact) {
+    const day = days ? t("vmLxc.layout.uptimeDay", { count: days }) : ""
+    const hour = hours ? t("vmLxc.layout.uptimeHour", { count: hours }) : ""
+    const minute = minutes ? t("vmLxc.layout.uptimeMinute", { count: minutes }) : ""
+    return (days ? [day, hour] : [hour, minute]).filter(Boolean).join(" ") || t("vmLxc.layout.uptimeRecent")
+  }
   return t("vmLxc.duration.dhm", { days, hours, minutes })
 }
+
+const inventoryCounter = (value: number | undefined) =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : undefined
+
+const completeTransferTotal = ([first, second]: readonly [number | undefined, number | undefined]) =>
+  first === undefined || second === undefined ? undefined : first + second
 
 const extractIPFromConfig = (config?: VMConfig, lxcIPInfo?: VMDetails["lxc_ip_info"]): string => {
   // Use primary IP from lxc-info if available
@@ -581,7 +607,10 @@ const getOSIcon = (osInfo: VMDetails["os_info"] | undefined, vmType: string): Re
 function MountPointCard({ mp }: { mp: LxcMountPoint }) {
   const t = useT()
   const isStale = mp.runtime_reachable === false
-  const isReadonly = !isStale && mp.runtime_readonly === true
+  // Read-only as configured (ro=1, or a remote mount asked to be read-only)
+  // is shown as such without the warning colour.
+  const isReadonlyAsked = !isStale && mp.runtime_readonly === true && mp.runtime_readonly_expected === true
+  const isReadonly = !isStale && mp.runtime_readonly === true && !isReadonlyAsked
   const isDivergent = mp.runtime_mounted === false  // configured but not actually mounted
   // "Zombie bind": the host removed the source (e.g. USB pulled, manual
   // umount) but the CT mount namespace still shows the bind as mounted.
@@ -673,7 +702,9 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
                 ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                 : isReadonly
                   ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                  : mp.runtime_mounted === null
+                  : isReadonlyAsked
+                    ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                    : mp.runtime_mounted === null
                     ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
                     : "bg-green-500/10 text-green-500 border-green-500/20"
           }
@@ -684,7 +715,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
               ? t("vmLxc.details.mountStatus.notMounted")
               : isHostDetached
                 ? t("vmLxc.details.mountStatus.hostDetached")
-                : isReadonly
+                : isReadonly || isReadonlyAsked
                   ? t("vmLxc.details.mountStatus.readOnly")
                   : mp.runtime_mounted === null
                     ? t("vmLxc.details.mountStatus.stopped")
@@ -824,22 +855,26 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 }
 
 export function VirtualMachines() {
+  // The profile of the session decides which actions are offered.
+  const { capabilities } = useAccess()
   const t = useT()
   const { language } = useI18n()
+  const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
+  // The list follows the refresh of the Proxmox status daemon; an open guest
+  // keeps the faster poll its modal waits on after actions and updates.
   const {
     data: vmData,
     error,
     isLoading,
     mutate,
   } = useSWR<VMData[]>("/api/vms", fetcher, {
-    refreshInterval: 2500,
+    refreshInterval: selectedVM ? 2500 : 10000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     dedupingInterval: 1000,
     errorRetryCount: 2,
   })
 
-  const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
   const [vmDetails, setVMDetails] = useState<VMDetails | null>(null)
   // Cross-open cache: last-known payloads keyed by vmid, persisted
   // across modal open/close for the lifetime of this component. When
@@ -948,6 +983,7 @@ export function VirtualMachines() {
   const [editedNotes, setEditedNotes] = useState("")
   const [savingNotes, setSavingNotes] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
+  const infoTriggerRef = useRef<HTMLElement | null>(null)
   const [ipsLoaded, setIpsLoaded] = useState(false)
   const [loadingIPs, setLoadingIPs] = useState(false)
   const [networkUnit, setNetworkUnit] = useState<"Bytes" | "Bits">("Bytes")
@@ -963,7 +999,6 @@ export function VirtualMachines() {
   const [showBackupModal, setShowBackupModal] = useState(false)
   const [backupMode, setBackupMode] = useState<string>("snapshot")
   const [backupProtected, setBackupProtected] = useState(false)
-  const [backupNotification, setBackupNotification] = useState<string>("auto")
   const [backupNotes, setBackupNotes] = useState<string>("{{guestname}}")
   const [backupPbsChangeMode, setBackupPbsChangeMode] = useState<string>("default")
   
@@ -978,7 +1013,9 @@ export function VirtualMachines() {
   // A container restored from a backup carries the mark of its installation
   // and has no record on this host until it is recovered from the menu.
   const [ociRestored, setOciRestored] = useState(false)
-  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover" } | null>(null)
+  const [ociAction, setOciAction] = useState<{ vmid: number; action: "update" | "modify" | "recover"; recoverPrevious?: boolean } | null>(null)
+  const ociCompletionCodeRef = useRef<number | undefined>(undefined)
+  useEffect(() => { ociCompletionCodeRef.current = undefined }, [ociAction])
 
   // Firewall log state — fetched only when the operator opens that tab
   // so a CT/VM without firewall use doesn't pay the pvesh cost on every
@@ -1290,7 +1327,8 @@ export function VirtualMachines() {
     return () => clearTimeout(t)
   }, [updatesResult])
 
-  const handleVMClick = async (vm: VMData) => {
+  const handleVMClick = async (vm: VMData, trigger?: HTMLElement) => {
+    infoTriggerRef.current = trigger ?? null
     setSelectedVM(vm)
     setOsCheckError(null)
     setBulkLoaded(null)
@@ -1698,7 +1736,6 @@ export function VirtualMachines() {
     // Reset modal to defaults
     setBackupMode("snapshot")
     setBackupProtected(false)
-    setBackupNotification("auto")
     setBackupNotes("{{guestname}}")
     setBackupPbsChangeMode("default")
     // Auto-select first storage if none selected
@@ -1722,7 +1759,6 @@ export function VirtualMachines() {
           mode: backupMode,
           compress: "zstd",
           protected: backupProtected,
-          notification: backupNotification,
           notes: backupNotes,
           pbs_change_detection: backupPbsChangeMode
         }),
@@ -1879,40 +1915,6 @@ export function VirtualMachines() {
     setTerminalOpen(true)
   }
   
-const handleDownloadLogs = async (vmid: number, vmName: string) => {
-    try {
-      const data = await fetchApi(`/api/vms/${vmid}/logs`)
-
-      // Format logs as plain text
-      let logText = `=== ${t("vmLxc.logs.header", { name: vmName, vmid })} ===\n`
-      logText += `${t("vmLxc.logs.node")}: ${data.node}\n`
-      logText += `${t("vmLxc.logs.type")}: ${data.type}\n`
-      logText += `${t("vmLxc.logs.totalLines")}: ${data.log_lines}\n`
-      logText += `${t("vmLxc.logs.generated")}: ${new Date().toISOString()}\n`
-      logText += `\n${"=".repeat(80)}\n\n`
-
-      if (data.logs && Array.isArray(data.logs)) {
-        data.logs.forEach((log: any) => {
-          if (typeof log === "object" && log.t) {
-            logText += `${log.t}\n`
-          } else if (typeof log === "string") {
-            logText += `${log}\n`
-          }
-        })
-      }
-
-      const blob = new Blob([logText], { type: "text/plain" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${vmName}-${vmid}-logs.txt`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error("Error downloading logs:", error)
-    }
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "running":
@@ -1963,6 +1965,22 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   // Ensure vmData is always an array (backend may return object on error)
   const safeVMData = Array.isArray(vmData) ? vmData : []
 
+  const [typeFilter, setTypeFilter] = useState<InventoryType>(() => {
+    try {
+      const saved = window.localStorage.getItem(inventoryTypeKey)
+      return saved === "qemu" || saved === "lxc" ? saved : "all"
+    } catch {
+      return "all"
+    }
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(inventoryTypeKey, typeFilter)
+    } catch {
+      // The current selection still works when browser storage is unavailable.
+    }
+  }, [typeFilter])
+
   // Status filter for the "Virtual Machines & Containers" list. Persisted
   // to localStorage so a reload keeps the operator's last view.
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "stopped">(() => {
@@ -1976,7 +1994,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     }
   }, [statusFilter])
   const [updatesOnly, setUpdatesOnly] = useState(() => {
-    if (typeof window === "undefined") return false
+    if (typeof window === "undefined" || typeFilter === "qemu") return false
     return window.localStorage.getItem("proxmenux.vmListUpdatesOnly") === "true"
   })
   useEffect(() => {
@@ -1985,18 +2003,25 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     }
   }, [updatesOnly])
   const [vmSearchQuery, setVmSearchQuery] = useState("")
+  const selectInventoryType = (type: InventoryType) => {
+    setTypeFilter(type)
+    if (type === "qemu") setUpdatesOnly(false)
+  }
 
   const vmSearchTerms = useMemo(
     () => normalizeVmSearchValue(vmSearchQuery).trim().split(/\s+/).filter(Boolean),
     [vmSearchQuery],
   )
 
+  const typeMatchedVMs = useMemo(() => typeFilter === "all"
+    ? safeVMData
+    : safeVMData.filter((vm) => vm.type === typeFilter), [safeVMData, typeFilter])
   const statusCounts = useMemo(() => ({
-    all: safeVMData.length,
-    running: safeVMData.filter((vm) => vm.status === "running").length,
-    stopped: safeVMData.filter((vm) => vm.status === "stopped").length,
-    updates: safeVMData.filter(hasLxcPendingUpdates).length,
-  }), [safeVMData])
+    all: typeMatchedVMs.length,
+    running: typeMatchedVMs.filter((vm) => vm.status === "running").length,
+    stopped: typeMatchedVMs.filter((vm) => vm.status === "stopped").length,
+    updates: typeMatchedVMs.filter(hasLxcPendingUpdates).length,
+  }), [typeMatchedVMs])
 
   const vmTypeSynonyms = useMemo(() => ({
     lxc: t("vmLxc.filters.typeSynonyms.lxc"),
@@ -2005,13 +2030,19 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
   const filteredVMs = useMemo(() => {
     const statusMatched = statusFilter === "all"
-      ? safeVMData
-      : safeVMData.filter((vm) => vm.status === statusFilter)
+      ? typeMatchedVMs
+      : typeMatchedVMs.filter((vm) => vm.status === statusFilter)
     return statusMatched.filter((vm) => (
       (!updatesOnly || hasLxcPendingUpdates(vm))
       && matchesVmSearch(vm, vmSearchTerms, vmTypeSynonyms)
     ))
-  }, [safeVMData, statusFilter, updatesOnly, vmSearchTerms, vmTypeSynonyms])
+  }, [typeMatchedVMs, statusFilter, updatesOnly, vmSearchTerms, vmTypeSynonyms])
+  const listLayout = useVmListLayout()
+  const columnPickerId = useId()
+  const [columnPickerOpen, setColumnPickerOpen] = useState(false)
+  const listKey = (vm: VMData) => `${vm.type === "lxc" ? "lxc" : "qemu"}:${vm.vmid}`
+  // Columns belong to the compact list; the standard cards have none.
+  const standardView = filteredVMs.length > 0 && filteredVMs.every((vm) => listLayout.isExpanded(listKey(vm)))
 
   // ── LXC update apply flow (Phase 2a/b) ────────────────────────────
   // Users pick a target (OS, App, both) + backup / restart options,
@@ -2032,6 +2063,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [applyRestart, setApplyRestart] = useState(false)
   const [applyStartedAt, setApplyStartedAt] = useState<number>(0)
   const [applyRunId, setApplyRunId] = useState<string>("")
+  const [applyResume, setApplyResume] = useState(false)
   const [applyCheckedOs, setApplyCheckedOs] = useState(false)
   const [applyTargetIds, setApplyTargetIds] = useState<string[]>([])
   const [applyTargetLabels, setApplyTargetLabels] = useState<string[]>([])
@@ -2085,6 +2117,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
   const [schedulePreset, setSchedulePreset] = useState<string>("daily-3am")
   const [scheduleTarget, setScheduleTarget] = useState<"os" | "app" | "both">("both")
   const [scheduleTargets, setScheduleTargets] = useState<string[]>(["os", "apps"])
+  // The applications the schedule can update, as the open container shows
+  // them; "apps" is saved only while there is one to update.
+  const scheduleAppChoicesRef = useRef<{ vmid: number; ids: string[] } | null>(null)
   const [scheduleReleaseDelayDays, setScheduleReleaseDelayDays] = useState(0)
   const [scheduleLastRunAt, setScheduleLastRunAt] = useState<string | null>(null)
   const [scheduleLastRunStatus, setScheduleLastRunStatus] = useState<string | null>(null)
@@ -2331,7 +2366,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     const cronToSave = scheduleEnabled || scheduleConfigured ? scheduleCron : ""
     // A container installed by OCI manager Apps has one thing to update on
     // a schedule: its image.
-    const targetsToSave = ociInstance ? ["oci_image"] : scheduleTargets
+    const shownAppChoices = scheduleAppChoicesRef.current
+    const withoutHiddenApps = shownAppChoices?.vmid === vmid && shownAppChoices.ids.length === 0
+      ? scheduleTargets.filter((value) => value !== "apps")
+      : scheduleTargets
+    const targetsToSave = ociInstance
+      ? ["oci_image"]
+      : withoutHiddenApps.length ? withoutHiddenApps : scheduleTargets
     const hasOsTarget = targetsToSave.includes("os")
     const hasAppTarget = targetsToSave.some((value) => value !== "os")
     const derivedTarget: "os" | "app" | "both" = hasOsTarget && hasAppTarget ? "both" : hasOsTarget ? "os" : "app"
@@ -2673,6 +2714,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setApplyVmid(vmid)
     setApplyTarget(target)
     setApplyRunId(runId)
+    setApplyResume(false)
     setApplyCheckedOs(opts?.checkedOs === true)
     setApplyTargetIds(opts?.targetIds?.length ? opts.targetIds : fallbackTargets)
     setApplyTargetLabels(opts?.targetLabels?.length ? opts.targetLabels : fallbackLabels)
@@ -2693,27 +2735,37 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setApplyStartedAt(Date.now())
     setApplyOpen(true)
   }
-  const handleApplyComplete = async (exitCode = 0) => {
+  const resumeApplyJob = (job: LxcUpdateJob) => {
+    setApplyVmid(job.vmid)
+    setApplyTarget(job.target)
+    setApplyRunId(job.id)
+    setApplyCheckedOs(job.script_path.endsWith("/install_checked_os_updates.sh"))
+    setApplyResume(true)
+    setApplyStartedAt(job.created_at * 1000)
+    setApplyOpen(true)
+  }
+  const handleApplyComplete = async (exitCode = 0, notifyBackend = true) => {
     if (applyVmid == null) return
     const duration = Math.max(0, Math.round((Date.now() - applyStartedAt) / 1000))
-    // The modal fires onComplete on any WS close (success or user cancel).
-    // Report the same run ID so the backend can collapse this compatibility
-    // callback with its authoritative process-completion hook.
+    // Legacy callers may report the same run ID to the compatibility route.
+    // Background Updates only refresh the view after the server's real exit.
     try {
-      await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          success: exitCode === 0,
-          run_id: applyRunId,
-          target: applyTarget,
-          requested_targets: applyTargetIds,
-          target_labels: applyTargetLabels,
-          duration_seconds: duration,
-          ct_name: selectedVM?.name || `CT-${applyVmid}`,
-          refresh_docker_inventory: applyDockerRefresh,
-        }),
-      })
+      if (notifyBackend) {
+        await fetchApi(`/api/lxc-updates/${applyVmid}/applied`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            success: exitCode === 0,
+            run_id: applyRunId,
+            target: applyTarget,
+            requested_targets: applyTargetIds,
+            target_labels: applyTargetLabels,
+            duration_seconds: duration,
+            ct_name: selectedVM?.name || `CT-${applyVmid}`,
+            refresh_docker_inventory: applyDockerRefresh,
+          }),
+        })
+      }
     } catch {
       // Non-fatal — the backend process hook owns finalization.
     }
@@ -2731,6 +2783,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     // performs the requests (the data map is only a render seed), so no
     // invalidation is needed and there is no "Loading applications" flash.
     void fetchLxcApps(applyVmid)
+    // Recovery can be opened from the job banner while another CT is selected.
+    // Refresh the operated guest without changing that other guest's result UI.
+    if (selectedVMRef.current?.vmid !== applyVmid) {
+      void mutate()
+      return
+    }
     // Enter the "Comprobando resultado…" state on the Updates tab.
     // Baseline snapshot lets a downstream useEffect detect when the
     // SWR poll actually delivers the post-apply counts (as opposed
@@ -2863,8 +2921,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     onClick?: () => void,
   ) => {
     if (!uc) return null
-    const stale = uc.stale === true || (!!uc.last_check && isLxcUpdateStale(uc))
-    if (!stale && (!uc.available || !uc.count || uc.count <= 0)) return null
+    if (!uc.available || !uc.count || uc.count <= 0) return null
     const last = uc.last_check
       ? new Date(uc.last_check).toLocaleString()
       : "—"
@@ -2896,15 +2953,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     const clickable = onClick
       ? "cursor-pointer hover:bg-violet-500/20 transition-colors focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
       : ""
-    return (
-      <Badge
-        variant="outline"
-        className={`bg-violet-500/10 text-violet-400 border-violet-500/30 flex items-center flex-shrink-0 ${sizing} ${clickable}`}
-        title={tooltip}
-        onClick={onClick}
-        role={onClick ? "button" : undefined}
-        tabIndex={onClick ? 0 : undefined}
-      >
+    const className = `bg-violet-500/10 text-violet-400 border-violet-500/30 flex items-center flex-shrink-0 ${sizing} ${clickable}`
+    const content = (
+      <>
         {/* Icon-only badge: `↑` (ArrowUpCircle, same glyph as the
             Apply update buttons) + count. Dropped the "N updates" /
             "N update" text so we don't need to translate the label
@@ -2912,14 +2963,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             space — matters most on the LXC card row where uptime,
             IP and other chips compete for width. Count alone with
             the up-arrow reads unambiguously as "pending updates". */}
-        {stale ? <Clock className={iconSize} /> : <ArrowUpCircle className={iconSize} />}
-        {stale ? t("vmLxc.updates.checkStale") : uc.count}
+        <ArrowUpCircle className={iconSize} />
+        {uc.count}
         {/* Chevron only when the badge is wired up as a clickable
             shortcut — its absence on the dashboard card avoids
             implying interactivity where there isn't any (the whole
             row is the click target there). */}
         {onClick && <ChevronRight className={`${iconSize} -mr-0.5 opacity-80`} />}
+      </>
+    )
+    return onClick ? (
+      <Badge variant="outline" className={className} title={tooltip} onClick={onClick} role="button" tabIndex={0}>
+        {content}
       </Badge>
+    ) : (
+      <VmCardTooltip label={tooltip}>
+        <span className={cn(badgeVariants({ variant: "outline" }), className)}>{content}</span>
+      </VmCardTooltip>
     )
   }
 
@@ -3108,6 +3168,54 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
     setIsEditingNotes(false)
     setEditedNotes("")
   }
+
+  // Keep the transfer scale stable across searches and filters.
+  let networkMaximum = 1
+  let diskIoMaximum = 1
+  for (const vm of safeVMData) {
+    if (vm.status !== "running") continue
+    networkMaximum = Math.max(networkMaximum, inventoryCounter(vm.netin) ?? 0, inventoryCounter(vm.netout) ?? 0)
+    diskIoMaximum = Math.max(diskIoMaximum, inventoryCounter(vm.diskread) ?? 0, inventoryCounter(vm.diskwrite) ?? 0)
+  }
+
+  const inventoryRows = sortVmRows(filteredVMs.map((vm) => {
+    // Both the expanded card and the compact IP column use the current list
+    // address first, then the existing configuration and prefetch caches.
+    let lxcIP: string | null | undefined = null
+    if (vm.type === "lxc") {
+      lxcIP = vm.ip || vmConfigs[vm.vmid]
+      if (!lxcIP) {
+        const cached = vmModalCacheRef.current.details.get(vm.vmid) as any
+        lxcIP = cached?.lxc_ip_info?.primary_ip
+          || (cached?.config ? extractIPFromConfig(cached.config, cached.lxc_ip_info) : null)
+      }
+    }
+    const ip = vm.status === "running" && lxcIP && lxcIP !== "DHCP" && lxcIP !== "N/A" ? lxcIP : undefined
+    const count = vm.type === "lxc" ? getAggregateUpdateCheck(vm)?.count : undefined
+    const running = vm.status === "running"
+    const tags = parseTags(vm.tags)
+    const net: readonly [number | undefined, number | undefined] = running
+      ? [inventoryCounter(vm.netin), inventoryCounter(vm.netout)] : [undefined, undefined]
+    const diskIo: readonly [number | undefined, number | undefined] = running
+      ? [inventoryCounter(vm.diskread), inventoryCounter(vm.diskwrite)] : [undefined, undefined]
+    const statusLabel = running || vm.status === "stopped"
+      ? t(`vmLxc.statusFilter.${vm.status}`)
+      : getStatusLabel(vm.status, false)
+    return { vm, lxcIP, tags, net, diskIo, statusLabel, values: {
+      name: vm.name,
+      type: vm.vmid,
+      state: statusLabel,
+      tags: tags.join(", ") || undefined,
+      ip,
+      uptime: running ? inventoryCounter(vm.uptime) : undefined,
+      cpu: vm.cpu * 100,
+      memory: vm.maxmem > 0 ? vm.mem / vm.maxmem * 100 : undefined,
+      disk: vm.maxdisk > 0 ? vm.disk / vm.maxdisk * 100 : undefined,
+      net: completeTransferTotal(net),
+      io: completeTransferTotal(diskIo),
+      updates: count && count > 0 ? count : undefined,
+    } }
+  }), listLayout.sort, language, (row, column) => row.values[column])
 
   return (
     <div className="space-y-6">
@@ -3352,14 +3460,20 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
       </div>
 
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <CardHeader className="flex flex-col gap-3">
           <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
             <Server className="h-6 w-6" />
             {t("vmLxc.listTitle")}
           </CardTitle>
-          <div className="flex w-full flex-col gap-2 xl:w-auto xl:items-end">
-            <div className="flex w-full flex-col gap-2 md:flex-row md:flex-wrap md:items-center xl:flex-nowrap">
-              <div className="relative w-full md:w-72">
+          <VmListToolbar
+            actions={
+              <VmListActions key="actions" layout={listLayout} keys={filteredVMs.map(listKey)}
+                filtered={typeFilter !== "all" || statusFilter !== "all" || updatesOnly || vmSearchTerms.length > 0}
+                pickerId={columnPickerId} pickerOpen={columnPickerOpen}
+                onTogglePicker={() => setColumnPickerOpen((current) => !current)} />
+            }
+            search={
+              <div key="search" className="relative min-w-0 flex-[1_1_10rem] max-sm:basis-24">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
@@ -3381,7 +3495,21 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                   </button>
                 )}
               </div>
-               <div
+            }
+            types={
+            <div key="types" role="group" aria-label={t("vmLxc.typeFilter.ariaLabel")}
+              className="grid w-full grid-cols-[auto_1fr_1fr] gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto">
+              {inventoryTypes.map((type) => (
+                <button key={type} type="button" aria-pressed={typeFilter === type}
+                  onClick={() => selectInventoryType(type)}
+                  className={`${inventoryFilterButton} whitespace-nowrap ${typeFilter === type ? inventoryFilterActive : inventoryFilterIdle}`}>
+                  {type === "all" ? t("vmLxc.typeFilter.all") : type === "qemu" ? "VM" : "LXC"}
+                </button>
+              ))}
+            </div>
+            }
+            status={
+               <div key="status"
                  role="group"
                  aria-label={t("vmLxc.statusFilter.ariaLabel")}
                  className="grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto"
@@ -3404,11 +3532,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                       type="button"
                        aria-pressed={active}
                        onClick={() => setStatusFilter(key)}
-                      className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
-                        active
-                          ? "bg-blue-500 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                      }`}
+                       className={`${inventoryFilterButton} ${active ? inventoryFilterActive : inventoryFilterIdle}`}
                     >
                       {key === "running" && <Play className={iconClass} />}
                       {key === "stopped" && <Square className={iconClass} />}
@@ -3422,12 +3546,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                  <button
                    type="button"
                    aria-pressed={updatesOnly}
+                   disabled={typeFilter === "qemu"}
                    onClick={() => setUpdatesOnly((current) => !current)}
-                   className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto ${
-                     updatesOnly
-                       ? "bg-violet-500/80 text-white shadow-sm"
-                       : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                   }`}
+                   className={`${inventoryFilterButton} disabled:pointer-events-none disabled:opacity-50 ${updatesOnly ? "bg-violet-500/80 text-white shadow-sm" : inventoryFilterIdle}`}
                  >
                    <ArrowUpCircle className="h-3.5 w-3.5" />
                    <span>{t("vmLxc.filters.updates")}</span>
@@ -3436,20 +3557,23 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                    </span>
                  </button>
                </div>
-             </div>
+            }
+          />
+          <VmListColumnPicker id={columnPickerId} open={columnPickerOpen && !standardView} layout={listLayout} />
             {vmSearchTerms.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t("vmLxc.filters.resultCount", {
                   shown: filteredVMs.length,
-                  total: safeVMData.length,
+                  total: typeMatchedVMs.length,
                 })}
               </span>
              )}
-          </div>
         </CardHeader>
         <CardContent>
           {safeVMData.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">{t("vmLxc.empty")}</div>
+          ) : typeMatchedVMs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">{t("vmLxc.typeFilter.empty")}</div>
           ) : filteredVMs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
                {vmSearchTerms.length > 0
@@ -3461,8 +3585,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                    : t("vmLxc.filters.noStopped")}
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredVMs.map((vm) => {
+            <VmListGrid layout={listLayout} headings={!standardView}>
+              {inventoryRows.map(({ vm, lxcIP, tags, net, diskIo, statusLabel, values }) => {
                 const cpuPercent = (vm.cpu * 100).toFixed(1)
                 const memPercent = vm.maxmem > 0 ? ((vm.mem / vm.maxmem) * 100).toFixed(1) : "0"
                 const memGB = (vm.mem / 1024 ** 3).toFixed(1)
@@ -3471,37 +3595,54 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                 const diskGB = (vm.disk / 1024 ** 3).toFixed(1)
                 const maxDiskGB = (vm.maxdisk / 1024 ** 3).toFixed(1)
                 const typeBadge = getTypeBadge(vm.type)
-                // IP resolution — try both sources so a card never
-                // ends up with an empty slot while one path is still
-                // in flight:
-                //   1) `vmConfigs` — populated by the dedicated
-                //      LXC-IP-fetch effect (batches of 5, gated by
-                //      `ipsLoaded` so it only runs once per mount).
-                //   2) `vmModalCacheRef.details` — populated by the
-                //      background prefetcher that warms every guest's
-                //      /api/vms/<vmid> payload. Contains the same
-                //      `lxc_ip_info.primary_ip` the effect uses; if
-                //      the prefetch landed first, we surface the IP
-                //      immediately without waiting for the batch.
-                let lxcIP: string | null | undefined = null
-                if (vm.type === "lxc") {
-                  lxcIP = vm.ip || vmConfigs[vm.vmid]
-                  if (!lxcIP) {
-                    const cached = vmModalCacheRef.current.details.get(vm.vmid) as any
-                    lxcIP = cached?.lxc_ip_info?.primary_ip
-                      || (cached?.config ? extractIPFromConfig(cached.config, cached.lxc_ip_info) : null)
-                  }
-                }
                 const additionalIpCount = lxcIP
                   ? (vm.ips || []).filter((ip) => ip !== lxcIP).length
                   : 0
+                const metric = (value: number, Icon: typeof Cpu, label: string) => (
+                  <VmListMetric value={value} color={getUsageColor(value)} fill={getMemoryUsageColor(value)}
+                    phone={listLayout.phone} label={label} icon={<Icon aria-hidden="true" className="size-4" />} />
+                )
+                const tagDots = (size: string) => tags.map((tag, index) => (
+                  <VmCardTooltip key={`${tag}-${index}`} label={tag}>
+                    <span className={`inline-block shrink-0 rounded-full ${size}`} style={{ backgroundColor: tagToColor(tag).bg }} />
+                  </VmCardTooltip>
+                ))
 
                 return (
-                  <div key={vm.vmid}>
+                  <VmListRow key={listKey(vm)} guestKey={listKey(vm)} name={vm.name} status={vm.status} statusLabel={statusLabel}
+                    updates={values.updates}
+                    layout={listLayout} onOpen={(trigger) => handleVMClick(vm, trigger)} onPreview={() => prefetchVM(vm)} cells={{
+                    name: <span className="font-semibold">{vm.name}</span>,
+                    type: <span className={vm.type === "lxc" ? "text-cyan-600 dark:text-cyan-400" : "text-purple-600 dark:text-purple-400"}>{typeBadge.label} · {vm.vmid}</span>,
+                    state: <span className={getStatusColor(vm.status)}>{statusLabel}</span>,
+                    tags: tags.length > 0 ? <span className="flex items-center gap-1.5" role="img" aria-label={values.tags}>{tagDots("size-2")}</span> : null,
+                    ip: values.ip
+                      ? <VmCardTooltip label={values.ip}><span className="block truncate text-muted-foreground">{values.ip}</span></VmCardTooltip>
+                      : "—",
+                    uptime: values.uptime === undefined ? "—"
+                      : <VmCardTooltip label={formatUptime(values.uptime, t)}><span>{formatUptime(values.uptime, t, true)}</span></VmCardTooltip>,
+                    cpu: metric(values.cpu, Cpu, t("vmLxc.layout.columns.cpu")),
+                    memory: metric(values.memory ?? NaN, MemoryStick, t("vmLxc.layout.columns.memory")),
+                    disk: metric(values.disk ?? NaN, HardDrive, t("vmLxc.layout.columns.disk")),
+                    net: <VmListTransfer counters={net} maximum={networkMaximum}
+                      label={(first, second) => t("vmLxc.layout.networkTransfer", { first, second })}
+                      format={(value) => formatNetworkTraffic(value, networkUnit)} />,
+                    io: <VmListTransfer counters={diskIo} maximum={diskIoMaximum}
+                      label={(first, second) => t("vmLxc.layout.diskTransfer", { first, second })}
+                      format={(value) => formatNetworkTraffic(value, "Bytes")} />,
+                    updates: values.updates
+                      ? <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+                          <ArrowUpCircle aria-hidden="true" className={`${listLayout.phone ? "size-4" : "size-3"} shrink-0`} />
+                          {/* On a phone the icon alone says there are updates; the count is in the details. */}
+                          <span className={listLayout.phone ? "sr-only" : undefined}>{values.updates}</span>
+                        </span>
+                      : "—",
+                  }}>
+                    {(card) => (
+                    <>
                     <div
-                      className="hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                      onClick={() => handleVMClick(vm)}
-                      onMouseEnter={() => prefetchVM(vm)}
+                      {...card}
+                      className="group hidden sm:block p-4 rounded-lg border border-border bg-card hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {/* Row 1 — identity header. Just badges + name
                           + ID + update badge, no uptime/IP here. On
@@ -3602,7 +3743,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               </div>
                               <Progress
                                 value={Number.parseFloat(cpuPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(cpuPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(cpuPercent))}`}
                               />
                             </div>
                           </div>
@@ -3622,7 +3763,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               </div>
                               <Progress
                                 value={Number.parseFloat(memPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(memPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(memPercent))}`}
                               />
                             </div>
                           </div>
@@ -3642,7 +3783,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               </div>
                               <Progress
                                 value={Number.parseFloat(diskPercent)}
-                                className={`h-1.5 ${getProgressColor(Number.parseFloat(diskPercent))}`}
+                                className={`h-1.5 sm:group-hover:bg-background/50 transition-colors ${getProgressColor(Number.parseFloat(diskPercent))}`}
                               />
                             </div>
                           </div>
@@ -3679,10 +3820,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     </div>
 
                     <div
-                      className="sm:hidden p-4 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors cursor-pointer"
-                      onClick={() => handleVMClick(vm)}
+                      {...card}
+                      className="sm:hidden px-2.5 py-3 min-[375px]:p-4 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 min-[375px]:gap-3">
                         {vm.status === "running" ? (
                           <Play className="h-5 w-5 text-green-500 fill-current flex-shrink-0" />
                         ) : (
@@ -3703,7 +3844,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             the desktop card and inside the modal. */}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-foreground truncate">{vm.name}</div>
-                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-1">
                             <span>ID: {vm.vmid}</span>
                             {parseTags(vm.tags).map((tag) => {
                               const { bg } = tagToColor(tag)
@@ -3725,7 +3866,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 min-[375px]:gap-3 flex-shrink-0">
                           {/* CPU icon with percentage */}
                           <div className="flex flex-col items-center gap-0.5">
                             {vm.status === "running" && (
@@ -3766,10 +3907,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                    </>
+                    )}
+                  </VmListRow>
                 )
               })}
-            </div>
+            </VmListGrid>
           )}
         </CardContent>
       </Card>
@@ -3800,6 +3943,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         }}
       >
         <DialogContent
+          onCloseAutoFocus={(event) => {
+            const trigger = infoTriggerRef.current
+            infoTriggerRef.current = null
+            if (trigger?.isConnected && trigger.getClientRects().length > 0) {
+              event.preventDefault()
+              trigger.focus({ preventScroll: true })
+            }
+          }}
           className={`max-w-4xl flex flex-col p-0 overflow-hidden ${
             isStandalone
               ? "h-[95vh] sm:h-[90vh]"
@@ -4276,7 +4427,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       </Button>
                                     </>
                                   ) : (
-                                    <Button
+                                    capabilities.guests && (<Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => {
@@ -4289,7 +4440,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     >
                                       <Settings2 className="h-3.5 w-3.5 sm:mr-1" />
                                       <span className="hidden sm:inline">{t("actions.edit")}</span>
-                                    </Button>
+                                    </Button>)
                                   )}
                                 </div>
                               </div>
@@ -4557,7 +4708,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                                       {t("vmLxc.notes")}
                                     </h4>
-                                    {!isEditingNotes && (
+                                    {!isEditingNotes && capabilities.guests && (
                                       <Button
                                         variant="outline"
                                         size="sm"
@@ -5265,7 +5416,9 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     null
                   return (
                     <LxcAppPanel
-                      key={`${selectedVM.vmid}-${selectedVM.modal_cache_revision ?? 0}`}
+                      // Refresh server data without destroying an unsaved editor.
+                      key={selectedVM.vmid}
+                      cacheRevision={selectedVM.modal_cache_revision ?? 0}
                       vmid={selectedVM.vmid}
                       ctIp={ctIp}
                       onChange={() => mutate()}
@@ -5404,7 +5557,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   </span>
                                 </div>
                                 <div>
-                                  <Button
+                                  {capabilities.update && (<Button
                                     size="sm"
                                     onClick={async () => {
                                       try {
@@ -5418,7 +5571,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   >
                                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                     {t("vmLxc.updates.updateToVersion", { version: aw?.latest_version || "" })}
-                                  </Button>
+                                  </Button>)}
                                 </div>
                                 {others > 0 && (
                                   <div className="text-[11px] text-muted-foreground">
@@ -5509,8 +5662,18 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     <Info className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
                                     <span>{t("vmLxc.ociUpdates.memberNote", { primary: primaryLabel, count: ociInstance.members.length })}</span>
                                   </div>
-                                  {primaryVM && (
-                                    <div className="flex justify-end">
+                                  <div className="flex flex-wrap justify-end gap-2">
+                                    {!ociInstance.pending && capabilities.guests && (
+                                      <Button
+                                        size="sm"
+                                        className={neutralBtnCls}
+                                        onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "modify" })}
+                                      >
+                                        <Settings2 className="h-4 w-4 mr-1.5" />
+                                        {t("vmLxc.ociUpdates.modify")}
+                                      </Button>
+                                    )}
+                                    {primaryVM && (
                                       <Button
                                         size="sm"
                                         className={neutralBtnCls}
@@ -5521,8 +5684,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         <ChevronRight className="h-4 w-4 mr-1.5" />
                                         {t("vmLxc.ociUpdates.openPrimary")}
                                       </Button>
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
                               ) : (
                               <>
@@ -5535,7 +5698,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 <div className="text-xs text-amber-400 mt-3 leading-relaxed">{t("vmLxc.ociUpdates.pendingNote")}</div>
                               )}
                               <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
-                                {!ociInstance.pending && (
+                                {!ociInstance.pending && capabilities.guests && (
                                   <Button
                                     size="sm"
                                     className={neutralBtnCls}
@@ -5548,16 +5711,16 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     {t("vmLxc.ociUpdates.modify")}
                                   </Button>
                                 )}
-                                <Button
+                                {capabilities.update && (<Button
                                   size="sm"
                                   className={updateBtnCls}
-                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update" })}
+                                  onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "update", recoverPrevious: !!ociInstance.pending })}
                                 >
                                   {hasUpdate
                                     ? <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                     : <RefreshCw className="h-4 w-4 mr-1.5" />}
                                   {ociInstance.pending ? t("vmLxc.ociUpdates.recover") : t("vmLxc.ociUpdates.update")}
-                                </Button>
+                                </Button>)}
                               </div>
                               </>
                               )}
@@ -5718,14 +5881,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                               <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2">
                                 {!optionsEditMode ? (
-                                  <button
+                                  capabilities.update && (<button
                                     type="button"
                                     onClick={enterOptionsEdit}
                                     className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
                                   >
                                     <Settings2 className="h-3.5 w-3.5" />
                                     {t("vmLxc.options.editButton")}
-                                  </button>
+                                  </button>)
                                 ) : (
                                   <>
                                     <button
@@ -5772,7 +5935,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           <p className="text-sm text-muted-foreground leading-relaxed">
                             {t(ociRestored ? "vmLxc.updates.ociRestoredBody" : "vmLxc.updates.ociBody")}
                           </p>
-                          {ociRestored && (
+                          {ociRestored && capabilities.update && (
                             <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap justify-end gap-2">
                               <Button
                                 size="sm"
@@ -5780,7 +5943,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                 onClick={() => setOciAction({ vmid: selectedVM.vmid, action: "recover" })}
                               >
                                 <RotateCcw className="h-4 w-4 mr-1.5" />
-                                {t("vmLxc.ociUpdates.recover")}
+                                {t("vmLxc.ociUpdates.registerRestored")}
                               </Button>
                             </div>
                           )}
@@ -5883,6 +6046,12 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                           if (app.update_command?.trim()) return true
                           return helperExists && app.update_method === "helper" && app.helper_slug === uc?.helper_slug
                         }).map((app) => ({ id: `app:${app.id}`, label: app.name }))
+                        if (uc) {
+                          scheduleAppChoicesRef.current = {
+                            vmid: selectedVM.vmid,
+                            ids: scheduledAppChoices.map((choice) => choice.id),
+                          }
+                        }
                         const versionTrackedScheduleAppIds = new Set(
                           registeredApps
                             .filter((app) => (
@@ -6093,7 +6262,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   <div className="flex items-center gap-2 mb-3">
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                     <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.updates.osPackagesTitle")}</h3>
-                                    <Button
+                                    {capabilities.update && (<Button
                                       size="sm" variant="outline" className="ml-auto"
                                       disabled={selectedVM.status !== "running" || osCheckingVmid !== null || updatesRefreshing || controlLoading || applyOpen}
                                       title={t("vmLxc.updates.refreshCheckHelp")}
@@ -6101,7 +6270,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     >
                                       <RefreshCw className={`h-4 w-4 mr-1.5 ${osCheckingVmid === selectedVM.vmid ? "animate-spin" : ""}`} />
                                       {t("vmLxc.updates.checkSystemPackages")}
-                                    </Button>
+                                    </Button>)}
                                   </div>
                                   {selectedVM.status !== "running" && (
                                     <p className="text-sm text-muted-foreground mb-3">
@@ -6181,7 +6350,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                   )}
                                   {osUpdateStatusKnown && osCheckingVmid !== selectedVM.vmid && <div className="mt-3 flex justify-end">
                                     {hasOsUpdates ? (
-                                    <Button
+                                    capabilities.update && (<Button
                                       size="sm"
                                       disabled={!hasOsUpdates || osCheckingVmid !== null || updatesRefreshing || controlLoading || !!osCheckError}
                                       onClick={() => openApplyTerminal(selectedVM.vmid, "os", { checkedOs: true })}
@@ -6194,7 +6363,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         : osUpdateStatusKnown
                                           ? t("vmLxc.updates.osUpToDate")
                                           : t("vmLxc.updates.checkBeforeUpdate")}
-                                    </Button>
+                                    </Button>)
                                     ) : (
                                       <Button asChild size="sm" className={upToDateBtnCls}>
                                         <span role="status">{t("vmLxc.updates.osUpToDate")}</span>
@@ -6219,7 +6388,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </h3>
                                       </div>
                                       {!dockerEditing && (
-                                        <button
+                                        capabilities.guests && (<button
                                           type="button"
                                           onClick={() => openCustomCmdEditor(
                                             dockerAppWatch,
@@ -6229,7 +6398,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         >
                                           <Settings2 className="h-3.5 w-3.5" />
                                           {t("vmLxc.updates.editApp")}
-                                        </button>
+                                        </button>)
                                       )}
                                     </div>
                                     {dockerAppWatch.checked_at && !dockerEditing && (
@@ -6313,7 +6482,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           )}
                                         </div>
                                         <div className="mt-3 flex justify-end">
-                                          <Button
+                                          {capabilities.update && (<Button
                                             size="sm"
                                             onClick={() => openApplyTerminal(
                                               selectedVM.vmid,
@@ -6337,7 +6506,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             {dockerEngineUpToDate
                                               ? t("vmLxc.updates.upToDate")
                                               : t("vmLxc.updates.updateDockerEngineOnly")}
-                                          </Button>
+                                          </Button>)}
                                         </div>
                                       </div>
                                     )}
@@ -6470,7 +6639,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   </span>
                                                 )}
                                                 {image.update_available === true && (image.update_targets || []).map((target) => (
-                                                  <Button
+                                                  capabilities.update && (<Button
                                                     key={`${image.reference}-${target.project}`}
                                                     size="sm"
                                                     onClick={() => openApplyTerminal(selectedVM.vmid, "app", {
@@ -6482,10 +6651,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   >
                                                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                                     {t("vmLxc.updates.updateDockerImage")}
-                                                  </Button>
+                                                  </Button>)
                                                 ))}
                                                 {image.update_available === true && (image.standalone_containers || []).map((container) => (
-                                                  <Button
+                                                  capabilities.update && (<Button
                                                     key={`${image.reference}-${container}`}
                                                     size="sm"
                                                     onClick={() => openApplyTerminal(selectedVM.vmid, "app", {
@@ -6496,7 +6665,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                   >
                                                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
                                                     {t("vmLxc.updates.recreateStandaloneContainer", { container })}
-                                                  </Button>
+                                                  </Button>)
                                                 ))}
                                               </div>
                                             </div>
@@ -6546,7 +6715,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             {helperName || t("vmLxc.updates.applicationDefaultName")}
                                           </h3>
                                         </div>
-                                        <button
+                                        {capabilities.guests && (<button
                                           type="button"
                                           onClick={() => openCustomCmdEditor(
                                             matchApp,
@@ -6557,7 +6726,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           {helperSelected
                                             ? t("vmLxc.updates.editApp")
                                             : t("vmLxc.updates.configureUpdater")}
-                                        </button>
+                                        </button>)}
                                       </div>
                                       {helperTracksVersion && matchApp.checked_at && (
                                         <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
@@ -6578,7 +6747,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       {helperExists && (
                                         <div className="mb-3 flex items-start gap-2.5">
                                           <img
-                                            src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                            src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/community-scripts.webp"
                                             alt=""
                                             className="h-7 w-7 rounded-sm object-contain flex-shrink-0"
                                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
@@ -6633,11 +6802,11 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         const label = hasUpd ? t("vmLxc.updates.applyUpdate") : upToD ? t("vmLxc.updates.upToDate") : t("vmLxc.updates.runUpdater")
                                         return (
                                           <div className="mt-3 flex justify-end">
-                                            <Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "", targetIds: [`app:${matchApp.id}`] })} className={cls}>
+                                            {capabilities.update && (<Button size="sm" onClick={() => openApplyTerminal(selectedVM.vmid, "app", { runHelper: true, appName: helperName || "", targetIds: [`app:${matchApp.id}`] })} className={cls}>
                                               {hasUpd && <ArrowUpCircle className="h-4 w-4 mr-1.5" />}
                                               {noState && <RefreshCw className="h-4 w-4 mr-1.5" />}
                                               {label}
-                                            </Button>
+                                            </Button>)}
                                           </div>
                                         )
                                       })()}
@@ -6678,7 +6847,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           </h3>
                                         </div>
                                         {!editing && aw.update_via !== "docker" && (
-                                          <button
+                                          capabilities.guests && (<button
                                             type="button"
                                             onClick={() => openCustomCmdEditor(aw)}
                                             className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5 flex-shrink-0"
@@ -6687,7 +6856,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             {hasCmd || aw.update_method === "helper"
                                               ? t("vmLxc.updates.editApp")
                                               : t("vmLxc.updates.configureUpdater")}
-                                          </button>
+                                          </button>)
                                         )}
                                       </div>
                                       {tracksVersion && aw.checked_at && !editing && (
@@ -6789,7 +6958,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
 
                                           {hasCmd ? (
                                             <div className="mt-3 flex justify-end">
-                                              <Button
+                                              {capabilities.update && (<Button
                                                 size="sm"
                                                 onClick={() => openApplyTerminal(
                                                   selectedVM.vmid,
@@ -6812,7 +6981,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                                     : aw.update_method === "helper"
                                                       ? t("vmLxc.updates.runUpdater")
                                                       : t("vmLxc.updates.runCustomCommand")}
-                                              </Button>
+                                              </Button>)}
                                             </div>
                                           ) : (
                                             <p className={`text-xs text-muted-foreground leading-relaxed min-w-0 ${tracksVersion ? "mt-3" : ""}`}>
@@ -6856,7 +7025,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       )}
                                     </div>
                                     {!bulkEditMode && (
-                                      <button
+                                      capabilities.update && (<button
                                         type="button"
                                         onClick={() => {
                                           if (!bulkConfigured) {
@@ -6871,7 +7040,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         {bulkConfigured
                                           ? t("vmLxc.bulkUpdate.edit")
                                           : t("vmLxc.bulkUpdate.configure")}
-                                      </button>
+                                      </button>)
                                     )}
                                   </div>
 
@@ -6960,7 +7129,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                       <div className="flex items-center justify-between gap-2 pt-1">
                                         <div>
                                           {bulkConfigured && (
-                                            <button
+                                            capabilities.update && (<button
                                               type="button"
                                               onClick={() => deleteBulkUpdate(selectedVM.vmid)}
                                               disabled={bulkSaving}
@@ -6968,7 +7137,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                             >
                                               <Trash2 className="h-3.5 w-3.5" />
                                               {t("vmLxc.bulkUpdate.delete")}
-                                            </button>
+                                            </button>)
                                           )}
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -6984,7 +7153,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           >
                                             {t("vmLxc.bulkUpdate.cancel")}
                                           </button>
-                                          <button
+                                          {capabilities.update && (<button
                                             type="button"
                                             onClick={() => saveBulkUpdate(selectedVM.vmid)}
                                             disabled={bulkSaving || bulkTargets.length < 2 || staleBulkTargets.length > 0 || pendingDockerBulkTargets.length > 0}
@@ -6994,7 +7163,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                               : <Check className="h-3.5 w-3.5" />}
                                             {t("vmLxc.bulkUpdate.save")}
-                                          </button>
+                                          </button>)}
                                         </div>
                                       </div>
                                     </div>
@@ -7009,7 +7178,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                         </p>
                                       )}
                                       <div className="flex justify-end">
-                                        <Button
+                                        {capabilities.update && (<Button
                                           size="sm"
                                           onClick={() => applyBulkUpdate(selectedVM.vmid)}
                                           disabled={bulkApplying || osCheckingVmid !== null || updatesRefreshing || !osUpdateStatusKnown || bulkAllTargetsUpToDate || (
@@ -7028,7 +7197,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                           {bulkAllTargetsUpToDate
                                             ? t("vmLxc.updates.upToDate")
                                             : t("vmLxc.bulkUpdate.apply")}
-                                        </Button>
+                                        </Button>)}
                                       </div>
                                     </div>
                                   ) : (
@@ -7241,7 +7410,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     return (
                                       <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 rounded-md bg-muted/40 border border-border/50">
                                         <img
-                                          src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox-helper-scripts.webp"
+                                          src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/community-scripts.webp"
                                           alt=""
                                           className="h-5 w-5 rounded-sm object-contain flex-shrink-0 mt-0.5"
                                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
@@ -7375,14 +7544,14 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                                     to the Switch above, not here. */}
                                 <div className="pt-4 border-t border-border/50 flex items-center justify-end gap-2">
                                   {!optionsEditMode ? (
-                                    <button
+                                    capabilities.update && (<button
                                       type="button"
                                       onClick={enterOptionsEdit}
                                       className="h-8 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors inline-flex items-center gap-1.5"
                                     >
                                       <Settings2 className="h-3.5 w-3.5" />
                                       {t("vmLxc.options.editButton")}
-                                    </button>
+                                    </button>)
                                   ) : (
                                     <>
                                       <button
@@ -7472,7 +7641,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                             </div>
                             <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.backups.title")}</h3>
                           </div>
-                          <Button
+                          {capabilities.backup && (<Button
                             size="sm"
                             className="h-7 text-xs bg-amber-600/20 border border-amber-600/50 text-amber-400 hover:bg-amber-600/30 gap-1"
                             onClick={openBackupModal}
@@ -7484,7 +7653,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                               <Plus className="h-3 w-3" />
                             )}
                             <span>{t("vmLxc.backups.create")}</span>
-                          </Button>
+                          </Button>)}
                         </div>
 
                         {/* Divider */}
@@ -7637,22 +7806,24 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                     Previously this stacked as 3 rows on mobile and 2
                     rows on desktop, eating scroll space with each new
                     tab we added. */}
-                {(() => {
-                  const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running"
+                {(capabilities.guests || capabilities.terminal) && (() => {
+                  const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running" && capabilities.terminal
+                  const controls = capabilities.guests
                   const pendingAction = controlAction?.vmid === selectedVM?.vmid ? controlAction?.action : null
                   const controlLabel = (action: string, key: string) => pendingAction === action
                     ? t(`vmLxc.actions.${action}Pending`) : t(key)
                   return (
-                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${!controls ? "grid-cols-1" : hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
                       {hasTerminal && (
                         <Button
-                          className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 col-span-4 lg:col-span-1"
+                          className={`w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 ${controls ? "col-span-4 lg:col-span-1" : ""}`}
                           onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                         >
                           <Terminal className="h-4 w-4 mr-2" />
                           {t("vmLxc.openTerminal")}
                         </Button>
                       )}
+                      {controls && (<>
                       <Button
                         className="w-full bg-green-600/20 border border-green-600/50 text-green-400 hover:bg-green-600/30"
                         disabled={selectedVM?.status === "running" || controlLoading}
@@ -7697,6 +7868,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
                         {pendingAction === "stop" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <StopCircle className="h-4 w-4 sm:mr-2" />}
                         <span className="hidden sm:inline">{controlLabel("stop", "vmLxc.actions.forceStop")}</span>
                       </Button>
+                      </>)}
                     </div>
                   )
                 })()}
@@ -7853,25 +8025,6 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
               </div>
             </div>
             
-            {/* Notification Row */}
-            <div className="space-y-2">
-                <Label className="text-sm flex items-center gap-1.5">
-                  <Bell className="h-3.5 w-3.5" />
-                  {t("vmLxc.backupModal.notification")}
-                </Label>
-              <Select value={backupNotification} onValueChange={setBackupNotification}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">{t("vmLxc.backupModal.useGlobalSettings")}</SelectItem>
-                  <SelectItem value="always">{t("vmLxc.backupModal.alwaysNotify")}</SelectItem>
-                  <SelectItem value="failure">{t("vmLxc.backupModal.notifyOnFailure")}</SelectItem>
-                  <SelectItem value="never">{t("vmLxc.backupModal.neverNotify")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
             {/* Protected Checkbox */}
             <div className="flex items-center space-x-2">
               <Checkbox 
@@ -8012,6 +8165,8 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
         />
       )}
 
+      <LxcUpdateJobs activeRunId={applyOpen ? applyRunId : undefined} onResume={resumeApplyJob} />
+
       {/* LXC Update Apply Terminal — streams the apply_updates.sh
           script over WS/PTY (same wiring as the hardware installers).
           The backend finalizes on process exit; the close callback only
@@ -8023,7 +8178,13 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
             setApplyOpen(false)
             setApplyVmid(null)
           }}
-          onComplete={handleApplyComplete}
+          onComplete={(exitCode) => {
+            markUpdateJobViewed(applyRunId)
+            // The server-owned job is the sole completion authority.
+            void handleApplyComplete(exitCode ?? 1, false)
+          }}
+          backgroundUpdate={{ runId: applyRunId, vmid: applyVmid, resume: applyResume }}
+          cancelledExitCode={130}
           scriptPath={applyCheckedOs
             ? "/usr/local/share/proxmenux/scripts/lxc/install_checked_os_updates.sh"
             : "/usr/local/share/proxmenux/scripts/lxc/apply_updates.sh"}
@@ -8033,13 +8194,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           completedWithErrorMessage={(exitCode) =>
             t("vmLxc.updates.terminalCompletedWithError", { code: exitCode })
           }
-          description={
-            applyTarget === "os"
-              ? t("vmLxc.updates.terminalDescriptionOs")
-              : applyTarget === "app"
-                ? t("vmLxc.updates.terminalDescriptionApp")
-                : t("vmLxc.updates.terminalDescriptionBoth")
-          }
+          description={t("vmLxc.updates.backgroundDescription")}
           params={{
             VMID: String(applyVmid),
             RUN_ID: applyRunId,
@@ -8069,6 +8224,7 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           onClose={() => {
             const vmid = ociAction.vmid
             setOciAction(null)
+            if (!shouldRefreshOciAfterCompletion(ociCompletionCodeRef.current)) return
             // The image, the digest and the record changed: read them again.
             fetchApi(`/api/vms/${vmid}/apps/check`, { method: "POST" })
               .catch(() => undefined)
@@ -8082,7 +8238,10 @@ const handleDownloadLogs = async (vmid: number, vmName: string) => {
           }}
           scriptPath="/usr/local/share/proxmenux/scripts/oci/manage_instance.sh"
           scriptName="oci_manage_instance"
-          title={ociAction.action === "update" ? t("vmLxc.ociUpdates.terminalTitleUpdate")
+          cancelledExitCode={OCI_CANCELLED_EXIT_CODE}
+          onComplete={(exitCode) => { ociCompletionCodeRef.current = exitCode }}
+          title={ociAction.action === "update" ? t(ociAction.recoverPrevious
+            ? "vmLxc.ociUpdates.terminalTitleRecoverPrevious" : "vmLxc.ociUpdates.terminalTitleUpdate")
             : ociAction.action === "recover" ? t("vmLxc.ociUpdates.terminalTitleRecover")
             : t("vmLxc.ociUpdates.terminalTitleModify")}
           description={t("vmLxc.ociUpdates.terminalDescription")}

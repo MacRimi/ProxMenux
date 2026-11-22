@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "CloudBeaver is a web-based database GUI tool which provides rich web interface. You can use it to manage PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, DB2, Firebird, H2, Trino."
+    },
+    "description": {
+      "en_US": "CloudBeaver is a web-based database management tool with a graphical interface. It allows users to connect to and manage various database systems, including PostgreSQL, MySQL, MariaDB, SQL Server, and Oracle. It provides capabilities to explore database structures, run SQL queries, and manage data directly from a browser."
+    },
+    "repository": "https://github.com/dbeaver/cloudbeaver",
+    "screenshots": [
+      "https://github.com/dbeaver/cloudbeaver/wiki/images/gis-demo.png",
+      "https://github.com/dbeaver/cloudbeaver/wiki/images/sql-editor-demo.png",
+      "https://github.com/dbeaver/cloudbeaver/wiki/images/connection-creation-demo.png",
+      "https://github.com/dbeaver/cloudbeaver/wiki/images/data-transfer-demo.png"
+    ]
   }
 }

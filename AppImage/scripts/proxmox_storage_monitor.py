@@ -13,6 +13,8 @@ import socket
 import time
 from typing import Dict, List, Any, Optional
 
+import pve_mirror
+
 
 def classify_storage_state(storage_type: str, status: str, total: int) -> Dict[str, Any]:
     """Classify reachability independently from reported capacity."""
@@ -80,19 +82,21 @@ class ProxmoxStorageMonitor:
         """Load configured storages from Proxmox configuration"""
         try:
             local_node = self._get_node_name()
-            
-            # Read storage configuration from pvesh
-            result = subprocess.run(
-                ['pvesh', 'get', '/storage', '--output-format', 'json'],
-                capture_output=True,
-                text=True,
-                timeout=15
-            )
-            
-            if result.returncode != 0:
-                return
-            
-            storages = json.loads(result.stdout)
+
+            # storage.cfg read directly; pvesh when it can't be answered exactly
+            storages = pve_mirror.storage_list()
+            if storages is None:
+                result = subprocess.run(
+                    ['pvesh', 'get', '/storage', '--output-format', 'json'],
+                    capture_output=True,
+                    text=True,
+                    timeout=15
+                )
+
+                if result.returncode != 0:
+                    return
+
+                storages = json.loads(result.stdout)
             
             for storage in storages:
                 storage_id = storage.get('storage')
@@ -138,19 +142,21 @@ class ProxmoxStorageMonitor:
         
         try:
             local_node = self._get_node_name()
-            
-            # Get current storage status from pvesh
-            result = subprocess.run(
-                ['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            if result.returncode != 0:
-                return {'available': [], 'unavailable': list(self.configured_storages.values())}
-            
-            resources = json.loads(result.stdout)
+
+            # Current storage status as pvestatd published it; pvesh otherwise
+            resources = pve_mirror.cluster_resources_storage()
+            if resources is None:
+                result = subprocess.run(
+                    ['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+
+                if result.returncode != 0:
+                    return {'available': [], 'unavailable': list(self.configured_storages.values())}
+
+                resources = json.loads(result.stdout)
             
             # Track which configured storages are available
             available_storages = []

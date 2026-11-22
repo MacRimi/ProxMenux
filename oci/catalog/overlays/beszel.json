@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Monitor system metrics and container stats from a self-hosted web dashboard."
+    },
+    "description": {
+      "en_US": "Beszel is a lightweight server monitoring platform designed to track system performance and resource utilization. It collects metrics such as CPU, memory, disk activity, and network traffic across multiple systems and displays them in a centralized web dashboard. The application provides historical performance records, tracks hardware sensors such as temperatures and disk health, and delivers configurable alerts."
+    },
+    "screenshots": [
+      "https://beszel.dev/image/dashboard.png",
+      "https://beszel.dev/image/system-full.png",
+      "https://beszel.dev/image/settings-notifications.png",
+      "https://henrygd-assets.b-cdn.net/beszel/screenshot-new.png"
+    ]
+  }
+}

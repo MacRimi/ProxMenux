@@ -1,15 +1,15 @@
 {
   "meta": {
-    "title": "Post-instalación: Seguridad | ProxMenux Documentation",
-    "description": "Opciones de seguridad disponibles en el script post-instalación Customizable de ProxMenux. Por ahora una sola opción: desactivar el servicio portmapper/rpcbind para reducir la superficie de ataque del host."
+    "title": "Post-instalación: Seguridad | Documentación de ProxMenux",
+    "description": "Opciones de seguridad disponibles en el script post-instalación Personalizable de ProxMenux. Por ahora una sola opción: desactivar el servicio portmapper/rpcbind para reducir la superficie de ataque del host."
   },
   "header": {
     "title": "Post-instalación: Seguridad",
-    "section": "Settings post-install Proxmox"
+    "section": "Configuración post instalación de Proxmox"
   },
   "intro": {
     "title": "Qué cubre esta categoría",
-    "body": "La seguridad post-instalación se limita al <strong>hardening del host que es seguro aplicar sin supervisión</strong> — cosas que desactivan servicios que casi nadie necesita y que se pueden deshacer desde el menú Uninstall. Las herramientas de seguridad activa (Fail2Ban para prevención de intrusiones, Lynis para auditoría) viven bajo la entrada dedicada <em>Seguridad</em> del menú principal de ProxMenux, no aquí en post-instalación."
+    "body": "La seguridad post-instalación se limita al <strong>refuerzo del host que se puede aplicar sin supervisión de forma segura</strong>: desactivar servicios que casi nadie necesita y poder revertirlo desde Desinstalar. Las herramientas de seguridad activa (Fail2Ban para prevenir intrusiones y Lynis para auditorías) están en la entrada <em>Seguridad</em> del menú principal de ProxMenux, fuera de la post-instalación."
   },
   "rpcbind": {
     "heading": "Desactivar portmapper / rpcbind",
@@ -27,7 +27,7 @@
     "verifyTitle": "Verificación",
     "verifyBody": "Tras aplicar, confirma que <code>rpcbind</code> está apagado y que nada escucha en el puerto 111:",
     "reversibleTitle": "Restaura el estado original del servicio",
-    "reversibleBody": "El cambio queda registrado en <code>installed_tools.json</code>. <link>Uninstall Optimizations</link> devuelve cada unidad de rpcbind al estado habilitado o deshabilitado y activo o inactivo que tenía antes de aplicar ProxMenux; no presupone que rpcbind estuviera habilitado en todos los hosts."
+    "reversibleBody": "El cambio queda registrado en <code>installed_tools.json</code>. <link>Desinstalar optimizaciones</link> devuelve cada unidad de rpcbind al estado habilitado o deshabilitado y activo o inactivo que tenía antes de aplicar ProxMenux; no presupone que rpcbind estuviera habilitado en todos los hosts."
   },
   "related": {
     "heading": "Relacionado",
@@ -48,7 +48,7 @@
         "tail": " — estado de servicios, journalctl, referencia de lynis audit."
       },
       {
-        "label": "Customizable Post-Install",
+        "label": "Post-instalación personalizable",
         "href": "/docs/post-install/customizable",
         "tail": " — volver al menú padre."
       }

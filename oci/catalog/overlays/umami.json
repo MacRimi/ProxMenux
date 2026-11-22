@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Umami is a privacy-focused web analytics platform. This recipe uses the official Umami image with a separate PostgreSQL LXC for persistent analytics data."
+    },
+    "description": {
+      "en_US": "Umami is a privacy-first web analytics platform. It gathers traffic, campaigns, visitor behavior, conversions, and revenue metrics in one central location without relying on cookies or invasive tracking. It provides website owners with detailed insights while fully respecting visitor privacy."
+    },
+    "screenshots": [
+      "https://umami.is/_next/image?url=%2F_next%2Fstatic%2Fimmutable%2Fmedia%2Fapp.06ov74hy3esf9.jpg&w=3840&q=75",
+      "https://umami.is/_next/image?url=%2F_next%2Fstatic%2Fimmutable%2Fmedia%2Fscreenshot-compare.2u451skf-dscn.jpg&w=3840&q=75",
+      "https://docs.umami.is/images/docs/screenshot.png",
+      "https://umami.is/_next/image?url=%2F_next%2Fstatic%2Fimmutable%2Fmedia%2Fscreenshot-funnel.44rt4hli8vy5t.png&w=3840&q=75"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create and manage short links from a small web interface. Chhoto URL stores its link database in SQLite and supports password-protected administration without a separate database service."
+    },
+    "description": {
+      "en_US": "Chhoto URL is a lightweight and fast self-hosted URL shortener. It shortens long links into randomly generated or custom slugs and redirects visitors instantly without intermediate pages. The application records link hits without tracking personal data and supports expiration dates, QR codes, link disabling, and notes."
+    }
+  }
+}

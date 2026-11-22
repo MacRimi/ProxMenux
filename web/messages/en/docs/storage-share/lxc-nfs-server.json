@@ -27,14 +27,14 @@
     "heading": "The \"sharedfiles\" group convention",
     "body": "Before exporting the folder, ProxMenux creates a group called <code>sharedfiles</code> with <strong>GID 101000</strong> inside the container, adds every regular user to it, then sets the export directory to <code>root:sharedfiles</code> with mode <code>2775</code>. The <code>2</code> at the front is the SGID bit — every file or folder created inside automatically inherits the <code>sharedfiles</code> group.",
     "gidTitle": "Why GID 101000 specifically",
-    "gidBody": "It maps to host GID <strong>1000</strong> when an unprivileged container reads the same file (LXC default idmap shifts everything by +100000). In the current ProxMenux flow the NFS server itself runs in a <strong>privileged</strong> CT (no shift on its side), but the convention keeps the group ID numerically consistent with unprivileged client CTs that may mount this share later. Two privileged CTs both using <code>sharedfiles</code> at GID 101000 can read / write each other's files cleanly because the GID numbers match end-to-end.",
-    "remapTitle": "The script also creates 'remap_*' users — they are vestigial here",
-    "remapBody": "For every regular user in the CT (and for common UIDs like 33 = www-data, 1000, 1001, 1002), the script creates a parallel <code>remap_&lt;uid&gt;</code> user with UID = <code>&lt;uid&gt; + 100000</code>, all members of <code>sharedfiles</code>. The <code>+100000</code> shift mimics the LXC unprivileged idmap, but since this script enforces a <strong>privileged</strong> CT (no shift), those <code>remap_*</code> users are shadow accounts with no real-world counterpart on the host. They are harmless leftovers from a more ambitious design intent. If you don't see them in <code>getent passwd</code>, nothing breaks."
+    "gidBody": "With the default LXC ID map (+100000), host GID 101000 appears as GID <strong>1000</strong> inside an unprivileged CT. This server flow uses a <strong>privileged</strong> CT, where there is no shift. Two privileged CTs using <code>sharedfiles</code> at GID 101000 therefore share the same numeric group ID.",
+    "remapTitle": "Legacy 'remap_*' user creation is skipped for privileged CTs",
+    "remapBody": "The legacy unprivileged branch would create <code>remap_&lt;uid&gt;</code> users with UID <code>&lt;uid&gt; + 100000</code>, all in <code>sharedfiles</code>, for regular users and common UIDs (33, 1000, 1001, 1002). This <code>+100000</code> shift is irrelevant in the <strong>privileged</strong> CTs required by this flow, so the script skips that branch. Missing <code>remap_*</code> accounts in <code>getent passwd</code> are expected and do not indicate a failure."
   },
   "defaults": {
     "heading": "Default export options — read this first",
     "warnTitle": "Default options include no_root_squash",
-    "warnBody": "ProxMenux defaults to <code>rw,sync,no_subtree_check,'<'strong'>'no_root_squash'<'/strong'>'</code>. This means <strong>any client root user can write as root on the export</strong> — appropriate for a trusted home LAN but never for an untrusted network. If your CT is reachable from an untrusted segment (a public network, a VPS, a hostile VLAN), <strong>change the export options to <code>root_squash</code></strong> in the custom-options dialog."
+    "warnBody": "ProxMenux defaults to <code>rw,sync,no_subtree_check,<strong>no_root_squash</strong></code>. This means <strong>any client root user can write as root on the export</strong> — appropriate for a trusted home LAN but never for an untrusted network. If your CT is reachable from an untrusted segment (a public network, a VPS, a hostile VLAN), <strong>change the export options to <code>root_squash</code></strong> in the custom-options dialog."
   },
   "opening": {
     "heading": "Opening the tool",
@@ -109,7 +109,7 @@
   },
   "uninstall": {
     "heading": "Uninstall NFS server",
-    "body": "Full clean-up after confirmation: stops + disables <code>nfs-kernel-server</code> and <code>rpcbind</code>, clears <code>/etc/exports</code>, <code>apt-get purge</code> the NFS packages, removes the <code>sharedfiles</code> group and the <code>remap_*</code> users, kills any leftover processes. The exported <strong>folders themselves are not deleted</strong> — only the NFS configuration and packages.",
+    "body": "Full clean-up after confirmation: stops + disables <code>nfs-kernel-server</code> and <code>rpcbind</code>, clears <code>/etc/exports</code>, <code>apt-get purge</code> <code>nfs-kernel-server</code> and <code>nfs-common</code>, removes the <code>remap_*</code> users and the <code>sharedfiles</code> group (only if no regular users are still members, which is usually not the case), kills any leftover processes. The exported <strong>folders themselves are not deleted</strong> — only the NFS configuration and packages.",
     "warnTitle": "The script stops at the export line, not at the data",
     "warnBody": "Both <em>Delete export</em> and <em>Uninstall NFS server</em> remove the export configuration. The data on the exported folder is preserved. To delete the data too, do it explicitly with <code>rm -rf</code> after the script finishes — and back it up first if anyone might still need it."
   },

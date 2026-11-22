@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "Quick disk inventory",
-    "body": "<code>lsblk</code> is the fastest way to see all block devices and their partitions in a tree view. For persistent identifiers (which survive between boots and hardware changes) use <code>ls -lh /dev/disk/by-id/</code>."
+    "body": "<code>lsblk</code> shows block devices and partitions in a tree. Inspect persistent identifiers with <code>ls -lh /dev/disk/by-id/</code>: these normally remain stable across reboots and device reordering for the same disk. Replacing a disk or changing the way a controller exposes its identity can change its by-id path."
   },
   "commandGroups": [
     {
@@ -104,16 +104,16 @@
           "description": "Show status of all storage pools"
         },
         {
-          "command": "pvesm list",
-          "description": "List all available storage"
+          "command": "pvesm status --enabled 1",
+          "description": "List enabled configured storage"
         },
         {
           "command": "pvesm list <storage>",
           "description": "List content of specific storage"
         },
         {
-          "command": "pvesm scan <storage>",
-          "description": "Scan storage for new content"
+          "command": "pvesm scan nfs <server>",
+          "description": "Discover NFS exports on a server"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "commands": [
         {
           "command": "qm importdisk <vmid> <image_path> <storage>",
-          "description": "Attach disk image to VM"
+          "description": "Import disk image as an unused disk for the VM; attach it separately"
         },
         {
           "command": "qm set <vmid> -<bus><index> <disk_path>",
@@ -130,7 +130,7 @@
         },
         {
           "command": "qemu-img convert -O <format> <input> <output>",
-          "description": "Convert disk image format"
+          "description": "Convert an offline disk image format"
         }
       ]
     },
@@ -199,15 +199,15 @@
   ],
   "lvmTip": {
     "title": "LVM short vs long commands",
-    "bodyRich": "Both forms exist for compatibility. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> give a clean single-line-per-volume table; <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> give a verbose multi-line dump per volume. For day-to-day use prefer the short versions."
+    "bodyRich": "Both forms are available. <code>pvs</code> / <code>vgs</code> / <code>lvs</code> produce compact tables with one row per physical volume, volume group or logical volume respectively. <code>pvdisplay</code> / <code>vgdisplay</code> / <code>lvdisplay</code> provide more detailed multi-line output. The short forms are convenient for everyday checks."
   },
   "smartInfo": {
-    "title": "SMART for spinning disks vs NVMe",
-    "bodyRich": "<strong>Spinning / SATA / SAS disks</strong> use the <code>smartctl</code> family from <code>smartmontools</code> (installed by default on Proxmox). Pass the device as <code>/dev/sda</code>, <code>/dev/sdb</code>, etc. <strong>NVMe disks</strong> have their own native protocol — <code>smartctl</code> works against them (passes most data through), but the <code>nvme</code> tool from <code>nvme-cli</code> reports more NVMe-specific fields (wear levelling, media errors, namespace info). Install with <code>apt install nvme-cli</code> if not present."
+    "title": "SMART for SATA/SAS vs NVMe",
+    "bodyRich": "<strong>SATA / SAS disks, including SSDs,</strong> can be inspected with <code>smartctl</code> from <code>smartmontools</code> (installed by default on Proxmox). Specify the device, for example <code>/dev/sda</code> or <code>/dev/sdb</code>. <strong>NVMe disks</strong> use a different native protocol. <code>smartctl</code> also supports them, while <code>nvme</code> from <code>nvme-cli</code> provides NVMe-specific controller, namespace and health queries. Install it with <code>apt install nvme-cli</code> if absent."
   },
   "selfTestWarn": {
     "title": "Self-tests run in the background",
-    "bodyRich": "<code>smartctl -t short</code> and <code>-t long</code> return immediately — the disk runs the test on its own. Check progress with <code>smartctl -a /dev/&lt;disk&gt;</code> (look for the \"Self-test routine in progress\" line) or wait for completion and read <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Short tests take ~2 min; long tests can take hours on large spinners. The disk stays usable during the test, but I/O performance drops."
+    "bodyRich": "On supported drives, <code>smartctl -t short /dev/&lt;disk&gt;</code> and <code>smartctl -t long /dev/&lt;disk&gt;</code> start background tests and return immediately. Check progress with <code>smartctl -a /dev/&lt;disk&gt;</code> (look for \"Self-test routine in progress\") or wait and read <code>smartctl -l selftest /dev/&lt;disk&gt;</code>. Short tests commonly take about two minutes; long tests can take hours. The disk remains usable, but testing can reduce I/O performance."
   },
   "related": {
     "heading": "Related",

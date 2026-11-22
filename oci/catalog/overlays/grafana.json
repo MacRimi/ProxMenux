@@ -11,5 +11,19 @@
         "retrieval": null
       }
     ]
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Grafana open source is open source visualization and analytics software.Visualizations: Fast and flexible client side graphs with a multitude of options. Panel plugins offer many different ways to visualize metrics and logs. Dynamic Dashboards: Create dynamic & reusable dashboards with template variables that appear as dropdowns at the top of the dashboard. Explore Metrics: Explore your data through ad-hoc queries and dynamic drilldown. Split view and compare different time ranges, queries and data sources side by side. Explore Logs: Experience the magic of switching from metrics to logs with preserved label filters. Quickly search through all your logs or streaming them live. Alerting: Visually define alert rules for your most important metrics. Grafana will continuously evaluate and send notifications to systems like Slack, PagerDuty, VictorOps, OpsGenie. Mixed Data Sources: Mix different data sources in the same graph! You can specify a data source on a per-query basis. This works for even custom datasources.\n"
+    },
+    "description": {
+      "en_US": "Grafana is an open source visualization and analytics platform. It allows users to build dynamic, reusable dashboards to visualize metrics and logs with customizable panel plugins. It enables querying, exploring, and comparing data across mixed data sources, as well as setting up alert rules for key metrics."
+    },
+    "screenshots": [
+      "https://grafana.com/mw/_next/image/?url=https%3A%2F%2Fa-us.storyblok.com%2Ff%2F1022730%2F1216x405%2F5345a6abd5%2Fbg-homepage-grafana-play_tiny.png&w=3840&q=75",
+      "https://grafana.com/mw/_next/image/?url=https%3A%2F%2Fa-us.storyblok.com%2Ff%2F1022730%2F1000x604%2F9222287fee%2Fimage-homepage-ai-dashboard.png%2Fm%2Ffilters%3Aformat(webp)%3Aquality(90)%2F&w=3840&q=75",
+      "https://grafana.com/mw/_next/image/?url=https%3A%2F%2Fa-us.storyblok.com%2Ff%2F1022730%2F1000x604%2Fc2eca69aa7%2Fimage-homepage-cost-management-dashboard.png%2Fm%2Ffilters%3Aformat(webp)%3Aquality(90)%2F&w=3840&q=75",
+      "https://grafana.com/mw/_next/image/?url=https%3A%2F%2Fa-us.storyblok.com%2Ff%2F1022730%2F1000x604%2F81ce5ace9c%2Fimage-homepage-rca-dashboard.png%2Fm%2Ffilters%3Aformat(webp)%3Aquality(90)%2F&w=3840&q=75"
+    ]
   }
 }

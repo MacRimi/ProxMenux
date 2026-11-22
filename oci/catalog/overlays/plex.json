@@ -4,6 +4,12 @@
       "scheme": "http",
       "port": 32400,
       "path": "/web"
+    },
+    "tagline": {
+      "en_US": "Plex Media Server organizes personal video, music, and photo collections into a centralized library."
+    },
+    "description": {
+      "en_US": "Plex Media Server organizes personal video, music, and photo collections into a centralized library. It streams media content to phones, tablets, streaming devices, gaming consoles, and smart TVs. The server also supports on-the-fly transcoding to deliver media seamlessly across different client devices."
     }
   },
   "container_contract": {

@@ -21,8 +21,13 @@ class GroqProvider(AIProvider):
     # Exclude non-chat models
     EXCLUDED_PATTERNS = ['whisper', 'tts', 'guard', 'tool-use']
     
-    # Recommended models (in priority order - versatile/large models first)
-    RECOMMENDED_PREFIXES = ['llama-3.3', 'llama-3.1-70b', 'llama-3.1-8b', 'mixtral', 'gemma']
+    # Prefer the verified default and current GPT-OSS models. Llama remains
+    # available for accounts with access; retired Mixtral/Gemma families have
+    # no recommendation priority. Sorting never adds IDs to the API response.
+    RECOMMENDED_PREFIXES = [
+        'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b',
+        'llama-3.3', 'llama-3.1-8b',
+    ]
     
     def list_models(self) -> List[str]:
         """List available Groq models for chat completions.

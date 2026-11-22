@@ -10,7 +10,7 @@
   "intro": {
     "p1": "The <strong>Updates</strong> tab separates version detection from the action that installs an update. Registration and optional version tracking live on the <link>App tab</link>; executable update methods live here.",
     "p2": "A saved application appears in Updates even when it contains only a web link. Version tracking is optional, and an updater can be configured independently.",
-    "callout": "Registering an application does not select an updater. If a matching Helper-Scripts updater is detected, choose and save <strong>Helper-Scripts</strong> or <strong>Custom command</strong>. Detection is not a compatibility guarantee. The choice belongs to each application, even when several apps share one LXC."
+    "callout": "Registering an application does not select an updater. If a matching Community Scripts updater is detected, choose and save <strong>Community Scripts</strong> or <strong>Custom command</strong>. Detection is not a compatibility guarantee. The choice belongs to each application, even when several apps share one LXC."
   },
   "overview": {
     "heading": "What the tab contains",
@@ -24,8 +24,8 @@
   },
   "mechanisms": {
     "heading": "How an update method is selected",
-    "lead": "The integrated Proxmox VE Helper-Scripts path follows the official <helper>update-apps mechanism</helper>. Other install types use the matching package, Docker or custom path.",
-    "officialReference": "Official reference: the <helper>Proxmox VE Helper-Scripts update-apps documentation</helper> covers interactive and unattended modes, backups, dry runs, temporary build resources, logs and exit codes.",
+    "lead": "The integrated Community Scripts path follows the official <helper>update-apps mechanism</helper>. Other install types use the matching package, Docker or custom path.",
+    "officialReference": "Official reference: the <helper>Community Scripts update-apps documentation</helper> covers interactive and unattended modes, backups, dry runs, temporary build resources, logs and exit codes.",
     "colSource": "Source",
     "colAction": "Displayed action",
     "colNotes": "What runs",
@@ -36,9 +36,9 @@
         "notes": "Updates the container packages. Registered apps installed as dpkg or apk packages are covered by this same pass."
       },
       {
-        "source": "Proxmox VE Helper-Scripts",
+        "source": "Community Scripts",
         "action": "Apply update",
-        "notes": "After Helper-Scripts is explicitly selected, runs the official application script identified by the validated /usr/bin/update wrapper. A marker or catalogue match alone never enables execution."
+        "notes": "After Community Scripts is explicitly selected, runs the official application script identified by the validated /usr/bin/update wrapper. A marker or catalogue match alone never enables execution."
       },
       {
         "source": "Custom command",
@@ -56,7 +56,7 @@
         "notes": "Pulls the selected image and recreates its Compose service group or protected standalone container."
       }
     ],
-    "callout": "A custom command <strong>replaces</strong> Helper-Scripts for that application. Manual, bulk and scheduled runs all respect the saved choice. Existing custom commands and legacy explicitly saved bulk/enabled schedule selections are retained; newly registered applications are never opted in by an old schedule."
+    "callout": "A custom command <strong>replaces</strong> Community Scripts for that application. Manual, bulk and scheduled runs all respect the saved choice. Existing custom commands and legacy explicitly saved bulk/enabled schedule selections are retained; newly registered applications are never opted in by an old schedule."
   },
   "docker": {
     "heading": "Docker Engine and Docker images",
@@ -76,7 +76,7 @@
     "items": [
       "<strong>Configure</strong> opens the updater selector when no method is selected; <strong>Edit</strong> changes a saved choice. The information buttons explain each option, link to official documentation and show a custom-script example. Selecting an option does not execute it.",
       "When version tracking is disabled but an updater exists, the neutral <strong>Run updater</strong> action is shown. ProxMenux does not claim that an update is pending.",
-      "Without an available Helper-Scripts updater, configure a custom command. Disabling a method does not silently select another one; existing plan/schedule selections remain saved and unavailable targets are reported.",
+      "Without an available Community Scripts updater, configure a custom command. Disabling a method does not silently select another one; existing plan/schedule selections remain saved and unavailable targets are reported.",
       "The <strong>Update image</strong> action applies only to the selected Docker unit; it does not update Docker Engine or unrelated images."
     ],
     "statusColState": "Known state",
@@ -144,7 +144,7 @@
       "After each run, ProxMenux checks the standard Debian reboot-required marker. When a restart is needed, the Updates tab and the completion notification say so; the warning is cleared when that LXC starts or restarts.",
       "On the Proxmox host, scheduled-run logs are stored in <code>/usr/local/share/proxmenux/logs/lxc-updates/</code> using the name <code>&lt;VMID&gt;-scheduled-&lt;run-id&gt;.log</code>. The latest ten logs are retained per LXC and older files are removed automatically.",
       "This retained history applies to scheduled updates. A manual update displays its output live in the Monitor execution window and does not create a scheduled-run log in that directory.",
-      "External host schedules detected from Proxmox VE Helper-Scripts are shown separately so overlapping automation is visible."
+      "External host schedules detected from Community Scripts are shown separately so overlapping automation is visible."
     ],
     "callout": "Run every selected method manually before enabling a schedule. Scheduled commands cannot answer prompts."
   },
@@ -169,7 +169,7 @@
         "resolution": "Open Configure, add the official non-interactive procedure and test it manually before scheduling it."
       },
       {
-        "problem": "A Proxmox VE Helper-Scripts identity is shown but no action exists",
+        "problem": "A Community Scripts identity is shown but no action exists",
         "resolution": "The LXC has legacy identification data but no verified /usr/bin/update wrapper. Add a custom method only after confirming the correct procedure."
       },
       {

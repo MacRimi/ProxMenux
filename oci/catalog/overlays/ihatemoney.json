@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted shared-expense and group-budget manager for tracking purchases and settling who owes whom."
+    },
+    "description": {
+      "en_US": "I Hate Money is a shared budget management application designed to track expenses among groups of people. It records who bought what, when, and for whom, helping participants calculate balances and settle their bills easily. Collaborators can participate directly without needing to create user accounts."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/YunoHost-Apps/ihatemoney_ynh/HEAD/doc/screenshots/screenshot.webp"
+    ]
+  }
+}

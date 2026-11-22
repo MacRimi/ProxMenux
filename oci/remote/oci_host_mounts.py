@@ -22,8 +22,10 @@ def valid_path(value):
 
 MOUNTINFO = Path('/proc/self/mountinfo')
 BY_UUID = Path('/dev/disk/by-uuid')
-# Filesystems that number their folders again every time they are mounted.
-RENUMBERED = ('vfat', 'exfat', 'msdos')
+# Filesystems that number their folders again every time they are mounted:
+# FAT ones, and those the kernel builds anew on every boot (/run, /dev, /proc,
+# /sys), whose folders come back with other numbers after a restart.
+RENUMBERED = ('vfat', 'exfat', 'msdos', 'tmpfs', 'devtmpfs', 'ramfs', 'proc', 'sysfs')
 
 
 def _field(value):

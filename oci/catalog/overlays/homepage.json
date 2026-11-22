@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A home server start page with service links, widgets and optional health checks."
+    },
+    "description": {
+      "en_US": "Homepage is an application dashboard designed to organize self-hosted services and bookmarks in one place. It integrates with external tools and information providers to display live status, statistics, and utility widgets like weather and search. All requests to backend services are proxied to keep API credentials secure."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/gethomepage/homepage/HEAD/images/1.png?v=2"
+    ]
+  }
+}

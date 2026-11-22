@@ -3,6 +3,7 @@ import ast
 from contextlib import nullcontext
 import copy
 import json
+import os
 from pathlib import Path
 import re
 import runpy
@@ -23,9 +24,12 @@ OLD_GUARD = 'The current template changes the image or identity; an explicit mig
 GUARD = 'The current template changes the template identity or image repository; an explicit migration is required'
 OLD_PREVIEW = ('The saved image channel is checked for a newer image. If replacement is needed, the CT is stopped and '
                'a native backup is verified before its root is replaced. Host directories are outside that backup.')
-PREVIEW = ('If the image channel has a new version, the CT is stopped, backed up and verified, and replaced with '
-           'the new image to update the container. If the update fails after the container was changed, the backup '
-           'is restored. An update that stops halfway is recovered from the OCI management menu.')
+PREVIEW = ('If a newer application image is available, the container is stopped and backed up, and the backup '
+           'integrity is verified. The container is then updated using the new image.\n\n'
+           'If the update fails after the container was changed, ProxMenux attempts to restore the previous '
+           'installation from the backup. If the operation remains incomplete, select the application in OCI '
+           'management and choose "Recover the previous installation".\n\n'
+           'Host directories mounted in the container are not restored by the container backup.')
 
 
 def extracted(path, name, scope):
@@ -129,10 +133,13 @@ class UpdateWording(unittest.TestCase):
         reconcile = ModuleType('oci_instance_reconcile')
         reconcile.propose = lambda *args: None
         scope = {'sys': SimpleNamespace(path=[], executable='python3'),
+                 'os': os, 'tempfile': tempfile, 'Path': Path, 'CANCELLED': None,
                  'translate': lambda text: text, 'check_selected': lambda project, row: row,
+                 '_selected_configuration': lambda vmid: instances.command('pct', 'config', str(vmid)),
                  'images': SimpleNamespace(offer_removal=lambda *args: None),
                  'carry_records': lambda project, **options: {},
                  '_work_backup_ready': lambda project, ui, vmid: True,
+                 '_apply_recommended': lambda project, ui, vmid, record: True,
                  '_run_lifecycle': lambda command, title: events.append(('run', command, title)) or True}
         row = {'vmid': 101, 'reason': 'matched', 'stack': False, 'pending': False, 'status': 'installed'}
         decision = False
@@ -155,16 +162,20 @@ class UpdateWording(unittest.TestCase):
         record = {'status': 'installed', 'observed': {'image': {'manifest_digest': 'sha256:current'}}}
         instances = SimpleNamespace(ROOT=Path('/inert'), locked=lambda root: nullcontext(),
                                     read=lambda root, vmid: record, command=lambda *args: b'arch: amd64')
-        transaction = SimpleNamespace(candidate_contract=lambda *args: {'deployment': {}},
+        transaction = SimpleNamespace(log=lambda text: None, candidate_contract=lambda *args: {'deployment': {}},
                                       external_changes=lambda *args: {}, preflight=lambda *args: None,
                                       require_backup_space=lambda *args: self.fail('backup space checked on no-op'),
                                       apply=lambda *args, **kwargs: self.fail('apply on no-op'))
         scope = {'instances': instances, 'transaction': transaction,
+                 'native_reads': SimpleNamespace(session=lambda **kwargs: nullcontext()),
                  'translate': lambda text: text,
                  'msg_info': lambda text: events.append(text), 'msg_ok': lambda text: events.append(text),
-                 'resolve_archive': lambda desired, config, current, check: (None, current),
+                 'resolve_archive': lambda desired, config, current, check, **kwargs: (None, current),
                  'kept_settings': lambda *args: self.fail('kept settings on no-op')}
-        extracted(UPDATE, 'update', scope)(101, keep_backup='not-a-real-storage')
+        for enabled in (False, True):
+            with self.subTest(layer_cache=enabled):
+                scope['layer_cache'] = SimpleNamespace(enabled=lambda: enabled)
+                extracted(UPDATE, 'update', scope)(101, keep_backup='not-a-real-storage')
         self.assertIn('The image is already up to date; nothing was changed.', events)
 
     def test_new_keys_extracted_and_shipped_and_missing_locale_fallback(self):

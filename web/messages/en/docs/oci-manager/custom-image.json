@@ -153,6 +153,76 @@
       ]
     },
     {
+      "id": "compose-stacks",
+      "title": "Compose files with several services",
+      "intro": "A Compose file with several services is installed as a stack: one native LXC per service, joined by a private bridge and started in the order of their dependencies. <stacksLink>Multi-container applications</stacksLink> describes how a stack is created, checked and updated. This section covers what the Compose file decides.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Service", "How it is recognised", "When it is ready"],
+            "rows": [
+              ["Main", "The one named in <code>x-casaos.main</code>. Without it, the first service that publishes a port, or else the first one in the file.", "Its published web port answers over HTTP, or its own <code>healthcheck</code> passes. It needs a published TCP port."],
+              ["Database or cache", "Its image is PostgreSQL, MariaDB, MongoDB, Redis, Valkey or Meilisearch.", "The check ProxMenux has for that server, such as <code>pg_isready</code>, unless the service declares its own <code>healthcheck</code>."],
+              ["Worker", "Any other service that keeps running.", "Its own <code>healthcheck</code>. Without one, HTTP on the port it publishes, TCP on a port it only lists under <code>expose</code>, or else only that the LXC is running."],
+              ["One-shot job", "A service that another one waits for with <code>condition: service_completed_successfully</code>.", "It exits with code 0 within 300 seconds."]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "A <code>healthcheck</code> runs inside the LXC of its service, as <code>CMD</code> or <code>CMD-SHELL</code>. A <code>CMD-SHELL</code> check cannot use variables such as <code>$PORT</code>, because it does not run with the environment of the application: the value has to be written instead.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> and <code>retries</code> set how long the check is waited for, 3600 seconds at most in total.",
+              "A service that another one waits for with <code>condition: service_healthy</code> needs a <code>healthcheck</code> of its own, unless it is a database or cache of the table."
+            ]
+          }
+        },
+        {
+          "p": "A one-shot job prepares something the other services need, such as a database migration, and exits."
+        },
+        {
+          "list": {
+            "items": [
+              "Its <code>restart</code> has to be <code>no</code> or absent. The main service, and a service that others wait for with <code>service_healthy</code>, cannot be jobs.",
+              "It runs before the services that wait for it. A successful run is recorded, and later starts run it again only when its image or its configuration changes (environment, mounts, devices). A change of CPU, memory or disk size does not run it again.",
+              "Proxmox does not start it at boot, and the watchdog does not watch it."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "A volume or host path that several services mount becomes one host directory mounted in each of them, and the installation asks where it goes. Every service that mounts it must have the same <code>PUID</code> and <code>PGID</code> (1000 when they are not set).",
+              "Each service that publishes a TCP port gets an address on the LAN besides its private one, and the installation asks for an address for each of them."
+            ]
+          }
+        },
+        {
+          "p": "Applications often read their public address from a variable such as <code>APP_PUBLIC_URL</code>, and inside a stack <code>localhost</code> is the LXC of the service itself. A variable with <code>PUBLIC</code> or <code>EXTERNAL</code> among the words of its name, ending in <code>_URL</code>, <code>_URI</code> or <code>_ORIGIN</code>, whose value points to <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> or <code>::1</code>, is rewritten to the LAN address of the service that publishes that port, with the port of its container. That service needs a static address."
+        },
+        {
+          "code": {
+            "title": "A public URL rewritten",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL in the worker LXC (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "When the URL cannot be rewritten, the stack is not installed and one of these messages says why:"
+        },
+        {
+          "table": {
+            "headers": ["Message", "Cause"],
+            "rows": [
+              ["<strong>Ambiguous local public URL; use an explicit URL</strong>", "More than one service publishes that port."],
+              ["<strong>Local public URL has no matching published port; use an explicit URL</strong>", "No service publishes that port."],
+              ["<strong>Automatic public URLs require static frontend addresses or explicit URLs</strong>", "The service the URL points to has a DHCP address."],
+              ["<strong>Invalid service check URL</strong>", "The URL is malformed or its port is not valid."]
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "private-registries",
       "title": "Images in private registries",
       "intro": "An image in a private registry, such as a private package on GitHub or a private repository on Docker Hub, is read with an account saved in ProxMenux.",
@@ -192,7 +262,8 @@
           "list": {
             "items": [
               "A Dockerfile without a published image: the image has to be built and published in an OCI registry first.",
-              "A Compose file with several services: it is blocked because it describes more than one image. This option installs a single container.",
+              "A Compose file with several services is installed as described in <sectionLink>Compose files with several services</sectionLink>, except when it declares more than one network, an external network, options on top-level volumes, optional dependencies (<code>required: false</code>) or services that depend on the main one.",
+              "In a stack, a service that uses <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> or <code>extra_hosts</code> is marked as needing a stack review, and the stack is not installed.",
               "<code>configs</code>, external secrets or device formats that cannot be translated unambiguously.",
               "Shell substitutions such as <code>$(command)</code>: the resulting value has to be written instead.",
               "<code>docker run</code> options that are not recognised, and <code>--env-file</code>: an explicit Compose file is read instead."

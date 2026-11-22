@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Share files through temporary download links and manage them from a web interface. Gokapi stores its configuration and application data in separate persistent directories and uses its built-in database."
+    },
+    "description": {
+      "en_US": "Gokapi is a self-hosted file sharing platform designed for distributing temporary files securely. It allows registered users to upload files that automatically expire after a specified number of downloads or days. The platform supports end-to-end encryption, file deduplication, user role management, and file requests that let external users upload files directly."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/d805a88b-dc74-4c39-bed6-ec31b9c3e17f",
+      "https://github.com/user-attachments/assets/a6565cf8-bd2d-4027-a150-673aa93d4502",
+      "https://github.com/user-attachments/assets/cbc738e4-75ae-4647-8178-da735f74a86f",
+      "https://github.com/user-attachments/assets/fd9c032b-733d-4657-9f42-f751b2634e02"
+    ]
+  }
+}

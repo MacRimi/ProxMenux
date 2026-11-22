@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { ExternalLink } from "lucide-react"
@@ -31,7 +31,6 @@ export default async function InstallCoralTPUHostPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.hardware.installCoralTpuHost" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -166,20 +165,6 @@ export default async function InstallCoralTPUHostPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("howRuns.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("howRuns.body")}</p>
 
-      <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto text-sm my-4 border border-gray-200 leading-snug">
-{`Detect Coral hardware
-        │
-        ├─ PCIe / M.2 detected ──► build gasket + apex with DKMS
-        │                          └─ reboot recommended
-        │
-        ├─ USB detected ─────────► install libedgetpu runtime
-        │                          └─ no reboot required
-        │
-        └─ no PCIe / M.2 detected
-             ├─ no legacy gasket-dkms state ─► no PCIe changes
-             └─ legacy gasket-dkms state ────► offer optional cleanup
-                                                └─ USB runtime untouched`}
-      </pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("walkthrough.heading")}</h2>
 
@@ -281,7 +266,7 @@ export default async function InstallCoralTPUHostPage({
           alt={t("reinstallUninstall.imageAlt")}
           width={1200}
           height={680}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("reinstallUninstall.imageCaption", { code })}
@@ -362,6 +347,7 @@ rm -rf gasket-driver
 git clone --depth=1 https://github.com/feranick/gasket-driver.git
 
 # Stage under /usr/src for DKMS
+mkdir -p /usr/src/gasket-1.0
 cp -a /tmp/gasket-driver/src/. /usr/src/gasket-1.0/
 
 # Tell DKMS what it is

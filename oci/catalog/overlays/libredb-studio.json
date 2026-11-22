@@ -85,5 +85,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "LibreDB Studio is an open-source (MIT), self-hosted SQL IDE. It provides a modern web-based interface to connect to 16 database engines (PostgreSQL, MySQL, MongoDB, Redis, ClickHouse and more), browse schemas, write and run SQL queries, and manage your data from any browser on your LAN. Data is stored locally in a SQLite database, so everything stays under your control."
+    },
+    "description": {
+      "en_US": "LibreDB Studio is a web-based SQL editor and database management interface compatible with numerous database engines. It allows users to browse schemas, execute queries, and inspect database performance. The platform also includes interactive entity-relationship diagrams, schema diff tools, and data visualization dashboards."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/libredb/libredb-studio/main/public/screenshots/hero-editor.png",
+      "https://raw.githubusercontent.com/libredb/libredb-studio/main/public/screenshots/erd-diagram.png"
+    ],
+    "repository": "https://github.com/libredb/libredb-studio"
   }
 }

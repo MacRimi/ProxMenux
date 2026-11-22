@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "title": "Zmeniť jazyk | Dokumentácia ProxMenux",
+    "description": "Vyberte si z ôsmich jazykov rozhrania ProxMenux. Každá inštalácia obsahuje vopred vytvorené prekladové katalógy JSON; hostiteľ nepotrebuje prekladovú službu ani prostredie Python. Menu sa automaticky načíta znova.",
+    "ogTitle": "Zmeniť jazyk | Dokumentácia ProxMenux",
+    "ogDescription": "Vyberte jeden z ôsmich jazykov ProxMenux v Nastaveniach. Dostupné pri každej inštalácii."
+  },
+  "header": {
+    "title": "Zmeniť jazyk",
+    "description": "Prepnite rozhranie ProxMenux medzi ôsmimi podporovanými jazykmi. Výber sa uloží do config.json a menu sa reštartuje v novom jazyku. Každá inštalácia obsahuje prekladové katalógy.",
+    "section": "Nastavenia"
+  },
+  "intro": {
+    "title": "Čo to je?",
+    "body": "Dialóg uvádza osem podporovaných jazykov. ProxMenux uloží váš výber do <code>config.json</code> ako <code>.language</code> a reštartuje <code>config_menu.sh</code>, aby sa zmena ihneď prejavila."
+  },
+  "warn": {
+    "title": "Dostupné pri každej inštalácii",
+    "body": "Nastavenia vždy zobrazujú možnosť Zmeniť jazyk. Katalógy sa inštalujú do <code>/usr/local/share/proxmenux/lang/</code> <em>a</em> vybraný jazyk sa ukladá do <code>config.json</code>. Staršie prekladové prostredie Python nie je potrebné."
+  },
+  "supported": {
+    "heading": "Podporované jazyky",
+    "headerCode": "Code",
+    "headerLang": "Jazyk",
+    "headerNotes": "Poznámky",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "Angličtina",
+        "notes": "Zdrojový jazyk — najpresnejší"
+      },
+      {
+        "code": "es",
+        "lang": "Španielčina",
+        "notes": "Vopred vytvorený katalóg JSON"
+      },
+      {
+        "code": "fr",
+        "lang": "Francúzština",
+        "notes": "Vopred vytvorený katalóg JSON"
+      },
+      {
+        "code": "de",
+        "lang": "Nemčina",
+        "notes": "Vopred vytvorený katalóg JSON"
+      },
+      {
+        "code": "it",
+        "lang": "Taliančina",
+        "notes": "Vopred vytvorený katalóg JSON"
+      },
+      {
+        "code": "pt",
+        "lang": "Portugalčina",
+        "notes": "Vopred vytvorený katalóg JSON"
+      },
+      {
+        "code": "sk",
+        "lang": "Slovenčina",
+        "notes": "Vopred vytvorený katalóg JSON"
+      },
+      {
+        "code": "sv",
+        "lang": "Švédčina",
+        "notes": "Vopred vytvorený katalóg JSON"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "Angličtina je najpresnejšia",
+    "body": "Texty v iných jazykoch pochádzajú z vopred vytvorených katalógov JSON dodávaných s ProxMenux. Chýbajúce preklady používajú angličtinu; hostiteľ nevolá živú prekladovú službu. Pri pochybnom preklade zostáva referenciou anglický text."
+  },
+  "underHood": {
+    "heading": "Ako to funguje pod kapotou",
+    "items": [
+      "Dialóg uvádza osem kódov jazykov; vyberte si jeden.",
+      "Ak <code>config.json</code> existuje: <code>jq --arg lang \"$new_language\" '.language = $lang''</code> aktualizuje pole na mieste.",
+      "Ak <code>config.json</code> neexistuje: nový je vytvorený s jazykovým kódom v objekte s jedným poľom.",
+      "Potvrdzovací dialóg: <em>\"Jazyk bol zmenený na [code]\"</em>.",
+      "<code>exec bash config_menu.sh</code> znova načíta menu Nastavenia s aktivovaným novým jazykom."
+    ]
+  },
+  "manual": {
+    "heading": "Ručný ekvivalent"
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "noOptionTitle": "Voľba sa neobjavuje v Nastaveniach",
+    "noOptionBody": "Možnosť Zmeniť jazyk je v aktuálnych vydaniach vždy dostupná. Ak chýba, aktualizujte ProxMenux oficiálnym inštalátorom a znova otvorte Nastavenia.",
+    "stillEnglishTitle": "Jazyk sa zmenil, ale rozhranie je stále v angličtine",
+    "stillEnglishBody": "Po zmene sa menu znova spustí. Ak ste otvorili nový shell a spustili iný vstupný bod ProxMenux, znova spustite <code>menu</code>, aby sa použil nový jazyk. Overte to príkazom <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Zobraziť informácie o verzii",
+        "tail": " — potvrdzuje kanál vydaní, prekladové súbory a aktuálny jazyk."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Prehľad nastavení",
+        "tail": "."
+      }
+    ]
+  }
+}

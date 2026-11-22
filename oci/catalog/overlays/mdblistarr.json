@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Sends MDBList lists to Radarr and Sonarr and keeps the library status synced with MDBList."
+    },
+    "description": {
+      "en_US": "MDBListarr is a companion application that connects MDBList with Radarr, Sonarr, and Plex. It pulls items from your MDBList queue and automatically submits add requests to your Arr instances, while also uploading your current library status back to MDBList on a schedule. Additionally, it offers optional Plex integration to stamp poster artwork with MDBList scores and age ratings or sync scores into Plex rating fields."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/cdd58b1a-4b55-464d-84dd-55246ba6a096"
+    ]
+  }
+}

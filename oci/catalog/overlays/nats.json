@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run a single NATS server with JetStream enabled, a persistent data directory and its local monitoring endpoint."
+    },
+    "description": {
+      "en_US": "NATS is a messaging and communications system designed for digital systems, services, and devices. It facilitates communication across distributed architectures, connecting applications through various client languages. The server is lightweight enough to run across on-premises environments, cloud platforms, and edge devices."
+    }
+  }
+}

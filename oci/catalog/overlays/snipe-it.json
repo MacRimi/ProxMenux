@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Track IT assets, software licenses, accessories and equipment assignments with Snipe-IT."
+    },
+    "description": {
+      "en_US": "Snipe-IT is an open-source asset management system designed for IT operations. It tracks equipment assignments, hardware depreciation, accessories, and software licenses. The platform provides check-in and check-out workflows, role-based access control, and integration with directory services and management tools."
+    },
+    "screenshots": [
+      "https://snipeitapp.com/img/desktop_snipe.png"
+    ]
+  }
+}

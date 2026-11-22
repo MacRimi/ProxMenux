@@ -14,5 +14,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Doplarr_rs is a Discord bot for requesting media through *arr backends, written in Rust."
+    },
+    "description": {
+      "en_US": "Doplarr_rs is a Discord bot designed for requesting media through various *arr backend services. Written in Rust, it interfaces directly with chat channels to let users search for and request movies or television shows. It helps streamline the intake of new content into personal media servers directly through Discord."
+    }
   }
 }

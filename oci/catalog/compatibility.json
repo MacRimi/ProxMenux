@@ -1,0 +1,4 @@
+{
+  "engine_api": 1,
+  "description": "Increment engine_api when catalog recipes require runtime capabilities unavailable in earlier catalog-refresh clients."
+}

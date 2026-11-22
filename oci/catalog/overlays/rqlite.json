@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run a single-node rqlite database with a persistent SQLite-compatible SQL API. The same instance can later be expanded into a cluster manually."
+    },
+    "description": {
+      "en_US": "rqlite is a lightweight, fault-tolerant, distributed relational database built on SQLite. It provides full SQL support and replicates data across nodes to ensure high availability and reliability. Applications can interact with it using an easy-to-use HTTP API, a command-line interface, or a built-in console application."
+    }
+  }
+}

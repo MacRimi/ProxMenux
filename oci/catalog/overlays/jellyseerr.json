@@ -10,5 +10,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Jellyseerr is a self-hosted media request and management tool designed to streamline media library request and discovery processes, offering an intuitive Web interface, ideal for home media server users and small teams. It seamlessly integrates with existing media services, enabling efficient management of movies, shows, and mixed content libraries.\n\nThe tool's core features include a customizable request system and broad media server integration. It allows users to request movies or individual show seasons through a user-friendly interface, with administrators able to approve requests via a simple management UI. It integrates with Jellyfin, Emby, and Plex, supporting user import and authentication with existing accounts. Diverse notification channels (e.g., Discord, Telegram, Email) provide real-time request status updates, and library scanning tracks available media to prevent duplicate requests.\n\nIt offers a granular permission system, enabling precise control over user access and actions. The mobile-friendly design facilitates on-the-go request approvals, while watchlist and blacklist support help users filter content. Support for PostgreSQL and SQLite databases ensures flexible deployment options. Community support via GitHub and Discord provides documentation and assistance, delivering a modern media management solution with intuitive operation and high flexibility.\n\n**Key Features:**\n- Full Jellyfin/Emby/Plex integration including authentication with user import & management.\n- Support for PostgreSQL and SQLite databases.\n- Supports Movies, Shows and Mixed Libraries.\n- Ability to change email addresses for SMTP purposes.\n- Easy integration with your existing services. Currently, Jellyseerr supports Sonarr and Radarr.\n- Jellyfin/Emby/Plex library scan, to keep track of the titles which are already available.\n- Customizable request system, which allows users to request individual seasons or movies in a friendly, easy-to-use interface.\n- Incredibly simple request management UI. Don't dig through the app to simply approve recent requests!\n- Granular permission system.\n- Support for various notification agents.\n- Mobile-friendly design, for when you need to approve requests on the go!\n- Support for watchlisting & blacklisting media.\n\n**Learn More:**\n- [Jellyseerr Documentation](https://docs.jellyseerr.dev/)\n- [Jellyseerr GitHub Repository](https://github.com/Fallenbagel/jellyseerr)\n"
+    },
+    "description": {
+      "en_US": "Jellyseerr is an open-source media request management tool. It integrates with media servers such as Jellyfin as well as services like Sonarr and Radarr. Users can browse content and submit requests for movies or individual TV show seasons. Administrators can monitor library availability to avoid duplicate requests and approve submissions through a dedicated interface."
+    },
+    "repository": "https://github.com/Fallenbagel/jellyseerr",
+    "screenshots": [
+      "https://raw.githubusercontent.com/Fallenbagel/jellyseerr/HEAD/public/preview.jpg",
+      "https://raw.githubusercontent.com/seerr-team/seerr/HEAD/public/preview.jpg"
+    ]
   }
 }

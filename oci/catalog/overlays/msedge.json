@@ -19,5 +19,50 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "Microsoft Edge"
+    },
+    "tagline": {
+      "en_US": "Microsoft Edge is a cross-platform web browser developed by Microsoft and based on Chromium."
+    },
+    "description": {
+      "en_US": "Microsoft Edge is a cross-platform web browser developed by Microsoft and based on Chromium. It provides web browsing capabilities with full modern web standards support, multimedia handling, and extension compatibility."
+    },
+    "tips": [
+      "By default, there is no authentication enabled.",
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ],
+    "screenshots": [
+      "https://edgestatic.azureedge.net/shared/cms/lrs1c69a1j/section-images/1014af37c5aa4285a8f168cb631074ce-png-w1920.avif",
+      "https://edgestatic.azureedge.net/shared/cms/lrs1c69a1j/section-images/fcb43719b9b84385ad51c539f9b63d03-png-w1920.avif"
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 3001,
+      "path": "/"
+    }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ],
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "scheme": "https",
+        "port": 3001,
+        "path": "/",
+        "source": "linuxserver-readme-application-setup"
+      }
+    ]
   }
 }

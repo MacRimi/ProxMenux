@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted visual bookmarking board for saving, tagging and sharing images, videos and web pages. It uses local persistent storage and SQLite by default, with no separate database or supporting service required."
+    },
+    "description": {
+      "en_US": "Pinry is an open-source tiling image board system. It allows users to save, tag, and share images, videos, and webpages in a visual, easy-to-browse layout. The platform supports multiple users, public and private boards, tagging, and search capabilities."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/4109722/166976413-38b575f2-a246-4852-ba05-11bca5f9b052.png"
+    ]
+  }
+}

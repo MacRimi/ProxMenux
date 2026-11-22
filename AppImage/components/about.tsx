@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { APP_VERSION } from "./release-notes-modal"
 import { useT } from "../lib/i18n/provider"
+import { ProxMenuxMark } from "./proxmenux-mark"
 
 // Issue #191: a dedicated About tab. Centralises project metadata
 // (version, license, author) and every external link the project
@@ -130,8 +131,8 @@ export function About() {
               />
             </div>
             <div className="text-center md:text-left flex-1 min-w-0">
-              <h2 className="text-2xl md:text-3xl font-semibold text-foreground">
-                ProxMenux Monitor
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground" aria-label="ProxMenux Monitor">
+                <ProxMenuxMark /> Monitor
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {t("about.heroDescription")}

@@ -34,5 +34,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Lyrion Music Server is a self-hosted music management app designed to control a variety of audio playback devices, supporting streaming of local music collections, internet radio, and multiple streaming services (with or without subscriptions). Its intuitive Web interface enables users to access and control music effortlessly via any browser, ideal for music enthusiasts creating personalized audio experiences.\n\nThe app's core features include versatile music streaming and extensive customization. Users can seamlessly play local music libraries, listen to global internet radio, or connect to streaming services, catering to diverse listening needs. It offers flexible control options, allowing customization of server functionality, interaction methods, and interface appearance. Additionally, it supports a unified interface across multiple devices, ensuring a consistent experience on phones, computers, or other players, with the ability to select the ideal playback device for any scenario.\n\nIt can be flexibly deployed on personal servers or NAS devices, with community-provided documentation aiding users in optimising setups and extending functionality. Whether managing personal music collections or creating a shared audio hub for family, the app's intuitive operation and high flexibility deliver a modern music management platform, meeting needs from casual listening to professional audio management.\n\n**Key Features:**\n- Music streaming for local collections, internet radio, and multiple streaming services\n- Intuitive Web interface for effortless music access and control via any browser\n- Extensive customisation options for server functionality, interaction methods, and interface appearance\n- Unified multi-device interface ensuring consistent experience across phones, computers, and other players\n- Community documentation support for optimising setups and extending functionality\n\n**Learn More:**\n- [Lyrion Music Server Official Website](https://www.lyrion.org)\n- [Lyrion Music Server GitHub Repository](https://github.com/lms-community/slimserver)\n"
+    },
+    "description": {
+      "en_US": "Lyrion Music Server, formerly known as Logitech Media Server, is an audio streaming and music management system designed to control playback across various audio devices. It streams local music collections, playlists, and internet radio to connected players. A built-in web interface provides playback controls and server configuration, with functionality expandable via a built-in plugin manager."
+    },
+    "screenshots": [
+      "https://lyrion.org/assets/screenshot.png"
+    ]
   }
 }

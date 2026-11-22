@@ -1,38 +1,67 @@
 {
   "meta": {
     "title": "Contributors | ProxMenux Documentation",
-    "description": "Recognition for the people who make ProxMenux possible — testers, reviewers and developers who shape each release.",
+    "description": "Behind every release are people who develop, review, translate and test ProxMenux. This page thanks those contributing today and those who helped the project take its first steps.",
     "ogTitle": "Contributors | ProxMenux Documentation",
-    "ogDescription": "Meet the contributors behind ProxMenux."
+    "ogDescription": "Behind every release are people who develop, review, translate and test ProxMenux. This page thanks those contributing today and those who helped the project take its first steps."
   },
   "header": {
     "title": "Contributors",
-    "description": "The ProxMenux project grows and thrives thanks to the contribution of its collaborators. This is the well-deserved recognition of their work — testing builds before release, catching regressions, reviewing PRs and shaping the direction of new features.",
+    "description": "Behind every release are people who develop, review, translate and test ProxMenux. This page thanks those contributing today and those who helped the project take its first steps.",
     "section": "About"
   },
-  "beyond": {
-    "title": "Beyond this list",
-    "body": "Many more people contribute via bug reports, feature ideas in Discussions, beta testing and translations. The full list of code contributors lives on the <extlink>GitHub contributors graph</extlink>. The page below highlights the people who have been most actively involved in testing and reviewing ProxMenux releases."
+  "active": {
+    "heading": "Development, review and ongoing collaboration",
+    "intro": "Vaso73, f3rs3n and jcastro contribute regularly through improvements, fixes and reviews. Their work goes beyond testing a release: it also helps build and debug the next ones.",
+    "people": {
+      "Vaso73": "Improvements and fixes in OCI manager and ProxMenux Monitor, alongside Slovak translations and language reviews.",
+      "f3rs3n": "Fixes and reviews of script and Monitor behavior, together with ongoing improvements to the Italian translation.",
+      "jcastro": "Development and debugging of OCI, backup and Monitor features, alongside documentation reviews and testing since the project's early days."
+    }
+  },
+  "code": {
+    "heading": "More contributions to the code",
+    "intro": "The following people have also contributed code changes. Follow their links to explore their work; GitHub's history records contributions and pull requests as they are merged.",
+    "viewWork": "View contributions",
+    "history": "Contribution history",
+    "merged": "View all merged PRs"
+  },
+  "community": {
+    "heading": "A community that also tests, translates and documents",
+    "body": "Not all work arrives as code. Reproducing a bug, sharing useful logs, testing different hardware, clarifying an explanation or suggesting an improvement also helps ProxMenux work better.",
+    "languages": "Special thanks to everyone reviewing text in their own language. Translations of the menus, Monitor and documentation bring the project to more people and make it more comfortable to use."
   },
   "testers": {
-    "heading": "Testers & reviewers",
-    "intro": "These were among the first to contribute to the project — testing, reporting issues and suggesting improvements that helped ProxMenux grow into what it is today.",
-    "roles": {
-      "testing": "Testing",
-      "testingReviewer": "Testing & reviewer"
-    },
+    "heading": "Thank you for the early testing",
+    "intro": "This recognition still matters. These people helped validate early releases, tested the project on their own equipment, and shared problems and suggestions as ProxMenux began to grow.",
     "youtube": "YouTube"
   },
   "contribute": {
-    "heading": "Want to contribute?",
-    "intro": "Any contribution is welcome — code, testing, design, documentation, or just sharing your ideas:",
-    "tester": "<strong>Tester</strong> — try the <beta>beta channel</beta> and report what works and what doesn't before stable releases.",
-    "developer": "<strong>Developer</strong> — Bash + Next.js (TypeScript) + a bit of Python for the translation venv. PRs welcome on <gh>GitHub</gh>.",
-    "designer": "<strong>Designer</strong> — UI improvements, icons, screenshots for documentation.",
-    "ideas": "<strong>Ideas</strong> — open a thread in <disc>GitHub Discussions</disc> before opening a feature request issue."
+    "heading": "There is a place for your contribution too",
+    "intro": "You can help with a small fix, a specific test or a text review. You do not need to develop a whole feature to make a difference.",
+    "ways": {
+      "code": {
+        "title": "Code and review",
+        "body": "Develop features, fix bugs or review a PR. The contributing guide explains how to prepare and propose changes."
+      },
+      "testing": {
+        "title": "Testing and diagnosis",
+        "body": "Try beta releases and share reproduction steps and logs that help others understand a problem."
+      },
+      "translations": {
+        "title": "Translations",
+        "body": "Review messages in your language and help keep them up to date as new features are added."
+      },
+      "docs": {
+        "title": "Documentation and design",
+        "body": "Clarify a guide, add a screenshot or improve the interface so others can follow it more easily."
+      }
+    },
+    "guide": "Contributing guide",
+    "discuss": "Talk with the community"
   },
-  "coc": {
-    "title": "Read the Code of Conduct first",
-    "body": "Before submitting code or reporting issues, give the <coclink>Code of Conduct & Best Practices</coclink> a quick read. It covers expectations around code responsibility, security disclosure and PR scope."
+  "thanks": {
+    "title": "Thank you for making it possible",
+    "body": "To everyone listed here and everyone helping in an issue, a conversation or a test: thank you for spending your time improving ProxMenux."
   }
 }

@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run the diagrams.net web editor from the project-maintained image. No external database or sidecar is needed. By default, diagrams are saved or exported by the browser; configure an integration if you want server-side storage."
+    },
+    "description": {
+      "en_US": "draw.io is a browser-based diagramming and whiteboarding application. It enables users to create flowcharts, organizational charts, system architectures, and network diagrams. The application handles rendering and exports directly within the browser, with optional integrations for saving files to external storage providers."
+    },
+    "screenshots": [
+      "https://www.drawio.com/img/home/editor-classic-aws.png",
+      "https://www.drawio.com/img/home/editor-simple-bpmn.png",
+      "https://www.drawio.com/img/blog/sketch-theme-tutorial.png"
+    ]
+  }
+}

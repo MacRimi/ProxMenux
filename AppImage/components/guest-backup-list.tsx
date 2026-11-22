@@ -7,6 +7,7 @@ import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { useT } from "@/lib/i18n/provider"
+import { useAccess } from "../lib/access"
 import { deleteGuestBackups, type GuestBackup } from "../lib/guest-backup-archives"
 
 export function GuestBackupList({ vmid, backups, loading, onRefresh, storageColor }: {
@@ -17,6 +18,7 @@ export function GuestBackupList({ vmid, backups, loading, onRefresh, storageColo
   storageColor?: (storage: string) => { bg: string; text: string; border: string }
 }) {
   const t = useT()
+  const { capabilities } = useAccess()
   const [selected, setSelected] = useState<string[]>([])
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -76,14 +78,18 @@ export function GuestBackupList({ vmid, backups, loading, onRefresh, storageColo
         <span className="text-xs text-muted-foreground">{t("vmLxc.backups.available")}</span>
         <Badge variant="secondary" className="text-xs h-5">{backups.length}</Badge>
       </div>
-      <div className="flex items-center gap-2">
+      {/* The buttons wrap on a narrow screen; deleting is offered only when
+          there is something to delete. */}
+      <div className="flex flex-wrap items-center gap-2 min-w-0">
         <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" disabled={disabled} onClick={refresh}>
           <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />{t("vmLxc.backups.refresh")}
         </Button>
-        <Button size="sm" variant="destructive" className="h-7 text-xs gap-1" disabled={disabled || !chosen.length} onClick={() => setConfirm(true)}>
-          {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-          {t("vmLxc.backups.deleteSelected", { count: chosen.length })}
-        </Button>
+        {backups.length > 0 && capabilities.backup && (
+          <Button size="sm" variant="destructive" className="h-7 text-xs gap-1" disabled={disabled || !chosen.length} onClick={() => setConfirm(true)}>
+            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+            {t("vmLxc.backups.deleteSelected", { count: chosen.length })}
+          </Button>
+        )}
       </div>
     </div>
     {message && <p role="status" className="text-xs text-muted-foreground mb-2">{message}</p>}

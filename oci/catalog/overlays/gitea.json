@@ -10,5 +10,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Gitea is a painless self-hosted all-in-one software development service, it includes Git hosting, code review, team collaboration, package registry and CI/CD. It is similar to GitHub, Bitbucket and GitLab. \n\n- Code Hosting\nGitea supports creating and managing repositories, browsing commit history and code files, reviewing and merging code submissions, managing collaborators, handling branches, and more. It also supports many common Git features such as tags, Cherry-pick, hooks, integrated collaboration tools, and more.\n\n- Lightweight and Fast\nOne of Gitea's design goals is to be lightweight and fast in response. Unlike some large code hosting platforms, it remains lean, performing well in terms of speed, and is suitable for resource-limited server environments. Due to its lightweight design, Gitea has relatively low resource consumption and performs well in resource-constrained environments.\n\n- Easy Deployment and Maintenance\nIt can be easily deployed on various servers without complex configurations or dependencies. This makes it convenient for individual developers or small teams to set up and manage their own Git services.\n\n- Security\nGitea places a strong emphasis on security, offering features such as user permission management, access control lists, and more to ensure the security of code and data.\n\n- Code Review\nCode review supports both the Pull Request workflow and AGit workflow. Reviewers can browse code online and provide review comments or feedback. Submitters can receive review comments and respond or modify code online. Code reviews can help individuals and organizations enhance code quality.\n\n- CI/CD\nGitea Actions supports CI/CD functionality, compatible with GitHub Actions. Users can write workflows in familiar YAML format and reuse a variety of existing Actions plugins. Actions plugins support downloading from any Git website.\n\n- Project Management\nGitea tracks project requirements, features, and bugs through columns and issues. Issues support features like branches, tags, milestones, assignments, time tracking, due dates, dependencies, and more.\n\n- Artifact Repository\nGitea supports over 20 different types of public or private software package management, including Cargo, Chef, Composer, Conan, Conda, Container, Helm, Maven, npm, NuGet, Pub, PyPI, RubyGems, Vagrant, and more.\n\n- Open Source Community Support\nGitea is an open-source project based on the MIT license. It has an active open-source community that continuously develops and improves the platform. The project also actively welcomes community contributions, ensuring updates and innovation.\n\n- Multilingual Support\nGitea provides interfaces in multiple languages, catering to users globally and promoting internationalization and localization.\n"
+    },
+    "description": {
+      "en_US": "Gitea is a self-hosted software development service that provides Git repository hosting, code review, and team collaboration tools. It allows users to manage branches, browse commit histories, and handle pull requests. The platform also includes project management with issue tracking, package registries for various ecosystems, and built-in continuous integration workflows."
+    },
+    "screenshots": [
+      "https://dl.gitea.com/screenshots/home.png",
+      "https://dl.gitea.com/screenshots/issues.png",
+      "https://dl.gitea.com/screenshots/pull_requests.png",
+      "https://dl.gitea.com/screenshots/user_profile.png"
+    ]
   }
 }

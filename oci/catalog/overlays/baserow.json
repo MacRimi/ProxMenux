@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Build databases without code. Use a static IPv4 address for the application LXC."
+    },
+    "description": {
+      "en_US": "Baserow is an open-source platform for creating databases, applications, automations, and AI agents without writing code. It functions as a spreadsheet-database hybrid that combines familiar grid-based data organization with relational database capabilities. Users can structure information, automate repetitive workflows, build internal tools and portals, and visualize records using custom dashboards."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/baserow/baserow/HEAD/docs/assets/screenshot.png",
+      "https://raw.githubusercontent.com/baserow/baserow/HEAD/docs/assets/screenshot_kanban.png",
+      "https://raw.githubusercontent.com/baserow/baserow/HEAD/docs/assets/screenshot_application_builder.png",
+      "https://raw.githubusercontent.com/baserow/baserow/HEAD/docs/assets/screenshot_dashboard.png"
+    ]
+  }
+}

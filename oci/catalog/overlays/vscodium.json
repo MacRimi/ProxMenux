@@ -10,5 +10,32 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "VSCodium"
+    },
+    "tagline": {
+      "en_US": "VSCodium is a community-driven, freely-licensed binary distribution of Microsoft’s editor VS Code."
+    },
+    "description": {
+      "en_US": "VSCodium is a community-driven, freely-licensed binary distribution of Microsoft's VS Code editor. It provides a full-featured code editor with syntax highlighting, debugging tools, and version control capabilities. It allows developers to write, edit, and navigate source code across various programming languages without proprietary tracking or telemetry."
+    },
+    "screenshots": [
+      "https://vscodium.com/img/vscodium.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

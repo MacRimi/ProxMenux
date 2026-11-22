@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Blinko is an open-source personal knowledge management and information recording platform, focused on providing users with a lightweight, efficient, and scalable note-taking and knowledge organization experience. Through modular design and a modern technology stack, it enables users to quickly capture ideas, organize knowledge, and build their own information system.\n\nThe project emphasizes simplicity and customizability, supporting flexible combinations of various content types (text, tags, links, etc.), while its clear structured design helps users efficiently retrieve and connect information. Blinko also provides excellent extensibility, making it easy for developers to customize and enhance functionality according to their needs.\n\nIn practical use, Blinko balances usability and functionality, offering a smooth experience for daily note-taking, knowledge accumulation, or project document management - an ideal knowledge tool for long-term personal growth.\n\n**Main features:**\n\n- Lightweight note system for quick content recording and editing\n- Tags and structured organization to improve information retrieval efficiency\n- Support for multiple content types (text, links, etc.)\n- Extensible architecture for custom functionality and plugin development\n- Clean interface design focused on content rather than complex operations\n\n**Learn more:**\n\n- [Blinko GitHub](https://github.com/blinkospace/blinko)\n"
+    },
+    "description": {
+      "en_US": "Blinko is an open-source personal knowledge management and note-taking tool designed to capture and organize fleeting thoughts. It lets users jot down ideas instantly using Markdown formatting and stores content as plain text. The platform also provides AI-powered retrieval to search and access notes using natural language queries."
+    },
+    "tips": [
+      "Default username is blinko and password is blinko."
+    ],
+    "repository": "https://github.com/blinko-space/blinko",
+    "screenshots": [
+      "https://raw.githubusercontent.com/blinko-space/blinko/HEAD/app/public/home.png"
+    ]
   }
 }

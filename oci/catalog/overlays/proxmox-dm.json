@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Runs Proxmox Datacenter Manager as a native LXC to see and manage several Proxmox VE nodes and clusters from one place, including migrations between them. Community packaging by Dockur, not an official Proxmox image."
+    },
+    "description": {
+      "en_US": "Proxmox Datacenter Manager is a centralized management platform for Proxmox VE nodes and clusters. It provides a web interface featuring a global dashboard to monitor node health and resource utilization. The application aggregates task logs across your infrastructure, tracks available updates and security patches, and supports cross-cluster migration of virtual guests."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/dockur/proxmox-dm/master/.github/screenshot.png"
+    ]
+  }
+}

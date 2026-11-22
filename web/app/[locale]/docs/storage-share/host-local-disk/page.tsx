@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -36,7 +36,6 @@ export default async function HostLocalDiskPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.storageShare.hostLocalDisk" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -214,7 +213,7 @@ was changed          │  PHASE 2 — Execute                 │
       <p className="mb-4 text-gray-800 leading-relaxed">{t("format.intro")}</p>
       <ol className="list-decimal pl-6 mb-4 text-gray-800 leading-relaxed space-y-2">
         {formatItems.map((_, idx) => (
-          <li key={idx}>{t.rich(`format.items.${idx}`, { code, strong })}</li>
+          <li key={idx}>{t.rich(`format.items.${idx}`, { code, strong, em })}</li>
         ))}
       </ol>
 

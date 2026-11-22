@@ -1,0 +1,123 @@
+{
+  "meta": {
+    "title": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox ProxMenux Documentação",
+    "description": "Registe um alvo iSCSI como armazenamento Proxmox com o ProxMenux. A ferramenta instala open-iscsi, descobre o portal através de sendtargets, permite escolher o alvo e executa pvesm add iscsi. Fornece dispositivos de blocos raw para as imagens de disco das VM.",
+    "ogTitle": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox ProxMenux Documentação",
+    "ogDescription": "Registe um alvo iSCSI como armazenamento Proxmox com descoberta guiada. Usa pvesm add iscsi e fornece dispositivos de blocos raw para os discos das VM."
+  },
+  "header": {
+    "title": "Máquina: Adicionar iSCSI alvo como armazenamento Proxmox",
+    "description": "Registre um alvo iSCSI (de um SAN, TrueNAS / FreeNAS, Synology, um alvo Windows Server, qualquer array que fala iSCSI) como armazenamento Proxmox. Os LUNs exportados aparecem como dispositivos de bloco e podem hospedar imagens de disco VM em desempenho quase local através da rede.",
+    "section": "Armazenamento e Compartilhamento · Máquina"
+  },
+  "intro": {
+    "title": "O que isto faz",
+    "body": "ProxMenux envolve <code>pvesm add iscsi</code> com um fluxo guiado: instala <code>open-iscsi</code> se necessário, pede o portal iSCSI (IP:port), executa <code>iscsiadm --mode discovery --type sendtargets</code> contra ele, permite escolher um IQN alvo e registra o armazenamento iSCSI no Proxmox. O serviço <code>iscsid</code>, em seguida, mantém a sessão iSCSI vivo através de reinicialização."
+  },
+  "vocab": {
+    "heading": "vocabulário iSCSI (referência rápida)",
+    "headerTerm": "Termo",
+    "headerMeaning": "Significado",
+    "rows": [
+      {
+        "term": "Portal",
+        "meaningRich": "O endpoint de serviço iSCSI no servidor alvo — um IP (ou hostname) mais uma porta TCP. O porto padrão é <code>3260</code>; ProxMenux assume-o se você não especificar um."
+      },
+      {
+        "term": "Alvo",
+        "meaningRich": "Um único servidor exportado dentro do portal, identificado pelo seu IQN (<em>iSCSI Qualified Name</em>). Um portal pode hospedar muitos alvos."
+      },
+      {
+        "term": "IQN",
+        "meaningRich": "A forma canônica é <code>iqn.YYYY-MM.reverse.domain:identifier</code>, por exemplo <code>iqn.2024-08.com.truenas:proxmox-pool</code>. Tanto o alvo como o iniciador têm o seu próprio IQN."
+      },
+      {
+        "term": "LUN",
+        "meaningRich": "Um dispositivo de bloco dentro de um alvo (Número de Unidade Lógica). Um único alvo pode expor vários LUNs; cada LUN aparece como seu próprio disco em Proxmox e pode se tornar um disco VM."
+      },
+      {
+        "term": "Iniciador",
+        "meaningRich": "O cliente que se conecta a um alvo — neste caso, seu host Proxmox. O iniciador tem seu próprio IQN armazenado em <code>/etc/iscsi/initiatorname.iscsi</code>. Os alvos geralmente só aceitam sessões de IQNs de iniciadores pré-autorizados."
+      }
+    ]
+  },
+  "opening": {
+    "heading": "Abrir a ferramenta",
+    "body": "Do menu principal do ProxMenux, abra o <strong>Storage &amp; Share Manager → Adicione iSCSI Target como Proxmox Storage</strong>. Você verá este sub-menu com quatro opções:",
+    "imageAlt": "Menu do gestor de máquinas iSCSI — Adicionar / Ver / Remover / Teste de conectividade"
+  },
+  "howRuns": {
+    "heading": "Como o script é executado (Adicionar fluxo)",
+    "body": "O fluxo tem duas fases com separação clara entre \"ajustar o iniciador, descobrir alvos\" e \"realmente registrar armazenamento em Proxmox\". Ao contrário do NFS / Samba, não há nenhuma descoberta automática na sub-rede — você deve saber o endereço do portal (iSCSI não é amigável à transmissão)."
+  },
+  "add": {
+    "heading": "Adicionar o alvo iSCSI como armazenamento Proxmox",
+    "items": [
+      "<strong>Entrada portal</strong> — digite o IP ou hostname do servidor alvo iSCSI. Porta <code>3260</code> é assumido a menos que você digite <code>host:port</code>.",
+      "<strong>Descoberta do alvo</strong> — ProxMenux chama <code>iscsiadm --mode discovery --type sendtargets --portal &lt;ip:port&gt;</code>. O servidor responde com cada IQN que permite que este iniciador veja. Se a descoberta falhar, o script mostra o erro exato de <code>iscsiadm</code> e lista causas comuns (IP errado, firewall, IQN iniciador não autorizado).",
+      "<strong>Seleção do alvo</strong> — um único alvo é selecionado automaticamente; vários alvos mostram um menu.",
+      "<strong>Storage ID</strong> — padrão é <code>iscsi-&lt;last IQN segment, 20 chars max&gt;</code>. Apenas letras, dígitos, <code>-</code> e <code>_</code>.",
+      "<strong>Tipo de conteúdo</strong> — ao contrário do NFS / Samba, o conteúdo de iSCSI é <strong>fixo ao <code>images</code></strong>. iSCSI expõe dispositivos de bloco brutos, não um sistema de arquivos, então o Proxmox só permite hospedar discos VM nele."
+    ],
+    "authTitle": "Autorizar o iniciador Proxmox no alvo",
+    "authBody1": "Antes do fluxo Adicionar funcionar de ponta a ponta, o alvo iSCSI precisa conhecer seu host Proxmox. Obter o seu IQN iniciador:",
+    "authBody2": "Adicione esse IQN à lista de acesso do alvo (TrueNAS: <em>Sharing → Block → Initiators Groups</em>; Synology: <em>SAN Manager → iSCSI → Target → Edit → Initiators</em>; etc.). Se o iniciador não estiver autorizado, a descoberta com <code>iscsiadm</code> retorna uma lista vazia ou um erro de autenticação."
+  },
+  "manual": {
+    "heading": "Equivalente manual",
+    "body": "O fluxo completo corresponde a estes comandos:"
+  },
+  "view": {
+    "heading": "Ver os armazenamentos iSCSI configurados",
+    "body": "Lista todas as entradas iSCSI no Proxmox (<code>pvesm status | awk ''$2 == \"iscsi\"''</code>) com portal, IQN do alvo, tipo de conteúdo e estado atual."
+  },
+  "remove": {
+    "heading": "Remover o armazenamento de iSCSI",
+    "body": "Executa <code>pvesm remove &lt;storage-id&gt;</code> após confirmar portal, alvo e conteúdo. Somente o registro Proxmox é removido — <strong>o alvo iSCSI em si não é tocado</strong> e as sessões existentes no lado do kernel podem durar até o próximo reinício.",
+    "warnTitle": "Verifique primeiro os discos de VM existentes neste iSCSI",
+    "warnBody": "Removendo um armazenamento iSCSI enquanto as VMs ainda têm discos nele deixa aquelas VMs apontando para uma loja desaparecida. O Proxmox assinalará o erro, mas os dados LUN não são tocados no alvo — você pode registrar novamente o armazenamento mais tarde para recuperar os discos. Ainda assim, mova ou faça backup das VMs primeiro para ser seguro."
+  },
+  "test": {
+    "heading": "Teste de conectividade iSCSI",
+    "body": "Executa um passe diagnóstico: verifica se o <code>iscsiadm</code> está instalado, imprime o seu IQN iniciador, confirma que o <code>iscsid</code> está em execução, pings cada portal registrado, sonda sua porta, e relata o <code>pvesm status</code> mais se uma sessão iSCSI está atualmente ativa (<code>iscsiadm --mode session</code>). Sessão ativa mais portal acessível, mas \"inativo\" no Proxmox geralmente significa um estado obsoleto — tente <code>pvesm set &lt;id&gt; --disable 0</code>."
+  },
+  "troubleshoot": {
+    "heading": "Resolução de Problemas",
+    "portalTitle": "\"Não é possível alcançar o portal\", mas o IP do servidor responde em outro lugar",
+    "portalBody": "O ping ao endereço do portal falhou. Verifique se está alcançando a interface da <em>rede de armazenamento</em> (iSCSI costuma usar uma VLAN ou sub-rede separada da rede de gerenciamento). Confira também o DNS se informou um nome de host.",
+    "discoverTitle": "\"A descoberta do iSCSI falhou\" do iscsiadm",
+    "discoverIntro": "O script mostra o erro exato. Causas mais comuns:",
+    "discoverItems": [
+      "Portal IP / porta errada (dupla verificação, padrão é 3260).",
+      "O serviço iSCSI não está em execução no servidor alvo.",
+      "Firewall bloqueia 3260 entre Proxmox e o alvo.",
+      "<strong>Iniciador IQN não está autorizado no alvo.</strong> Causa mais frequente em matrizes empresariais. Adicione o seu Proxmox IQN ao ACL inicial do alvo primeiro."
+    ],
+    "noTargetTitle": "Nenhum alvo encontrado, mas a descoberta foi bem- sucedida",
+    "noTargetBody": "O servidor aceitou o seu iniciador, mas não expõe nenhum alvo a ele. Revise os controles de autenticação/acesso do alvo — alguns arrays permitem a descoberta de todas as IQNs, mas filtram os alvos que cada IQN pode ver.",
+    "noLunTitle": "LUNs não aparecem em /dev/disk/by-path após o registro",
+    "noLunBody": "<code>pvesm add iscsi</code> teve sucesso, mas o kernel não está vendo dispositivos de bloco. Verifique <code>iscsiadm --mode session</code> — se nenhuma sessão estiver ativa, inicie uma manualmente com <code>iscsiadm --mode node --login</code>. Se uma sessão existir, mas não aparecerem LUNs, force uma nova varredura: <code>iscsiadm --mode session --rescan</code>. Se ainda nada, o alvo provavelmente não tem LUNs atribuídos a este IQN ainda (configurar mapeamento LUN no alvo).",
+    "chapTitle": "Autenticação CHAP",
+    "chapBody": "O ProxMenux não oferece campos de usuário e senha CHAP no fluxo interativo. Se a descoberta falhar, o script para antes de <code>pvesm add</code>; o armazenamento não é registrado apesar da falha. Configure separadamente os requisitos CHAP do alvo em <code>open-iscsi</code>, incluindo a autenticação da descoberta quando necessária, e tente novamente. Confira a configuração com <code>iscsiadm</code> e verifique sessões ativas com <code>iscsiadm --mode session</code>."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/storage-share/host-nfs",
+        "label": "Compartilhamento NFS como armazenamento Proxmox",
+        "tail": " — alternativas ao nível dos ficheiros. Mais simples de configurar, mais flexível (backup / ISO / tmpl / imagens), ligeiramente mais lento para discos VM ao vivo."
+      },
+      {
+        "href": "/docs/storage-share/host-samba",
+        "label": "Samba / CIFS como armazenamento Proxmox",
+        "tail": " — outra opção de nível de arquivo; evite para discos VM ao vivo devido à semântica de bloqueio."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Adicionar o disco local como armazenamento Proxmox",
+        "tail": " — quando o disco é local para a máquina Proxmox, não em outra caixa na rede."
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
@@ -25,7 +25,6 @@ export default async function VmsLxcsTabPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.dashboard.vmsLxcs" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -107,7 +106,7 @@ export default async function VmsLxcsTabPage({
         <img
           src="/monitor/vms-top-row.png"
           alt={t("topRow.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("topRow.imageCaption")}
@@ -159,7 +158,7 @@ export default async function VmsLxcsTabPage({
         <img
           src="/monitor/vms-inventory-mobile.png"
           alt={t("inventory.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full max-w-md mx-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full max-w-md mx-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("inventory.imageCaption")}
@@ -189,7 +188,7 @@ export default async function VmsLxcsTabPage({
         <img
           src="/monitor/vms-modal-status.png"
           alt={t("drillIn.statusImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.statusImageCaption")}
@@ -261,7 +260,7 @@ export default async function VmsLxcsTabPage({
         <img
           src="/monitor/vms-modal-mounts.png"
           alt={t("drillIn.mountsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.mountsImageCaption")}
@@ -308,7 +307,7 @@ export default async function VmsLxcsTabPage({
         <img
           src="/monitor/vms-modal-backups.png"
           alt={t("drillIn.backupsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.backupsImageCaption")}

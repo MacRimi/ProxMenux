@@ -57,6 +57,80 @@ def _example_default(name: str, example: str | None, timezone: str | None = None
     return example
 
 
+# The share of the node's RAM a proposed default may take; the user can still
+# set any value, since a Proxmox memory limit reserves nothing.
+HOST_MEMORY_SHARE = 0.75
+
+
+def fit_memory_to_host(memory_mb: int, host_mb: int | None) -> tuple[int, str | None]:
+    """The proposed RAM, lowered to what this node can give, with the reason."""
+    limit = int(host_mb * HOST_MEMORY_SHARE) // 256 * 256 if host_mb else 0
+    if not limit or memory_mb <= limit:
+        return memory_mb, None
+    fitted = max(512, limit)
+    return fitted, translate("This node has {host} MB of RAM, so {fitted} MB are proposed instead of {wanted} MB.").format(
+        host=host_mb, fitted=fitted, wanted=memory_mb)
+
+
+def proportional_cores(cores: int, memory_mb: int, host_cpus: int | None) -> int:
+    """One core for every 2 GiB of RAM, between the template's own and 8, and
+    never more than the node has."""
+    wanted = max(int(cores), min(8, -(-int(memory_mb) // 2048)))
+    return max(1, min(wanted, host_cpus)) if host_cpus else wanted
+
+
+# Below this, an AMD GPU's own memory is the carve-out of an integrated GPU.
+INTEGRATED_GPU_VRAM_MB = 4096
+# An Intel integrated GPU allocates the model inside the container's memory,
+# next to what the CPU keeps of it.
+INTEGRATED_GPU_MEMORY_MB = 12288
+
+
+def context_budget(memory_mb: int, gpu: dict[str, Any] | None) -> int:
+    """The memory that holds a model and its context window: the GPU's own,
+    the system memory an AMD integrated GPU maps, or the container's."""
+    gpu = gpu or {}
+    dedicated = int(gpu.get("dedicated_mb") or 0)
+    if gpu.get("vendor") == "intel" and not dedicated:
+        # Measured: the GPU buffers count in the container, about a third more.
+        return int(memory_mb) * 2 // 3
+    if gpu.get("vendor") == "amd" and dedicated < INTEGRATED_GPU_VRAM_MB:
+        return int(gpu.get("shared_mb") or 0) or int(memory_mb)
+    return max(int(memory_mb), dedicated)
+
+
+# Bytes per value of each context cache type.
+CACHE_TYPE_BYTES = {"f32": 4, "f16": 2, "bf16": 2, "q8_0": 1, "q5_1": 0.69, "q5_0": 0.69,
+                    "q4_1": 0.56, "q4_0": 0.56, "iq4_nl": 0.56}
+
+
+def cache_size_factor(variable: str, environment: list[dict[str, Any]]) -> float:
+    """How large the context cache is next to the 8-bit one the context
+    tables are measured with: 2 uncompressed, 1.5 with only keys compressed."""
+    values = {entry["name"]: str(entry.get("value") or "").lower() for entry in environment}
+    if variable.startswith("OLLAMA_"):
+        keys = vals = values.get("OLLAMA_KV_CACHE_TYPE") or "f16"
+    else:
+        keys = values.get("LLAMA_ARG_CACHE_TYPE_K") or "f16"
+        vals = values.get("LLAMA_ARG_CACHE_TYPE_V") or "f16"
+    return (CACHE_TYPE_BYTES.get(keys, 2) + CACHE_TYPE_BYTES.get(vals, 2)) / 2
+
+
+def value_for_memory(table: Any, memory_mb: int) -> str | None:
+    """The value of a variable that depends on the container's RAM, from
+    [[minimum MiB, value], ...] in ascending order."""
+    if not isinstance(table, list):
+        return None
+    selected = None
+    for row in table:
+        if (not isinstance(row, list) or len(row) != 2 or isinstance(row[0], bool)
+                or not isinstance(row[0], int) or not isinstance(row[1], str)):
+            raise InstallError(translate("Invalid memory-dependent default"))
+        if memory_mb >= row[0]:
+            selected = row[1]
+    return selected
+
+
 def _compose_example(template: dict[str, Any], name: str) -> str | None:
     """The value the image's own Compose file shows for a variable, as a hint."""
     try:
@@ -76,6 +150,30 @@ def _compose_example(template: dict[str, Any], name: str) -> str | None:
     return None
 
 
+def choose_environment_value(item: dict[str, Any], ui, default: str | None) -> str:
+    """Select a declared value using the same menu as the rest of the installer.
+
+    Values are image arguments, not shell commands. Labels can be translated,
+    but the value saved in the deployment must remain exactly as declared.
+    """
+    choices = item["choices"]
+    values = [choice["value"] for choice in choices]
+    if not values or len(set(values)) != len(values) or any(not value for value in values):
+        raise InstallError(f"{item['name']}: invalid or duplicate choices")
+    if item.get("sensitive") or item.get("container_address") or item.get("prompt_user") is False:
+        raise InstallError(f"{item['name']}: choices require an interactive, non-secret variable")
+    if default not in (None, "") and default not in values:
+        raise InstallError(f"{item['name']}: default is not among the declared choices")
+    label = translate(item["prompt"]) if item.get("prompt") else f"{translate('Value for')} {item['name']}"
+    selected = ui.choose(label, [(choice["value"], translate(choice["label"])) for choice in choices],
+                         default if default in values else values[0])
+    if selected is None:
+        raise UserCancelled(label)
+    if selected not in values:
+        raise InstallError(f"{item['name']}: selected value is not among the declared choices")
+    return selected
+
+
 def _image_documentation(template: dict[str, Any]) -> str | None:
     ui = template.get("catalog_ui", {})
     return next((ui[key] for key in ("documentation", "repository", "website")
@@ -93,6 +191,60 @@ def ups_device_request(item: dict[str, Any], advanced: bool) -> dict[str, Any]:
         raise UserCancelled(translate("No UPS was found on a USB port of this host. "
                                       "Connect it and start the installation again."))
     return item
+
+
+def _nut_config():
+    from .extra_devices import usb_passthrough
+    usb_passthrough()
+    import oci_nut_config
+    return oci_nut_config
+
+
+def ups_paths(item: dict[str, Any], advanced: bool, ui, attached) -> list[str]:
+    """The UPS the NUT server watches: every UPS the host has on USB, and in
+    the advanced installation the ones chosen among them."""
+    found = [row for row in host.usb_devices() if row["kind"] == "UPS" and row["path"] not in attached]
+    if not advanced:
+        return [row["path"] for row in found] or [item["host_path_default"]]
+    if len(found) > 1:
+        chosen = ui.checklist(translate("UPS monitored by the NUT server"),
+                              [(row["path"], row["name"]) for row in found], [row["path"] for row in found])
+        if not chosen:
+            raise UserCancelled(translate("Choose at least one UPS"))
+        return list(chosen)
+    from .extra_devices import choose_usb_device
+    return [choose_usb_device(ui, translate(item["path_prompt"]), item.get("host_path_default") or None, attached)]
+
+
+def ups_driver(device: dict[str, Any], advanced: bool, ui) -> str:
+    """The NUT driver of a UPS: the one its vendor needs, or in the advanced
+    installation the one chosen."""
+    nut = _nut_config()
+    proposed = nut.driver_for(device["usb"])
+    if not advanced:
+        return proposed
+    options = [(driver, driver) for driver in (proposed, *[d for d in nut.KNOWN_DRIVERS if d != proposed])]
+    chosen = ui.choose(f"{translate('NUT driver for the UPS')} {device['usb']['vendor']}:{device['usb']['product']}",
+                       options, proposed)
+    if chosen is None:
+        raise UserCancelled(translate("Device configuration cancelled"))
+    return chosen
+
+
+def ups_environment(devices: list[dict[str, Any]], environment: list[dict[str, Any]], ui) -> list[dict[str, Any]]:
+    """The DRIVER variable shows the driver of the first UPS, and two UPS that
+    NUT could not tell apart are said before installing."""
+    nut = _nut_config()
+    ups = nut.ups_devices({"devices": devices})
+    if not ups:
+        return environment
+    for first, second in nut.ambiguous(ups):
+        ui.message(translate("Two UPS of the same model without a serial number of their own are on USB ports "
+                             "with the same number, so NUT could swap them. Connect one of them to a port "
+                             "with another number.") + f"\n\n{first['usb']['port']} · {second['usb']['port']}")
+    driver = ups[0].get("nut_driver") or nut.driver_for(ups[0]["usb"])
+    return [*[entry for entry in environment if entry["name"] != "DRIVER"],
+            {"name": "DRIVER", "value": driver, "sensitive": False}]
 
 
 def external_services_notice(template: dict[str, Any]) -> str | None:
@@ -270,8 +422,11 @@ def ask_application_extra_devices(ui, kinds: tuple[str, ...] = ("gpu", "usb")) -
     multi-container application; asked in an advanced installation only."""
     if _answers_from_recipe(ui):
         return []
-    from .extra_devices import ask_extra_devices
-    return ask_extra_devices(ui, [], True, kinds=kinds)
+    from .extra_devices import ask_extra_devices, by_identity
+    try:
+        return [by_identity(device) for device in ask_extra_devices(ui, [], True, kinds=kinds)]
+    except ValueError as error:
+        raise InstallError(str(error)) from None
 
 
 def ask_application_resources(ui, cores: int, memory_mb: int, swap_mb: int) -> dict[str, int]:
@@ -369,13 +524,13 @@ def build_deployment(
         from .stack import DefaultsUI
         ui = DefaultsUI(ui)
     if template.get("id") == "image-immich":
-        return _build_immich_deployment(template, ui)
+        return _build_immich_deployment(template, ui, mode)
     if template.get("id") == "image-nextcloud-stack":
-        return _build_nextcloud_stack_deployment(template, ui)
+        return _build_nextcloud_stack_deployment(template, ui, mode)
     if template.get("id") == "image-paperless-ngx":
-        return _build_paperless_stack_deployment(template, ui)
+        return _build_paperless_stack_deployment(template, ui, mode)
     if template.get("id") == "image-tandoor":
-        return _build_tandoor_stack_deployment(template, ui)
+        return _build_tandoor_stack_deployment(template, ui, mode)
     if template.get("id") == "image-rclone":
         return _build_rclone_deployment(template, ui)
     advanced = mode != DEFAULT_MODE
@@ -453,7 +608,12 @@ def build_deployment(
     hostname_default = _hostname_default(runtime_profile.get("hostname")
                                          or template["container_contract"]["container_name"])
     cpu_shares = installer_profile.get("resources", {}).get("cpu_shares")
-    memory_default = installer_profile.get('resources', {}).get('memory_default_mb', defaults['memory_mb'])
+    memory_default, memory_note = fit_memory_to_host(
+        int(installer_profile.get('resources', {}).get('memory_default_mb', defaults['memory_mb'])),
+        host.memory_total_mb())
+    cores_default = proportional_cores(int(defaults["cores"]), memory_default, host.cpu_count())
+    if memory_note and not _answers_from_recipe(ui):
+        ui.info(memory_note)
     mac_address = installer_profile.get("network", {}).get("mac_address")
     timezone = host.timezone()
     # A default installation still asks its storage, its address and how it
@@ -462,7 +622,7 @@ def build_deployment(
     if advanced:
         vmid_text = ui.ask(translate("VMID (empty = next free)"), "", required=False)
         hostname = ui.ask(translate("Hostname"), hostname_default)
-        cores = int(ui.ask(translate("CPU cores"), str(defaults["cores"])))
+        cores = int(ui.ask(translate("CPU cores"), str(cores_default)))
         cpu_units = (int(ui.ask(translate("Relative CPU priority (cpuunits)"),
                                 str(_cpu_units_default(int(cpu_shares)))))
                      if cpu_shares is not None else None)
@@ -488,13 +648,14 @@ def build_deployment(
             volume_storage = rootfs_storage
         template_storage = ask_storage(ui, "", "vztmpl", defaults["template_storage"], DEFAULT_MODE)
         rootfs_size = int(defaults["rootfs_size_gb"])
-        cores = int(defaults["cores"])
+        cores = cores_default
         cpu_units = _cpu_units_default(int(cpu_shares)) if cpu_shares is not None else None
         memory = int(memory_default)
         swap = int(defaults["swap_mb"])
 
     mounts: list[dict[str, Any]] = []
     host_bind_policies = installer_profile.get("host_bind_policies", {})
+    required_host_path_prompts = set(installer_profile.get("required_host_path_prompts", []))
     labels = {"managed-volume": translate("Container volume (included in backups)"),
               "host-bind": translate("Host directory (not included in Proxmox backups)"),
               "skip": translate("Do not mount")}
@@ -506,8 +667,8 @@ def build_deployment(
         offered = list(choices)
         chosen = advanced or {"managed-volume", "host-bind"} <= set(choices)
         if chosen and len(offered) > 1:
-            # The answer is the user's: a host directory is never proposed.
-            proposed = "managed-volume" if item["default"] == "host-bind" else item["default"]
+            # The answer is the user's; the choice of the oci-compose is proposed.
+            proposed = item["default"]
             volume_mode = ui.choose(f"{translate('Where to store')} {item['container_path']}",
                                     [(choice, labels[choice]) for choice in offered], proposed)
             if volume_mode is None:
@@ -528,7 +689,7 @@ def build_deployment(
             backup = item["managed_volume"]["backup"]
         else:
             source = _shared_host_path_default(template, item)
-            if chosen and not _is_system_bind(item):
+            if (chosen or item["container_path"] in required_host_path_prompts) and not _is_system_bind(item):
                 source = ui.ask(f"{translate('Host path for')} {item['container_path']}", source)
             size = None
             backup = False
@@ -565,7 +726,7 @@ def build_deployment(
 
     tmpfs_mounts: list[dict[str, Any]] = []
     for item in installer_profile.get("tmpfs_mounts", []):
-        size_mb = int(item["default_size_mb"])
+        size_mb = max(1, memory // 2) if item.get("size_from_memory") else int(item["default_size_mb"])
         if advanced and item.get("prompt_size", True):
             size_prompt = (translate(item["size_prompt"]) if item.get("size_prompt")
                            else f"{translate('tmpfs size in MB for')} {item['container_path']}")
@@ -577,9 +738,18 @@ def build_deployment(
                 "container_path": item["container_path"],
                 "size_mb": size_mb,
                 "mount_options": item.get("mount_options", ["rw", "nosuid", "nodev"]),
+                **({"owner_strategy": item["owner_strategy"]} if item.get("owner_strategy") else {}),
+                **({"mode": item["mode"]} if item.get("mode") is not None else {}),
+                **({"uid": item["uid"]} if item.get("uid") is not None else {}),
+                **({"gid": item["gid"]} if item.get("gid") is not None else {}),
             }
         )
+        if item.get("owner_strategy") == "mapped-application-user":
+            for key in ("uid", "gid"):
+                if key not in tmpfs_mounts[-1] and installer_profile.get("volume_owner", {}).get(key) is not None:
+                    tmpfs_mounts[-1][key] = installer_profile["volume_owner"][key]
 
+    vlan_tag = None
     if advanced:
         bridge = ask_bridge(ui, translate("Network bridge"), defaults["bridge"])
         if mac_address:
@@ -588,6 +758,7 @@ def build_deployment(
             ipv4, gateway = "host", None
         else:
             ipv4, gateway = access.ask_ipv4(ui, bridge)
+            vlan_tag = access.ask_vlan_tag(ui)
     else:
         bridge = ask_bridge(ui, "", defaults["bridge"], DEFAULT_MODE)
         if host_monitor:
@@ -600,8 +771,10 @@ def build_deployment(
     host_firewall = confirm_host_monitor_firewall(ui, template, bridge) if host_monitor else None
 
     environment: list[dict[str, str]] = []
+    memory_dependent: list[tuple[dict[str, Any], str, str | None]] = []
+    choice_defaults: dict[str, str] = {}
     optional_explained = False
-    for item in template["container_contract"]["environment"]:
+    for environment_index, item in enumerate(template["container_contract"]["environment"]):
         name = item["name"]
         if item.get("prompt"):
             label = translate(item["prompt"])
@@ -609,8 +782,27 @@ def build_deployment(
             label = f"{translate('Password or secret')} ({name})"
         else:
             label = f"{translate('Value for')} {name}"
-        default = _example_default(name, item["example"], timezone)
+        default = _example_default(name, choice_defaults.get(name, item["example"]), timezone)
+        # A setting that grows with the memory the model will use, such as its
+        # context window, is decided once the GPU is chosen.
+        if item.get("default_by_memory_mb"):
+            memory_dependent.append((item, label, default))
+            continue
         generated = installer_profile.get("generated_sensitive_environment", {}).get(name)
+        if "choices" in item:
+            value = choose_environment_value(item, ui, default)
+            selected_choice = next(choice for choice in item["choices"] if choice["value"] == value)
+            suggested = selected_choice.get("environment_defaults", {})
+            subsequent = {entry["name"]: entry for entry in template["container_contract"]["environment"][
+                environment_index + 1:]}
+            for target, example in suggested.items():
+                entry = subsequent.get(target)
+                if (entry is None or entry.get("sensitive") or entry.get("container_address")
+                        or entry.get("prompt_user") is False or "choices" in entry or not isinstance(example, str)):
+                    raise InstallError(f"{name}: invalid choice default for {target}")
+            choice_defaults.update(suggested)
+            environment.append({"name": name, "value": value, "sensitive": False})
+            continue
         if item.get("container_address"):
             # The address of the container is known or will be: nothing to ask.
             # The advanced installation shows it, for a name or a proxy in front.
@@ -672,6 +864,36 @@ def build_deployment(
 
     devices, selected_hardware_profile, post_start_configurations, environment = configure_acceleration(
         installer_profile, environment, unprivileged, ui, mode)
+    hardware_profile = next((profile for profile in installer_profile.get("hardware_acceleration", {}).get("profiles", [])
+                             if profile.get("id") == selected_hardware_profile), {})
+    # Some GPU images are several times larger than the CPU one: give the
+    # container the disk its image needs instead of failing to unpack it.
+    minimum_rootfs = int(hardware_profile.get("rootfs_minimum_gb") or 0)
+    if rootfs_size < minimum_rootfs:
+        ui.info(translate("The image for this acceleration needs a larger disk: {size} GB are used instead of {previous} GB.").format(
+            size=minimum_rootfs, previous=rootfs_size))
+        rootfs_size = minimum_rootfs
+    if memory_dependent:
+        gpu = host.gpu_memory(selected_hardware_profile, devices)
+        if gpu.get("vendor") == "intel" and not gpu.get("dedicated_mb") and not advanced:
+            # An Intel integrated GPU allocates inside the container: give it
+            # room for the model, its context and what the CPU keeps of it.
+            raised, note = fit_memory_to_host(max(memory, INTEGRATED_GPU_MEMORY_MB), host.memory_total_mb())
+            if raised > memory:
+                ui.info(translate("The integrated GPU uses the container's memory: {memory} MB are proposed.").format(
+                    memory=raised))
+                memory = raised
+                cores = proportional_cores(cores, memory, host.cpu_count())
+        budget = context_budget(memory, gpu)
+        chosen = {entry["name"] for entry in environment}
+        for item, label, fallback in memory_dependent:
+            if item["name"] in chosen:
+                continue  # the acceleration profile sets it
+            effective = int(budget / cache_size_factor(item["name"], environment))
+            default = value_for_memory(item["default_by_memory_mb"], effective) or fallback
+            value = ui.ask(label, default, required=item["required"]) if advanced else default
+            if value or item["required"]:
+                environment.append({"name": item["name"], "value": value or "", "sensitive": False})
     devices, completion_notes = configure_detector(installer_profile, devices, ui)
     # What the selected acceleration profile leaves for the user to set.
     completion_notes = [*next((profile.get("completion_notes", [])
@@ -679,13 +901,17 @@ def build_deployment(
                                if profile["id"] == selected_hardware_profile), []), *completion_notes]
 
     if advanced:
-        from .extra_devices import ask_extra_devices
+        from .extra_devices import ask_extra_devices, by_identity
         reference = template['container_contract']['image']['reference']
         repository = reference.split('@', 1)[0].rsplit(':', 1)[0]
         devices = ask_extra_devices(
             ui, devices, unprivileged,
             allow_coral=repository in ('ghcr.io/blakeblackshear/frigate',
                                         'codeproject/ai-server', 'docker.io/codeproject/ai-server'))
+        try:
+            devices = [by_identity(device) for device in devices]
+        except ValueError as error:
+            raise InstallError(str(error)) from None
 
     from .gpu import apply_profile_image
     apply_profile_image(template, selected_hardware_profile)
@@ -728,7 +954,7 @@ def build_deployment(
                                          "keyctl, 2 cores, 2048 MB RAM, rootfs of at least 12 GB and /mnt/data "
                                          "of at least 16 GB on a container volume included in backups"))
 
-    return {
+    deployment = {
         "host_monitor": host_monitor,
         "monitor_scope": monitor_scope,
         "host_firewall": host_firewall,
@@ -751,6 +977,7 @@ def build_deployment(
             "firewall": defaults["firewall"],
             "host_managed": defaults["host_managed_network"],
             "mac_address": mac_address,
+            **({"vlan_tag": vlan_tag} if vlan_tag else {}),
         },
         "features": defaults.get("features", []),
         "security": {
@@ -781,6 +1008,12 @@ def build_deployment(
         "post_start_configurations": post_start_configurations,
         "extra_hosts": installer_profile.get("extra_hosts", []),
     }
+    if advanced and not _answers_from_recipe(ui):
+        from . import mount_idmap
+        if mount_idmap.eligible(deployment) and mount_idmap.backend().supported():
+            mount_idmap.configure(ui, deployment, installer_profile, ask=True)
+    return deployment
+
 
 
 def _build_rclone_deployment(
@@ -823,6 +1056,7 @@ def _build_rclone_deployment(
         raise InstallError(translate("The web UI password must have at least 24 characters"))
     bridge = ask_bridge(ui, translate("Network bridge"), schema["bridge"]["default"])
     ipv4, gateway = access.ask_ipv4(ui, bridge)
+    vlan_tag = access.ask_vlan_tag(ui)
 
     return {
         "vmid": int(vmid_text) if vmid_text else None,
@@ -842,6 +1076,7 @@ def _build_rclone_deployment(
             "firewall": defaults["firewall"],
             "host_managed": defaults["host_managed_network"],
             "mac_address": None,
+            **({"vlan_tag": vlan_tag} if vlan_tag else {}),
         },
         "features": defaults["features"],
         "security": {
@@ -948,15 +1183,14 @@ def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str
         return software
     # Recognition on an AMD GPU depends on ROCm: it is offered when the host
     # can run it, marked as experimental on a GPU ROCm does not support
-    # officially, and left out, with the reason, when it cannot.
+    # officially, and left out when it cannot. A GPU of a generation ROCm does
+    # not run is simply not offered; what the host can fix is explained.
     amd_blocker = host.rocm_blocker(rootfs_storage) if found["amd"] else None
     amd_experimental = (found["amd"] and not amd_blocker
                         and host.rocm_support(found.get("amd_gfx_target")) == "experimental")
-    if amd_blocker:
+    if amd_blocker in ("kfd", "space"):
         reason = (translate("The AMD driver does not offer its compute interface (/dev/kfd) on this host.")
                   if amd_blocker == "kfd" else
-                  f"{translate('The ROCm image has no support for the AMD GPU of this host:')} {host.amd_gpu_name()}."
-                  if amd_blocker == "generation" else
                   translate("The storage has less than 40 GB free for the ROCm image."))
         real.message(f"{reason}\n\n{translate('Recognition is not offered on the AMD GPU; video transcoding is.')}")
     mark = f" — {translate('experimental on this GPU')}" if amd_experimental else ""
@@ -1029,6 +1263,7 @@ def _ask_immich_acceleration(ui, rootfs_storage: str | None = None) -> tuple[str
 def _build_immich_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1073,11 +1308,15 @@ def _build_immich_deployment(
     addresses, frontend_gateway = access.ask_addresses(
         essential_ui(ui), frontend_bridge, [translate("Immich server"), "Immich Machine learning"])
     server_ipv4, ml_ipv4 = addresses.values()
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     (video_acceleration, render_device, vaapi_driver,
      ml_acceleration, ml_render) = _ask_immich_acceleration(ui, rootfs_storage)
     extra_devices = ask_application_extra_devices(ui, ("usb",))
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
+        **selection,
         "deployment_kind": "immich-four-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1103,6 +1342,7 @@ def _build_immich_deployment(
             "frontend_ipv4": server_ipv4,
             "machine_learning_frontend_ipv4": ml_ipv4,
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": defaults["private_network"]["bridge"],
             "private_subnet": defaults["private_network"]["subnet"],
@@ -1133,6 +1373,7 @@ def _build_immich_deployment(
 def _build_nextcloud_stack_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1190,6 +1431,7 @@ def _build_nextcloud_stack_deployment(
     extra_mounts = ask_application_extra_paths(ui, ["/var/www/html"], application_storage or rootfs_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Nextcloud"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     admin_username = ui.ask(
         translate("Initial administrator user"), defaults["application"]["admin_username"]
@@ -1199,7 +1441,10 @@ def _build_nextcloud_stack_deployment(
 
     extra_devices = ask_application_extra_devices(ui)
     private = defaults["private_network"]
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
+        **selection,
         "deployment_kind": "nextcloud-three-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1230,6 +1475,7 @@ def _build_nextcloud_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1244,6 +1490,7 @@ def _build_nextcloud_stack_deployment(
 def _build_paperless_stack_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1314,6 +1561,7 @@ def _build_paperless_stack_deployment(
              "/usr/src/paperless/export"], application_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Paperless"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     ocr_language = ui.ask(translate("OCR language (Tesseract code)"), defaults["ocr_language"])
     if not re.fullmatch(r"[a-z]{3}(?:\+[a-z]{3})*", ocr_language):
@@ -1326,7 +1574,10 @@ def _build_paperless_stack_deployment(
 
     extra_devices = ask_application_extra_devices(ui)
     private = defaults["private_network"]
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     return {
+        **selection,
         "deployment_kind": "paperless-three-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1359,6 +1610,7 @@ def _build_paperless_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1373,6 +1625,7 @@ def _build_paperless_stack_deployment(
 def _build_tandoor_stack_deployment(
     template: dict[str, Any],
     ui: TerminalUI | DialogUI,
+    mode: str = ADVANCED_MODE,
 ) -> dict[str, Any]:
     defaults = template["proxmox"]["laboratory_contract"]["defaults"]
     pve_defaults = template["proxmox"]["defaults"]
@@ -1441,6 +1694,7 @@ def _build_tandoor_stack_deployment(
         ui, ["/opt/recipes/mediafiles", "/opt/recipes/staticfiles"], static_storage)
     frontend_bridge = ask_bridge(ui, translate("Access bridge for Tandoor"), defaults["frontend_network"]["bridge"])
     addresses, frontend_gateway = access.ask_addresses(essential_ui(ui), frontend_bridge, [""])
+    frontend_vlan_tag = access.ask_vlan_tag(ui)
     timezone = ui.ask(translate("Timezone"), host.timezone())
     allowed_hosts = ui.ask(
         translate("Allowed hosts (comma separated; * allows access through the assigned IP)"),
@@ -1460,6 +1714,8 @@ def _build_tandoor_stack_deployment(
         raise InstallError(translate("The administrator email is not valid"))
 
     extra_devices = ask_application_extra_devices(ui)
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(vmid_text) if vmid_text else None, mode)
     onboot = essential_ui(ui).confirm(translate("Start the stack with Proxmox"), pve_defaults["onboot"])
     # The first start creates the administrator, so a default installation does not ask it.
     start_after = ui.confirm(translate("Start when finished"), True)
@@ -1470,6 +1726,7 @@ def _build_tandoor_stack_deployment(
 
     private = defaults["private_network"]
     return {
+        **selection,
         "deployment_kind": "tandoor-two-lxc-stack",
         "base_vmid": int(vmid_text) if vmid_text else None,
         "stack_name": stack_name,
@@ -1501,6 +1758,7 @@ def _build_tandoor_stack_deployment(
             "frontend_bridge": frontend_bridge,
             "frontend_ipv4": addresses[""],
             "frontend_gateway": frontend_gateway,
+            **({"frontend_vlan_tag": frontend_vlan_tag} if frontend_vlan_tag else {}),
             "private_allocation": "automatic",
             "private_bridge": private["bridge"],
             "private_subnet": private["subnet"],
@@ -1588,8 +1846,11 @@ def _run_remote_install(
             shutil.copy2(project_root / 'remote' / 'haos_healthcheck.py', temporary / 'haos_healthcheck.py')
             shutil.copy2(project_root / 'remote' / 'oci_installation_state.py', temporary / 'oci_installation_state.py')
             shutil.copy2(project_root / 'remote' / 'oci_instances.py', temporary / 'oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            shutil.copy2(project_root / 'remote' / 'oci_image_mountpoints.py', temporary / 'oci_image_mountpoints.py')
+            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_nut_config.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'oci_image_names.py', 'lxc_hardware.py', 'lxc_nvidia_setup.sh', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 shutil.copy2(project_root / 'remote' / helper, temporary / helper)
+            if deployment_kind in stack_installers:
+                shutil.copy2(project_root / "remote" / "oci_stack_vmids.py", temporary / "oci_stack_vmids.py")
             if deployment_kind == 'generic-multi-lxc-stack':
                 shutil.copy2(project_root / 'remote' / 'install_generic_stack.py', temporary / 'install_generic_stack.py')
                 shutil.copy2(project_root / 'remote' / 'install_oci.sh', temporary / 'install_oci.sh')
@@ -1625,8 +1886,10 @@ def _run_remote_install(
             archive.add(project_root / 'remote' / 'haos_healthcheck.py', arcname='haos_healthcheck.py')
             archive.add(project_root / 'remote' / 'oci_installation_state.py', arcname='oci_installation_state.py')
             archive.add(project_root / 'remote' / 'oci_instances.py', arcname='oci_instances.py')
-            for helper in ('oci_ui.sh', 'oci_ui.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_host_mounts.py', 'oci_nested_mounts.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
+            for helper in ('oci_layer_paths.py', 'oci_layer_cache.py', 'oci_zfs_recovery.py', 'oci_native_reads.py', 'oci_native_reads.pl', 'oci_carried_record.py', 'oci_compose_jobs.py', 'oci_stack_public_routes.py', 'oci_ui.sh', 'oci_ui.py', 'oci_native_import.py', 'oci_description.py', 'oci_console.py', 'oci_native_stack.py', 'oci_native_stack.sh', 'oci_instance_transaction.py', 'oci_managed_volumes.py', 'oci_network_files.py', 'oci_image_mountpoints.py', 'oci_host_mounts.py', 'oci_mount_idmap.py', 'oci_nested_mounts.py', 'oci_usb_passthrough.py', 'oci_nut_config.py', 'oci_mount_lock.py', 'oci_work_backup.py', 'oci_stack_adapters.py', 'oci_runtime_settings.py', 'oci_gpu_devices.py', 'oci_accelerators.py', 'oci_nvidia_runtime.py', 'oci_nvidia_refresh.py', 'oci_nvidia_dynamic.py', 'oci_update_current.py', 'oci_resource_modify.py', 'oci_native_modify.py', 'oci_stack_replay.py', 'oci_stack_plan.py', 'oci_stack_transaction.py', 'oci_stack_native.py', 'oci_image_cache.py', 'oci_image_names.py', 'lxc_hardware.py', 'lxc_nvidia_setup.sh', 'nvidia_lxc_mount_lab.sh', 'oci_nvidia_setup.sh', 'oci_immich_ml.sh', 'oci_rocm_check.py'):
                 archive.add(project_root / 'remote' / helper, arcname=helper)
+            if deployment_kind in stack_installers:
+                archive.add(project_root / "remote" / "oci_stack_vmids.py", arcname="oci_stack_vmids.py")
             if deployment_kind == 'generic-multi-lxc-stack':
                 archive.add(project_root / 'remote' / 'install_generic_stack.py', arcname='install_generic_stack.py')
                 archive.add(project_root / 'remote' / 'install_oci.sh', arcname='install_oci.sh')
@@ -1815,7 +2078,8 @@ def detected_detector_devices(installer_profile, root=Path("/")):
 def configure_detector(installer_profile, devices, ui, root=Path("/")):
     """Offer the object detection devices found on the host; ask nothing when
     there are none. Returns the devices and the note that tells how to use it."""
-    attached = {item.get("host_path") for item in devices}
+    from .extra_devices import device_node
+    attached = {device_node(item) for item in devices}
     candidates = [item for item in detected_detector_devices(installer_profile, root)
                   if item["host_path"] not in attached]
     if not candidates or any(item.get("id", "").startswith("detector-") for item in devices):
@@ -1893,11 +2157,6 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
             found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) == "experimental"}
         options = [(item["id"], item["label"]) for item in usable]
         asked = advanced or not installer_profile.get("selkies")
-        if asked and found["amd"] and any(item.get("amd_gfx_targets") and item not in usable and host.rocm_support(
-                found.get("amd_gfx_target"), tuple(item["amd_gfx_targets"])) is None for item in profiles):
-            # Its owner may expect the GPU to be offered: say why it is not.
-            ui.message(f"{translate('The ROCm image of this application has no support for the AMD GPU of this host:')} "
-                       f"{host.amd_gpu_name()}. {translate('Its ROCm profile is not offered.')}")
         if asked and len(usable) < len(profiles) and len(usable) == 1:
             # Nothing but the CPU is left: say why there is nothing to choose.
             ui.message(translate("No usable GPU was found on this host. The application will be installed "
@@ -1987,43 +2246,53 @@ def configure_acceleration(installer_profile, environment, unprivileged, ui, mod
                      if vendor_id in item.get("drm_vendor_ids", []) for node in host.gpus()[vendor]]
             if nodes and item["host_path_default"] not in nodes:
                 item = {**item, "host_path_default": nodes[0]}
+            from .extra_devices import by_identity, choose_usb_device, device_node
+            attached = {device_node(device) for device in devices}
             if item.get("purpose") == "ups":
                 item = ups_device_request(item, advanced)
-            if not advanced:
-                host_path = item["host_path_default"]
-            elif item.get("purpose") in ("serial", "user-selected-device", "ups"):
-                from .extra_devices import choose_usb_device
-                host_path = choose_usb_device(ui, translate(item["path_prompt"]), item["host_path_default"],
-                                              {device.get("host_path") for device in devices})
+                host_paths = ups_paths(item, advanced, ui, attached)
+            elif not advanced:
+                host_paths = [item["host_path_default"]]
+            elif item.get("purpose") in ("serial", "user-selected-device"):
+                host_paths = [choose_usb_device(ui, translate(item["path_prompt"]), item["host_path_default"], attached)]
             else:
-                host_path = ui.ask(translate(item["path_prompt"]), item["host_path_default"])
-            container_path = (
-                host_path
-                if item.get("container_path_strategy") == "same-as-host"
-                else item.get("container_path", host_path)
-            )
-            device = {
-                "id": item["id"],
-                "kind": kind,
-                "host_path": host_path,
-                "container_path": container_path,
-                "mode": item.get("mode", "0660"),
-                "deny_write": item.get("deny_write", False),
-                "gid_strategy": item.get("gid_strategy", "host-device-gid"),
-            }
-            if item.get("append_host_device_gid_to_environment"):
-                device["append_host_device_gid_to_environment"] = item[
-                    "append_host_device_gid_to_environment"
-                ]
-            if item.get("drm_vendor_ids"):
-                device["drm_vendor_ids"] = item["drm_vendor_ids"]
-            if item.get("uid_from_environment"):
-                name = item["uid_from_environment"]
-                uid = next((entry["value"] for entry in environment if entry["name"] == name), "")
-                if not re.fullmatch(r"[0-9]+", str(uid)) or int(uid) >= 4294967295:
-                    raise InstallError(f"{name}: {translate('must contain a valid numeric UID for the GPU')}")
-                device["uid"] = int(uid)
-            devices.append(device)
+                host_paths = [ui.ask(translate(item["path_prompt"]), item["host_path_default"])]
+            for number, host_path in enumerate(host_paths, 1):
+                container_path = (
+                    host_path
+                    if item.get("container_path_strategy") == "same-as-host"
+                    else item.get("container_path", host_path)
+                )
+                device = {
+                    "id": item["id"] if number == 1 else f'{item["id"]}-{number}',
+                    "kind": kind,
+                    "host_path": host_path,
+                    "container_path": container_path,
+                    "mode": item.get("mode", "0660"),
+                    "deny_write": item.get("deny_write", False),
+                    "gid_strategy": item.get("gid_strategy", "host-device-gid"),
+                }
+                if item.get("append_host_device_gid_to_environment"):
+                    device["append_host_device_gid_to_environment"] = item[
+                        "append_host_device_gid_to_environment"
+                    ]
+                if item.get("drm_vendor_ids"):
+                    device["drm_vendor_ids"] = item["drm_vendor_ids"]
+                if item.get("uid_from_environment"):
+                    name = item["uid_from_environment"]
+                    uid = next((entry["value"] for entry in environment if entry["name"] == name), "")
+                    if not re.fullmatch(r"[0-9]+", str(uid)) or int(uid) >= 4294967295:
+                        raise InstallError(f"{name}: {translate('must contain a valid numeric UID for the GPU')}")
+                    device["uid"] = int(uid)
+                try:
+                    device = by_identity(device)
+                except ValueError as error:
+                    raise InstallError(str(error)) from None
+                if item.get("purpose") == "ups" and device.get("kind") == "usb":
+                    device["nut_driver"] = ups_driver(device, advanced, ui)
+                devices.append(device)
+            if item.get("purpose") == "ups":
+                environment = ups_environment(devices, environment, ui)
         for env_item in item.get("environment", []):
             selected = (ui.choose(translate(env_item["prompt"]),
                                   [(value, value) for value in env_item["choices"]],

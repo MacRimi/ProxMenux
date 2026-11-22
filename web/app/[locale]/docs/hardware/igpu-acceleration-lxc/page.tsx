@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -32,7 +32,6 @@ export default async function AddGpuToLxcPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.hardware.igpuAccelerationLxc" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -146,88 +145,6 @@ export default async function AddGpuToLxcPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("howRuns.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("howRuns.body")}</p>
 
-      <pre className="bg-gray-100 text-gray-800 p-4 rounded-md overflow-x-auto text-sm my-4 border border-gray-200 leading-snug">
-{`┌─────────────────────────────────────────────┐
-│  PHASE 1 — Detect, select, validate         │
-│  (nothing touched yet)                      │
-└──────────────────┬──────────────────────────┘
-                   ▼
-  lspci detects Intel / AMD / NVIDIA GPU(s)
-  (NVIDIA: also check nvidia module loaded +
-   nvidia-smi, capture host driver version)
-                   │
-                   ▼
-  User picks LXC container from the list
-                   │
-                   ▼
-  User selects which GPU(s) to add
-  (checklist; auto-selects if only one)
-                   │
-                   ▼
-  Pre-flight checks
-  ├─ Not in SR-IOV (VF / active PF) → block
-  ├─ Bound to vfio-pci? → offer Switch Mode, exit
-  └─ Already configured in this CT? → filter out
-      (skip duplicates, warn if partial)
-                   │
-     ┌─────── Cancel   OR   Confirm ────┐
-     ▼                                  ▼
- Exit, nothing       ┌──────────────────┴──────────────────┐
- was changed         │  PHASE 2 — Configure + install      │
-                     └──────────────────┬──────────────────┘
-                                        ▼
-                       Stop container (if running)
-                                        │
-                                        ▼
-                       Write LXC config (/etc/pve/lxc/<ctid>.conf):
-                       ├─ Intel / AMD iGPU:
-                       │    dev<N>: /dev/dri/card*   gid=video
-                       │    dev<N>: /dev/dri/renderD* gid=render
-                       ├─ AMD with ROCm (if /dev/kfd):
-                       │    dev<N>: /dev/kfd  gid=render
-                       └─ NVIDIA:
-                            dev<N>: /dev/nvidia0..N
-                            dev<N>: /dev/nvidiactl · nvidia-uvm*
-                            dev<N>: /dev/nvidia-modeset
-                            dev<N>: /dev/nvidia-caps/* (if exists)
-                                        │
-                                        ▼
-                       Install GPU guard hookscript
-                       (same one used by VM passthrough, if
-                        available — prevents conflicts on start/stop)
-                                        │
-                                        ▼
-                       Start container + wait for readiness
-                       (pct exec — true, up to ~30 s)
-                                        │
-                                        ▼
-                       Install userspace drivers inside CT
-                       (distro auto-detected)
-                       ├─ Intel  → apk/pacman/apt
-                       │           (intel-media-driver,
-                       │            libva-utils, opencl-icd)
-                       ├─ AMD    → Mesa VA drivers
-                       │           (mesa-va-drivers, libva)
-                       └─ NVIDIA →
-                          ├─ Alpine:  apk add nvidia-utils
-                          ├─ Arch:    pacman -S nvidia-utils
-                          └─ Debian/Ubuntu/others:
-                             host .run is pre-extracted, packed,
-                             pct push'd into the container, run
-                             with --no-kernel-modules --no-dkms
-                                        │
-                                        ▼
-                       Align GIDs in /etc/group inside CT
-                       (video=44, render=104 to match host)
-                                        │
-                                        ▼
-                       Restore container state
-                       (stop if it was stopped before)
-                                        │
-                                        ▼
-                       Show summary + nvidia-smi output
-                       (if NVIDIA) + log path`}
-      </pre>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("walkthrough.heading")}</h2>
 

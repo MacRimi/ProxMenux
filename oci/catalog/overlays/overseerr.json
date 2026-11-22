@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Overseerr is a free and open source software application for managing requests for your media library. It integrates with your existing services, such as Sonarr, Radarr, and Plex!"
+    },
+    "description": {
+      "en_US": "Overseerr is a media request management and discovery tool designed to work with Plex ecosystems. It enables users to browse, search, and discover movies and TV shows. Server owners can track and manage incoming media requests from their users in a centralized interface."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/seerr-team/seerr/HEAD/public/preview.jpg"
+    ]
   }
 }

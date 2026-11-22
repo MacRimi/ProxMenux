@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web application to manage and monitor 3D printers. The official Docker image and web interface can start without a printer attached; persist /octoprint and pass through USB or camera devices only when needed."
+    },
+    "description": {
+      "en_US": "OctoPrint is a web-based interface designed to manage and monitor 3D printers. It provides tools to start, pause, and control printing jobs directly from a web browser. Users can also supervise printing progress with connected cameras and generate timelapses of their print jobs."
+    },
+    "screenshots": [
+      "https://octoprint.org/assets/img/screenshot-readme.png"
+    ]
+  }
+}

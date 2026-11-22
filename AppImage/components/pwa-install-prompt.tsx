@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Plus, Share, X } from "lucide-react"
+import { ExternalLink, Plus, Share, X } from "lucide-react"
 import { useT } from "../lib/i18n/provider"
 
 // ==========================================================
@@ -30,6 +30,7 @@ import { useT } from "../lib/i18n/provider"
 const DISMISSED_FOREVER_KEY = "proxmenux-install-dismissed"
 const DISMISSED_UNTIL_KEY = "proxmenux-install-dismissed-until"
 const NOT_NOW_DAYS = 30
+const HTTPS_DOCS = "https://macrimi.github.io/ProxMenux/docs/monitor/access-auth#https"
 
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false
@@ -62,6 +63,9 @@ export function PwaInstallPrompt() {
   const t = useT()
   const [open, setOpen] = useState(false)
   const [platform, setPlatform] = useState<"ios" | "android" | null>(null)
+  // Chrome installs a web app only from a secure origin: over plain HTTP it
+  // can add a shortcut, never the app. Say so instead of steps that fail.
+  const [secure, setSecure] = useState(true)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -80,8 +84,36 @@ export function PwaInstallPrompt() {
       // localStorage unavailable (private mode etc.) — treat as not dismissed.
     }
 
+    setSecure(window.isSecureContext)
     setPlatform(isIOS() ? "ios" : "android")
-    setOpen(true)
+
+    // A dialog of the dashboard (welcome tour, release notes) blocks pointer
+    // events on everything outside it, so this prompt would show on top but
+    // could not be tapped. Wait until no dialog is open, and confirm it a
+    // moment later, since one dialog can open right after another closes.
+    const dialogOpen = () => document.querySelector('[role="dialog"][data-state="open"]') !== null
+    let timer: ReturnType<typeof setTimeout> | undefined
+    // Dialogs mount in portals directly under <body> and announce their state
+    // in data-state; the rest of the page changing does not reset the wait.
+    const portals = new MutationObserver(() => schedule())
+    const states = new MutationObserver(() => schedule())
+    const stop = () => {
+      portals.disconnect()
+      states.disconnect()
+      clearTimeout(timer)
+    }
+    const schedule = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        if (dialogOpen()) return
+        stop()
+        setOpen(true)
+      }, 800)
+    }
+    portals.observe(document.body, { childList: true })
+    states.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["data-state"] })
+    schedule()
+    return stop
   }, [])
 
   const handleNotNow = useCallback(() => {
@@ -120,6 +152,8 @@ export function PwaInstallPrompt() {
       aria-modal="true"
       aria-labelledby="pwa-install-title"
       className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      // Stays usable even if another dialog opens and disables pointer events on the page.
+      style={{ pointerEvents: "auto" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose()
       }}
@@ -167,7 +201,9 @@ export function PwaInstallPrompt() {
               <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
                 {platform === "ios"
                   ? t("pwaInstall.iosDescription")
-                  : t("pwaInstall.androidDescription")}
+                  : secure
+                    ? t("pwaInstall.androidDescription")
+                    : t("pwaInstall.insecure.description")}
               </p>
             </div>
           </div>
@@ -208,11 +244,29 @@ export function PwaInstallPrompt() {
                 </span>
               </li>
             </ol>
-          ) : (
+          ) : secure ? (
             <div className="mb-4 rounded-lg border border-border bg-muted/50 px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground">
               {t("pwaInstall.android.stepOpenMenu")} <b className="text-foreground">⋮</b> →{" "}
+              <b className="text-foreground">{t("pwaInstall.installApp")}</b> {t("pwaInstall.android.or")}{" "}
               <b className="text-foreground">{t("pwaInstall.addToHomeScreen")}</b> → {t("pwaInstall.android.stepConfirm")}{" "}
               <b className="text-foreground">{t("pwaInstall.android.install")}</b>.
+            </div>
+          ) : (
+            <div className="mb-4 flex flex-col gap-2 rounded-lg border border-border bg-muted/50 px-3.5 py-3 text-[13px] leading-relaxed text-muted-foreground">
+              <p>{t("pwaInstall.insecure.howTo")}</p>
+              <a
+                href={HTTPS_DOCS}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+              >
+                {t("pwaInstall.insecure.docs")}
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </a>
+              <p>
+                {t("pwaInstall.insecure.shortcut")} <b className="text-foreground">⋮</b> →{" "}
+                <b className="text-foreground">{t("pwaInstall.addToHomeScreen")}</b>.
+              </p>
             </div>
           )}
 

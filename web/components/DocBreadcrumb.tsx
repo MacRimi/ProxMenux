@@ -16,6 +16,10 @@ import { Home, ChevronRight } from "lucide-react"
  * Skips itself entirely on the docs root (`/docs`) where the
  * breadcrumb would just be "Docs" with nothing meaningful before it.
  */
+// Sections that only group pages and have no page of their own: shown as text.
+// shortcut: hand-kept list, derive it at build time if a second section appears.
+const SECTIONS_WITHOUT_PAGE = new Set(["/docs/hardware"])
+
 export function DocBreadcrumb() {
   const pathname = usePathname()
   const segments = pathname.split("/").filter(Boolean)
@@ -43,6 +47,8 @@ export function DocBreadcrumb() {
             <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
             {c.isLast ? (
               <span className="text-gray-900 font-medium">{c.label}</span>
+            ) : SECTIONS_WITHOUT_PAGE.has(c.href) ? (
+              <span>{c.label}</span>
             ) : (
               <Link href={c.href} className="hover:text-gray-900 transition-colors">
                 {c.label}

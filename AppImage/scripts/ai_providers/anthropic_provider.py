@@ -1,7 +1,7 @@
 """Anthropic (Claude) provider implementation.
 
 Anthropic's Claude models are excellent for text generation and translation.
-Models use "-latest" aliases that auto-update to newest versions.
+Models are addressed by their pinned IDs (the "-latest" aliases were retired).
 """
 from typing import Optional, List
 from .base import AIProvider, AIProviderError
@@ -15,29 +15,35 @@ class AnthropicProvider(AIProvider):
     API_URL = "https://api.anthropic.com/v1/messages"
     API_VERSION = "2023-06-01"
     
-    # Anthropic model aliases that resolve to pinned snapshots (per docs
-    # at platform.claude.com/docs/en/docs/about-claude/models). Kept as a
-    # runtime fallback for the `/api/notifications/provider-models`
-    # intersection with `verified_ai_models.json`; the JSON is the
-    # authoritative UI-facing list. Refreshed 2026-07-13 to drop the
-    # deprecated claude-3-5-* aliases (retired upstream, no longer in the
-    # Models API response) and add the current-generation IDs. Ordered
-    # cheapest → most capable so the first entry is a safe default.
+    # Current Claude API model IDs (per docs at
+    # platform.claude.com/docs/en/docs/about-claude/models). Kept as a
+    # runtime fallback for `/api/notifications/provider-models` when
+    # `verified_ai_models.json` has no Anthropic entry; the JSON is the
+    # authoritative UI-facing list. Refreshed 2026-10-26 against the live
+    # Models API. Ordered cheapest → most capable so the first entry is a
+    # safe default.
     KNOWN_MODELS = [
-        "claude-haiku-4-5",
+        "claude-haiku-5-5",
+        "claude-haiku-4-5-20251001",
+        "claude-sonnet-5-5",
         "claude-sonnet-5",
         "claude-sonnet-4-6",
+        "claude-opus-5-5",
         "claude-opus-4-8",
+        "claude-opus-4-7",
         "claude-opus-4-6",
+        "claude-opus-4-5-20251101",
         "claude-fable-5",
+        "claude-fable-5-1",
     ]
+
+    # Newer models (Opus 5.x, Fable) may think before answering and the
+    # thinking counts against max_tokens, so a small cap can end the turn
+    # with no text at all. max_tokens is a ceiling, not a cost.
+    MIN_MAX_TOKENS = 1024
     
     def list_models(self) -> List[str]:
-        """Return known Anthropic model aliases.
-        
-        Anthropic doesn't have a public models list API, but their "-latest"
-        aliases auto-update to the newest versions, making them reliable choices.
-        """
+        """Return known Anthropic model IDs."""
         return self.KNOWN_MODELS
     
     def generate(self, system_prompt: str, user_message: str,
@@ -68,7 +74,7 @@ class AnthropicProvider(AIProvider):
             'messages': [
                 {'role': 'user', 'content': user_message},
             ],
-            'max_tokens': max_tokens,
+            'max_tokens': max(max_tokens, self.MIN_MAX_TOKENS),
         }
         
         headers = {
@@ -79,11 +85,20 @@ class AnthropicProvider(AIProvider):
         
         result = self._make_request(self.API_URL, payload, headers)
         
-        try:
-            # Anthropic returns content as array of content blocks
-            content = result['content']
-            if isinstance(content, list) and len(content) > 0:
-                return content[0].get('text', '').strip()
-            return str(content).strip()
-        except (KeyError, IndexError) as e:
-            raise AIProviderError(f"Unexpected response format: {e}")
+        # A safety classifier can decline even benign notifications
+        # (HTTP 200, stop_reason "refusal", empty content). Raising lets the
+        # caller fall back to the original, untranslated notification.
+        if result.get('stop_reason') == 'refusal':
+            category = (result.get('stop_details') or {}).get('category')
+            raise AIProviderError(f"Request declined by Anthropic (category: {category})")
+
+        # Content is a list of blocks; thinking blocks may come before the
+        # text, so take the first text block rather than content[0].
+        content = result.get('content')
+        if not isinstance(content, list):
+            raise AIProviderError("Unexpected response format: missing content")
+        for block in content:
+            if isinstance(block, dict) and block.get('type') == 'text':
+                return block.get('text', '').strip()
+        raise AIProviderError(
+            f"No text in response (stop_reason: {result.get('stop_reason')})")

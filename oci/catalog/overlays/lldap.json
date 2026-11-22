@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Provide LDAP authentication and manage users and groups through a compact web interface. ProxMenux generates the initial administrator password and the secrets required by LLDAP."
+    },
+    "description": {
+      "en_US": "LLDAP is a lightweight authentication server that provides a simplified LDAP interface for user authentication. It includes a web frontend for managing users, groups, and custom attributes, as well as enabling self-service profile edits and password resets. The server is designed to act as a low-resource user directory for self-hosted applications and identity providers."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/lldap/lldap/master/screenshot.png"
+    ]
+  }
+}

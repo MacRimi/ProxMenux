@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web-based library for cataloguing and browsing video games. Gameyfin uses its own persistent database and data directories; it does not require a separate database service. Select the host directory containing your game library so Gameyfin can scan and display your collection. Metadata and artwork lookups use the sources configured in the application."
+    },
+    "description": {
+      "en_US": "Gameyfin is a self-hosted video game library manager that organizes game collections into a searchable web interface. It automatically scans game folders to index titles and retrieve metadata along with cover artwork. Users can browse their catalog from any device, download game files directly through the browser, and share their library with others."
+    },
+    "screenshots": [
+      "https://gameyfin.org/assets/screenshots/home.png",
+      "https://gameyfin.org/assets/screenshots/game.png",
+      "https://gameyfin.org/assets/screenshots/game-requests.png",
+      "https://gameyfin.org/assets/screenshots/admin-plugins.png"
+    ]
+  }
+}

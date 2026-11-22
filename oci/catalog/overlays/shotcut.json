@@ -18,6 +18,34 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 6,
+      "memory_mb": 8192
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Shotcut is a free, open source, cross-platform video editor."
+    },
+    "description": {
+      "en_US": "Shotcut is a free, open-source, cross-platform video editor. It allows users to edit video and audio content through a full-featured desktop interface. The application is useful for assembling footage, making cuts, and producing finished media projects."
+    },
+    "screenshots": [
+      "https://www.shotcut.org/assets/img/screenshots/Shotcut-18.11.18.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

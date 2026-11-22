@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage shared shopping lists, recipes and meal plans in one self-hosted app."
+    },
+    "description": {
+      "en_US": "KitchenOwl is a grocery list and recipe management platform. It allows users to create and sync shopping lists in real time across multiple household members. The application also supports recipe collection, meal planning, and expense tracking to manage household balances."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/TomBursch/kitchenowl/HEAD/metadata/en-US/images/phoneScreenshots/groceries.png",
+      "https://raw.githubusercontent.com/TomBursch/kitchenowl/HEAD/metadata/en-US/images/phoneScreenshots/recipe.png",
+      "https://raw.githubusercontent.com/TomBursch/kitchenowl/HEAD/metadata/en-US/images/phoneScreenshots/plan.png",
+      "https://raw.githubusercontent.com/TomBursch/kitchenowl/HEAD/metadata/en-US/images/phoneScreenshots/expenses.png"
+    ]
+  }
+}

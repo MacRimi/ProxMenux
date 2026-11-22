@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "title": "Gestion réseau Proxmox — Ponts, agrégations, diagnostic, réparation | ProxMenux",
+    "description": "Diagnostics en lecture seule, analyses suivies de suggestions et réparations guidées pour la pile réseau Debian / Proxmox (/etc/network/interfaces). Inspectez les ponts et les agrégations, lancez des outils de surveillance en direct, rendez les noms d’interface persistants, sauvegardez et redémarrez le réseau en toute sécurité — avec sauvegardes obligatoires et aperçus étape par étape.",
+    "ogTitle": "Gestion réseau Proxmox — Ponts, agrégations, diagnostic, réparation",
+    "ogDescription": "Diagnostics, analyses et réparations guidées pour la pile réseau Proxmox avec sauvegardes obligatoires et prévisualisations étape par étape.",
+    "twitterTitle": "Gestion réseau Proxmox | ProxMenux",
+    "twitterDescription": "Ponts, agrégations, diagnostics et réparations guidées pour la pile réseau Proxmox avec sauvegardes obligatoires."
+  },
+  "header": {
+    "title": "Gestion du réseau",
+    "description": "Diagnostics en lecture seule, rapports d’analyse suivis de suggestions et réparations guidées pour la pile réseau classique Debian/Proxmox. Toute opération destructive crée d’abord une sauvegarde et affiche les modifications exactes avant de les appliquer.",
+    "section": "Réseau"
+  },
+  "intro": {
+    "title": "À quoi sert ce menu",
+    "body": "Inspectez, diagnostiquez et, au besoin, réparez la configuration réseau de l’hôte Proxmox sans perdre l’accès à distance. Les outils suivent un principe : <strong>lire d’abord, proposer, puis appliquer uniquement avec un consentement explicite et une sauvegarde de sécurité</strong>. Il n’existe pas de bouton « Tout réparer automatiquement »."
+  },
+  "openingMenu": {
+    "heading": "Ouverture du menu",
+    "intro": "Dans le menu principal de ProxMenux, sélectionnez <strong>Réseau</strong>. Vous verrez ceci :",
+    "imageAlt": "Menu de gestion de réseau avec diagnostic, suivi, analyse, réparation, noms persistants et options de sauvegarde"
+  },
+  "safety": {
+    "heading": "Le modèle de sécurité",
+    "body": "Modifier la configuration réseau d’un hôte Proxmox distant est l’un des moyens les plus faciles de perdre son accès. ProxMenux en tient compte pour chaque action. Les outils se répartissent en trois niveaux de comportement : choisissez la carte correspondant à votre objectif :"
+  },
+  "tiers": {
+    "readOnly": {
+      "title": "Lecture seule",
+      "body": "Contrôle pur. Impossible de modifier le système en aucune circonstance.",
+      "items": [
+        "Tableau d'acheminement, tests de connectivité, statistiques avancées",
+        "Surveillance du trafic en temps réel (iftop, iptraf-ng)",
+        "Test de bande passante (iperf3)"
+      ]
+    },
+    "analyze": {
+      "title": "Analysez, puis suggérez",
+      "body": "Détecte les problèmes, affiche un rapport avec les commandes shell proposées, puis s’arrête. Vous décidez ensuite de lancer ou non la réparation guidée.",
+      "items": [
+        "Analyse de la configuration des ponts",
+        "Analyse de la configuration du réseau"
+      ]
+    },
+    "apply": {
+      "title": "Appliquer avec sauvegarde",
+      "body": "Modifie le système. Crée toujours d’abord une sauvegarde horodatée du fichier concerné et affiche un aperçu avant l’écriture.",
+      "items": [
+        "Noms d’interface persistants (fichiers .link)",
+        "Sauvegarde manuelle, restauration et redémarrage du service"
+      ]
+    }
+  },
+  "classicTitle": "Pile classique seulement",
+  "classicBody": "Chaque fonction d'analyse et de réparation vérifie le gestionnaire de réseau actif avant de toucher quoi que ce soit. Si l'hôte exécute <strong>netplan</strong>, <strong>systemd-networkd</strong> ou <strong>NetworkManager</strong>, l'outil avorte immédiatement avec un message clair — le menu ne prend en charge que la pile classique Debian/Proxmox à <code>/etc/network/interfaces</code>. Ceci est intentionnel : l'édition d'un fichier netplan avec des règles écrites pour <code>ifupdown</code> corromprait silencieusement la configuration.",
+  "backups": {
+    "heading": "Où vont les sauvegardes",
+    "intro": "Chaque réparation guidée, restauration ou sauvegarde manuelle écrit une copie horodatée de <code>/etc/network/interfaces</code> à <code>/var/backups/proxmenux/</code> :",
+    "rollbackIntro": "Pour revenir manuellement à la configuration précédente depuis une console :"
+  },
+  "readOnlySection": {
+    "heading": "Contrôle en lecture seule",
+    "body": "Le point de départ lorsque quelque chose semble anormal. Inspection uniquement — n’écrit jamais dans <code>/etc/network/interfaces</code> et n’exécute aucune commande de modification, à une exception explicite près : la purge de NetworkManager, s’il est détecté, nécessite votre accord. Utilisable en toute sécurité via SSH à tout moment.",
+    "options": [
+      {
+        "title": "Diagnostic",
+        "description": "Trois vérifications en lecture seule : Afficher la table d'acheminement, tester la connectivité et les diagnostics avancés. L'inspection pure n'écrit jamais au système."
+      },
+      {
+        "title": "Outils de surveillance en direct",
+        "description": "Trois lanceurs interactifs : iftop (bande passante en temps réel par paire d'hôtes), iptraf-ng (moniteur de trafic multimode) et iperf3 (test de bande passante, serveur / mode client)."
+      }
+    ]
+  },
+  "analyzeSection": {
+    "heading": "Analysez, puis suggérez",
+    "body": "À utiliser lorsqu’une inspection ou une panne réelle révèle un problème de configuration. Chaque outil examine la partie concernée de <code>/etc/network/interfaces</code>, affiche un rapport détaillé avec la commande shell exacte qui corrigerait chaque problème, puis <strong>s’arrête</strong>. Si vous acceptez ensuite la réparation guidée facultative, chaque modification est sauvegardée et prévisualisée avant d’être écrite.",
+    "options": [
+      {
+        "title": "Analyse des ponts et réparation guidée",
+        "description": "Détecte les ponts vmbrX dont les ports sont absents ou invalides, par exemple après une réénumération PCI. Affiche d’abord un rapport et ne répare que si vous acceptez la procédure guidée en 5 étapes."
+      },
+      {
+        "title": "Analyse de configuration et nettoyage guidé",
+        "description": "Repère les interfaces physiques déclarées dans /etc/network/interfaces qui n’existent plus, c’est-à-dire les configurations orphelines laissées par des changements matériels. Les signale et propose une suppression guidée."
+      }
+    ]
+  },
+  "applySection": {
+    "heading": "Appliquer avec sauvegarde",
+    "body": "Ces outils écrivent sur le disque par leur fonctionnement même. Chacun crée une sauvegarde horodatée du fichier concerné avant l’écriture, et les options destructives, comme la restauration et le redémarrage, exigent une confirmation explicite oui/non. Les <em>noms d’interface persistants</em> prennent effet au prochain redémarrage, pas immédiatement ; leur mise en place peut donc être planifiée en toute sécurité même sur un hôte distant.",
+    "options": [
+      {
+        "title": "Noms d'interface persistants",
+        "description": "Associe les noms d’interface (eno1, enp3s0, …) aux adresses MAC au moyen de fichiers .link de systemd. Les noms restent stables après un changement d’emplacement PCI, une mise à niveau du noyau ou l’ajout ou le retrait d’autres cartes réseau."
+      },
+      {
+        "title": "Sauvegarde et redémarrage des interfaces",
+        "description": "Un instantané manuel de /etc/network/interfaces, parcourir et restaurer les sauvegardes précédentes, afficher la configuration en direct et redémarrer le service de réseautage au besoin."
+      }
+    ]
+  },
+  "consoleTitle": "Préparez l'accès à la console",
+  "consoleSubTitle": "Avant toute réparation sur un hôte distant",
+  "consoleBody": "Si vous êtes connecté via SSH et ne disposez que d’un seul accès à l’hôte, prévoyez une solution de secours avant toute modification réseau : console physique / IPMI / iKVM ou autre machine sur le même réseau local. Les réparations guidées sont sûres et proposent toujours une commande de retour en arrière, mais un pont mal configuré ou une liaison interrompue peut tout de même vous priver d’accès jusqu’à ce que vous puissiez atteindre la console."
+}

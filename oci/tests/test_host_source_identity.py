@@ -53,6 +53,19 @@ class SameSourceTests(unittest.TestCase):
         self.assertTrue(host_mounts.same_source(fat, dict(fat, inode=405)))
         self.assertFalse(host_mounts.same_source(fat, dict(fat, inode=405, filesystem="uuid:7EFB-F094")))
 
+    def test_a_folder_the_kernel_builds_on_every_boot_is_told_by_its_filesystem(self):
+        # /run/dbus as an application's recipe shares it: another inode after
+        # every restart of the host.
+        dbus = source(resolved_path="/run/dbus", filesystem="tmpfs:tmpfs", fstype="tmpfs",
+                      device=28, inode=2846, uid=0, gid=0, mode=0o755)
+        self.assertTrue(host_mounts.same_source(dbus, dict(dbus, inode=2803, device=27)))
+        for kind, origin in (("devtmpfs", "udev"), ("proc", "proc"), ("sysfs", "sysfs")):
+            other = dict(dbus, filesystem=f"{kind}:{origin}", fstype=kind)
+            self.assertTrue(host_mounts.same_source(other, dict(other, inode=7)))
+        # Still not another filesystem, nor another path.
+        self.assertFalse(host_mounts.same_source(dbus, dict(dbus, inode=2803, filesystem="ext4:/dev/sda1", fstype="ext4")))
+        self.assertFalse(host_mounts.same_source(dbus, dict(dbus, resolved_path="/run/udev")))
+
     def test_a_record_made_before_the_filesystem_was_looked_at_has_no_device_to_compare(self):
         self.assertTrue(host_mounts.same_source(recorded_before(), source(device=2097)))
         self.assertFalse(host_mounts.same_source(recorded_before(), source(inode=14)))
@@ -156,11 +169,21 @@ class UpdateOfAnApplicationWithASharedDirectoryTests(unittest.TestCase):
             self.assertTrue(any("identity of their filesystem" in line for line in logged))
 
     def test_another_folder_in_its_place_stops_the_operation(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(host_mounts, "filesystem", return_value=("uuid:first", "ext4")):
             recorded = dict(host_mounts.snapshot(directory))
             recorded["inode"] += 1
             with self.assertRaisesRegex(ValueError, "does not match its recorded identity"):
                 self.freeze(directory, recorded)
+
+    def test_a_folder_of_a_filesystem_built_at_boot_after_a_restart(self):
+        # As /run/dbus after the host restarted: same tmpfs, another inode.
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(host_mounts, "filesystem", return_value=("tmpfs:tmpfs", "tmpfs")):
+            recorded = dict(host_mounts.snapshot(directory))
+            recorded["inode"] += 1
+            original, desired, _ = self.freeze(directory, recorded)
+            self.assertEqual(desired, original)
 
     def test_another_filesystem_in_its_place_stops_the_operation(self):
         with tempfile.TemporaryDirectory() as directory:

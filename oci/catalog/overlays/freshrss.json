@@ -10,5 +10,23 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "FreshRSS"
+    },
+    "tagline": {
+      "en_US": "FreshRSS is a self-hosted RSS and Atom feed aggregator."
+    },
+    "description": {
+      "en_US": "FreshRSS is a self-hosted RSS and Atom feed aggregator. It fetches updates from multiple websites and organizes them into a centralized reading interface. It enables users to follow news, blogs, and other web content without relying on third-party feed reader services."
+    },
+    "tips": [
+      "Initial configuration is completed through a setup wizard in the web UI.",
+      "For external databases, create a user and database in your MySQL or MariaDB server (not root) before running the setup wizard."
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/FreshRSS/FreshRSS/HEAD/docs/img/FreshRSS-screenshot.png"
+    ]
   }
 }

@@ -293,7 +293,7 @@ fi
 if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
   APP_METHOD_RAN=0
   if [[ -n "$UPDATE_COMMAND" && "$RUN_HELPER" == "1" && "$ALLOW_HELPER_WITH_CUSTOM" != "1" ]]; then
-    echo "Custom update command configured; skipping Proxmox VE Helper-Scripts updater."
+    echo "Custom update command configured; skipping Community Scripts updater."
     RUN_HELPER=0
   fi
   if [[ "$UPDATE_DOCKER_ENGINE" == "1" ]]; then
@@ -323,7 +323,7 @@ if [[ "$TARGET" == "app" || "$TARGET" == "both" ]]; then
     esac
     if [[ -z "$RESOLVED_SLUG" ]]; then
       if [[ "$APP_FAILED" -eq 0 ]]; then
-        echo "ERROR: RUN_HELPER=1 but /usr/bin/update contains no valid Proxmox VE Helper-Scripts app slug." >&2
+        echo "ERROR: RUN_HELPER=1 but /usr/bin/update contains no valid Community Scripts app slug." >&2
         APP_FAILED=1
       fi
     else
@@ -343,7 +343,7 @@ raise SystemExit(0 if lxc_apps.helper_update_selected(
 ) else 1)
 PY
       then
-        echo "ERROR: Helper-Scripts has not been selected for this application. Configure its update method first." >&2
+        echo "ERROR: Community Scripts has not been selected for this application. Configure its update method first." >&2
         exit 5
       fi
       # Never execute the arbitrary URL embedded in the CT. The slug is

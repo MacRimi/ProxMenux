@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Runs the AceStream engine and serves its streams over HTTP as HLS or MPEG-TS, for players such as VLC."
+    },
+    "description": {
+      "en_US": "AceStream HTTP Proxy runs the AceStream engine and exposes an HTTP streaming interface. It converts AceStream peer-to-peer broadcasts into standard HLS or MPEG-TS streams. This allows media players such as VLC or mpv to play streams directly without requiring dedicated AceStream software on client devices."
+    }
+  }
+}

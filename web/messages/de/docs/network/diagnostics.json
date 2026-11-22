@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnose | ProxMenux Dokumentation",
+    "description": "Drei einmalige, schreibgeschützte Diagnoseprüfungen: Routingtabelle anzeigen, Konnektivität testen und erweiterte Diagnose. Reine Prüfung — schreibt nie in /etc/network/interfaces und führt nie ändernde Befehle aus, mit einer ausdrücklichen Ausnahme: Wird NetworkManager erkannt, kann er nach Ihrer Zustimmung vollständig entfernt werden.",
+    "ogTitle": "Diagnose | ProxMenux Dokumentation",
+    "ogDescription": "Schreibgeschützte Netzwerkdiagnose für den Proxmox-Host: Routing, Erreichbarkeit und erweiterte Statistiken."
+  },
+  "header": {
+    "title": "Diagnose",
+    "description": "Drei einmalige, schreibgeschützte Prüfungen des aktuellen Netzwerkzustands: Routingtabelle, Konnektivitätstest und erweiterte Statistiken. Keine schreibt in /etc/network/interfaces — jederzeit sicher nutzbar, auch über SSH. Für interaktive Echtzeitüberwachung siehe Überwachungswerkzeuge für Echtzeitdaten.",
+    "section": "Netzwerk"
+  },
+  "intro": {
+    "title": "Was das macht",
+    "body": "Berichtet über Routing, Erreichbarkeit und zusammengefasste Statistiken, <strong>ohne etwas zu ändern</strong>. Damit können Sie den ordnungsgemäßen Netzwerkbetrieb bestätigen oder doppelte IP-Adressen erkennen. Für die kontinuierliche Verkehrsbeobachtung siehe <monitoringLink>Überwachungswerkzeuge für Echtzeitdaten</monitoringLink>; zur Anzeige der unverarbeiteten Konfigurationsdatei siehe <backupLink>Schnittstellen sichern und neu starten</backupLink>."
+  },
+  "routing": {
+    "heading": "Routing-Tabelle anzeigen",
+    "body": "Listet alle aktuell vom Kernel verwendeten Routen auf (<code>ip route show</code>) und hebt das Standard-Gateway hervor. Damit lässt sich prüfen, ob Internetverkehr die erwartete Schnittstelle verwendet und keine veralteten Routen Vorrang haben."
+  },
+  "connectivity": {
+    "heading": "Konnektivität testen",
+    "intro": "Sendet zwei ICMP-Sonden nacheinander an drei Ziele und meldet jede einzelne. Führt dann eine <code>nslookup google.com</code> aus, um die DNS-Auflösung unabhängig von ICMP zu überprüfen.",
+    "headerTest": "Test",
+    "headerTarget": "Ziel",
+    "headerConfirms": "Was es bestätigt",
+    "rows": [
+      {
+        "test": "Google DNS",
+        "target": "8.8.8.8",
+        "confirms": "Externe Erreichbarkeit über bekannte Anycast IP"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Unabhängige zweite Meinung, wenn Google ICMP blockiert"
+      },
+      {
+        "test": "Gateway",
+        "target": "(Standardroute)",
+        "confirms": "L2/L3-Verbindung zum lokalen Router"
+      },
+      {
+        "test": "DNS-Auflösung",
+        "target": "google.com",
+        "confirms": "Der DNS-Server ist erreichbar und antwortet"
+      }
+    ],
+    "readingTitle": "Lesen des Ergebnisses",
+    "readingBody": "Wenn der Gateway-Test besteht, aber die öffentlichen DNS-Ziele fehlschlagen, haben Sie lokale Konnektivität, aber kein Internet - überprüfen Sie den Upstream des Gateways. Wenn die DNS-Auflösung fehlschlägt, Pings zu <code>8.8.8.8</code> jedoch erfolgreich sind, ist das Problem der Resolver, nicht das Netzwerk: Überprüfen Sie <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Erweiterte Diagnose",
+    "intro": "Fasst netzwerkweite Statistiken zusammen und prüft auf häufige Probleme. Meldet die Anzahl aktiver Verbindungen, lauschende Ports und die Gesamtzahl der Schnittstellen und weist ausdrücklich auf zwei problematische Konstellationen hin:",
+    "items": [
+      "<strong>NetworkManager läuft auf einem Proxmox-Host.</strong> NetworkManager und Proxmox’ <code>ifupdown</code> stehen im Konflikt: Beide versuchen, Schnittstellen zu verwalten, sodass Bridges ständig ihren Zustand wechseln oder nicht aktiviert werden. Wird NetworkManager erkannt, bietet das Werkzeug an, ihn interaktiv zu stoppen, zu deaktivieren und vollständig zu entfernen (dies ist die <em>einzige</em> Diagnose, die das System ändern kann, und nur nach ausdrücklicher Zustimmung).",
+      "<strong>Doppelte IP-Adressen auf verschiedenen Schnittstellen.</strong> Zwei Schnittstellen mit derselben IPv4-Adresse verursachen sporadische Verbindungsprobleme, die innerhalb der VM äußerst schwer zu untersuchen sind. Erkannt über <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "Die NetworkManager-Eingabeaufforderung ist hier die einzige Änderungsaktion",
+    "nmBody": "Alle anderen Prüfungen in der erweiterten Diagnose sind schreibgeschützt. Die Entfernung von NetworkManager erfordert eine Ja/Nein-Bestätigung und führt <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code> aus. Wenn Sie ablehnen, ändert sich nichts."
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "gwTitle": "Konnektivität testen meldet einen Gatewayfehler, aber der Host hat Internetzugriff",
+    "gwBody": "Einige Router reagieren nicht auf ICMP von ihrer internen Schnittstelle aus, selbst wenn sie den Datenverkehr gerne weiterleiten. Testen Sie mit <code>traceroute 8.8.8.8</code> von einer Konsole aus: Wenn der zweite Hop Ihr ISP ist und der öffentliche DNS-Test bestanden ist, ist das Gateway trotz des fehlgeschlagenen Pings in Ordnung.",
+    "dupTitle": "Die erweiterte Diagnose meldet weiterhin doppelte IP-Adressen, obwohl ich eine entfernt habe",
+    "dupBody": "Der Check betrachtet den Live-Kernel-Status, nicht die Config-Datei. Führen Sie <code>ip -4 addr show</code> aus, um zu bestätigen; wenn das Duplikat noch vorhanden ist, hält es immer noch eine Schnittstelle. Verwenden Sie <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code>, um es aus dem Live-Zustand zu entfernen, und bearbeiten Sie dann <code>/etc/network/interfaces</code>, wenn es auch persistent ist."
+  },
+  "related": {
+    "heading": "Verwandte Themen",
+    "items": [
+      {
+        "label": "Überwachungswerkzeuge für Echtzeitdaten",
+        "href": "/docs/network/monitoring",
+        "tail": "— interaktive iftop / iptraf-ng / iperf3 Launcher."
+      },
+      {
+        "label": "Brückenanalyse und geführte Reparatur",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — wenn einem vmbrX der physische Port fehlt."
+      },
+      {
+        "label": "Konfigurationsanalyse und geführte Bereinigung",
+        "href": "/docs/network/config-analysis",
+        "tail": " — wenn eine alte Netzwerkkarte noch deklariert, aber nicht mehr vorhanden ist."
+      },
+      {
+        "label": "Schnittstellen sichern und neu starten",
+        "href": "/docs/network/backup-restore",
+        "tail": " — um vor jeder Änderung einen Schnappschuss der Konfiguration zu erstellen."
+      }
+    ]
+  }
+}

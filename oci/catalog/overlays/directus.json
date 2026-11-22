@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A data platform and API for managing SQL databases through a web interface. This single-image profile uses SQLite for a simple standalone installation."
+    },
+    "description": {
+      "en_US": "Directus is a data platform that allows managing SQL databases through a web interface. It provides an intuitive interface and an API layer to connect with and manage database content. It is useful for administering database schemas and managing records without writing manual queries."
+    },
+    "screenshots": [
+      "https://framerusercontent.com/images/AH9e6QUUP9JGX8tCugbyfafTs.png?width=1405&height=873",
+      "https://framerusercontent.com/images/wDMzR3oV9R51pVCPoOz6PGTRs54.png"
+    ]
+  }
+}

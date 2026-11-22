@@ -47,6 +47,7 @@ export interface StorageDevice {
   sas_version?: string // e.g., "SAS-3"
   sas_speed?: string // e.g., "12Gb/s"
   link_speed?: string // Generic link speed info
+  controller_slot?: string | null // PCI slot of the controller, matches PCIDevice.slot
 }
 
 export interface PCIDevice {
@@ -55,6 +56,7 @@ export interface PCIDevice {
   device: string
   vendor: string
   class: string
+  sdevice?: string // Subsystem device name, e.g. "HBA 9400-16i"
   driver?: string
   kernel_module?: string
   irq?: string
@@ -257,8 +259,13 @@ export interface HardwareData {
     cores_per_socket?: number
     sockets?: number
     total_threads?: number
+    l1d_cache?: string
+    l1i_cache?: string
+    l2_cache?: string
     l3_cache?: string
     virtualization?: string
+    min_mhz?: number
+    max_mhz?: number
   }
   motherboard?: {
     manufacturer?: string

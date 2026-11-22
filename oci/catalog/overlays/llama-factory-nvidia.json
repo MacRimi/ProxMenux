@@ -1,0 +1,11 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "LLaMA Factory is a comprehensive framework for fine-tuning Large Language Models (LLMs) with support for over 100 models. It provides a user-friendly web interface and powerful training methods including LoRA, QLoRA, and full-parameter training.\n\n**Key Features:**\n- Support for 100+ LLMs including LLaMA, Mistral, Qwen, and more\n- Multiple fine-tuning methods (LoRA, QLoRA, Full, Freeze)\n- Intuitive Web UI for easy model management\n- Built-in API server for model inference\n- Multi-GPU training support\n- Quantization and model export capabilities\n\n**Hardware Requirements:**\n- GPU: NVIDIA GPU with CUDA support required\n\n**Learn More:**\n- [GitHub Repository](https://github.com/hiyouga/LLaMA-Factory)\n- [Documentation](https://llamafactory.readthedocs.io/)\n"
+    },
+    "description": {
+      "en_US": "LLaMA Factory is a framework for fine-tuning Large Language Models. It supports numerous models and provides training techniques such as LoRA, QLoRA, and full-parameter tuning. It features a web interface for model configuration and management, alongside built-in model inference capabilities."
+    },
+    "repository": "https://github.com/hiyouga/LlamaFactory"
+  }
+}

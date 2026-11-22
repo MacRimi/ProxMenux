@@ -1,0 +1,21 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage shows, movies and music in one self-hosted application."
+    },
+    "description": {
+      "en_US": "HolyArrs is a self-hosted media manager that brings together, in a single application, the work usually split between Sonarr, Radarr, Lidarr, Prowlarr, Bazarr and Seerr. People browse and request shows, movies and music from a streaming-style interface, and HolyArrs searches the configured sources, picks the best release according to your rules and sends it to your download client. Finished downloads are renamed and filed into the library with their subtitles, ready for your media server."
+    },
+    "tips": [
+      "Create the owner account in the web interface on first visit; there are no default credentials.",
+      "Keep /config on local storage. Select media and download folders under /media in the web setup.",
+      "Keep downloads and libraries on the same filesystem to use hardlinks."
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/HolyArrs/.github/0713fbb7cb8fc644cd552da924a5da16f8f17376/profile/clip-home-light.webp",
+      "https://raw.githubusercontent.com/HolyArrs/.github/0713fbb7cb8fc644cd552da924a5da16f8f17376/profile/clip-explore-light.webp",
+      "https://raw.githubusercontent.com/HolyArrs/.github/0713fbb7cb8fc644cd552da924a5da16f8f17376/profile/clip-requests-light.webp",
+      "https://raw.githubusercontent.com/HolyArrs/.github/0713fbb7cb8fc644cd552da924a5da16f8f17376/profile/clip-downloads-light.webp"
+    ]
+  }
+}

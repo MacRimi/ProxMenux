@@ -27,5 +27,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Linkwarden is an open-source self-hosted bookmark and web archive manager designed to help users collect, organize, and preserve important online content in one place. In addition to traditional bookmarking capabilities, it provides full webpage backup so valuable information remains safely accessible over time.\n\nBuilt around long-term content preservation, Linkwarden can automatically capture webpage screenshots, PDFs, and full HTML files to help prevent link rot. It also includes reading mode, annotations, local AI-powered tagging, full-text search, and a multi-level classification system for smarter and more efficient information management. Its modular architecture supports self-hosting, browser extensions, and cross-device sync.\n\nIn practice, Linkwarden is suitable not only for personal knowledge management and content collection, but also for team collaboration and shared curation. With collections and permission controls, users can organize content together and manage it publicly or privately. It is a modern bookmarking tool that balances data ownership, security, and collaboration.\n\n**Key Features:**\n\n- Full webpage archiving (screenshots, PDFs, HTML) to prevent link rot\n- AI-powered auto-tagging and full-text search\n- Reading mode, text highlighting, and annotations\n- Multi-level categories and tags for flexible organization\n- Team collaboration and permission management\n\n**Learn more:**\n\n- [Linkwarden GitHub](https://github.com/linkwarden/linkwarden)\n"
+    },
+    "description": {
+      "en_US": "Linkwarden is a collaborative bookmark manager designed to collect, read, annotate, and preserve webpages in one place. To prevent link rot, it automatically saves a copy of each webpage as a screenshot, PDF, and single HTML file. Users can highlight and annotate text, organize links with collections and tags, and share content publicly or collaborate with teams."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/linkwarden/linkwarden/HEAD/assets/linkwarden-hero.png"
+    ],
+    "repository": "https://github.com/linkwarden/linkwarden"
   }
 }

@@ -1,0 +1,384 @@
+{
+  "meta": {
+    "title": "Inštalácia obrazu mimo katalógu | ProxMenux",
+    "description": "Prispôsobte obraz OCI zo súboru Compose, URL, príkazu docker run alebo odkazu na obraz a pred inštaláciou skontrolujte, čo ProxMenux dokáže reprodukovať."
+  },
+  "header": {
+    "title": "Nainštalovať obraz mimo katalógu",
+    "description": "Vlastný obraz sa prispôsobí zo súboru Compose, príkazu docker run alebo iba z odkazu na obraz. Výsledok sa zobrazí na kontrolu skôr, než sa vytvorí akýkoľvek LXC.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Rovnaký konvertor a inštalátor",
+            "body": "Voľba <strong>Nainštalovať obraz mimo katalógu</strong> používa rovnaký konvertor a inštalátor ako šablóny katalógu. Rozdiel je v tom, že konfigurácia inštalácie sa vytvorí až zo zadanej definície a overí sa pred vytvorením akéhokoľvek LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Ako je obraz opísaný",
+      "intro": "Úvodná obrazovka sa pýta, ako je obraz opísaný. Štyri možnosti poskytnú definíciu na prispôsobenie, piata používa iba názov obrazu a ďalšie tri načítajú už napísaný oci-compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Voľba",
+              "Čo sa načíta"
+            ],
+            "rows": [
+              [
+                "Vložiť súbor Compose do terminálu",
+                "Vložte obsah YAML do terminálu a ukončite ho pomocou Ctrl+D."
+              ],
+              [
+                "Načítať súbor Compose z tohto hostiteľa",
+                "Cesta na uzle, predvolene <code>/root/docker-compose.yml</code>. Súbor musí existovať a nesmie presiahnuť 256 KiB."
+              ],
+              [
+                "Stiahnuť súbor Compose z adresy",
+                "Adresa <code>http://</code> alebo <code>https://</code>, ktorá poskytuje nespracovaný YAML. Stiahne sa najviac 256 KiB."
+              ],
+              [
+                "Vložiť príkaz docker run do terminálu",
+                "Príkaz zverejnený projektom. Prispôsobia sa porty, prostredie, zväzky, zariadenia, capabilities, používateľ, zdieľaná pamäť a ďalšie podporované voľby."
+              ],
+              [
+                "Iba odkaz na obraz, bez súboru Compose",
+                "Odkaz, napríklad <code>ghcr.io/user/application:latest</code>. Vyhľadá sa obraz v registri a zachovajú sa jeho metadáta OCI."
+              ],
+              [
+                "Vložiť oci-compose do terminálu",
+                "Vložte JSON do terminálu a ukončite ho pomocou Ctrl+D. Nekonvertuje sa: overí sa a nainštaluje tak, ako je napísaný."
+              ],
+              [
+                "Načítať oci-compose z tohto hostiteľa",
+                "Súbor JSON na uzle, predvolene <code>/root/oci-compose.json</code>, s veľkosťou najviac 2 MiB."
+              ],
+              [
+                "Stiahnuť oci-compose z adresy",
+                "Adresa <code>http://</code> alebo <code>https://</code>, ktorá poskytuje súbor JSON. Stiahnu sa najviac 2 MiB."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-source-menu.png",
+            "alt": "Menu výberu spôsobu opisu obrazu mimo katalógu",
+            "caption": "Spôsoby opisu obrazu mimo katalógu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference-only",
+      "title": "Čo poskytuje samotný odkaz na obraz",
+      "intro": "Obraz obsahuje metadáta svojho procesu, nie však celé prostredie, ktoré zvyčajne dopĺňa súbor Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Načítané z obrazu",
+              "Nie je v obraze",
+              "Dôsledok"
+            ],
+            "rows": [
+              [
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> a zahrnuté prostredie",
+                "Premenné uvedené iba v dokumentácii",
+                "Pridajú sa pri inštalácii alebo cez Upraviť"
+              ],
+              [
+                "Zväzky deklarované obrazom",
+                "Adresáre hostiteľa uvedené iba v súbore Compose",
+                "Ďalšie cesty sa pridajú pred inštaláciou"
+              ],
+              [
+                "Porty <code>EXPOSE</code>",
+                "URL, protokol alebo funkčná kontrola služby",
+                "Potvrdí sa port a spôsob kontroly služby"
+              ],
+              [
+                "Architektúry a digest v registri",
+                "Zariadenia, oprávnenia alebo externé závislosti",
+                "Bez požiadavky v definícii sa nepovolia"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Kontrola pred inštaláciou",
+      "intro": "Po prispôsobení definície ProxMenux zobrazí, ako ju pochopil, ešte pred otázkami na VMID, zdroje a úložisko.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Analyzovať",
+                "body": "Načítajú sa služby, obraz, porty, cesty, prostredie, zariadenia, zabezpečenie a kontroly stavu."
+              },
+              {
+                "title": "Overiť obraz v registri",
+                "body": "Obraz musí existovať v registri a zobrazia sa jeho publikované architektúry. Súkromný register sa načíta pomocou účtu uloženého pre daný register."
+              },
+              {
+                "title": "Uviesť nepoužité voľby",
+                "body": "Vypíšu sa štítky, siete Docker, nastavenia Swarm a ďalšie kľúče, ktoré nemajú na LXC vplyv."
+              },
+              {
+                "title": "Zablokovať voľby bez bezpečného ekvivalentu",
+                "body": "Kľúče bez bezpečného ekvivalentu sa zobrazia v časti <strong>Voľby bez ekvivalentu</strong> a inštalácia nepokračuje. Žiadny sa nevynechá bez upozornenia."
+              },
+              {
+                "title": "Vyžiadať tajné údaje",
+                "body": "Premenné, ktorých názov označuje heslo, token alebo kľúč, sa pri inštalácii vyžiadajú ako citlivé údaje."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-review.png",
+            "alt": "Súhrn interpretácie súboru Compose v ProxMenux",
+            "caption": "Súhrn zobrazený pred otázkami na VMID a zdroje."
+          }
+        },
+        {
+          "p": "Po potvrdení súhrnu nasleduje rovnaký postup ako v katalógu: názov, predvolený alebo rozšírený režim, VMID, CPU, pamäť, sieť, spúšťanie s uzlom, trvalé a ďalšie cesty, kompatibilné zariadenia a záverečný súhrn."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "Príklady vstupu",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Compose",
+                "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
+              },
+              {
+                "title": "docker run",
+                "code": "docker run -d \\\n  --name app \\\n  -p 8080:8080 \\\n  -e TZ=Europe/Madrid \\\n  -v app-config:/config \\\n  -v /srv/media:/media \\\n  ghcr.io/example/app:latest"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "oci-compose",
+      "title": "Ručne napísaný oci-compose",
+      "intro": "oci-compose je súbor JSON, z ktorého sa inštaluje aplikácia. Katalóg uchováva jeden pre každú aplikáciu. Rovnaký formát možno napísať ručne a nainštalovať touto voľbou.",
+      "blocks": [
+        {
+          "p": "V ručne napísanom súbore autor určí obraz, porty, premenné, zväzky a otázky pri inštalácii. ProxMenux pri načítaní doplní zvyšok. Formát vyjadrí aj to, čo Compose neobsahuje: text otázky, heslo vytvorené pri inštalácii, profil GPU, vlastníka každého zväzku, kontrolu prvého spustenia alebo prihlasovacie údaje zobrazené na konci."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Overiť",
+                "body": "Súbor s chybami sa nenainštaluje. Každá chyba označí príslušné pole; pri neplatnom JSON sa uvedie riadok a stĺpec."
+              },
+              {
+                "title": "Skontrolovať",
+                "body": "Platný súbor zobrazí, čo nainštaluje: obraz, webovú adresu, porty, trvalé cesty, premenné požadované pri inštalácii a súbory, ktoré zapíše."
+              },
+              {
+                "title": "Nainštalovať",
+                "body": "Inštalácia je rovnaká ako pri aplikáciách katalógu, s predvolenými alebo rozšírenými nastaveniami."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Súbor, ktorý určuje oprávnenia",
+            "body": "oci-compose určuje, čo sa v kontajneri pripojí a s akými oprávneniami. Kontrola to ukáže pred inštaláciou: používajte iba súbory z dôveryhodných zdrojov."
+          }
+        },
+        {
+          "p": "Formát je opísaný po blokoch s dvoma úplnými príkladmi v <readmeLink>README enginu OCI</readmeLink>. Rovnakým spôsobom možno načítať aj záznam inštalácie: použije sa iba pôvodná šablóna, nie odpovede z danej inštalácie."
+        }
+      ]
+    },
+    {
+      "id": "compose-stacks",
+      "title": "Súbory Compose s viacerými službami",
+      "intro": "Súbor Compose s viacerými službami sa nainštaluje ako stack: jeden natívny LXC pre každú službu, spojené súkromným mostom a spúšťané v poradí svojich závislostí. <stacksLink>Aplikácie s viacerými kontajnermi</stacksLink> opisuje, ako sa stack vytvára, overuje a aktualizuje. Táto časť sa venuje tomu, čo určuje súbor Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Služba",
+              "Ako sa rozpozná",
+              "Kedy je pripravená"
+            ],
+            "rows": [
+              [
+                "Hlavná",
+                "Tá, ktorá je uvedená v <code>x-casaos.main</code>. Bez nej prvá služba, ktorá zverejňuje port, inak prvá v súbore.",
+                "Jej zverejnený webový port odpovedá cez HTTP alebo prejde jej vlastný <code>healthcheck</code>. Potrebuje zverejnený port TCP."
+              ],
+              [
+                "Databáza alebo vyrovnávacia pamäť",
+                "Jej obraz je PostgreSQL, MariaDB, MongoDB, Redis, Valkey alebo Meilisearch.",
+                "Kontrola, ktorú ProxMenux pre daný server má, napríklad <code>pg_isready</code>, ak služba nedeklaruje vlastný <code>healthcheck</code>."
+              ],
+              [
+                "Pracovná služba",
+                "Každá ďalšia služba, ktorá zostáva spustená.",
+                "Jej vlastný <code>healthcheck</code>. Bez neho HTTP na porte, ktorý zverejňuje, TCP na porte, ktorý len uvádza v <code>expose</code>, inak len overenie, že LXC beží."
+              ],
+              [
+                "Jednorazová úloha",
+                "Služba, na ktorú iná čaká cez <code>condition: service_completed_successfully</code>.",
+                "Skončí s kódom 0 do 300 sekúnd."
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "<code>healthcheck</code> sa spúšťa vnútri LXC svojej služby ako <code>CMD</code> alebo <code>CMD-SHELL</code>. Kontrola <code>CMD-SHELL</code> nemôže používať premenné ako <code>$PORT</code>, pretože sa nespúšťa v prostredí aplikácie: namiesto premennej treba zapísať hodnotu.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> a <code>retries</code> určujú, ako dlho sa na kontrolu čaká, najviac 3600 sekúnd spolu.",
+              "Služba, na ktorú iná čaká cez <code>condition: service_healthy</code>, potrebuje vlastný <code>healthcheck</code>, ak nejde o databázu alebo vyrovnávaciu pamäť z tabuľky."
+            ]
+          }
+        },
+        {
+          "p": "Jednorazová úloha pripraví niečo, čo ostatné služby potrebujú, napríklad migráciu databázy, a skončí."
+        },
+        {
+          "list": {
+            "items": [
+              "Jej <code>restart</code> musí byť <code>no</code> alebo chýbať. Hlavná služba a služba, na ktorú iné čakajú cez <code>service_healthy</code>, nemôžu byť úlohami.",
+              "Spustí sa pred službami, ktoré na ňu čakajú. Úspešný beh sa zaznamená a ďalšie štarty ju spustia znova, len keď sa zmení jej obraz alebo konfigurácia (prostredie, pripojenia, zariadenia). Zmena CPU, pamäte alebo veľkosti disku ju znova nespustí.",
+              "Proxmox ju pri štarte nespúšťa a watchdog ju nesleduje."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Zväzok alebo cesta hostiteľa, ktoré pripája viac služieb, sa stane jedným adresárom hostiteľa pripojeným v každej z nich a inštalácia sa pýta, kam sa umiestni. Každá služba, ktorá ho pripája, musí mať rovnaké <code>PUID</code> a <code>PGID</code> (1000, ak nie sú nastavené).",
+              "Každá služba, ktorá zverejňuje port TCP, dostane okrem súkromnej aj adresu v LAN a inštalácia sa pýta na adresu pre každú z nich."
+            ]
+          }
+        },
+        {
+          "p": "Aplikácie často čítajú svoju verejnú adresu z premennej ako <code>APP_PUBLIC_URL</code> a vnútri stacku je <code>localhost</code> LXC samotnej služby. Premenná, v ktorej názve je slovo <code>PUBLIC</code> alebo <code>EXTERNAL</code>, končiaca na <code>_URL</code>, <code>_URI</code> alebo <code>_ORIGIN</code>, ktorej hodnota ukazuje na <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> alebo <code>::1</code>, sa prepíše na adresu LAN služby, ktorá tento port zverejňuje, s portom jej kontajnera. Táto služba potrebuje statickú adresu."
+        },
+        {
+          "code": {
+            "title": "Prepísaná verejná URL",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL v LXC worker (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "Ak sa URL nedá prepísať, stack sa nenainštaluje a dôvod uvedie jedna z týchto správ:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Správa",
+              "Príčina"
+            ],
+            "rows": [
+              [
+                "<strong>Lokálna verejná URL je nejednoznačná; zadajte explicitnú URL</strong>",
+                "Tento port zverejňuje viac ako jedna služba."
+              ],
+              [
+                "<strong>Lokálnej verejnej URL nezodpovedá žiadny zverejnený port; zadajte explicitnú URL</strong>",
+                "Tento port nezverejňuje žiadna služba."
+              ],
+              [
+                "<strong>Automatické verejné URL vyžadujú statické adresy frontendov alebo explicitné URL</strong>",
+                "Služba, na ktorú URL ukazuje, má adresu DHCP."
+              ],
+              [
+                "<strong>Neplatné URL služby</strong>",
+                "URL má nesprávny tvar alebo jej port nie je platný."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "private-registries",
+      "title": "Obrazy v súkromných registroch",
+      "intro": "Obraz zo súkromného registra, napríklad súkromný balík GitHub alebo repozitár Docker Hub, sa načíta pomocou účtu uloženého v ProxMenux.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Register odmietne prístup k obrazu",
+                "body": "Ak register oznámi, že obraz vyžaduje účet, kontrola ponúkne prihlásenie a potom obraz načíta znova."
+              },
+              {
+                "title": "Prihlásiť sa",
+                "body": "Používateľské meno a heslo alebo token s oprávnením na stiahnutie obrazu. Register ich overí a uložia sa iba pri úspešnom overení."
+              },
+              {
+                "title": "Nainštalovať a udržiavať aktuálne",
+                "body": "Účet sa použije na stiahnutie obrazu pri inštalácii aj pri aktualizáciách, úpravách, opätovnom vytvorení, vo watchdogu a pri kontrole aktualizácií Monitora na ľubovoľnom uzle klastra."
+              }
+            ]
+          }
+        },
+        {
+          "p": "<strong>Účty registrov</strong> v hlavnom menu OCI manager Apps zobrazujú uložené účty podľa registra a používateľa, nikdy nie ich tajné údaje. Z každého účtu možno overiť, stiahnuť alebo nainštalovať obraz a aktualizovať alebo odstrániť prihlasovacie údaje."
+        },
+        {
+          "list": {
+            "items": [
+              "GitHub (<code>ghcr.io</code>): používateľ je účet GitHub a heslo je osobný prístupový token s oprávnením <code>read:packages</code>.",
+              "Docker Hub (<code>docker.io</code>): používateľ je účet Docker Hub a heslo je prístupový token s oprávnením na čítanie.",
+              "Ostatné registre, aj s vlastným portom, napríklad <code>registry.example.com:5000</code>: používateľské meno a heslo alebo token poskytnuté daným registrom."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Kde sa účty ukladajú",
+            "body": "V <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, ktorý môže čítať iba root, v rovnakom adresári ako heslá úložísk Proxmox. <code>/etc/pve</code> zdieľajú všetky uzly klastra, preto sa účet pridaný na jednom uzle používa na všetkých. Záloha hostiteľa tento súbor obsahuje a odinštalovanie ProxMenux ho odstráni zo všetkých uzlov."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Definície, ktoré sa nenainštalujú",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Dockerfile bez publikovaného obrazu: obraz sa musí najprv zostaviť a zverejniť v registri OCI.",
+              "Súbor Compose s viacerými službami sa nainštaluje tak, ako opisuje časť <sectionLink>Súbory Compose s viacerými službami</sectionLink>, okrem prípadu, keď deklaruje viac ako jednu sieť, externú sieť, voľby pri zväzkoch najvyššej úrovne, voliteľné závislosti (<code>required: false</code>) alebo služby závislé od hlavnej.",
+              "V stacku sa služba, ktorá používa <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> alebo <code>extra_hosts</code>, označí ako vyžaduje kontrolu zostavy a stack sa nenainštaluje.",
+              "<code>configs</code>, externé tajné údaje alebo formáty zariadení, ktoré nemožno jednoznačne prispôsobiť.",
+              "Nahradenia shellu, napríklad <code>$(command)</code>: namiesto nich treba zapísať výslednú hodnotu.",
+              "Nerozpoznané voľby <code>docker run</code> a <code>--env-file</code>: namiesto nich použite súbor Compose s výslovne uvedenými hodnotami."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

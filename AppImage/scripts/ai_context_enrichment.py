@@ -56,6 +56,56 @@ def _get_freq_conn():
         return None
 
 
+def get_backup_error_context(pve_message: str,
+                             log_directory: Path = Path('/var/log/vzdump')) -> str:
+    """Read low-level errors only from the exact failed run in a native report.
+
+    Per-guest vzdump logs are reused. A matching VMID alone is not sufficient:
+    require the report's complete, timestamped failure line in the local log.
+    Shell commands and paths from the message are never executed or followed.
+    """
+    if not isinstance(pve_message, str):
+        return ''
+    context = []
+    seen = set()
+    for line in pve_message.splitlines():
+        reference = re.sub(r'^\s*\d+:\s*', '', line).strip()
+        match = re.match(
+            r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+ERROR:\s+Backup of VM (\d+) failed\b',
+            reference)
+        if not match:
+            continue
+        vmid = match.group(1)
+        if vmid in seen or len(seen) >= 20:
+            continue
+        seen.add(vmid)
+        for kind, label in (('lxc', 'CT'), ('qemu', 'VM')):
+            try:
+                with (log_directory / f'{kind}-{vmid}.log').open('rb') as handle:
+                    handle.seek(0, os.SEEK_END)
+                    handle.seek(max(0, handle.tell() - 131072))
+                    lines = handle.read(131072).decode('utf-8', 'replace').splitlines()
+            except OSError:
+                continue
+            if reference not in lines:
+                continue
+            end = lines.index(reference)
+            starts = [i for i, item in enumerate(lines[:end])
+                      if f'Starting Backup of VM {vmid} (' in item]
+            start = starts[-1] if starts else 0
+            evidence = [item for item in lines[start:end]
+                        if re.search(r'\b(?:ERROR|Error):|EDQUOT|quota exceeded|no space left on device',
+                                     item, re.IGNORECASE)]
+            for item in list(dict.fromkeys(evidence))[-6:]:
+                if len(item) > 700:
+                    item = item[:349] + '…' + item[-350:]
+                context.append(f'{label} {vmid}: {item}')
+            break
+        if sum(map(len, context)) >= 10000:
+            break
+    return '\n'.join(context)
+
+
 def get_system_uptime() -> str:
     """Get system uptime in human-readable format.
     
@@ -115,22 +165,16 @@ def get_event_frequency(error_id: str = None, error_key: str = None,
     try:
         cursor = conn.cursor()
 
-        # Try to find the error
-        if error_id:
+        # Try to find the error. The errors table keys a row by error_key.
+        if error_id or error_key:
             cursor.execute('''
-                SELECT first_seen, last_seen, occurrences, category
-                FROM errors WHERE error_key = ? OR error_id = ?
-                ORDER BY last_seen DESC LIMIT 1
-            ''', (error_id, error_id))
-        elif error_key:
-            cursor.execute('''
-                SELECT first_seen, last_seen, occurrences, category
+                SELECT first_seen, last_seen, occurrence_count, category
                 FROM errors WHERE error_key = ?
                 ORDER BY last_seen DESC LIMIT 1
-            ''', (error_key,))
+            ''', (error_id or error_key,))
         elif category:
             cursor.execute('''
-                SELECT first_seen, last_seen, occurrences, category
+                SELECT first_seen, last_seen, occurrence_count, category
                 FROM errors WHERE category = ? AND resolved_at IS NULL
                 ORDER BY last_seen DESC LIMIT 1
             ''', (category,))

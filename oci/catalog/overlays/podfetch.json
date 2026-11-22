@@ -16,5 +16,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "PodFetch is a sleek and efficient self-hosted podcast manager written in Rust. It automatically downloads new episodes of your favorite podcasts on a configurable interval and lets you listen to them from a clean, fast web UI on any device.\n\nIts standout feature is a GPodder-compatible sync API: keep using mobile podcast apps like AntennaPod while subscriptions, episode actions, and playback positions stay in sync with your server. PodFetch also supports multi-user setups with invites and roles, playlists, favorites, OPML import and export, podcast search via iTunes or Podcast Index, and optional OIDC or basic authentication.\n"
+    },
+    "description": {
+      "en_US": "PodFetch is a self-hosted podcast manager that automatically downloads new podcast episodes on a configurable schedule. It features a web interface for streaming episodes directly from any device. It also provides a GPodder-compatible API to sync subscriptions, playback status, and episode actions with mobile podcast clients."
+    }
   }
 }

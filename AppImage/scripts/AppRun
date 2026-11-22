@@ -6,8 +6,17 @@
 # Get the directory where this AppImage is mounted
 APPDIR="$(dirname "$(readlink -f "${0}")")"
 
+source "${APPDIR}/usr/bin/appimage_arch.sh" || exit 1
+pmx_appimage_arch "$(uname -m)" || exit 1
+
 export PATH="${APPDIR}/usr/bin:${PATH}"
-export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/usr/lib:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib/${PMX_APPIMAGE_TRIPLET}:${APPDIR}/usr/lib:${APPDIR}/lib/${PMX_APPIMAGE_TRIPLET}:${APPDIR}/lib:${LD_LIBRARY_PATH}"
+
+# The Monitor reads the output of lsblk, lscpu, apt and others. Under the
+# host locale they print "29,7G" or translated text the parsers don't know,
+# so every command it runs gets the C locale. UTF-8 keeps names readable;
+# the interface has its own translations. The web terminal already used it.
+export LC_ALL=C.UTF-8
 
 # Console monitor (TUI). Handled before the Python ABI selection below, whose
 # warnings would dirty the console; `-I` ignores PYTHONPATH anyway.

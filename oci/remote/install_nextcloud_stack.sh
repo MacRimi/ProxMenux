@@ -132,7 +132,8 @@ FRONTEND_IPV4=$(jqr '.network.frontend_ipv4')
 FRONTEND_GATEWAY=$(jq -r '.network.frontend_gateway // empty' "$DEPLOYMENT_FILE")
 oci_access_net "$FRONTEND_IPV4" "$FRONTEND_GATEWAY" \
   || die "$(translate "Invalid access address:") $FRONTEND_IPV4 $FRONTEND_GATEWAY"
-FRONTEND_NET=$OCI_ACCESS_NET
+oci_vlan_option frontend_vlan_tag || die "$(translate "The VLAN tag must be a number from 1 to 4094")"
+FRONTEND_NET=$OCI_ACCESS_NET$OCI_VLAN_OPTION
 PRIVATE_BRIDGE=$(jqr '.network.private_bridge')
 PRIVATE_SUBNET=$(jqr '.network.private_subnet')
 PRIVATE_HOST_ADDRESS=$(jqr '.network.private_host_address')
@@ -160,33 +161,17 @@ esac
 [[ $PRIVATE_BRIDGE =~ ^vmbr[0-9]+$ ]] || die "$(translate "Invalid private bridge")"
 [[ $PRIVATE_SUBNET =~ ^10\.77\.[0-9]{1,3}\.0/24$ ]] || die "$(translate "Invalid private network")"
 
-vmid_block_free() {
-  local candidate=$1 offset
-  for offset in 0 1 2; do
-    pct config "$((candidate + offset))" >/dev/null 2>&1 && return 1
-    qm config "$((candidate + offset))" >/dev/null 2>&1 && return 1
-  done
-  return 0
-}
+# The network offsets stay fixed even when the selected VMIDs are not consecutive.
+STACK_VMIDS=$(python3 "$SCRIPT_DIR/oci_stack_vmids.py" "$DEPLOYMENT_FILE" application cache database) \
+  || die "$(translate "Could not allocate the stack VMIDs")"
+read -r APPLICATION_ID CACHE_ID DATABASE_ID <<< "$STACK_VMIDS"
 
-if [[ -z $BASE_VMID ]]; then
-  BASE_VMID=$(pvesh get /cluster/nextid)
-  while ! vmid_block_free "$BASE_VMID"; do
-    BASE_VMID=$((BASE_VMID + 1))
-  done
-fi
-[[ $BASE_VMID =~ ^[0-9]+$ ]] || die "$(translate "Invalid base VMID")"
-vmid_block_free "$BASE_VMID" || die "$(translate "These VMIDs are not free:") ${BASE_VMID}-$((BASE_VMID + 2))"
-
-APPLICATION_ID=$BASE_VMID
-CACHE_ID=$((BASE_VMID + 1))
-DATABASE_ID=$((BASE_VMID + 2))
 
 oci_log "Stack: $STACK_NAME; VMIDs: Nextcloud=$APPLICATION_ID, Redis=$CACHE_ID, PostgreSQL=$DATABASE_ID"
 oci_log "Private network: $PRIVATE_SUBNET on $PRIVATE_BRIDGE"
 
 if [[ $DRY_RUN == 1 ]]; then
-  msg_info2 "$(translate "Stack:") $STACK_NAME · CT ${APPLICATION_ID}-${DATABASE_ID}"
+  msg_info2 "$(translate "Stack:") $STACK_NAME · CT $STACK_VMIDS"
   msg_info2 "$(translate "Private network:") $PRIVATE_BRIDGE ($PRIVATE_SUBNET)"
   msg_ok "$(translate "Dry run completed; no containers were created.")"
   exit 0
@@ -270,10 +255,7 @@ ensure_image() {
   archive_volume="${TEMPLATE_STORAGE}:vztmpl/${archive_name}"
   archive_path=$(pvesm path "$archive_volume")
   mkdir -p "$(dirname "$archive_path")"
-  if [[ -s $archive_path ]]; then
-    msg_info "$(translate "Verifying the image integrity...")"
-  fi
-  if [[ -s $archive_path ]] && oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$archive_path"; then
+  if [[ -s $archive_path ]] && oci_verify_archive "$archive_path"; then
     oci_log "Reusing ${archive_volume}"
   else
     rm -f "$archive_path"
@@ -305,8 +287,7 @@ ensure_image() {
         msg_warn "$(translate "The image download did not complete correctly; downloading it again...")"
         continue
       fi
-      msg_info "$(translate "Verifying the image integrity...")"
-      if ! oci_quiet python3 "$VERIFY_OCI_ARCHIVE" "$partial"; then
+      if ! oci_verify_archive "$partial"; then
         rm -f "$partial"
         (( attempt < 2 )) || die "$(translate "The downloaded image is corrupt:") $image"
         msg_warn "$(translate "The image download did not complete correctly; downloading it again...")"
@@ -511,7 +492,7 @@ if (( START_AFTER == 1 )); then
       | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' \
       | grep -vFx "$APPLICATION_IP" | head -n 1 || true)
     if [[ -n $APPLICATION_LAN_IP ]] \
-      && curl -fsS -H 'Host: localhost' \
+      && oci_curl "$APPLICATION_ID" -fsS -H 'Host: localhost' \
         "http://${APPLICATION_LAN_IP}/status.php" >/dev/null 2>&1; then
       break
     fi
@@ -521,7 +502,7 @@ if (( START_AFTER == 1 )); then
     || die "$(translate "The application did not get an address on the access network:") Nextcloud"
   # Nextcloud 34 validates status.php against trusted_domains before the LAN IP
   # can be registered. localhost is the official image's initial trusted host.
-  STATUS_JSON=$(curl -fsS -H 'Host: localhost' \
+  STATUS_JSON=$(oci_curl "$APPLICATION_ID" -fsS -H 'Host: localhost' \
     "http://${APPLICATION_LAN_IP}/status.php")
   jq -e '.installed == true and .maintenance == false and .needsDbUpgrade == false' \
     <<<"$STATUS_JSON" >/dev/null \

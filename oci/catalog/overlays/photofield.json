@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted photo library that indexes local photo collections and keeps its thumbnail cache in persistent storage."
+    },
+    "description": {
+      "en_US": "Photofield is a self-hosted photo gallery and viewer designed to display large collections of images smoothly and quickly. It features a seamless zoomable interface with progressive multi-resolution image loading across various customizable layouts. The software operates read-only on local photo directories, indexing metadata, colors, and reverse geolocation data without altering the source files."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/SmilyOrg/photofield/HEAD/docs/assets/layouts.png",
+      "https://raw.githubusercontent.com/SmilyOrg/photofield/HEAD/docs/assets/semantic-search.jpg",
+      "https://raw.githubusercontent.com/SmilyOrg/photofield/HEAD/docs/assets/seamless-zoom.gif",
+      "https://raw.githubusercontent.com/SmilyOrg/photofield/HEAD/docs/assets/progressive-load.gif"
+    ]
+  }
+}

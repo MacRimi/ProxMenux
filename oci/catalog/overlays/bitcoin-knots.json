@@ -1,7 +1,10 @@
 {
   "catalog_ui": {
     "hidden": true,
-    "hidden_reason": "Its image stops without closing the application cleanly, also under Docker; hidden until the image is fixed"
+    "hidden_reason": "Its image stops without closing the application cleanly, also under Docker; hidden until the image is fixed",
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
   },
   "proxmox": {
     "installer_profile": {
@@ -14,5 +17,15 @@
         }
       ]
     }
-  }
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

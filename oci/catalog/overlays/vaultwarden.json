@@ -8,7 +8,14 @@
     "tips": [
       "The Web Vault requires a secure context. ProxMenux enables Vaultwarden's native Rocket TLS listener on port 443.",
       "A persistent self-signed certificate is generated under /data/tls. Browsers must trust or explicitly accept it; a trusted reverse proxy certificate can replace these files later."
-    ]
+    ],
+    "tagline": {
+      "en_US": "Alternative implementation of the Bitwarden server API written in Rust and compatible with upstream Bitwarden clients*, perfect for self-hosted deployment where running the official resource-heavy service might not be ideal."
+    },
+    "description": {
+      "en_US": "Vaultwarden is an alternative implementation of the Bitwarden server API written in Rust. It provides a lightweight backend for storing passwords, notes, and file attachments while maintaining compatibility with official Bitwarden client applications. The application includes support for organization vaults, two-factor authentication methods like U2F, YubiKey, and Duo, and serves the static files for the web vault interface."
+    },
+    "repository": "https://github.com/dani-garcia/vaultwarden"
   },
   "container_contract": {
     "environment": [

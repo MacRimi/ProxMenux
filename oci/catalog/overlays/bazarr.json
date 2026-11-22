@@ -22,5 +22,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Bazarr is a companion application to Sonarr and Radarr. It can manage and download subtitles based on your requirements. You define your preferences by TV show or movie and Bazarr takes care of everything for you."
+    },
+    "description": {
+      "en_US": "Bazarr is a companion application to Sonarr and Radarr designed to manage and download subtitles based on your requirements. You can define specific subtitle preferences for TV shows and movies, and the application automatically retrieves the matching files. It helps keep media libraries organized and fully subtitled without manual intervention."
+    },
+    "tips": [
+      "You must complete all the setup parameters in the webui before you can save the config."
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/morpheus65535/bazarr/HEAD/screenshot/bazarr-screenshot.png"
+    ]
   }
 }

@@ -28,7 +28,7 @@
         {
           "id": "clave-cifrado",
           "term": "Keyfile (encryption key)",
-          "def": "Binary file that Proxmox Backup Server uses to encrypt the <a href=\"#chunk\">chunks</a> of each backup before uploading them. Without this file, no encrypted backup can be read. ProxMenux stores it at <code>/usr/local/share/proxmenux/pbs-key.conf</code> with mode <code>600</code>. This is the asset that has to be protected; the <a href=\"#sobre-recuperacion\">recovery envelope</a> exists precisely so that this file can be rescued if it is lost."
+          "def": "Key file used by proxmox-backup-client to encrypt the <a href=\"#chunk\">chunks</a> before uploading them to PBS. Without the matching key, encrypted backup data cannot be read. ProxMenux stores the file at <code>/usr/local/share/proxmenux/pbs-key.conf</code> with mode <code>600</code>. Protect it: the <a href=\"#sobre-recuperacion\">recovery envelope</a> is designed to recover this file if it is lost."
         },
         {
           "id": "contrasena-keyfile",
@@ -156,7 +156,7 @@
         {
           "id": "modo-adjunto",
           "term": "Attach mode",
-          "def": "Scheduled job with no schedule of its own; it fires automatically whenever an existing PVE <code>vzdump</code> task runs. It inherits the schedule and retention from that parent task. Supported for Local and PBS destinations only."
+          "def": "Job without its own timer. A PVE <code>vzdump</code> job-end hook triggers it after guest backups when the destination storage matches. The selected parent supplies the storage and the retention, which is re-read from the parent job on every run, but the hook matches storage rather than parent job ID; another task using that storage may also trigger it. Supported for Local and PBS only."
         },
         {
           "id": "timer-systemd",

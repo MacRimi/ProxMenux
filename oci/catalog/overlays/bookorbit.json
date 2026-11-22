@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted reading platform and library manager for eBooks and light novels."
+    },
+    "description": {
+      "en_US": "BookOrbit is a self-hosted reading platform and library manager for ebooks, PDFs, comics, and audiobooks. It includes built-in web readers and synchronizes reading progress, highlights, and status across devices such as Kobo and KOReader. The system aggregates metadata from multiple providers, manages smart collections, tracks reading statistics, and supports multi-user environments with single sign-on."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/bookorbit/bookorbit/HEAD/docs/images/dashboard-overview.png"
+    ]
+  }
+}

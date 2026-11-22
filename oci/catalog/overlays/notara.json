@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted collaborative notes and knowledge base with pages, inline databases, and SQLite storage."
+    },
+    "description": {
+      "en_US": "Notara is an open-source collaborative notes and knowledge base application. It features a block editor that supports paragraphs, headings, code, toggles, callouts, and file attachments, alongside inline databases with table and board views. It enables real-time collaboration with shared editing and provides full-text search across titles and block content."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/DnzzL/notara/HEAD/docs/screenshots/editor.png",
+      "https://raw.githubusercontent.com/DnzzL/notara/HEAD/docs/screenshots/database-table.png",
+      "https://raw.githubusercontent.com/DnzzL/notara/HEAD/docs/screenshots/database-board.png"
+    ]
+  }
+}

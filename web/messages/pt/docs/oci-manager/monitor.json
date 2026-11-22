@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "title": "Contêineres OCI no ProxMenux Monitor | ProxMenux",
+    "description": "O que o ProxMenux Monitor mostra para um container instalado pelo OCI Manager Apps: versões de aplicativos e imagens, novas imagens, saída do console e o terminal Proxmox VE."
+  },
+  "header": {
+    "title": "No ProxMenux Monitor",
+    "description": "Um recipiente instalado pelo OCI Manager Apps aparece em VMs & LXCs como qualquer outro LXC. Seu modal lê o registro de instalação: versões de aplicação e imagem, novas imagens, saída de console e terminal.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "O registro é a fonte",
+            "body": "O OCI Manager Apps sabe o que ele instalou e de onde veio. O Monitor lê esse registro de instalação em vez de sondar o recipiente, por isso os dados são os mesmos se o recipiente está em execução ou parado."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Página",
+              "O que muda para um recipiente OCI"
+            ],
+            "rows": [
+              [
+                "Estado",
+                "Um interruptor <strong>Watchdog</strong> em Iniciar no arranque: o aplicativo é iniciado novamente quando pára por conta própria"
+              ],
+              [
+                "Aplicativo",
+                "O aplicativo é identificado a partir do registro, e as atualizações são monitoradas pela imagem"
+              ],
+              [
+                "Atualizações",
+                "A imagem é atualizada ou a aplicação modificada, com o mesmo fluxo que o menu OCI"
+              ],
+              [
+                "Montagens",
+                "Discos de contentores e pastas de máquinas, com a sua utilização"
+              ],
+              [
+                "Registros",
+                "Apenas para recipientes OCI: a saída do console da aplicação"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "title": "Aplicativo",
+      "intro": "A aba <appLink>App</appLink> oferece o aplicativo instalado como uma detecção, com o nome, logotipo, porta e esquema do registro. Registrando-o abre o editor com o método <strong>Imagem OCI (instalada por ProxMenux)</strong>, que não precisa de configuração.",
+      "blocks": [
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "boxes",
+                "title": "Aplicação",
+                "body": "A versão da aplicação dentro da imagem, lida a partir da imagem em si: o seu ambiente ou a sua etiqueta <code>org.opencontainers.image.version</code>. É informativo."
+              },
+              {
+                "icon": "archive",
+                "title": "Imagem",
+                "body": "A data de compilação e o digest da imagem instalada. A atualização é decidida aqui: o digest instalado é comparado com o que o registro publica hoje para a mesma tag."
+              }
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Quando o registro publica um novo digest, o cartão mostra <strong>Nova imagem</strong> com sua data e digest, mesmo que a versão do aplicativo dentro não mudou: uma reconstrução em uma base atualizada é uma atualização.",
+              "Quando os digests coincidem, o cartão mostra <strong>Versão</strong>.",
+              "O cartão faz links para o repositório da imagem: seu projeto GitHub, ou sua página Docker Hub para uma imagem oficial.",
+              "O link de acesso usa o endereço LAN do recipiente, também para o principal membro de um aplicativo multi-contentor, que tem um segundo endereço em sua rede privada.",
+              "O botão <strong>Atualizar dados</strong> lê novamente o registro de instalação e o registro de imagens. Não são oferecidas opções para procurar ou registrar outro aplicativo: o contêiner contém exatamente o aplicativo de seu registro."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-app-tab.png",
+            "alt": "Página de aplicação de um contentor OCI com a versão da aplicação, a imagem e o link do repositório",
+            "caption": "Página da aplicação de um recipiente instalado pelo OCI Manager Apps."
+          }
+        },
+        {
+          "p": "A verificação é executada uma vez por dia com as verificações de atualização do Monitor e o <strong>Atualizar dados</strong> a executa imediatamente. Uma nova imagem é enviada como uma notificação através dos canais configurados em <notificationsLink>Notificações</notificationsLink>. A atualização é aplicada na aba Atualizações."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Atualizações",
+      "intro": "Para um contêiner instalado pelo OCI Manager Apps a aba Atualizações mostra o aplicativo com sua imagem instalada e, quando o registro publica uma, a nova imagem, no mesmo formato que qualquer outra aplicação. Os atualizadores de pacotes e aplicativos de um LXC comum não aparecem.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Botão",
+              "O que abre"
+            ],
+            "rows": [
+              [
+                "Atualizar",
+                "A atualização de <lifecycleLink>Gerenciar aplicativos OCI instalados</lifecycleLink> para este contêiner, no terminal do Monitor. Pode ser executada com ou sem uma nova imagem; sem imagem nova, nada muda. Em um aplicativo com vários contêineres, atualiza todos os membros."
+              ],
+              [
+                "Modificar",
+                "O editor da aplicação (recursos, rede, caminhos e GPU). Em uma aplicação multi-contentor adiciona ou remove os caminhos e dispositivos extras do recipiente de aplicação e, em Immich, altera o que executa o reconhecimento."
+              ],
+              [
+                "Recuperar",
+                "Substitui a atualização quando uma operação no recipiente foi interrompida e abre sua recuperação."
+              ],
+              [
+                "Recuperar (contêiner restaurado)",
+                "Exibido para um contêiner restaurado de backup que não tem contrato neste host, em <strong>Aplicativo OCI restaurado</strong>. Abre a <lifecycleLink>recuperação</lifecycleLink> no terminal do Monitor; Atualizar e Modificar aparecem após o registro."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Alterações externas, diretórios host e aplicativos multi-contentores são tratados como no menu OCI. Em uma aplicação multi-contentor, os botões e as opções aparecem apenas no recipiente principal; os outros membros mostram sua imagem, uma nota de que eles são atualizados do recipiente principal e um botão que a abre. Quando o terminal fecha, a imagem, o registro e as montagens são lidos novamente."
+        },
+        {
+          "table": {
+            "headers": [
+              "Opção",
+              "Comportamento"
+            ],
+            "rows": [
+              [
+                "Manter o backup feito antes da atualização",
+                "Cada atualização faz backup do recipiente para restaurá-lo se a atualização falhar. Com esta opção, o mesmo backup é mantido no armazenamento escolhido e aparece entre os backups do CT; em Proxmox Backup Server um backup é escrito antes da atualização."
+              ],
+              [
+                "Atualizações agendadas",
+                "A imagem é atualizada no horário escolhido somente se o registro publicar uma nova, com a opção de esperar que ela tenha 1, 3, 7 ou 14 dias. Um contêiner com alterações feitas fora do ProxMenux é ignorado e reportado."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "Registros",
+      "intro": "A guia Logs aparece apenas para recipientes instalados pelo OCI Manager Apps, entre Mounts e Backups. Ele mostra a saída padrão e erro do processo principal da imagem, a mesma saída <code>docker logs</code> mostra para um recipiente Docker.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "A saída é mantida no host em <code>/var/log/proxmenux/oci/VMID.console.log</code> (modo 0600), desde o primeiro início e através de reinícios, para que possa ser lido com o recipiente parado.",
+              "O arquivo é rodado em 10 MB, mantendo três cópias comprimidas (<code>/etc/logrotate.d/proxmenux-oci</code>).",
+              "Cada início do recipiente é marcado na saída. A aba mostra a saída desde o último início por padrão; <strong>Histórico completo</strong> também mostra as anteriores.",
+              "Quando o aplicativo é removido, sua saída é removida com ele.",
+              "São exibidas as últimas 100, 500 ou 1000 linhas. Enquanto o contêiner está em execução, as novas linhas são acompanhadas ao vivo; rolar para cima pausa o acompanhamento e <strong>Acompanhar</strong> o retoma.",
+              "Um filtro mostra apenas as linhas que contêm um texto, e <strong>Baixar</strong> salva as linhas carregadas.",
+              "Os códigos de cores são removidos e uma linha que uma barra de progresso redesenha é mostrada em seu estado final.",
+              "A aba lê o arquivo a cada abertura, sem usar uma cópia em cache."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Credenciais de primeiro início",
+            "body": "Imagens que imprimem uma senha gerada em seu primeiro início deixam-na nesta saída, como <code>docker logs</code> faz. O instalador lê-o de lá para o mostrar em seu resumo."
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/monitor-logs-tab.png",
+            "alt": "Aba Logs com a saída do console de um contêiner OCI, seletor de linhas, filtro e botão de acompanhamento",
+            "caption": "Saída do console de um recipiente OCI."
+          }
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Consola Proxmox VE",
+      "blocks": [
+        {
+          "p": "Uma imagem OCI executa seu próprio processo como PID 1 e nenhum serviço de login, então o console padrão de um LXC abriria um terminal onde nada responde. Containers instalados pelo OCI Manager Apps são criados com <code>cmode: shell</code>: o console Proxmox VE abre uma shell com <code>lxc-attach</code>, o equivalente a <code>docker exec</code>, com a aplicação em execução intocada."
+        },
+        {
+          "list": {
+            "items": [
+              "O shell é o que <code>/etc/passwd</code> atribui ao root na imagem. Se root não tiver shell ou a imagem não incluir nenhum, o console padrão será mantido.",
+              "O shell é root dentro do recipiente, sem senha. Quem pode abri-lo é decidido pela permissão <code>VM.Console</code> de Proxmox VE.",
+              "O terminal do Monitor entra no recipiente com <code>pct enter</code>, que funciona da mesma forma."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mounts",
+      "title": "Montagens",
+      "blocks": [
+        {
+          "p": "A aba <mountsLink>Montagens</mountsLink> lista os discos do contêiner e seus diretórios do host. O uso de um disco em armazenamento de blocos, como LVM-thin, é lido do sistema de arquivos desse disco, montado apenas dentro do contêiner."
+        }
+      ]
+    }
+  ]
+}

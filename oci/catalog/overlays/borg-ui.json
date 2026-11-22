@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage Borg backups, schedules, archive browsing and restores from a web interface. This single-image profile disables optional Redis and persists application state, Borg cache and local backup storage."
+    },
+    "description": {
+      "en_US": "Borg UI is a web interface for BorgBackup that centralizes backup operations, archive management, and restores. It allows users to configure repositories across local, SSH, and SFTP destinations while monitoring storage and activity. Users can track live backup progress, automate schedules with pre- and post-backup hooks, and inspect archives to restore files without using the command line."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/karanhudia/borg-ui/main/screenshots/readme/dashboard-light.png",
+      "https://raw.githubusercontent.com/karanhudia/borg-ui/main/screenshots/readme/repositories-light.png",
+      "https://raw.githubusercontent.com/karanhudia/borg-ui/main/screenshots/readme/archive-browser-light.png",
+      "https://raw.githubusercontent.com/karanhudia/borg-ui/main/screenshots/readme/backup-progress-light.png"
+    ]
+  }
+}

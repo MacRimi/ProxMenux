@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted image-hosting service with authenticated uploads, image processing, public links, and local storage."
+    },
+    "description": {
+      "en_US": "ImageSilo is a self-hosted image hosting service with local file storage and SQLite. It provides authenticated uploads, stable public links, historical aliases, scoped API tokens, and image processing. Users can browse, search, filter, and manage image visibility through the built-in web interface."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/Willxup/imagesilo/HEAD/assets/screenshots/gallery-light.jpg",
+      "https://raw.githubusercontent.com/Willxup/imagesilo/HEAD/assets/screenshots/upload-light.jpg",
+      "https://raw.githubusercontent.com/Willxup/imagesilo/HEAD/assets/screenshots/login-light.jpg"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run a single-node S3-compatible object storage service with an embedded web console. It uses one image and a persistent data directory; no external database or Redis service is required."
+    },
+    "description": {
+      "en_US": "RustFS is a distributed object storage system offering S3 API and OpenStack Swift compatibility. It includes an embedded web console for managing buckets, files, and identity policies directly in a browser. The platform supports features such as object versioning, bitrot protection, server-side encryption, and lifecycle management."
+    }
+  }
+}

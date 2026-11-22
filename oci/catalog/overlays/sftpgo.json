@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage files and users through a web interface, and transfer files over SFTP. The first administrator is created through the setup page; the profile persists SFTPGo configuration and file storage."
+    },
+    "description": {
+      "en_US": "SFTPGo is an event-driven file transfer solution supporting SFTP, HTTP/S, FTP/S, and WebDAV protocols. It connects to multiple storage backends, including local filesystems, encrypted local storage, S3-compatible object storage, Google Cloud Storage, and Azure Blob Storage. Built-in web administration and web client interfaces allow users to manage permissions and transfer files internally or with external partners."
+    },
+    "screenshots": [
+      "https://sftpgo.com/assets/img/webclient.png",
+      "https://sftpgo.com/assets/img/webadmin.png"
+    ]
+  }
+}

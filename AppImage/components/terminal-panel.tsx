@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Copy,
   Clipboard,
+  RotateCw,
 } from "lucide-react"
 import { copyTerminalSelection, pasteFromClipboard } from "@/lib/terminal-clipboard"
 import {
@@ -97,6 +98,10 @@ const proxmoxCommands = [
   "scp file user@host:/path", "tail -f /var/log/syslog", "history", "clear",
 ]
 
+const ROTATE_HINT_KEY = "proxmenux-terminal-rotate-hint-dismissed"
+// Toolbar above the terminal and key bar below it, in CSS pixels.
+const LANDSCAPE_CHROME_PX = 120
+
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onClose }) => {
   const t = useT()
   const localizedCommands = proxmoxCommands.map((cmd, index) => ({
@@ -109,6 +114,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
   const [terminalHeight, setTerminalHeight] = useState<number>(500) // altura por defecto en px
+  const [viewportHeight, setViewportHeight] = useState(0)
+  const [portrait, setPortrait] = useState(false)
+  // ProxMenux menus need about 80 columns; a phone held upright gives ~50.
+  const [rotateHintHidden, setRotateHintHidden] = useState(true)
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  // A phone turned sideways uses the tablet layout with little height: keep the
+  // terminal, its toolbar and its key bar inside the screen.
+  const fittedHeight = isTablet && viewportHeight
+    ? Math.min(terminalHeight, Math.max(200, viewportHeight - LANDSCAPE_CHROME_PX))
+    : terminalHeight
+
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredCommands, setFilteredCommands] = useState<Array<{ cmd: string; desc: string }>>(localizedCommands)
@@ -129,6 +145,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
 
       setIsMobile(width < 768)
       setIsTablet(isTouchDevice && isTabletSize)
+      setViewportHeight(window.innerHeight)
+      setPortrait(window.innerHeight > width)
     }
 
     updateDeviceType()
@@ -138,6 +156,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
     const savedHeight = localStorage.getItem("terminalHeight")
     if (savedHeight) {
       setTerminalHeight(Number.parseInt(savedHeight, 10))
+    }
+    try {
+      setRotateHintHidden(localStorage.getItem(ROTATE_HINT_KEY) === "1")
+    } catch {
+      setRotateHintHidden(false)
     }
 
     return () => {
@@ -417,12 +440,25 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         const container = containerRefs.current[terminal.id]
         if (!terminal.term && container) {
           initializeTerminal(terminal, container)
+        } else if (terminal.term?.element && container && terminal.term.element.parentElement !== container) {
+          // Turning the device switches between the phone and tablet layouts,
+          // which render new containers: move the open terminal into its new
+          // place instead of leaving it in the one React removed.
+          container.appendChild(terminal.term.element)
+          try {
+            terminal.fitAddon?.fit()
+            if (terminal.ws?.readyState === WebSocket.OPEN) {
+              terminal.ws.send(JSON.stringify({ type: "resize", cols: terminal.term.cols, rows: terminal.term.rows }))
+            }
+          } catch (err) {
+            console.warn("[Terminal] resize after layout change failed:", err)
+          }
         }
       })
     }, 50)
     
     return () => clearTimeout(timer)
-  }, [terminals, isMobile])
+  }, [terminals, isMobile, isTablet])
 
   useEffect(() => {
     if (window.innerWidth < 640) return
@@ -449,7 +485,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ websocketUrl, onCl
         }
       }
     })
-  }, [terminalHeight, layout, terminals, isMobile])
+  }, [terminalHeight, fittedHeight, layout, terminals, isMobile])
+
+  useEffect(() => {
+    // Turned sideways, the dashboard header fills most of a phone screen:
+    // scroll so the whole terminal is in view.
+    if (isTablet && !portrait && viewportHeight && viewportHeight < terminalHeight + LANDSCAPE_CHROME_PX) {
+      panelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" })
+    }
+  }, [isTablet, portrait])
 
   const initializeTerminal = async (terminal: TerminalInstance, container: HTMLDivElement) => {
     const [TerminalClass, FitAddonClass] = await Promise.all([
@@ -766,8 +810,17 @@ const handleClose = () => {
 
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
 
+  const dismissRotateHint = () => {
+    setRotateHintHidden(true)
+    try {
+      localStorage.setItem(ROTATE_HINT_KEY, "1")
+    } catch {
+      // Best effort: the hint shows again on the next visit.
+    }
+  }
+
   return (
-    <div className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
+    <div ref={panelRef} className="flex flex-col h-full bg-zinc-950 rounded-md overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
         <div className="flex items-center gap-3">
           <Activity className="h-5 w-5 text-blue-500" />
@@ -843,13 +896,30 @@ const handleClose = () => {
         </div>
       </div>
 
+      {isMobile && portrait && !rotateHintHidden && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 text-xs text-zinc-400">
+          <RotateCw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{t("terminal.rotateHint")}</span>
+          <button
+            type="button"
+            onClick={dismissRotateHint}
+            aria-label={t("actions.close")}
+            className="-my-1.5 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-zinc-800 touch-manipulation"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       <div
         data-terminal-container
         ref={(el) => {
           containerRefs.current["main"] = el
         }}
-        className={`overflow-hidden flex flex-col ${isMobile ? "flex-1 h-[60vh]" : "overflow-hidden"} w-full max-w-full`}
-        style={!isMobile || isTablet ? { height: `${terminalHeight}px`, flexShrink: 0 } : undefined}
+        // In a column flex parent, flex-1 (basis 0) would override the height
+        // and the terminal would shrink to xterm's default 24 rows.
+        className={`overflow-hidden flex flex-col ${isMobile ? `${portrait && !rotateHintHidden ? "h-[calc(60dvh-36px)]" : "h-[60dvh]"} shrink-0` : "overflow-hidden"} w-full max-w-full`}
+        style={!isMobile || isTablet ? { height: `${fittedHeight}px`, flexShrink: 0 } : undefined}
       >
         {isMobile ? (
           <Tabs value={activeTerminalId} onValueChange={setActiveTerminalId} className="h-full flex flex-col">
@@ -876,7 +946,8 @@ const handleClose = () => {
                 key={terminal.id}
                 value={terminal.id}
                 forceMount
-                className={`flex-1 h-full mt-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
+                // Below the tab list: h-full would take the whole container and push the tabs out.
+                className={`flex-1 min-h-0 mt-0 ${activeTerminalId === terminal.id ? "block" : "hidden"}`}
               >
                 <div
                   ref={(el) => (containerRefs.current[terminal.id] = el)}

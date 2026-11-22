@@ -24,7 +24,7 @@ jobs:
           python-version: 3.11
 
       - name: 📦 Install Python dependencies
-        run: pip install requests
+        run: pip install requests Pillow
 
       - name: ⚙️ Generate json/helpers_cache.json
         run: python .github/scripts/generate_helpers_cache.py

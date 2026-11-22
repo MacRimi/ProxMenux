@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import type React from "react"
-import { getMessages, getTranslations, setRequestLocale } from "next-intl/server"
+import { getMessages, getTranslations } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
@@ -23,7 +23,7 @@ type ProblemRow = { problem: string; resolution: string }
 function Figure({ src, alt, caption }: { src: string; alt: string; caption: string }) {
   return (
     <figure className="my-6">
-      <img src={src} alt={alt} className="w-full rounded-lg border border-gray-200 shadow-sm" />
+      <img src={src} alt={alt} className="w-full rounded-lg border border-gray-200 shadow-xs" />
       <figcaption className="mt-2 text-center text-sm italic text-gray-500">{caption}</figcaption>
     </figure>
   )
@@ -35,7 +35,6 @@ export default async function AppTabPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.dashboard.vmsLxcsApp" })
   const messages = (await getMessages({ locale })) as unknown as {
     docs: { monitor: { dashboard: { vmsLxcsApp: {

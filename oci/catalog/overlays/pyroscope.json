@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run the Pyroscope server and its UI for receiving and exploring application profiles."
+    },
+    "description": {
+      "en_US": "Grafana Pyroscope is an open-source continuous profiling platform designed to surface performance insights from your applications. It stores, processes, and serves profiling data to help identify and analyze CPU, memory, and I/O usage. Users can inspect flame graphs and drill down into specific services to perform root cause analysis and eliminate performance bottlenecks."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/67691443-6450-45b9-8064-f41056c88ade",
+      "https://github.com/user-attachments/assets/2faeb985-f2b6-4311-ad29-e318e850c025"
+    ]
+  }
+}

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power, Moon, EyeOff } from "lucide-react"
+import { HardDrive, Database, AlertTriangle, CheckCircle2, XCircle, Square, Thermometer, Archive, Info, Clock, Usb, Server, Activity, FileText, Play, Loader2, Download, Plus, Trash2, Settings, Power, EyeOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { OptionSelect } from "./option-select"
 import { fetchApi } from "../lib/api-config"
 import { formatStorage as sharedFormatStorage } from "../lib/utils"
 import { DiskTemperatureDetailModal } from "./disk-temperature-detail-modal"
@@ -14,6 +15,8 @@ import { DiskTemperatureCard } from "./disk-temperature-card"
 import { getDiskType as resolveDiskType } from "../lib/disk-type"
 import { APP_VERSION } from "../lib/version"
 import { useT } from "@/lib/i18n/provider"
+import { useGroupDisksByController } from "../lib/storage-display"
+import { useAccess } from "../lib/access"
 import {
   useDiskTempThresholds,
   loadDiskTempThresholds,
@@ -70,7 +73,6 @@ interface DiskInfo {
   // badge AND to suppress the (stale) temperature value, so the
   // operator understands the graph is frozen on purpose — issue #232.
   standby?: boolean
-  idle?: boolean
   excluded?: boolean
   health: string
   power_on_hours?: number
@@ -102,6 +104,7 @@ interface DiskInfo {
   }
   observations_count?: number
   connection_type?: 'usb' | 'sata' | 'nvme' | 'sas' | 'internal' | 'unknown'
+  controller_slot?: string | null // PCI slot of the storage controller, key into StorageData.controllers
   removable?: boolean
   is_system_disk?: boolean
   system_usage?: string[]
@@ -121,12 +124,65 @@ interface DiskObservation {
   model: string
 }
 
+// Pool layout from `zpool status -j` (OpenZFS 2.3+). Only present when
+// details_available is true; older ZFS gets the basic fields above.
+interface ZFSDevice {
+  path: string
+  disk: string | null // base block device (e.g. "sdb"), null for file vdevs
+  state: string // ONLINE | DEGRADED | FAULTED | OFFLINE | UNAVAIL | REMOVED | AVAIL | INUSE
+  read_errors: number
+  write_errors: number
+  checksum_errors: number
+  slow_ios: number
+  via: string | null // "spare-0" / "replacing-0" while a device is being swapped
+}
+
+interface ZFSVdev {
+  name: string
+  type: string // mirror | raidz | draid | disk
+  parity: number | null
+  class: "normal" | "special" | "dedup" | "log" | "cache" | "spare"
+  state: string
+  read_errors: number
+  write_errors: number
+  checksum_errors: number
+  devices: ZFSDevice[]
+}
+
+interface ZFSScan {
+  function: "SCRUB" | "RESILVER" | string
+  state: "SCANNING" | "FINISHED" | "CANCELED" | string
+  start_time: number | null
+  end_time: number | null
+  errors: number
+  repaired_bytes: number
+  percent: number | null // only while SCANNING
+}
+
 interface ZFSPool {
   name: string
   size: string
   allocated: string
   free: string
   health: string
+  fragmentation?: number | null
+  capacity?: number | null
+  dedup_ratio?: number | null
+  details_available?: boolean
+  status?: string | null
+  action?: string | null
+  error_count?: number
+  scan?: ZFSScan | null
+  vdevs?: ZFSVdev[]
+}
+
+interface StorageController {
+  slot: string
+  class: string
+  vendor: string
+  device: string
+  sdevice?: string | null
+  driver?: string | null
 }
 
 interface StorageData {
@@ -134,6 +190,7 @@ interface StorageData {
   used: number
   available: number
   disks: DiskInfo[]
+  controllers?: Record<string, StorageController>
   zfs_pools: ZFSPool[]
   disk_count: number
   healthy_disks: number
@@ -231,7 +288,44 @@ function translateAtaError(raw: string, t: (key: string) => string): string | nu
   return out.length ? out.join('; ') : null
 }
 
-export function StorageOverview() {
+// Bucket disks by controller PCI slot, ordered by slot so groups follow
+// the bus layout. Disks with no resolvable controller go last.
+function groupDisksBySlot(disks: DiskInfo[]): [string | null, DiskInfo[]][] {
+  const groups = new Map<string | null, DiskInfo[]>()
+  for (const disk of disks) {
+    const slot = disk.controller_slot ?? null
+    groups.set(slot, [...(groups.get(slot) ?? []), disk])
+  }
+  return [...groups.entries()].sort(([a], [b]) => {
+    if (a === null) return 1
+    if (b === null) return -1
+    return a.localeCompare(b)
+  })
+}
+
+// `disksOnly` is the PBS Monitor: its disks and pools, without Proxmox VE storages.
+// Same ring as the disk wear gauge, with a faint track so 0% still reads.
+// Used for the fragmentation of a ZFS pool.
+function PercentRing({ value, color, label }: { value: number; color: string; label: string }) {
+  const pct = Math.max(0, Math.min(100, value))
+  return (
+    <svg width="88" height="88" viewBox="0 0 88 88" className="flex-shrink-0">
+      <circle cx="44" cy="44" r="35" fill="none" stroke={color} strokeOpacity="0.15" strokeWidth="6" />
+      <circle cx="44" cy="44" r="35" fill="none" stroke={color} strokeWidth="6"
+        strokeDasharray={`${pct * 2.199} 219.9`}
+        strokeLinecap="round" transform="rotate(-90 44 44)" />
+      <text x="44" y="40" textAnchor="middle" fill={color} fontSize="20" fontWeight="700">{pct}%</text>
+      <text x="44" y="56" textAnchor="middle" fill="currentColor" fontSize="12" className="text-muted-foreground">{label}</text>
+    </svg>
+  )
+}
+
+// OpenZFS reports a pool without its newer features enabled, which needs no action.
+const zfsStatusIsInformational = (status?: string | null) => /features are not enabled/i.test(status ?? "")
+
+const zfsFragmentationColor = (pct: number) => (pct > 80 ? "#ef4444" : pct > 50 ? "#eab308" : "#06b6d4")
+
+export function StorageOverview({ disksOnly = false }: { disksOnly?: boolean } = {}) {
   const t = useT()
 
   // User-configurable disk temperature thresholds (Settings → Health
@@ -239,6 +333,7 @@ export function StorageOverview() {
   // sensible defaults from `lib/health-thresholds`, so first paint
   // never blocks on the network.
   const dtThresholds = useDiskTempThresholds()
+  const [groupDisksByController] = useGroupDisksByController()
 
   const [storageData, setStorageData] = useState<StorageData | null>(null)
   const [proxmoxStorage, setProxmoxStorage] = useState<ProxmoxStorageData | null>(null)
@@ -249,6 +344,7 @@ export function StorageOverview() {
   const [mountDetail, setMountDetail] = useState<RemoteMount | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDisk, setSelectedDisk] = useState<DiskInfo | null>(null)
+  const [selectedPool, setSelectedPool] = useState<ZFSPool | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [diskObservations, setDiskObservations] = useState<DiskObservation[]>([])
   const [loadingObservations, setLoadingObservations] = useState(false)
@@ -258,6 +354,12 @@ export function StorageOverview() {
   // 85 vh capped by the visual viewport otherwise). Keeps every
   // detail modal at a matching size across the app.
   const [isStandalone, setIsStandalone] = useState(false)
+  // Disk, ZFS pool and remote mount details share one size.
+  const detailDialogClass = `max-w-4xl flex flex-col p-0 overflow-hidden ${
+    isStandalone
+      ? "h-[95vh] sm:h-[90vh]"
+      : "h-[85vh] sm:h-[85vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)]"
+  }`
 
   useEffect(() => {
     const checkStandalone = () => {
@@ -284,7 +386,7 @@ export function StorageOverview() {
     try {
       const [data, proxmoxData, mountsData] = await Promise.all([
         fetchApi<StorageData>("/api/storage"),
-        fetchApi<ProxmoxStorageData>("/api/proxmox-storage"),
+        disksOnly ? Promise.resolve(null) : fetchApi<ProxmoxStorageData>("/api/proxmox-storage"),
         // Sprint 13 — host-level NFS/CIFS/SMB mounts. Wrapped in catch
         // so a failure here doesn't blank the whole storage tab.
         fetchApi<RemoteMountsData>("/api/mounts").catch(() => ({ mounts: [], available: false } as RemoteMountsData)),
@@ -396,6 +498,57 @@ export function StorageOverview() {
     }
   }
 
+  // ZFS device/vdev states are shown verbatim, as `zpool status` prints them.
+  const getZfsStateBadge = (state: string) => {
+    const style =
+      state === "ONLINE"
+        ? "bg-green-500/10 text-green-500 border-green-500/20"
+        : state === "AVAIL" || state === "INUSE"
+          ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+          : state === "DEGRADED"
+            ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+            : "bg-red-500/10 text-red-500 border-red-500/20"
+    return <Badge className={`font-mono text-xs ${style}`}>{state}</Badge>
+  }
+
+  const getZfsVdevLabel = (vdev: ZFSVdev) => {
+    if (vdev.type === "mirror") return t("storage.zfs.mirror")
+    if (vdev.type === "raidz") return t("storage.zfs.raidz", { parity: vdev.parity ?? 1 })
+    if (vdev.type === "draid") return t("storage.zfs.draid", { parity: vdev.parity ?? 1 })
+    return t("storage.zfs.singleDisk")
+  }
+
+  // One-line pool shape for the card, e.g. "RAIDZ2", "2 x Mirror", "Stripe".
+  const getZfsLayoutSummary = (pool: ZFSPool) => {
+    const data = (pool.vdevs ?? []).filter((v) => v.class === "normal")
+    if (data.length === 0) return null
+    if (data.every((v) => v.type === "disk")) {
+      return data.length === 1 ? t("storage.zfs.singleDisk") : t("storage.zfs.stripe")
+    }
+    const labels = [...new Set(data.map(getZfsVdevLabel))]
+    if (labels.length === 1 && data.length > 1) return `${data.length} x ${labels[0]}`
+    return labels.join(" + ")
+  }
+
+  const formatZfsTime = (epoch: number | null | undefined) =>
+    epoch ? new Date(epoch * 1000).toLocaleString() : t("common.notAvailable")
+
+  const getZfsScanSummary = (scan: ZFSScan | null | undefined) => {
+    if (!scan) return t("storage.zfs.neverScrubbed")
+    const kind = scan.function === "RESILVER" ? t("storage.zfs.resilver") : t("storage.zfs.scrub")
+    if (scan.state === "SCANNING") {
+      return t("storage.zfs.scanRunning", { kind, percent: scan.percent ?? 0 })
+    }
+    if (scan.state === "CANCELED") return t("storage.zfs.scanCanceled", { kind })
+    return t("storage.zfs.scanFinished", {
+      kind,
+      date: scan.end_time ? new Date(scan.end_time * 1000).toLocaleDateString() : "",
+    })
+  }
+
+  const zfsDeviceErrors = (d: { read_errors: number; write_errors: number; checksum_errors: number }) =>
+    d.read_errors + d.write_errors + d.checksum_errors
+
   // Tiny coloured dot that prefixes status / counter values. Adds
   // accessibility-friendly redundancy (colour + position) to fields
   // that today rely on colour alone, so an "all OK" disk reads as
@@ -436,7 +589,7 @@ export function StorageOverview() {
   // in 4 different disk-list views (system / data / pool / other) and we
   // want them all to behave identically — issue #232 fix.
   // Why a disk shows no live temperature, when it doesn't: excluded by the
-  // user, parked, or idle and deliberately not read. Shared by every view
+  // user, or parked. Shared by every view
   // that paints a disk's temperature, so they cannot disagree.
   const renderNoReadingBadge = (disk: DiskInfo) => {
     if (disk.excluded) {
@@ -458,17 +611,6 @@ export function StorageOverview() {
         >
           <Power className="h-3 w-3" />
           {t("storage.standby")}
-        </Badge>
-      )
-    }
-    if (disk.idle) {
-      return (
-        <Badge
-          className="bg-muted text-muted-foreground border-border gap-1"
-          title={t("storage.idleTitle")}
-        >
-          <Moon className="h-3 w-3" />
-          {t("storage.idle")}
         </Badge>
       )
     }
@@ -502,16 +644,8 @@ export function StorageOverview() {
   const renderDiskCardV2 = (disk: DiskInfo) => {
     const type = getDiskTypeBadge(disk.name, disk.rotation_rate)
     // Pick the most relevant wear metric for the device class.
-    // NVMe uses `percentage_used` (0 = fresh, 100 = TBW spent).
-    // SSD may expose `media_wearout_indicator` (decreasing 100→0) or
-    // `ssd_life_left` (decreasing 100→0). Normalise both to a
-    // "percentage spent" so the bar always fills LEFT to RIGHT as the
-    // drive ages — visually consistent across vendors.
-    let wearPct: number | null = null
-    if (typeof disk.percentage_used === "number") wearPct = disk.percentage_used
-    else if (typeof disk.ssd_life_left === "number") wearPct = 100 - disk.ssd_life_left
-    else if (typeof disk.media_wearout_indicator === "number")
-      wearPct = 100 - disk.media_wearout_indicator
+    // Wear values are percentages used, while SSD life is percentage remaining.
+    const wearPct = getWearIndicator(disk)?.value ?? null
     // Wear bar always uses the same blue as the modal's wear visual,
     // even when the wear is high — the colour is the SECTION colour,
     // not a severity signal. The percentage value itself (and the
@@ -664,7 +798,7 @@ export function StorageOverview() {
             </div>
           )}
           {/* Reallocated only meaningful on rotating disks. */}
-          {disk.reallocated_sectors !== undefined && (disk.rotation_rate ?? 0) > 0 && (
+          {disk.reallocated_sectors !== undefined && resolveDiskType(disk.name, disk.rotation_rate) === "HDD" && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 {t("storage.reallocatedShort")}
@@ -720,12 +854,7 @@ export function StorageOverview() {
     // Resolve disk class → threshold pair from the user-configurable
     // backend (single source of truth). The semantics: temp BELOW warn
     // is green, between warn and hot is amber, hot or above is red.
-    let cls: keyof DiskTempMap = "HDD"
-    if (diskName?.startsWith("nvme")) {
-      cls = "NVMe"
-    } else if (!rotationRate || rotationRate === 0) {
-      cls = "SSD"
-    }
+    const cls: keyof DiskTempMap = resolveDiskType(diskName ?? "", rotationRate)
     const t = dtThresholds[cls]
     if (temp >= t.hot) return "text-red-500"
     if (temp >= t.warn) return "text-yellow-500"
@@ -756,9 +885,9 @@ export function StorageOverview() {
     return t("storage.duration.daysShort", { days: totalDays })
   }
 
-  const formatRotationRate = (rpm: number | undefined) => {
-    if (!rpm || rpm === 0) return "SSD"
-    return `${rpm.toLocaleString()} RPM`
+  const formatRotationRate = (diskName: string, rpm: number | undefined) => {
+    if (getDiskType(diskName, rpm) !== "HDD") return "SSD"
+    return rpm && rpm > 0 ? `${rpm.toLocaleString()} RPM` : t("common.notAvailable")
   }
 
   // Thin wrapper over the shared classifier so the rest of the file
@@ -905,7 +1034,8 @@ export function StorageOverview() {
   const getWearIndicator = (disk: DiskInfo): { value: number; label: string } | null => {
     const diskType = getDiskType(disk.name, disk.rotation_rate)
 
-    if (diskType === "NVMe" && disk.percentage_used !== undefined && disk.percentage_used !== null) {
+    // An NVMe drive behind a USB bridge is named sdX but still reports its NVMe wear.
+    if (typeof disk.percentage_used === "number") {
       return { value: disk.percentage_used, label: t("storage.wear.percentageUsed") }
     }
 
@@ -975,7 +1105,7 @@ export function StorageOverview() {
 
     storageData.disks.forEach((disk) => {
       // Match disk rows: policy-suppressed cached readings are not live temperatures.
-      if (disk.standby || disk.idle || disk.excluded || typeof disk.temperature !== "number" ||
+      if (disk.standby || disk.excluded || typeof disk.temperature !== "number" ||
           !Number.isFinite(disk.temperature) || disk.temperature <= 0) {
         unavailable++
         return
@@ -1134,7 +1264,7 @@ export function StorageOverview() {
   return (
     <div className="space-y-6">
       {/* Storage Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
+      {!disksOnly && <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-6">
         {/* ── Total Storage (preview restyle: headline + stacked bar Local·Remote·Free) ── */}
         {(() => {
           const totalGB = (totalLocalCapacity || 0) + (totalRemoteCapacity || 0)
@@ -1355,9 +1485,9 @@ export function StorageOverview() {
             </Card>
           )
         })()}
-      </div>
+      </div>}
 
-      {proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
+      {!disksOnly && proxmoxStorage && proxmoxStorage.storage && proxmoxStorage.storage.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1530,6 +1660,11 @@ export function StorageOverview() {
                 .map((mount) => {
                   const isStale = mount.status === "stale"
                   const isReadonly = mount.status === "readonly"
+                  const mountStatusClass = isStale
+                    ? "bg-red-500/10 text-red-500 border-red-500/20"
+                    : isReadonly
+                      ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                      : "bg-green-500/10 text-green-500 border-green-500/20"
                   const cardClasses = isStale
                     ? "border-red-500/50 bg-red-500/5 sm:hover:bg-red-500/10"
                     : isReadonly
@@ -1542,13 +1677,17 @@ export function StorageOverview() {
                       className={`cursor-pointer border rounded-lg p-3 transition-colors ${cardClasses}`}
                     >
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                              isStale ? "bg-red-500" : isReadonly ? "bg-amber-500" : "bg-green-500"
-                            }`}
-                          />
-                          <h3 className="font-mono text-sm truncate">{mount.target}</h3>
+                        {/* On a phone the path takes a line of its own, whole,
+                            and the badges follow below it. */}
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 basis-full sm:basis-auto">
+                            <div
+                              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                isStale ? "bg-red-500" : isReadonly ? "bg-amber-500" : "bg-green-500"
+                              }`}
+                            />
+                            <h3 className="font-mono text-sm break-all sm:truncate">{mount.target}</h3>
+                          </div>
                           <Badge className={getStorageTypeBadge(mount.fstype)}>{mount.fstype}</Badge>
                           {/* Sprint 13.18: makes it explicit that the
                               row corresponds to an entry already in the
@@ -1556,30 +1695,32 @@ export function StorageOverview() {
                               keeps it visually consistent with the
                               adjacent type badge. */}
                           {mount.proxmox_managed && (
-                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 whitespace-nowrap">
                               {t("storage.managedByProxmox")}
                             </Badge>
                           )}
                           {mount.readonly && (
-                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                            <Badge
+                              className={
+                                isReadonly
+                                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                  : "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                              }
+                            >
                               {t("storage.readOnlyShort")}
                             </Badge>
                           )}
+                          {/* The state goes with the other badges on a phone. */}
+                          <Badge className={`sm:hidden ${mountStatusClass}`}>
+                            {remoteMountStatusLabel(mount.status)}
+                          </Badge>
                         </div>
-                        <Badge
-                          className={
-                            isStale
-                              ? "bg-red-500/10 text-red-500 border-red-500/20"
-                              : isReadonly
-                                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                : "bg-green-500/10 text-green-500 border-green-500/20"
-                          }
-                        >
+                        <Badge className={`hidden sm:inline-flex ${mountStatusClass}`}>
                           {remoteMountStatusLabel(mount.status)}
                         </Badge>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-2 truncate">
-                        <span className="font-medium text-foreground">{t("storage.source")}:</span>{" "}
+                      <div className="text-xs text-muted-foreground mt-2 break-all sm:truncate">
+                        <span className="font-medium text-foreground">{t("storage.source")}</span>{" "}
                         <span className="font-mono">{mount.source || "—"}</span>
                       </div>
                       {isStale && mount.error && (
@@ -1610,7 +1751,7 @@ export function StorageOverview() {
           overlay with text-xs/text-[10px] all over and looked
           shrunken next to the rest of the modals. */}
       <Dialog open={!!mountDetail} onOpenChange={(open) => { if (!open) setMountDetail(null) }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className={detailDialogClass}>
           {mountDetail && (() => {
             const m = mountDetail
             const isStale = m.status === "stale"
@@ -1657,7 +1798,7 @@ export function StorageOverview() {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="px-6 pb-6 overflow-auto space-y-5">
+                <div className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto space-y-5">
                   {/* Type + tags */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className={getStorageTypeBadge(m.fstype)}>{m.fstype}</Badge>
@@ -1768,14 +1909,58 @@ export function StorageOverview() {
           <CardContent>
             <div className="space-y-4">
               {storageData.zfs_pools.map((pool) => (
-                <div key={pool.name} className="border rounded-lg p-4">
+                <div
+                  key={pool.name}
+                  className="border border-white/10 rounded-lg p-4 cursor-pointer bg-card hover:bg-white/5 transition-colors"
+                  onClick={() => setSelectedPool(pool)}
+                >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold text-lg">{pool.name}</h3>
                       {getHealthBadge(pool.health)}
                     </div>
-                    {getHealthIcon(pool.health)}
+                    <div className="flex items-center gap-2">
+                      {pool.capacity != null && <span className="text-sm font-medium">{pool.capacity}%</span>}
+                      {getHealthIcon(pool.health)}
+                    </div>
                   </div>
+                  {pool.details_available && (() => {
+                    const dataDevices = (pool.vdevs ?? [])
+                      .filter((v) => v.class === "normal")
+                      .reduce((n, v) => n + v.devices.length, 0)
+                    const problems = (pool.vdevs ?? []).some(
+                      (v) => v.devices.some((d) => zfsDeviceErrors(d) > 0) || zfsDeviceErrors(v) > 0,
+                    ) || (pool.error_count ?? 0) > 0
+                    return (
+                      <p className="text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-2">
+                        <span className="font-medium text-foreground">{getZfsLayoutSummary(pool)}</span>
+                        <span>|</span>
+                        <span>
+                          {t(dataDevices === 1 ? "storage.zfs.diskCountOne" : "storage.zfs.diskCountMany", { count: dataDevices })}
+                        </span>
+                        <span>|</span>
+                        <span>{getZfsScanSummary(pool.scan)}</span>
+                        {problems && (
+                          <span className="flex items-center gap-1 text-red-500">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            {t("storage.zfs.errorsReported")}
+                          </span>
+                        )}
+                      </p>
+                    )
+                  })()}
+                  {pool.capacity != null && (
+                    <Progress
+                      value={pool.capacity}
+                      className={`h-2 mb-2 ${
+                        pool.capacity > 90
+                          ? "[&>div]:bg-red-500"
+                          : pool.capacity > 75
+                            ? "[&>div]:bg-yellow-500"
+                            : "[&>div]:bg-blue-500"
+                      }`}
+                    />
+                  )}
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-sm text-muted-foreground">{t("storage.size")}</p>
@@ -1797,6 +1982,221 @@ export function StorageOverview() {
         </Card>
       )}
 
+      {/* ZFS Pool Details Dialog: re-resolved from storageData so it follows
+          the background refresh while open (e.g. resilver progress). */}
+      <Dialog open={selectedPool !== null} onOpenChange={(open) => { if (!open) setSelectedPool(null) }}>
+        <DialogContent className={detailDialogClass}>
+          {selectedPool && (() => {
+            const pool = storageData.zfs_pools.find((p) => p.name === selectedPool.name) ?? selectedPool
+            const classOrder: ZFSVdev["class"][] = ["normal", "special", "dedup", "log", "cache", "spare"]
+            const vdevs = [...(pool.vdevs ?? [])].sort(
+              (a, b) => classOrder.indexOf(a.class) - classOrder.indexOf(b.class),
+            )
+            const showSlowIos = vdevs.some((v) => v.devices.some((d) => d.slow_ios > 0))
+            return (
+              <>
+                <DialogHeader className="px-6 pt-6 pb-2">
+                  <DialogTitle className="flex items-center gap-3">
+                    <Database className="h-5 w-5" />
+                    {pool.name}
+                    {getHealthBadge(pool.health)}
+                  </DialogTitle>
+                  <DialogDescription>{t("storage.zfs.poolDetails")}</DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto flex flex-col gap-5">
+                  {(pool.status || pool.action) && (
+                    <div className={`rounded-lg border p-3 text-sm space-y-1 ${
+                      zfsStatusIsInformational(pool.status)
+                        ? "border-blue-500/30 bg-blue-500/10"
+                        : "border-yellow-500/30 bg-yellow-500/10"
+                    }`}>
+                      {pool.status && <p><span className="font-medium">{t("storage.zfs.status")}:</span> {pool.status}</p>}
+                      {pool.action && <p><span className="font-medium">{t("storage.zfs.action")}:</span> {pool.action}</p>}
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-lg border border-border p-4 flex flex-col justify-center gap-3">
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{t("storage.free")}</p>
+                          <p className="text-lg font-semibold">{pool.free}</p>
+                        </div>
+                        {pool.capacity != null && <span className="text-sm font-medium">{pool.capacity}%</span>}
+                      </div>
+                      {pool.capacity != null && (
+                        <Progress
+                          value={pool.capacity}
+                          className={`h-2 ${
+                            pool.capacity > 90
+                              ? "[&>div]:bg-red-500"
+                              : pool.capacity > 75
+                                ? "[&>div]:bg-yellow-500"
+                                : "[&>div]:bg-blue-500"
+                          }`}
+                        />
+                      )}
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">{t("storage.allocated")}</p>
+                          <p className="font-medium">{pool.allocated}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-muted-foreground">{t("storage.zfs.totalSize")}</p>
+                          <p className="font-medium">{pool.size}</p>
+                        </div>
+                      </div>
+                    </div>
+                    {(pool.fragmentation != null || pool.dedup_ratio != null) && (
+                      <div className="rounded-lg border border-border p-4 flex items-center gap-5">
+                        {pool.fragmentation != null && (
+                          <PercentRing value={pool.fragmentation} color={zfsFragmentationColor(pool.fragmentation)} label={t("storage.zfs.fragShort")} />
+                        )}
+                        <div className="min-w-0 flex-1 space-y-3 text-sm">
+                          {pool.fragmentation != null && (
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.fragmentation")}</p>
+                              <p className="font-medium">{pool.fragmentation}%</p>
+                            </div>
+                          )}
+                          {pool.dedup_ratio != null && (
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.dedupRatio")}</p>
+                              <p className="font-medium">{pool.dedup_ratio.toFixed(2)}x</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {!pool.details_available ? (
+                    <p className="text-sm text-muted-foreground italic">{t("storage.zfs.detailsUnavailable")}</p>
+                  ) : (
+                    <>
+                      {/* Scrub / resilver */}
+                      <div className="rounded-lg border border-border p-4 space-y-2">
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          {t("storage.zfs.scanTitle")}
+                        </h3>
+                        <p className="text-sm">{getZfsScanSummary(pool.scan)}</p>
+                        {pool.scan?.state === "SCANNING" && <Progress value={pool.scan.percent ?? 0} className="h-2" />}
+                        {pool.scan && (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.started")}</p>
+                              <p className="font-medium">{formatZfsTime(pool.scan.start_time)}</p>
+                            </div>
+                            {pool.scan.state !== "SCANNING" && (
+                              <div>
+                                <p className="text-muted-foreground">{t("storage.zfs.ended")}</p>
+                                <p className="font-medium">{formatZfsTime(pool.scan.end_time)}</p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.repaired")}</p>
+                              <p className="font-medium">{formatStorage(pool.scan.repaired_bytes / 1024 ** 3)}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">{t("storage.zfs.scanErrors")}</p>
+                              <p className={`font-medium ${pool.scan.errors > 0 ? "text-red-500" : ""}`}>{pool.scan.errors}</p>
+                            </div>
+                          </div>
+                        )}
+                        <p className={`text-sm ${(pool.error_count ?? 0) > 0 ? "text-red-500" : "text-green-500"}`}>
+                          {(pool.error_count ?? 0) > 0
+                            ? t("storage.zfs.dataErrors", { count: pool.error_count ?? 0 })
+                            : t("storage.zfs.noDataErrors")}
+                        </p>
+                      </div>
+
+                      {/* Layout: one block per top-level vdev; the last one
+                          reaches the bottom of the dialog. */}
+                      <div className="flex-1 flex flex-col gap-3">
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          {t("storage.zfs.layout")}
+                        </h3>
+                        {vdevs.map((vdev, i) => (
+                          <div key={`${vdev.class}-${vdev.name}-${i}`} className={`border rounded-lg ${i === vdevs.length - 1 ? "flex-1" : ""}`}>
+                            <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b bg-muted/30">
+                              <Badge variant="outline" className="text-xs">{t(`storage.zfs.classes.${vdev.class}`)}</Badge>
+                              <span className="text-sm font-medium">{getZfsVdevLabel(vdev)}</span>
+                              {vdev.type !== "disk" && (
+                                <span className="font-mono text-xs text-muted-foreground">{vdev.name}</span>
+                              )}
+                              <span className="ml-auto">{getZfsStateBadge(vdev.state)}</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-xs text-muted-foreground">
+                                    <th className="text-left font-normal px-3 py-1.5">{t("storage.zfs.device")}</th>
+                                    <th className="text-left font-normal px-2 py-1.5">{t("storage.zfs.disk")}</th>
+                                    <th className="text-left font-normal px-2 py-1.5">{t("storage.zfs.state")}</th>
+                                    <th className="text-right font-normal px-2 py-1.5" title={t("storage.zfs.readErrors")}>{t("storage.zfs.readShort")}</th>
+                                    <th className="text-right font-normal px-2 py-1.5" title={t("storage.zfs.writeErrors")}>{t("storage.zfs.writeShort")}</th>
+                                    <th className="text-right font-normal px-2 py-1.5" title={t("storage.zfs.checksumErrors")}>{t("storage.zfs.checksumShort")}</th>
+                                    {showSlowIos && (
+                                      <th className="text-right font-normal px-3 py-1.5">{t("storage.zfs.slowIos")}</th>
+                                    )}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {vdev.devices.map((dev) => {
+                                    const diskInfo = dev.disk ? storageData.disks.find((d) => d.name === dev.disk) : undefined
+                                    const errCls = (n: number) => `text-right px-2 py-1.5 font-mono ${n > 0 ? "text-red-500 font-semibold" : "text-muted-foreground"}`
+                                    return (
+                                      <tr key={`${dev.path}-${dev.via ?? ""}`} className="border-t border-border/50">
+                                        <td className="px-3 py-1.5 font-mono text-xs break-all" title={dev.path}>
+                                          {dev.path.split("/").pop()}
+                                          {dev.via && (
+                                            <span className="ml-2 text-muted-foreground">({t("storage.zfs.via", { name: dev.via })})</span>
+                                          )}
+                                        </td>
+                                        <td className="px-2 py-1.5">
+                                          {diskInfo ? (
+                                            <button
+                                              type="button"
+                                              title={diskInfo.model}
+                                              onClick={() => {
+                                                setSelectedPool(null)
+                                                handleDiskClick(diskInfo)
+                                              }}
+                                            >
+                                              <Badge variant="outline" className="font-mono hover:bg-accent">{diskInfo.name}</Badge>
+                                            </button>
+                                          ) : (
+                                            <span className="font-mono text-xs text-muted-foreground">{dev.disk ?? "-"}</span>
+                                          )}
+                                        </td>
+                                        <td className="px-2 py-1.5">{getZfsStateBadge(dev.state)}</td>
+                                        <td className={errCls(dev.read_errors)}>{dev.read_errors}</td>
+                                        <td className={errCls(dev.write_errors)}>{dev.write_errors}</td>
+                                        <td className={errCls(dev.checksum_errors)}>{dev.checksum_errors}</td>
+                                        {showSlowIos && (
+                                          <td className={`text-right px-3 py-1.5 font-mono ${dev.slow_ios > 0 ? "text-yellow-500" : "text-muted-foreground"}`}>
+                                            {dev.slow_ios}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* Physical Disks (internal only) */}
       <Card>
         <CardHeader>
@@ -1806,11 +2206,43 @@ export function StorageOverview() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {storageData.disks
-              .filter((d) => d.connection_type !== 'usb')
-              .map((disk) => renderDiskCardV2(disk))}
-          </div>
+          {groupDisksByController ? (
+            <div className="space-y-6">
+              {groupDisksBySlot(storageData.disks.filter((d) => d.connection_type !== 'usb')).map(([slot, disks]) => {
+                const controller = slot ? storageData.controllers?.[slot] : undefined
+                return (
+                  <div key={slot ?? "none"}>
+                    <div className="flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-border/50">
+                      <Server className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {controller
+                          ? controller.sdevice || controller.device
+                          : slot ?? t("storage.noController")}
+                      </span>
+                      {slot && <span className="font-mono text-xs text-muted-foreground">{slot}</span>}
+                      {controller?.driver && (
+                        <Badge variant="outline" className="font-mono text-xs text-green-500">
+                          {controller.driver}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        {t(disks.length === 1 ? "storage.diskCountOne" : "storage.diskCountMany", { count: disks.length })}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {disks.map((disk) => renderDiskCardV2(disk))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {storageData.disks
+                .filter((d) => d.connection_type !== 'usb')
+                .map((disk) => renderDiskCardV2(disk))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1842,13 +2274,7 @@ export function StorageOverview() {
           setSmartJsonData(null)
         }
       }}>
-        <DialogContent
-          className={`max-w-4xl flex flex-col p-0 overflow-hidden ${
-            isStandalone
-              ? "h-[95vh] sm:h-[90vh]"
-              : "h-[85vh] sm:h-[85vh] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)]"
-          }`}
-        >
+        <DialogContent className={detailDialogClass}>
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               {selectedDisk?.connection_type === 'usb' ? (
@@ -1965,6 +2391,28 @@ export function StorageOverview() {
                     )}
                   </div>
                 </div>
+                {selectedDisk.controller_slot && (() => {
+                  const controller = storageData.controllers?.[selectedDisk.controller_slot]
+                  return (
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground">{t("storage.storageController")}</p>
+                      <p className="font-medium">
+                        {controller ? controller.sdevice || controller.device : selectedDisk.controller_slot}
+                        {controller && (
+                          <span className="ml-2 font-mono text-xs text-muted-foreground">{selectedDisk.controller_slot}</span>
+                        )}
+                        {controller?.driver && (
+                          <Badge variant="outline" className="ml-2 font-mono text-xs text-green-500">
+                            {controller.driver}
+                          </Badge>
+                        )}
+                      </p>
+                      {controller && controller.sdevice && (
+                        <p className="text-xs text-muted-foreground">{controller.vendor} - {controller.device}</p>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Wear & Lifetime — DiskInfo (real-time, 60s refresh) for NVMe + SSD. SMART JSON as fallback. HDD: hidden. */}
@@ -1980,7 +2428,7 @@ export function StorageOverview() {
                 const wi = getWearIndicator(selectedDisk)
                 if (wi) {
                   wearUsed = wi.value
-                  lifeRemaining = 100 - wearUsed
+                  lifeRemaining = Math.max(0, 100 - wearUsed)
                   estimatedLife = getEstimatedLifeRemaining(selectedDisk) || ''
                   if (selectedDisk.total_lbas_written && selectedDisk.total_lbas_written > 0) {
                     const tb = selectedDisk.total_lbas_written / 1024
@@ -2024,16 +2472,16 @@ export function StorageOverview() {
                   if (lifeRemaining === null) {
                     const ataAttrs = data?.ata_smart_attributes as { table?: Array<{ id: number; name: string; value: number; raw?: { value: number } }> }
                     const table = ataAttrs?.table || []
-                    const wearAttr = table.find(a =>
+                    const wearAttr = table.find(a => a.id !== 230 && (
                       a.name?.toLowerCase().includes('wear_leveling') ||
                       a.name?.toLowerCase().includes('media_wearout') ||
                       a.name?.toLowerCase().includes('ssd_life_left') ||
                       a.id === 177 || a.id === 231
-                    )
+                    ))
                     const nvmeIsPresent = nvmeHealth?.percent_used !== undefined || nvmeHealth?.percentage_used !== undefined
 
                     if (wearAttr) {
-                      lifeRemaining = (wearAttr.id === 230) ? (100 - wearAttr.value) : wearAttr.value
+                      lifeRemaining = wearAttr.value
                     } else if (nvmeIsPresent) {
                       lifeRemaining = 100 - ((nvmeHealth.percent_used ?? nvmeHealth.percentage_used ?? 0) as number)
                     }
@@ -2179,7 +2627,7 @@ export function StorageOverview() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("storage.rotationRate")}</p>
-                    <p className="font-medium">{formatRotationRate(selectedDisk.rotation_rate)}</p>
+                    <p className="font-medium">{formatRotationRate(selectedDisk.name, selectedDisk.rotation_rate)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{t("storage.powerCycles")}</p>
@@ -2424,14 +2872,12 @@ function openSmartReport(disk: DiskInfo, testStatus: SmartTestStatus, smartAttri
 
   // Determine disk type (SAS detected via backend flag or connection_type)
   const isSasDisk = sd?.is_sas === true || disk.connection_type === 'sas'
-  let diskType = "HDD"
-  if (disk.name.startsWith("nvme")) {
-    diskType = "NVMe"
-  } else if (isSasDisk) {
+  let diskType: string = resolveDiskType(disk.name, disk.rotation_rate)
+  if (diskType !== "NVMe" && isSasDisk) {
     diskType = "SAS"
-  } else if (!disk.rotation_rate || disk.rotation_rate === 0) {
-    diskType = "SSD"
   }
+  const rpm = disk.rotation_rate && disk.rotation_rate > 0 ? disk.rotation_rate : 0
+  const known = (value?: string) => (value && value !== "Unknown" ? value : undefined)
   
   // Health status styling
   const healthStatus = String(testStatus.smart_status || (testStatus.smart_data?.smart_status) || 'unknown')
@@ -3377,11 +3823,11 @@ function pmxPrint(){
   <div class="grid-4">
     <div class="card">
       <div class="card-label">${tSmart("labels.model")}</div>
-      <div class="card-value" style="font-size:11px;">${disk.model || sd?.model || t("app.unknown")}</div>
+      <div class="card-value" style="font-size:11px;">${known(disk.model) || known(sd?.model) || t("app.unknown")}</div>
     </div>
     <div class="card">
       <div class="card-label">${tSmart("labels.serial")}</div>
-      <div class="card-value" style="font-size:11px;font-family:monospace;">${disk.serial || sd?.serial || t("app.unknown")}</div>
+      <div class="card-value" style="font-size:11px;font-family:monospace;">${known(disk.serial) || known(sd?.serial) || t("app.unknown")}</div>
     </div>
     <div class="card">
       <div class="card-label">${tSmart("labels.capacity")}</div>
@@ -3389,7 +3835,7 @@ function pmxPrint(){
     </div>
     <div class="card">
       <div class="card-label">${tSmart("labels.type")}</div>
-      <div class="card-value" style="font-size:11px;">${diskType === 'SAS' ? (disk.rotation_rate ? `SAS ${disk.rotation_rate} RPM` : 'SAS SSD') : diskType === 'HDD' && disk.rotation_rate ? `HDD ${disk.rotation_rate} RPM` : diskType}</div>
+      <div class="card-value" style="font-size:11px;">${diskType === 'SAS' ? (rpm ? `SAS ${rpm} RPM` : disk.rotation_rate === -1 ? 'SAS HDD' : 'SAS SSD') : diskType === 'HDD' && rpm ? `HDD ${rpm} RPM` : diskType}</div>
     </div>
   </div>
   ${(modelFamily || formFactor || sataVersion || ifaceSpeed) ? `
@@ -3576,29 +4022,30 @@ ${isNvmeDisk && !hasNvmeWearData ? (() => {
 })() : ''}
 
 ${!isNvmeDisk && diskType === 'SSD' ? (() => {
-  // Try to find SSD wear indicators from SMART attributes
-  const wearAttr = smartAttributes.find(a => 
+  // Try to find SSD wear indicators from SMART attributes. Matched by name:
+  // the same ID is a write counter on some drives (233 is NAND_GB_Written_TLC on WD).
+  const wearAttr = smartAttributes.find(a => a.id !== 230 && (
     a.name?.toLowerCase().includes('wear_leveling') ||
     a.name?.toLowerCase().includes('media_wearout') ||
     a.name?.toLowerCase().includes('percent_lifetime') ||
-    a.name?.toLowerCase().includes('ssd_life_left') ||
-    a.id === 177 || a.id === 231 || a.id === 233
-  )
+    a.name?.toLowerCase().includes('ssd_life_left')
+  ))
+  // With attribute 230, the backend reports the standard ATA statistic instead.
+  const usesAtaStatistic = disk.media_wearout_indicator != null && smartAttributes.some(a => a.id === 230)
   
   const lbasWrittenAttr = smartAttributes.find(a => 
     a.name?.toLowerCase().includes('total_lbas_written') ||
     a.id === 241
   )
   
-  // Also check disk properties — cast to number since SmartAttribute.value is number | string
-  const wearRaw = (wearAttr?.value !== undefined ? Number(wearAttr.value) : undefined) ?? disk.wear_leveling_count ?? disk.ssd_life_left
+  const reportedWear = disk.media_wearout_indicator ?? disk.wear_leveling_count
+  const lifeUsed = reportedWear ?? (disk.ssd_life_left != null
+    ? 100 - disk.ssd_life_left
+    : wearAttr?.value != null ? 100 - Number(wearAttr.value) : null)
 
-  if (wearRaw !== undefined && wearRaw !== null) {
-    // ID 230 (Media_Wearout_Indicator on WD/SanDisk): value = endurance used %
-    // All others (ID 177, 231, etc.): value = life remaining %
-    const lifeRemaining = (wearAttr?.id === 230) ? (100 - wearRaw) : wearRaw
-    const lifeUsed = 100 - lifeRemaining
-    
+  if (lifeUsed !== null && Number.isFinite(lifeUsed)) {
+    const lifeRemaining = Math.max(0, 100 - lifeUsed)
+
     // Calculate data written — detect unit from attribute name
     let dataWrittenTB = 0
     if (lbasWrittenAttr?.raw_value) {
@@ -3636,7 +4083,7 @@ ${!isNvmeDisk && diskType === 'SSD' ? (() => {
         </div>
       </div>
       <div style="margin-top:12px;font-size:11px;color:#475569;">
-        ${tSmart("labels.source")}: ${wearAttr?.name?.replace(/_/g, ' ') || tSmart("labels.ssdLifeIndicator")}
+        ${tSmart("labels.source")}: ${usesAtaStatistic ? 'Percentage Used Endurance Indicator' : wearAttr?.name?.replace(/_/g, ' ') || tSmart("labels.ssdLifeIndicator")}
       </div>
     </div>
     
@@ -3904,6 +4351,7 @@ interface SmartTestStatus {
 }
 
 function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabProps) {
+  const { capabilities } = useAccess()
   const t = useT()
   const [testStatus, setTestStatus] = useState<SmartTestStatus>({ status: 'idle' })
   const [loading, setLoading] = useState(true)
@@ -4083,7 +4531,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
             </div>
           </div>
           
-          <Button
+          {capabilities.execute && (<Button
             onClick={installSmartTools}
             disabled={installing}
             className="w-full gap-2 bg-[#4A9BA8] hover:bg-[#3d8591] text-white border-0"
@@ -4094,7 +4542,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               <Download className="h-4 w-4" />
             )}
             {installing ? t("storage.smartTest.installingTools") : t("storage.smartTest.installTools")}
-          </Button>
+          </Button>)}
           
           {testError && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
@@ -4125,7 +4573,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
         </h4>
         
         <div className="flex flex-wrap gap-3">
-          <Button
+          {capabilities.execute && (<Button
             variant="outline"
             size="sm"
             onClick={() => runSmartTest('short')}
@@ -4138,8 +4586,8 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               <Activity className="h-4 w-4" />
             )}
             {t("storage.smartTest.shortTest")}
-          </Button>
-          <Button
+          </Button>)}
+          {capabilities.execute && (<Button
             variant="outline"
             size="sm"
             onClick={() => runSmartTest('long')}
@@ -4152,7 +4600,7 @@ function SmartTestTab({ disk, observations = [], lastTestDate }: SmartTestTabPro
               <Activity className="h-4 w-4" />
             )}
             {t("storage.smartTest.extendedTest")}
-          </Button>
+          </Button>)}
         </div>
         <p className="text-xs text-muted-foreground">
           {t("storage.smartTest.testHelp")}
@@ -4313,6 +4761,7 @@ interface SmartHistoryEntry {
 }
 
 function HistoryTab({ disk }: { disk: DiskInfo }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const [history, setHistory] = useState<SmartHistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -4479,7 +4928,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
                 >
                   <Download className="h-3.5 w-3.5" />
                 </Button>
-                <Button
+                {capabilities.execute && (<Button
                   variant="ghost" size="sm"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400"
                   onClick={(e: unknown) => { (e as MouseEvent).stopPropagation(); if (confirm(t("storage.historyTab.confirmDelete"))) handleDelete(entry.filename) }}
@@ -4487,7 +4936,7 @@ function HistoryTab({ disk }: { disk: DiskInfo }) {
                   title={t("storage.historyTab.delete")}
                 >
                   {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                </Button>
+                </Button>)}
               </div>
             </div>
           )
@@ -4524,6 +4973,7 @@ interface ScheduleConfig {
 }
 
 function ScheduleTab({ disk }: { disk: DiskInfo }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const [config, setConfig] = useState<ScheduleConfig>({ enabled: true, schedules: [] })
   const [loading, setLoading] = useState(true)
@@ -4679,7 +5129,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           <p className="font-medium">{t("storage.scheduleTab.automaticTests")}</p>
           <p className="text-xs text-muted-foreground">{t("storage.scheduleTab.toggleHelp")}</p>
         </div>
-        <Button
+        {capabilities.execute && (<Button
           variant={config.enabled ? "default" : "outline"}
           size="sm"
           onClick={handleToggleGlobal}
@@ -4687,7 +5137,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           className={config.enabled ? "bg-purple-600 hover:bg-purple-700" : ""}
         >
           {config.enabled ? t("storage.scheduleTab.enabled") : t("storage.scheduleTab.disabled")}
-        </Button>
+        </Button>)}
       </div>
 
       {/* Schedules List */}
@@ -4712,7 +5162,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
                     {retentionLabel(schedule.retention)}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                {capabilities.execute && (<div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -4730,7 +5180,7 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
+                </div>)}
               </div>
             </div>
           ))}
@@ -4751,85 +5201,52 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.testType")}</label>
-              <select
-                value={formData.test_type}
-                onChange={e => setFormData(prev => ({ ...prev, test_type: e.target.value as 'short' | 'long' }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                <option value="short">{t("storage.smartTest.shortTest")}</option>
-                <option value="long">{t("storage.smartTest.longTest")}</option>
-              </select>
+              <OptionSelect value={formData.test_type} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.testType")}
+                onChange={value => setFormData(prev => ({ ...prev, test_type: value as 'short' | 'long' }))}
+                options={[{ value: "short", label: t("storage.smartTest.shortTest") },
+                          { value: "long", label: t("storage.smartTest.longTest") }]} />
             </div>
             
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.frequency")}</label>
-              <select
-                value={formData.frequency}
-                onChange={e => setFormData(prev => ({ ...prev, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                <option value="daily">{t("storage.scheduleTab.daily")}</option>
-                <option value="weekly">{t("storage.scheduleTab.weekly")}</option>
-                <option value="monthly">{t("storage.scheduleTab.monthly")}</option>
-              </select>
+              <OptionSelect value={formData.frequency} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.frequency")}
+                onChange={value => setFormData(prev => ({ ...prev, frequency: value as 'daily' | 'weekly' | 'monthly' }))}
+                options={[{ value: "daily", label: t("storage.scheduleTab.daily") },
+                          { value: "weekly", label: t("storage.scheduleTab.weekly") },
+                          { value: "monthly", label: t("storage.scheduleTab.monthly") }]} />
             </div>
             
             {formData.frequency === 'weekly' && (
               <div>
                 <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.dayOfWeek")}</label>
-                <select
-                  value={formData.day_of_week}
-                  onChange={e => setFormData(prev => ({ ...prev, day_of_week: parseInt(e.target.value) }))}
-                  className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-                >
-                  {dayNames.map((day, i) => (
-                    <option key={day} value={i}>{day}</option>
-                  ))}
-                </select>
+                <OptionSelect value={formData.day_of_week} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.dayOfWeek")}
+                  onChange={value => setFormData(prev => ({ ...prev, day_of_week: parseInt(value) }))}
+                  options={dayNames.map((day, i) => ({ value: i, label: day }))} />
               </div>
             )}
             
             {formData.frequency === 'monthly' && (
               <div>
                 <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.dayOfMonth")}</label>
-                <select
-                  value={formData.day_of_month}
-                  onChange={e => setFormData(prev => ({ ...prev, day_of_month: parseInt(e.target.value) }))}
-                  className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-                >
-                  {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
+                <OptionSelect value={formData.day_of_month} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.dayOfMonth")}
+                  onChange={value => setFormData(prev => ({ ...prev, day_of_month: parseInt(value) }))}
+                  options={Array.from({ length: 28 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))} />
               </div>
             )}
             
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.timeHour")}</label>
-              <select
-                value={formData.hour}
-                onChange={e => setFormData(prev => ({ ...prev, hour: parseInt(e.target.value) }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>{i.toString().padStart(2, '0')}:00</option>
-                ))}
-              </select>
+              <OptionSelect value={formData.hour} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.timeHour")}
+                onChange={value => setFormData(prev => ({ ...prev, hour: parseInt(value) }))}
+                options={Array.from({ length: 24 }, (_, i) => ({ value: i, label: `${i.toString().padStart(2, '0')}:00` }))} />
             </div>
             
             <div>
               <label className="text-sm text-muted-foreground">{t("storage.scheduleTab.retention")}</label>
-              <select
-                value={formData.retention}
-                onChange={e => setFormData(prev => ({ ...prev, retention: parseInt(e.target.value) }))}
-                className="w-full mt-1 p-2 rounded-md bg-background border border-input text-sm"
-              >
-                <option value={5}>{t("storage.scheduleTab.lastN", { count: 5 })}</option>
-                <option value={10}>{t("storage.scheduleTab.lastN", { count: 10 })}</option>
-                <option value={20}>{t("storage.scheduleTab.lastN", { count: 20 })}</option>
-                <option value={50}>{t("storage.scheduleTab.lastN", { count: 50 })}</option>
-                <option value={0}>{t("storage.scheduleTab.keepAll")}</option>
-              </select>
+              <OptionSelect value={formData.retention} className="mt-1 bg-background" ariaLabel={t("storage.scheduleTab.retention")}
+                onChange={value => setFormData(prev => ({ ...prev, retention: parseInt(value) }))}
+                options={[...[5, 10, 20, 50].map(count => ({ value: count, label: t("storage.scheduleTab.lastN", { count }) })),
+                          { value: 0, label: t("storage.scheduleTab.keepAll") }]} />
             </div>
           </div>
           
@@ -4854,14 +5271,14 @@ function ScheduleTab({ disk }: { disk: DiskInfo }) {
           </div>
         </div>
       ) : (
-        <Button
+        capabilities.execute && (<Button
           onClick={() => setShowForm(true)}
           variant="outline"
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
           {t("storage.scheduleTab.add")}
-        </Button>
+        </Button>)
       )}
       
       <p className="text-xs text-muted-foreground text-center">

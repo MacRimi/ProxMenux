@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A simple and easy-to-use DDNS tool. Automatically updates domain name resolution to your public IP (supports Alibaba Cloud, Tencent Cloud, Dnspod, Cloudflare, Callback, Huawei Cloud, Baidu Cloud, Porkbun, GoDaddy, and Google Domain).\n\nDeploy DDNS-go on self-hosted server, and you can bind the public IP of your self-hosted server device to your domain name. This way, you can access your self-hosted server device via the domain name while you are away.\n"
+    },
+    "description": {
+      "en_US": "ddns-go is a dynamic DNS management tool that automatically obtains your public IPv4 or IPv6 address and updates domain name resolution records. It supports simultaneous resolution across multiple DNS providers, multi-level domains, and custom TTL values. A built-in web interface allows users to manage configurations, inspect recent synchronization logs, and set up webhook notifications."
+    },
+    "tips": [
+      "The option to prohibit access from the public network is enabled by default in the web interface"
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/jeessy2/ddns-go/master/ddns-web.png"
+    ],
+    "repository": "https://github.com/jeessy2/ddns-go"
   }
 }

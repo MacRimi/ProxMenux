@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted home dashboard with configurable pages, widgets, RSS feeds and service status."
+    },
+    "description": {
+      "en_US": "Glance is a lightweight, customizable dashboard that aggregates feeds and service information into a unified interface. It displays various widgets such as RSS feeds, weather forecasts, video uploads, market prices, and server metrics across configurable pages. The application is designed to load quickly with low memory usage and supports custom styling, themes, and layouts on both desktop and mobile devices."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/glanceapp/glance/HEAD/docs/images/readme-main-image.png",
+      "https://raw.githubusercontent.com/glanceapp/glance/HEAD/docs/images/mobile-preview.png",
+      "https://raw.githubusercontent.com/glanceapp/glance/HEAD/docs/images/themes-example.png"
+    ]
+  }
+}

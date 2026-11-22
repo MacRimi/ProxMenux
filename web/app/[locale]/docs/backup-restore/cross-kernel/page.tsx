@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { AlertTriangle } from "lucide-react"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -43,7 +43,7 @@ type CategoryRow = { category: string; paths: string; reason: string }
 type PhaseRow = { phase: string; detail: string }
 type ScenarioRow = { scenario: string; detail: string }
 type CodeRefRow = { component: string; location: string }
-type WhereNextItem = { label: string; href: string; tail: string }
+type WhereNextItem = { label: string; href: string; tail?: string; tailRich?: string }
 
 export default async function CrossKernelPage({
   params,
@@ -51,7 +51,6 @@ export default async function CrossKernelPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.backupRestore.crossKernel" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -202,7 +201,7 @@ export default async function CrossKernelPage({
         {t("flowDiagram.intro")}
       </p>
 
-      <pre className="bg-gray-50 border border-gray-200 rounded-md p-4 text-xs sm:text-sm font-mono text-gray-800 overflow-x-auto whitespace-pre leading-relaxed mb-6">
+      <pre className="bg-gray-50 border border-gray-200 rounded-md p-4 text-xs sm:text-sm font-mono text-gray-800 overflow-x-auto whitespace-pre leading-relaxed sm:leading-5 mb-6">
         {t("flowDiagram.diagram")}
       </pre>
 
@@ -279,12 +278,12 @@ export default async function CrossKernelPage({
       </h2>
 
       <ul className="mb-6 space-y-2">
-        {whereNextItems.map((item) => (
+        {whereNextItems.map((item, idx) => (
           <li key={item.href} className="text-gray-800 leading-relaxed">
             <Link href={item.href} className="text-blue-600 hover:underline font-medium">
               {item.label}
             </Link>
-            <span>{item.tail}</span>
+            <span>{item.tailRich ? t.rich(`whereNext.items.${idx}.tailRich`, { code }) : item.tail}</span>
           </li>
         ))}
       </ul>

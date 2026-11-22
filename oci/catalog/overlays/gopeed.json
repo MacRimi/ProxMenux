@@ -16,5 +16,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Gopeed is a modern high-speed download tool supporting HTTP, BitTorrent, and Magnet protocols, offering a beautiful interface and powerful functionality. Its lightweight design and multi-platform support make it ideal for efficient file downloading across various devices.\n\nThe tool's core features include high-speed downloading and an elegant interface. It leverages Golang coroutines for concurrent downloading, supporting HTTP, HTTPS, BitTorrent, and Magnet protocols for fast, stable performance. The interface follows Material Design standards, including a dark mode, balancing aesthetics and usability. Advanced features include seeding, DHT, PEX, uTP, Webtorrent, and UPnP support, with daily automatic tracker list updates to enhance download efficiency.\n\nIt provides a RESTful API for open integration, allowing users to remotely control download tasks, pause, or delete them. Decentralized extensions enable JavaScript plugins to enhance functionality, such as downloading videos or music from websites. The tool's speed, flexibility, and user-friendly design deliver a modern download solution.\n\n**Key Features:**\n- High-speed downloading with HTTP, BitTorrent, Magnet protocols\n- Seeding, DHT, PEX, uTP, Webtorrent, UPnP\n- Daily automatic tracker list updates\n- RESTful API for remote download task control\n- Decentralized extensions with JavaScript plugins\n\n**Learn More:**\n- [Gopeed Official Website](https://gopeed.com)\n- [Gopeed GitHub Repository](https://github.com/gopeedlab/gopeed)\n"
+    },
+    "description": {
+      "en_US": "Gopeed is a high-speed download manager supporting HTTP, BitTorrent, and Magnet protocols across multiple platforms. It provides core downloading features alongside options for custom extension integration and RESTful API control. Users can manage tasks, seed files, and enhance functionality using community-developed plugins."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/GopeedLab/gopeed/main/_docs/img/ui-demo.png"
+    ],
+    "repository": "https://github.com/GopeedLab/gopeed"
   }
 }

@@ -40,7 +40,7 @@
       },
       {
         "label": "qm create + importdisk",
-        "detail": "qm create $VMID\nqm importdisk\n(VMDK → qcow2)\nqm set --scsiN",
+        "detail": "qm create $VMID\nqm importdisk\n(VMDK → storage format)\nqm set --scsiN",
         "variant": "target"
       }
     ]
@@ -86,7 +86,7 @@
   },
   "memWarn": {
     "title": "Memory unit ambiguity",
-    "body": "The parser <strong>assumes MiB</strong>. If the OVF declares memory in <em>GB</em> (e.g. some VMware exports do), the imported VM will have 1/1024th of the intended RAM. After import, double-check <code>qm config $VMID | grep memory</code> against the source VM's documented RAM and adjust with <code>qm set $VMID --memory &lt;MiB&gt;</code> if it's off by a factor of 1024 or 1024²."
+    "body": "The parser normalizes recognized memory units to <strong>MiB</strong>, including bytes, KiB, MiB, GiB and supported textual labels. Missing or unrecognized units are <em>treated as MiB</em>. After import, compare <code>qm config $VMID | grep memory</code> with the source VM’s documented RAM and, if needed, correct it using <code>qm set $VMID --memory &lt;MiB&gt;</code>."
   },
   "dialog": {
     "heading": "Import dialog flow",
@@ -108,7 +108,7 @@
     "heading": "Disk import loop",
     "intro": "For each disk reference in the OVF:",
     "items": [
-      "<code>qm importdisk $VMID $disk_path $STORAGE</code> — converts the VMDK to the storage-native format (e.g. qcow2 on local-lvm, raw on ZFS) and creates an <code>unusedN:</code> entry in the VM config.",
+      "<code>qm importdisk $VMID $disk_path $STORAGE</code> — imports the disk in a format supported by the target storage and creates an <code>unusedN:</code> entry in the VM configuration.",
       "The script greps the config for the just-created <code>unusedN</code> reference.",
       "<code>qm set $VMID --scsiN $unused_disk</code> — attaches the disk as <code>scsi0</code>, <code>scsi1</code>, …",
       "<code>qm set $VMID --delete unusedN</code> — clears the now-redundant unused marker."
@@ -175,11 +175,11 @@
   "troubleshoot": {
     "heading": "Troubleshooting",
     "orphanTitle": "VM was created but disk import failed — orphan VM left behind",
-    "orphanIntro": "Known limitation. The script doesn't auto-clean a partial import. Destroy the orphan with:",
+    "orphanIntro": "When an import fails, the script offers to remove the partial VM and its imported disks. If you declined, or automatic deletion failed, inspect the VM and remove it manually with:",
     "orphanCode": "qm destroy $VMID --destroy-unreferenced-disks 1",
     "orphanOutro": "Then fix the underlying cause (likely disk space on the target storage) and re-import.",
     "memTitle": "Imported VM has 8 MB of RAM (or 8 TB)",
-    "memIntro": "Memory unit ambiguity in the OVF parser. Off by a factor of 1024 → OVF used GB instead of MiB. Fix:",
+    "memIntro": "The parser converts recognized AllocationUnits to MiB. Missing or unsupported units are treated as MiB, so inspect the OVF and compare the imported setting with the source VM. Correct the memory if necessary:",
     "memCode": "qm set $VMID --memory 8192    # 8 GiB",
     "bootTitle": "Imported VM doesn't boot — \"No bootable device\"",
     "bootIntro": "Most common cause: BIOS / UEFI mismatch. The VM was UEFI but Proxmox created it as BIOS. Set the matching firmware:",
@@ -188,7 +188,7 @@
     "bsodTitle": "VMware-exported Windows VM imports but BSODs on first boot",
     "bsodBody": "Windows is sensitive to disk controller changes. Either: (a) install VirtIO drivers <em>before</em> exporting from VMware, or (b) keep the SCSI controller as <code>lsi</code> (the default) and only switch to VirtIO SCSI after the guest boots and you can install the VirtIO drivers in Windows.",
     "zeroTitle": "OVF parser reports 0 disks",
-    "zeroBody": "The OVF descriptor uses an unusual disk reference style. Open the .ovf in a text editor and confirm each disk has a <code>&lt;File ovf:href=\"...vmdk\" ...&gt;</code> entry. If the file extension is unusual (e.g. just <code>.dat</code>), rename it to <code>.vmdk</code> and update the OVF reference, then re-run.",
+    "zeroBody": "The OVF descriptor may use a disk reference style the parser does not recognize. Open the .ovf and look for each disk’s <code>&lt;File ovf:href=\"...vmdk\" ...&gt;</code> entry. If a disk really is VMDK but has an unusual extension such as <code>.dat</code>, rename it to <code>.vmdk</code> and update the OVF reference. Renaming does not convert a disk’s format.",
     "awkTitle": "awk: syntax error at or near , — parser fails on every OVA / OVF",
     "awkIntro": "The OVF parser uses gawk-specific syntax (3-argument <code>match()</code>) which mawk — the default <code>awk</code> on Debian / Proxmox — does not support. Recent versions of the script auto-install gawk on first use via the canonical <code>ensure_repositories</code> + <code>install_single_package</code> pair; if you're running an older copy, install it manually:",
     "awkCode": "apt-get install -y gawk",

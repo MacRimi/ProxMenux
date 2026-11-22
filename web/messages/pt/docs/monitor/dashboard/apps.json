@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "Painel Apps: um lançador para todas as ligações web | ProxMenux",
+    "description": "Use o painel de aplicativos para abrir links web registrados LXC e links personalizados, organizá-los por categoria e voltar para o hóspede que possui cada serviço."
+  },
+  "header": {
+    "title": "Painel: Página de aplicações",
+    "description": "Um único lançador para as interfaces web que você usa em todo o nó, seja de um aplicativo LXC registrado ou um Web Link personalizado.",
+    "section": "ProxMenux Monitor · Painel"
+  },
+  "intro": {
+    "title": "Um lançador, não um instalador de aplicações",
+    "body": "O separador <strong>Apps</strong> não instala software nem descobre serviços. Reúne as ligações guardadas numa grelha pesquisável. As ligações LXC configuram-se no <appTabLink>separador App</appTabLink> do sistema convidado; as personalizadas incluem serviços VM, proxies inversos e painéis externos."
+  },
+  "sources": {
+    "heading": "O que aparece em Apps",
+    "intro": "Cada URL lançável torna-se seu próprio cartão. A fonte determina onde esse cartão é editado, mas não como ele parece durante o uso normal.",
+    "colSource": "Origem",
+    "colAppears": "O que aparece",
+    "colManagedFrom": "Onde é gerido",
+    "rows": [
+      {
+        "source": "Aplicação LXC registada",
+        "appears": "Um cartão para cada Web Link salvo no registro da aplicação.",
+        "managedFrom": "VMs e LXCs → Janela do LXC → Aplicação"
+      },
+      {
+        "source": "Ligação personalizada ligada a um hóspede",
+        "appears": "Um URL de serviço associado a um VM ou LXC.",
+        "managedFrom": "Apps → Editar"
+      },
+      {
+        "source": "Ligação personalizada sem associação",
+        "appears": "Qualquer destino HTTP(S), incluindo serviços externos ou publicados através de proxy inverso.",
+        "managedFrom": "Apps → Editar"
+      }
+    ],
+    "relationshipTitle": "Apps e a aba de aplicativos LXC têm trabalhos diferentes",
+    "relationshipBody": "O <appTabLink>separador App</appTabLink> do LXC gere identidade, ligações web e acompanhamento opcional da versão. <strong>Apps</strong> utiliza estas ligações para as abrir rapidamente. Editar um cartão LXC regressa ao registo do sistema convidado sem duplicar a configuração."
+  },
+  "cards": {
+    "heading": "Como usar um cartão",
+    "intro": "Toda a placa é o alvo de lançamento, enquanto seus controles menores fornecem contexto sem abrir o serviço.",
+    "items": [
+      "Clique no cartão para abrir sua URL em uma nova guia do navegador.",
+      "O logotipo utiliza o logotipo Web Link primeiro e volta ao logotipo da aplicação quando apropriado.",
+      "O chip de categoria usa a mesma cor e etiqueta que o link Web correspondente na aba do aplicativo LXC.",
+      "A etiqueta do sistema convidado identifica a VM ou LXC associado. Um clique abre a sua janela: as ligações LXC abrem <strong>App</strong>, as VM abrem <strong>Estado</strong>.",
+      "Uma seta para cima roxa significa que a aplicação específica ou imagem Docker tem uma atualização disponível. Não é uma conta de atualização geral para todo o hóspede."
+    ]
+  },
+  "toolbar": {
+    "heading": "Procurar, filtrar e ordenar",
+    "intro": "A barra de ferramentas estreita uma grande coleção de aplicativos sem alterar os registros salvos.",
+    "items": [
+      "A pesquisa corresponde ao nome da aplicação, nome do convidado, VMID e categoria.",
+      "O filtro de categoria mostra uma categoria de cada vez ou todas as aplicações.",
+      "Ordene por <strong>Nome</strong>, <strong>ID</strong> ou <strong>Categoria</strong>. Ordenar por categoria acrescenta títulos entre grupos de cartões.",
+      "A ordem é guardada neste navegador. O texto de pesquisa e o filtro de categoria são repostos ao regressar à página.",
+      "A aba Apps permanece disponível quando a grade está vazia, então o primeiro link personalizado pode ser adicionado sem registrar primeiro um aplicativo LXC."
+    ]
+  },
+  "customLinks": {
+    "heading": "Adicionar e editar links Web personalizados",
+    "intro": "Use um link personalizado quando o serviço não for representado por um aplicativo LXC registrado.",
+    "steps": [
+      "Pressione <strong>Adicionar link</strong> da barra de ferramentas ou do estado vazio.",
+      "Digite um nome e uma URL <code>http://</code> ou <code>https://</code>.",
+      "Opcionalmente, adicione um logotipo, escolha ou crie uma categoria e ligue o link a um VM ou LXC.",
+      "Guarde a ligação. O cartão aparece imediatamente na grelha.",
+      "Para alterar ou remover uma ligação personalizada, escolha <strong>Editar</strong> e utilize o lápis no cartão."
+    ],
+    "colField": "Campo",
+    "colRequired": "Requerido",
+    "colPurpose": "Objecto",
+    "fields": [
+      {
+        "field": "Nome",
+        "required": "Sim",
+        "purpose": "O título do cartão e termo de pesquisa."
+      },
+      {
+        "field": "URL",
+        "required": "Sim",
+        "purpose": "O destino HTTP(S) completo aberto pelo cartão."
+      },
+      {
+        "field": "URL do logotipo",
+        "required": "Não",
+        "purpose": "Uma imagem remota mostrada na carta."
+      },
+      {
+        "field": "Categoria",
+        "required": "Não",
+        "purpose": "Adiciona um crachá compartilhado e permite a filtragem de categoria."
+      },
+      {
+        "field": "Associação ao sistema convidado",
+        "required": "Não",
+        "purpose": "Associa o link com um VM ou LXC e permite o atalho de hóspedes."
+      }
+    ],
+    "editTitle": "Editar a fonte da verdade",
+    "editBody": "O modo de edição mostra lápis apenas nas ligações personalizadas. Para um cartão LXC, abra o <appTabLink>separador App</appTabLink> do sistema convidado e altere a ligação guardada."
+  },
+  "categories": {
+    "heading": "Categorias e sinais de atualização",
+    "intro": "As categorias organizam ligações; os indicadores de atualização descrevem o estado do software. São funções separadas.",
+    "items": [
+      "O registro LXC assistido por catálogo pode preencher uma categoria, mas permanece editável.",
+      "Nomes de categorias personalizados podem ser criados a partir do mesmo seletor e então reutilizados pelo filtro.",
+      "As cores da categoria são determinísticas e adaptam-se ao tema claro ou escuro. Faixas roxas e vermelhas são reservadas para atualização e estados de perigo.",
+      "Para Docker, o ProxMenux associa o cartão ao contentor ou imagem e mostra as atualizações dessa imagem. As de Docker Engine continuam no <updatesLink>separador Atualizações</updatesLink> do LXC."
+    ]
+  },
+  "persistence": {
+    "heading": "Comportamento de persistência e cache",
+    "intro": "O painel utiliza os dados já disponíveis no Monitor sem voltar a analisar todos os sistemas convidados.",
+    "items": [
+      "As ligações personalizadas são guardadas atomicamente em <code>/etc/proxmenux/custom_links.json</code> e carregadas em memória no arranque do Monitor.",
+      "Links de LXC registrados continuam a fazer parte do registro de Monitor salvo de sua aplicação; o painel Apps não os duplica no arquivo de link personalizado.",
+      "Criar, editar ou excluir um link personalizado atualiza a lista de memórias imediatamente.",
+      "A preferência de ordenação é local ao navegador e não se sincroniza entre dispositivos ou utilizadores.",
+      "A posição de topo do Apps é controlada separadamente por <settingsLink>Configurações → Ordem de navegação</settingsLink>."
+    ]
+  },
+  "troubleshooting": {
+    "heading": "Situações comuns",
+    "colProblem": "Situação",
+    "colResolution": "Resolução",
+    "rows": [
+      {
+        "problem": "Um aplicativo LXC está registrado, mas nenhum cartão aparece",
+        "resolution": "Abra sua guia App e adicione pelo menos um link Web. O rastreamento de versões sozinho não cria uma placa de lançamento."
+      },
+      {
+        "problem": "O URL ou logotipo está errado",
+        "resolution": "Edite o link personalizado em Apps ou edite o Web Link na guia LXC App."
+      },
+      {
+        "problem": "Falta um serviço Docker",
+        "resolution": "Edite o aplicativo Docker registrado e salve a porta web publicada do serviço como um Web Link."
+      },
+      {
+        "problem": "A seta roxa refere-se à atualização errada Docker",
+        "resolution": "Reveja o nome e a descrição da ligação web para os associar ao contentor ou imagem pretendida."
+      },
+      {
+        "problem": "Apps abrem primeiro em vez de Visão Geral do Sistema",
+        "resolution": "O primeiro item salvo em Configurações → Ordem de navegação torna-se a guia de pouso. Restaurar a ordem padrão ou mover Visão geral primeiro."
+      }
+    ]
+  },
+  "whereNext": {
+    "heading": "Para onde seguir",
+    "items": [
+      {
+        "label": "Página da aplicação LXC",
+        "href": "/docs/monitor/dashboard/vms-lxcs/app",
+        "tail": " — aplicações de registo, ligações Web e acompanhamento opcional de versões."
+      },
+      {
+        "label": "Página de Atualizações do LXC",
+        "href": "/docs/monitor/dashboard/vms-lxcs/updates",
+        "tail": " — configurar e executar atualizações de aplicações, Docker Engine e imagens."
+      },
+      {
+        "label": "Página de Configuração",
+        "href": "/docs/monitor/dashboard/settings#navigation-order",
+        "tail": " — alterar a ordem de navegação e a guia de aterragem."
+      }
+    ]
+  }
+}

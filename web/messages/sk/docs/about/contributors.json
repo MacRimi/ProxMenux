@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "title": "Prispievatelia | Dokumentácia ProxMenux",
+    "description": "Za každou verziou sú ľudia, ktorí ProxMenux vyvíjajú, kontrolujú, prekladajú a testujú. Táto stránka ďakuje dnešným prispievateľom aj tým, ktorí pomohli projektu pri prvých krokoch.",
+    "ogTitle": "Prispievatelia | Dokumentácia ProxMenux",
+    "ogDescription": "Za každou verziou sú ľudia, ktorí ProxMenux vyvíjajú, kontrolujú, prekladajú a testujú. Táto stránka ďakuje dnešným prispievateľom aj tým, ktorí pomohli projektu pri prvých krokoch."
+  },
+  "header": {
+    "title": "Prispievatelia",
+    "description": "Za každou verziou sú ľudia, ktorí ProxMenux vyvíjajú, kontrolujú, prekladajú a testujú. Táto stránka ďakuje dnešným prispievateľom aj tým, ktorí pomohli projektu pri prvých krokoch.",
+    "section": "O projekte"
+  },
+  "active": {
+    "heading": "Vývoj, kontrola a pravidelná spolupráca",
+    "intro": "Vaso73, f3rs3n a jcastro pravidelne prispievajú vylepšeniami, opravami a kontrolami. Ich práca presahuje testovanie verzie: pomáha aj vytvárať a odlaďovať tie nasledujúce.",
+    "people": {
+      "Vaso73": "Vylepšenia a opravy v OCI manager a ProxMenux Monitor, ako aj preklad a kontrola slovenských textov.",
+      "f3rs3n": "Opravy a kontrola správania skriptov a Monitora spolu s priebežným zlepšovaním talianskeho prekladu.",
+      "jcastro": "Vývoj a ladenie funkcií OCI, zálohovania a Monitora, ako aj kontrola dokumentácie a testovanie od začiatkov projektu."
+    }
+  },
+  "code": {
+    "heading": "Ďalšie príspevky do kódu",
+    "intro": "Aj nasledujúci ľudia prispeli zmenami kódu. Odkazy umožňujú spoznať ich prácu; história GitHubu zachytáva príspevky a začlenené pull requesty.",
+    "viewWork": "Zobraziť príspevky",
+    "history": "História príspevkov",
+    "merged": "Všetky začlenené PR"
+  },
+  "community": {
+    "heading": "Komunita, ktorá aj testuje, prekladá a dokumentuje",
+    "body": "Nie každá práca má podobu kódu. Zopakovanie chyby, užitočné protokoly, testovanie iného hardvéru, zrozumiteľnejšie vysvetlenie alebo návrh zlepšenia tiež pomáhajú ProxMenuxu.",
+    "languages": "Osobitná vďaka patrí ľuďom, ktorí kontrolujú texty vo svojom jazyku. Preklady ponúk, Monitora a dokumentácie sprístupňujú projekt ďalším ľuďom a uľahčujú jeho používanie."
+  },
+  "testers": {
+    "heading": "Vďaka za prvé testy",
+    "intro": "Toto poďakovanie má stále svoje miesto. Títo ľudia pomáhali overovať prvé verzie, testovali projekt na vlastnom vybavení a zdieľali chyby a návrhy, keď ProxMenux začínal rásť.",
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Aj tvoj príspevok je vítaný",
+    "intro": "Pomôcť môžeš malou opravou, konkrétnym testom alebo kontrolou textu. Nemusíš vytvoriť celú funkciu.",
+    "ways": {
+      "code": {
+        "title": "Kód a kontrola",
+        "body": "Vyvíjaj funkcie, opravuj chyby alebo skontroluj PR. Príručka vysvetľuje, ako pripraviť a navrhnúť zmeny."
+      },
+      "testing": {
+        "title": "Testovanie a diagnostika",
+        "body": "Vyskúšaj beta verzie a zdieľaj postup na zopakovanie problému aj protokoly, ktoré pomôžu pochopiť ho."
+      },
+      "translations": {
+        "title": "Preklady",
+        "body": "Kontroluj správy vo svojom jazyku a pomôž ich udržiavať aktuálne pri pridávaní funkcií."
+      },
+      "docs": {
+        "title": "Dokumentácia a dizajn",
+        "body": "Spresni návod, pridaj snímku obrazovky alebo zlepši rozhranie, aby sa v ňom ostatní ľahšie vyznali."
+      }
+    },
+    "guide": "Príručka pre prispievateľov",
+    "discuss": "Diskutovať s komunitou"
+  },
+  "thanks": {
+    "title": "Ďakujeme, že to umožňujete",
+    "body": "Všetkým tu uvedeným aj tým, ktorí pomáhajú v issue, rozhovore či pri teste: ďakujeme za čas venovaný zlepšovaniu ProxMenuxu."
+  }
+}

@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "VoceChat is a secure chat software designed for independent deployment, offering a flexible solution for seamless communication. It combines instant messaging with channel-based group chats, allowing you to engage in one-on-one conversations or create themed channels for group discussions.\n\nVoceChat supports a variety of message formats, including text, images, files, emojis, and rich text (Markdown), making your communication vibrant and expressive. Once deployed, it can be accessed via a WebAPP or mobile APP, ensuring a consistent experience across platforms.\n\nWith robust management features, VoceChat enables easy member and channel administration, giving you full control over your team or group’s communication environment. Whether for individual users or enterprise teams, VoceChat delivers a secure, versatile, and efficient chat solution.\n"
+    },
+    "description": {
+      "en_US": "VoceChat is a lightweight chat server designed for private hosting. It provides instant messaging and channel-based group discussions with support for text, images, files, emojis, and rich text formatting. Users can communicate through a web interface or mobile applications, while administrators manage members and channels."
+    }
   }
 }

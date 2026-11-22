@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "title": "Comandos qm e pct do Proxmox — gestão de VM e contentores LXC | ProxMenux",
+    "description": "Comandos qm e pct do Proxmox VE para VM e contentores LXC: list, config, start, stop, shutdown, reboot, destroy, clone, migrate, snapshot, resize e pct exec / enter / push / pull para contentores.",
+    "ogTitle": "Comandos qm e pct do Proxmox — gestão de VM e contentores LXC",
+    "ogDescription": "Comandos qm e pct do Proxmox VE para gerir máquinas virtuais e contentores LXC pelo terminal: iniciar, parar, configurar, criar snapshots, migrar, clonar e eliminar.",
+    "twitterTitle": "Comandos qm / pct do Proxmox | ProxMenux",
+    "twitterDescription": "Seleção de comandos qm / pct para gerir máquinas virtuais e contentores LXC no Proxmox VE."
+  },
+  "header": {
+    "title": "Gestão de VM e CT",
+    "description": "Seleção de comandos qm para VM e pct para contentores LXC: listagem, ciclo de vida (start / stop / shutdown / destroy), consulta da configuração e operações de contentor como exec, enter, push e pull.",
+    "section": "Ajuda e informações"
+  },
+  "intro": {
+    "title": "Encontrar primeiro um VMID ou CTID",
+    "body": "Quase todos os comandos precisam de um ID numérico. Use <code>qm list</code> para VM e <code>pct list</code> para contentores. Substitua <code>&lt;vmid&gt;</code> / <code>&lt;ctid&gt;</code> nos exemplos pelo ID real antes de executar."
+  },
+  "commandGroups": [
+    {
+      "title": "Listagem e Informação",
+      "commands": [
+        {
+          "command": "qm list",
+          "description": "Listar todas as máquinas virtuais"
+        },
+        {
+          "command": "pct list",
+          "description": "Listar todos os contentores LXC"
+        },
+        {
+          "command": "qm config <vmid>",
+          "description": "Mostrar a configuração da VM interpretada por qm"
+        },
+        {
+          "command": "pct config <ctid>",
+          "description": "Mostrar a configuração do contentor interpretada por pct"
+        }
+      ]
+    },
+    {
+      "title": "Arquivos de configuração (raw)",
+      "commands": [
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Ver arquivo de configuração bruto da VM"
+        },
+        {
+          "command": "cat /etc/pve/lxc/<ctid>.conf",
+          "description": "Ver arquivo de configuração CT bruto"
+        },
+        {
+          "command": "nano /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Editar arquivo de configuração VM (nano)"
+        },
+        {
+          "command": "nano /etc/pve/lxc/<ctid>.conf",
+          "description": "Editar arquivo de configuração CT (nano)"
+        },
+        {
+          "command": "vi /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Editar o ficheiro de configuração VM (vi)"
+        },
+        {
+          "command": "vi /etc/pve/lxc/<ctid>.conf",
+          "description": "Editar o ficheiro de configuração CT (vi)"
+        }
+      ]
+    },
+    {
+      "title": "Gestão de VM",
+      "commands": [
+        {
+          "command": "qm start <vmid>",
+          "description": "Inicie uma máquina virtual. Use o <vmid> correto"
+        },
+        {
+          "command": "qm stop <vmid>",
+          "description": "Forçar a parada de uma máquina virtual. Use o <vmid> correto"
+        },
+        {
+          "command": "qm shutdown <vmid>",
+          "description": "Desligar uma máquina virtual de forma ordenada"
+        },
+        {
+          "command": "qm reset <vmid>",
+          "description": "Reiniciar uma máquina virtual (reboot rígido)"
+        },
+        {
+          "command": "qm suspend <vmid>",
+          "description": "Suspender uma máquina virtual"
+        },
+        {
+          "command": "qm resume <vmid>",
+          "description": "Continuar uma máquina virtual suspensa"
+        },
+        {
+          "command": "qm destroy <vmid>",
+          "description": "Exclua uma VM (irreversível). Use o <vmid> correto"
+        }
+      ]
+    },
+    {
+      "title": "Gestão de contentores",
+      "commands": [
+        {
+          "command": "pct start <ctid>",
+          "description": "Inicie um contêiner. Use o <ctid> correto"
+        },
+        {
+          "command": "pct stop <ctid>",
+          "description": "Forçar a parada de um contêiner. Use o <ctid> correto"
+        },
+        {
+          "command": "pct shutdown <ctid>",
+          "description": "Desligar um contentor de forma ordenada"
+        },
+        {
+          "command": "pct reboot <ctid>",
+          "description": "Reiniciar um contentor"
+        },
+        {
+          "command": "pct destroy <ctid>",
+          "description": "Excluir um CT (irreversível). Use o <ctid> correto"
+        }
+      ]
+    },
+    {
+      "title": "Operações de Contentores",
+      "commands": [
+        {
+          "command": "pct exec <ctid> -- getent passwd | column -t -s :",
+          "description": "Mostrar usuários do CT em formato de tabela"
+        },
+        {
+          "command": "pct exec <ctid> -- ps aux --sort=-%mem | head",
+          "description": "Principais processos de memória em CT"
+        },
+        {
+          "command": "pct enter <ctid>",
+          "description": "Entrar na shell do contentor"
+        },
+        {
+          "command": "pct push <ctid> <source> <dest>",
+          "description": "Copiar o ficheiro da máquina para o contentor"
+        },
+        {
+          "command": "pct pull <ctid> <source> <dest>",
+          "description": "Copiar o ficheiro do contentor para a máquina"
+        }
+      ]
+    }
+  ],
+  "destroyWarn": {
+    "title": "Destruir é irreversível.",
+    "bodyRich": "<code>qm destroy</code> e <code>pct destroy</code> removem a configuração do sistema convidado e os seus volumes de disco geridos. Não pressuponha que os dados externos ou em bind mounts são eliminados. A CLI não pede confirmação por predefinição. Guarde primeiro os dados necessários; consulte <backupLink>Cópias de segurança e restauro</backupLink>."
+  },
+  "qmConfigTip": {
+    "title": "qm config ou edição direta do ficheiro .conf",
+    "bodyRich": "<code>qm config &lt;vmid&gt;</code> e <code>pct config &lt;ctid&gt;</code> mostram a configuração através dos analisadores Proxmox. Para alterações normais, prefira <code>qm set</code> ou o comando pct equivalente. Editar diretamente <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> ou <code>/etc/pve/lxc/&lt;ctid&gt;.conf</code> contorna a validação e os bloqueios dos comandos de gestão; o ficheiro tem de continuar interpretável. Pare o sistema convidado e guarde uma cópia antes de reparar manualmente. <code>pmxcfs</code> sincroniza configurações entre nós, não os dados dos discos convidados."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Cópias de segurança e restauro",
+        "tail": " — vzdump e qmrestore / pct restore."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Armazenamento e Discos",
+        "tail": " — qm importdisk e gestão de discos."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Visão geral de ajuda e informações",
+        "tail": "."
+      }
+    ]
+  }
+}

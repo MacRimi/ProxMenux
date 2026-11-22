@@ -10,5 +10,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Home Assistant is an open source home automation platform designed to put local control and privacy first."
+    },
+    "description": {
+      "en_US": "Home Assistant is an open source home automation platform designed to put local control and privacy first. It enables users to monitor, control, and automate smart devices across the home from a unified interface. By operating entirely within the local network, it eliminates dependency on third-party cloud services."
+    },
+    "screenshots": [
+      "https://www.home-assistant.io/images/frontpage/hero_screenshot.png"
+    ]
   }
 }

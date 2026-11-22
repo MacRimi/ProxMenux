@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Proxmox Disk Manager — Attach Disks to VMs / LXC, SMART Tests, Wipe | ProxMenux",
-    "description": "Manage physical disks on a Proxmox VE host with ProxMenux: pass disks through to VMs or LXC containers (qm set scsi/sata/virtio, pct mp), import qcow2 / vmdk / vdi disk images, pass through whole HBAs or NVMe controllers, safely wipe disks and run SMART self-tests.",
+    "description": "Manage physical disks on a Proxmox VE host with ProxMenux: attach disks to VMs or LXC containers (qm set scsi/sata/virtio, pct mp), import img / qcow2 / vmdk / raw disk images, pass through whole HBAs or NVMe controllers, wipe disks with safety checks and run SMART self-tests.",
     "ogTitle": "Proxmox Disk Manager — Attach Disks to VMs / LXC, SMART Tests, Wipe",
     "ogDescription": "Attach disks to VMs / LXC, import disk images, PCI passthrough for controllers, safe wipe and SMART tests on Proxmox VE.",
     "twitterTitle": "Proxmox Disk Manager | ProxMenux",
@@ -14,7 +14,7 @@
   },
   "intro": {
     "title": "What this menu is for",
-    "body": "Every option here operates on <strong>physical disks already visible to the Proxmox host</strong>. The menu is split in three groups — <strong>VM</strong> (attach disks or import images into a virtual machine), <strong>LXC</strong> (attach disks to a container), and <strong>Utilities</strong> (safe format, SMART health). Safety checks apply everywhere: system disks and disks already in use are hidden or blocked."
+    "body": "These tools work with <strong>physical disks visible to the Proxmox host and image files stored on it</strong>. The menu has three groups: <strong>VM</strong> (attach disks or import images), <strong>LXC</strong> (attach disks to a container), and <strong>Utilities</strong> (formatting and SMART health). Attachment and wipe operations hide or block system disks and disks already in use; SMART checks can inspect those disks without wiping them."
   },
   "opening": {
     "heading": "Opening the menu",
@@ -32,7 +32,7 @@
       "Add Controller or NVMe to VM"
     ],
     "lxcTitle": "LXC",
-    "lxcBody": "Tools that operate on existing containers. Direct device passthrough needs a privileged container; the script offers to convert it if necessary.",
+    "lxcBody": "Tools for existing LXC containers. This script requires a privileged container and offers to change the flag when needed. Read the conversion and file-ownership cautions on the tool page first.",
     "lxcItems": [
       "Import Disk to LXC"
     ],
@@ -69,7 +69,7 @@
   },
   "lxc": {
     "heading": "LXC",
-    "intro": "Tools that operate on existing LXC containers. Direct device passthrough requires a privileged container; the script offers to convert the container if needed.",
+    "intro": "Tools for existing LXC containers. This script requires a privileged container and offers to change the flag when needed. Read the conversion and file-ownership cautions on the tool page first.",
     "options": [
       {
         "icon": "Boxes",
@@ -98,8 +98,8 @@
     ]
   },
   "safety": {
-    "title": "Safety rules shared by every option",
-    "intro": "ProxMenux filters out anything that could harm the host:",
+    "title": "Safety rules for disk attachment and wiping",
+    "intro": "Attachment and wipe operations filter out devices that could harm the host:",
     "items": [
       "The <strong>system disk</strong> (root pool, swap, active ZFS / LVM / RAID members) is always hidden.",
       "Disks <strong>mounted</strong> anywhere on the host are hidden or blocked at execution.",

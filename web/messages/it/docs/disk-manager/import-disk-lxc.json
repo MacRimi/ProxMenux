@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Importa disco in LXC | Documentazione ProxMenux",
+    "description": "Collega un disco fisico a un contenitore LXC esistente su Proxmox VE con ProxMenux. Gestisce rilevamento e formattazione del filesystem, punto di mount, conversione da non privilegiato a privilegiato e percorsi persistenti dei dispositivi.",
+    "ogTitle": "Importa disco in LXC | Documentazione ProxMenux",
+    "ogDescription": "Collega un disco fisico a un contenitore LXC esistente. Gestisce filesystem, punto di mount e conversione da non privilegiato a privilegiato."
+  },
+  "header": {
+    "title": "Importa disco su LXC",
+    "description": "Collegare un disco fisico a un contenitore LXC esistente sull'host Proxmox. ProxMenux rileva dischi liberi, li formatta facoltativamente con un filesystem supportato, e collega la partizione a un punto di montaggio all'interno del contenitore utilizzando percorsi di dispositivo persistenti.",
+    "section": "Gestione del disco · LXC"
+  },
+  "intro": {
+    "title": "Passthrough VM e passthrough LXC",
+    "body": "Questo passthrough LXC <strong>non fornisce un dispositivo a blocchi grezzo</strong>. Il contenitore riceve un <em>punto di mount</em>, cioè una directory su una partizione scelta nell’host. A differenza di una VM, usa il kernel dell’host: il filesystem (ext4/xfs/btrfs) viene quindi letto e gestito dall’host Proxmox ed esposto al contenitore."
+  },
+  "howRuns": {
+    "heading": "Come funziona lo script",
+    "body": "Il flusso ha due fasi distinte: raccolta di informazioni e scelte, poi modifica effettiva della configurazione del contenitore. Fino alla conferma finale non viene montato nulla nel CT.",
+    "summary": "ProxMenux nasconde il disco root e gli altri dischi montati, i membri ZFS, i membri RAID attivi, i dischi usati dall’LVM dell’host e i dischi già presenti in questo contenitore. I dischi citati da un’altra VM o da un altro CT sono mostrati come ⚠ In use, e le firme RAID / LVM mostrano un’etichetta ⚠."
+  },
+  "prereqs": {
+    "heading": "Prerequisiti",
+    "items": [
+      "Almeno un contenitore LXC definito sull'host.",
+      "Il contenitore è <strong>privilegiato</strong> oppure accetti la conversione proposta dallo script.",
+      "Almeno un disco fisico non in uso dall'host."
+    ],
+    "warnTitle": "Contenitore privilegiato richiesto",
+    "warnBody": "Questo script richiede un contenitore <strong>privilegiato</strong> per collegare direttamente il disco. Se rileva <code>unprivileged: 1</code>, propone di modificare <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> sul posto. Ciò cambia il modello di sicurezza senza rimappare i proprietari dei file esistenti. Salva un backup e verifica i proprietari prima di accettare, oppure ricrea il contenitore come privilegiato."
+  },
+  "steps": {
+    "heading": "Passo dopo passo",
+    "stepLabel": "Passaggio",
+    "list": [
+      {
+        "title": "Scegli il contenitore di destinazione",
+        "img": "/disk/select-container.png",
+        "caption": "Menu di selezione del contenitore",
+        "bodyRich": "ProxMenux elenca i contenitori LXC sull’host (<code>pct list</code>), tranne quelli creati da un’immagine OCI, i cui percorsi sono gestiti nell’OCI manager. Scegli quello che riceverà i dischi. Se non è privilegiato, viene proposta la conversione."
+      },
+      {
+        "title": "Scegli il disco fisico",
+        "img": "/disk/disk-selection-ct.png",
+        "caption": "Dischi liberi rilevati sull’host, con ⚠ per i metadati obsoleti",
+        "bodyRich": "Vengono mostrati solo candidati sicuri e puoi selezionare <strong>più dischi</strong> in una sola esecuzione. Per ogni disco, se lo usa una VM o un CT in esecuzione il disco viene saltato, se è fermo ti viene chiesto di confermare e un membro RAID viene rifiutato."
+      },
+      {
+        "title": "Formatta o riutilizza",
+        "intro": "Per ogni disco selezionato lo script ispeziona la prima partizione:",
+        "items": [
+          "Se ha già un filesystem, scegli se usarlo così com’è (i file esistenti sono conservati) o formattarlo.",
+          "Se non ha un filesystem, viene formattato: scegli ext4 / xfs / btrfs. La formattazione chiede sempre un’ulteriore conferma."
+        ]
+      },
+      {
+        "title": "Scegli il punto di montaggio",
+        "bodyRich": "Inserisci il percorso in cui il contenitore vedrà il disco. ProxMenux suggerisce <code>/mnt/disk_&lt;device&gt;</code> (ad esempio <code>/mnt/disk_sdb</code>) e aggiunge un suffisso se quel percorso è già in uso. È il percorso <em>all’interno</em> del contenitore; l’host fa riferimento alla partizione tramite <code>/dev/disk/by-id/…</code>."
+      },
+      {
+        "title": "Collega e verifica",
+        "img": "/disk/assignment-ct.png",
+        "caption": "Assegnazione a CT",
+        "bodyRich": "ProxMenux aggiunge una nuova voce <code>mpN:</code> alla configurazione del container, evitando gli indici già in uso, quindi rilegge la configurazione per verificarla. Per xfs e btrfs installa anche <code>xfsprogs</code> o <code>btrfs-progs</code> all’interno del container, offrendo di avviarlo se è fermo. Se il container è in esecuzione, il montaggio viene applicato subito; altrimenti entrerà in funzione al prossimo avvio.",
+        "extraImg": "/disk/result-point.png",
+        "extraAlt": "Punto di montaggio creato con successo",
+        "extraCaption": "Punto di montaggio creato e verificato"
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Equivalente manuale",
+    "body": "Lo script avvolge <code>pct set</code>. Un'invocazione diretta per un singolo disco sembra:"
+  },
+  "important": {
+    "heading": "Considerazioni importanti",
+    "items": [
+      "<strong>Più dischi per esecuzione</strong>: selezionali insieme nella checklist; ognuno ottiene il proprio punto di montaggio.",
+      "<strong>non</strong> collegare la stessa partizione a diversi contenitori che potrebbero montarla simultaneamente: le scritture simultanee corrompono il filesystem.",
+      "<strong>I vecchi metadati</strong>: i dischi con firme ZFS sono nascosti e i membri RAID vengono rifiutati. Cancella prima quei metadati con lo strumento <wipeLink>Formatta o cancella un disco fisico</wipeLink>."
+    ]
+  },
+  "troubleshoot": {
+    "heading": "Risoluzione dei problemi",
+    "unprivTitle": "\"Impossibile proseguire con un contenitore non privilegiato\"",
+    "unprivBody": "Hai rifiutato la conversione, quindi lo script si è fermato senza modificare nulla. Per continuare, eseguilo di nuovo e accetta: lo script arresta il contenitore, salva la sua configurazione in <code>/etc/pve/lxc/&lt;CTID&gt;.conf.bak</code> e sostituisce <code>unprivileged: 1</code> con <code>unprivileged: 0</code>. Questa modifica da sola non converte la proprietà UID/GID dei file esistenti: esegui prima un backup del contenitore e correggi i proprietari, oppure ripristina o ricrea il contenitore come privilegiato.",
+    "permsTitle": "Le autorizzazioni all'interno del contenitore sono sbagliate",
+    "permsBody": "Montare una partizione in un contenitore privilegiato conserva i proprietari esistenti; un filesystem appena formattato appartiene spesso a <code>root:root</code>. Se il servizio usa un altro utente, ad esempio <code>www-data</code> per Nextcloud, controlla UID/GID e modifica i file necessari con <code>chown</code>/<code>chmod</code>. Le modifiche agiscono anche sul disco sottostante."
+  },
+  "related": {
+    "heading": "Correlati",
+    "items": [
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importa disco nella VM",
+        "tail": "— flusso equivalente per le VM."
+      },
+      {
+        "href": "/docs/storage-share/lxc-mount-points",
+        "label": "Punti di montaggio LXC (Host ↔ CT)",
+        "tail": "— condividere directory host con un CT invece di allegare un disco intero."
+      },
+      {
+        "href": "/docs/help-info/vm-ct-commands",
+        "label": "Comandi di gestione VM e CT",
+        "tail": "— pct config / push / pull reference."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Panoramica di Disk Manager",
+        "tail": "."
+      }
+    ]
+  }
+}

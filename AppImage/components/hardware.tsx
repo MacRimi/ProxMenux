@@ -23,9 +23,12 @@ import {
 import { fetchApi } from "@/lib/api-config"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { GpuSwitchModeIndicator } from "./gpu-switch-mode-indicator"
+import { SystemInformation } from "./system-information"
 import { Settings2, CheckCircle2 } from "lucide-react"
 import { useT } from "../lib/i18n/provider"
 import { cn } from "@/lib/utils"
+import { useAccess } from "../lib/access"
+import { useIsPbs } from "../lib/use-platform"
 
 type TFunction = (key: string, params?: Record<string, string | number>) => string
 
@@ -33,7 +36,8 @@ const parseLsblkSize = (sizeStr: string | undefined): number => {
   if (!sizeStr) return 0
 
   // Remove spaces and convert to uppercase
-  const cleaned = sizeStr.trim().toUpperCase()
+  // lsblk follows the locale: "29,7G" on a French host
+  const cleaned = sizeStr.trim().toUpperCase().replace(",", ".")
 
   // Extract number and unit
   const match = cleaned.match(/^([\d.]+)([KMGT]?)$/)
@@ -340,6 +344,13 @@ const StorageTemperatureGroup = ({ title, temperatures }: { title: string; tempe
 }
 
 export default function Hardware() {
+  // Installing drivers and switching GPU modes run scripts on the host.
+  const { capabilities } = useAccess()
+  // The driver installers and the GPU switch mode are tools of a Proxmox VE
+  // host (passing a GPU to VMs and LXC); a Proxmox Backup Server shows its
+  // hardware without them.
+  const pbs = useIsPbs()
+  const canRunTools = capabilities.execute && !pbs
   const t = useT()
 
   // Static data - loaded once on mount. Static fields (CPU, motherboard, memory
@@ -633,6 +644,13 @@ export default function Hardware() {
     return realtimeGPUData.has_monitoring_tool === true
   }
 
+  const diskCountBySlot = new Map<string, number>()
+  for (const disk of hardwareData?.storage_devices ?? []) {
+    if (disk.controller_slot) {
+      diskCountBySlot.set(disk.controller_slot, (diskCountBySlot.get(disk.controller_slot) ?? 0) + 1)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -649,103 +667,7 @@ export default function Hardware() {
   return (
     <div className="space-y-6">
       {/* System Information - CPU & Motherboard */}
-      {(hardwareData?.cpu || hardwareData?.motherboard) && (
-        <Card className="border-border/50 bg-card/50 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">{t("hardware.sections.systemInformation")}</h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* CPU Info */}
-            {hardwareData?.cpu && Object.keys(hardwareData.cpu).length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <CpuIcon className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">CPU</h3>
-                </div>
-                <div className="space-y-2">
-                  {hardwareData.cpu.model && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.model")}</span>
-                      <span className="font-medium text-right">{hardwareData.cpu.model}</span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.cores_per_socket && hardwareData.cpu.sockets && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.cores")}</span>
-                      <span className="font-medium">
-                        {hardwareData.cpu.sockets} × {hardwareData.cpu.cores_per_socket} ={" "}
-                        {t("hardware.values.cores", { count: hardwareData.cpu.sockets * hardwareData.cpu.cores_per_socket })}
-                      </span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.total_threads && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.threads")}</span>
-                      <span className="font-medium">{hardwareData.cpu.total_threads}</span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.l3_cache && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.l3Cache")}</span>
-                      <span className="font-medium">{hardwareData.cpu.l3_cache}</span>
-                    </div>
-                  )}
-                  {hardwareData.cpu.virtualization && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.virtualization")}</span>
-                      <span className="font-medium">{hardwareData.cpu.virtualization}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Motherboard Info */}
-            {hardwareData?.motherboard && Object.keys(hardwareData.motherboard).length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">{t("hardware.sections.motherboard")}</h3>
-                </div>
-                <div className="space-y-2">
-                  {hardwareData.motherboard.manufacturer && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.manufacturer")}</span>
-                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.manufacturer, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.model && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.model")}</span>
-                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.model, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.bios?.vendor && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">BIOS</span>
-                      <span className="font-medium text-right">{formatHardwareValue(hardwareData.motherboard.bios.vendor, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.bios?.version && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.version")}</span>
-                      <span className="font-medium">{formatHardwareValue(hardwareData.motherboard.bios.version, t)}</span>
-                    </div>
-                  )}
-                  {hardwareData.motherboard.bios?.date && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t("hardware.labels.date")}</span>
-                      <span className="font-medium">{hardwareData.motherboard.bios.date}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
+      {hardwareData && <SystemInformation data={hardwareData} />}
 
       {/* Memory Modules */}
       {hardwareData?.memory_modules && hardwareData.memory_modules.length > 0 && (
@@ -1107,7 +1029,7 @@ return (
                     )}
 
 {/* GPU Switch Mode Indicator */}
-  {getGpuSwitchMode(gpu) !== "unknown" && (
+  {!pbs && getGpuSwitchMode(gpu) !== "unknown" && (
   <div className="mt-3 pt-3 border-t border-border/30">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -1141,7 +1063,7 @@ return (
                               </button>
                             </>
                           ) : (
-                            <button
+                            canRunTools && (<button
                               className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1150,7 +1072,7 @@ return (
                             >
                               <Settings2 className="h-3 w-3" />
                               {t("actions.edit")}
-                            </button>
+                            </button>)
                           )}
                         </div>
                       </div>
@@ -1642,7 +1564,9 @@ return (
                       </div>
                     </div>
                   </div>
-                ) : (
+                ) : pbs ? null : (
+                  // Extended monitoring asks for GPU tools a Proxmox Backup
+                  // Server has no use for: it is offered on Proxmox VE only.
                   <div className="rounded-lg bg-blue-500/10 p-4 border border-blue-500/20">
                     <div className="flex gap-3">
                       <div className="flex-shrink-0">
@@ -1660,7 +1584,7 @@ return (
                           {getMonitoringToolRecommendation(selectedGPU.vendor, t)}
                         </p>
                         {selectedGPU.vendor.toLowerCase().includes("nvidia") && (
-                          <Button
+                          canRunTools && (<Button
                             onClick={handleInstallNvidiaDriver}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                           >
@@ -1668,10 +1592,10 @@ return (
                               <Download className="mr-2 h-4 w-4" />
                               {t("hardware.actions.installNvidiaDrivers")}
                             </>
-                          </Button>
+                          </Button>)
                         )}
                         {(selectedGPU.vendor.toLowerCase().includes("amd") || selectedGPU.vendor.toLowerCase().includes("ati")) && (
-                          <Button
+                          canRunTools && (<Button
                             onClick={handleInstallAmdTools}
                             className="w-full bg-red-600 hover:bg-red-700 text-white"
                           >
@@ -1679,10 +1603,10 @@ return (
                               <Download className="mr-2 h-4 w-4" />
                               {t("hardware.actions.installAmdGpuTools")}
                             </>
-                          </Button>
+                          </Button>)
                         )}
                         {selectedGPU.vendor.toLowerCase().includes("intel") && (
-                          <Button
+                          canRunTools && (<Button
                             onClick={handleInstallIntelTools}
                             className="w-full bg-sky-600 hover:bg-sky-700 text-white"
                           >
@@ -1690,7 +1614,7 @@ return (
                               <Download className="mr-2 h-4 w-4" />
                               {t("hardware.actions.installIntelGpuTools")}
                             </>
-                          </Button>
+                          </Button>)
                         )}
                       </div>
                     </div>
@@ -1779,13 +1703,13 @@ return (
                   </p>
                 </div>
               </div>
-              <Button
+              {canRunTools && (<Button
                 onClick={() => setShowCoralInstaller(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
               >
                 <Download className="mr-2 h-4 w-4" />
                 {t("hardware.actions.installDrivers")}
-              </Button>
+              </Button>)}
             </div>
           )}
         </Card>
@@ -1960,7 +1884,7 @@ return (
               )}
 
               {!selectedCoral.drivers_ready && (
-                <Button
+                canRunTools && (<Button
                   onClick={() => {
                     setSelectedCoral(null)
                     setShowCoralInstaller(true)
@@ -1969,7 +1893,7 @@ return (
                 >
                   <Download className="mr-2 h-4 w-4" />
                   {t("hardware.actions.installCoralDrivers")}
-                </Button>
+                </Button>)
               )}
             </div>
           )}
@@ -2358,14 +2282,23 @@ return (
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hardwareData.pci_devices.map((device, index) => (
+            {hardwareData.pci_devices.map((device, index) => {
+              const diskCount = diskCountBySlot.get(device.slot) ?? 0
+              return (
               <div
                 key={index}
                 onClick={() => setSelectedPCIDevice(device)}
                 className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{translateDeviceType(device.type, t)}</Badge>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{translateDeviceType(device.type, t)}</Badge>
+                    {diskCount > 0 && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {t("hardware.counts.devices", { count: diskCount })}
+                      </Badge>
+                    )}
+                  </div>
                   <span className="font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
                 </div>
                 <p className="font-medium text-sm line-clamp-2 break-words">{device.device}</p>
@@ -2374,7 +2307,8 @@ return (
                   <p className="mt-1 font-mono text-xs text-green-500 truncate">{t("hardware.labels.driver")}: {device.driver}</p>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}
@@ -2434,6 +2368,37 @@ return (
                   <span className="font-mono text-sm">{selectedPCIDevice.kernel_module}</span>
                 </div>
               )}
+
+              {(() => {
+                const attachedDisks = (hardwareData?.storage_devices ?? []).filter(
+                  (disk) => disk.controller_slot === selectedPCIDevice.slot,
+                )
+                if (attachedDisks.length === 0) return null
+                return (
+                  <div className="flex justify-between gap-4 border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {t("hardware.labels.attachedDisks")} ({attachedDisks.length})
+                    </span>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {attachedDisks.map((disk) => (
+                        <button
+                          key={disk.name}
+                          type="button"
+                          title={disk.model}
+                          onClick={() => {
+                            setSelectedPCIDevice(null)
+                            setSelectedDisk(disk)
+                          }}
+                        >
+                          <Badge variant="outline" className="font-mono hover:bg-accent">
+                            {disk.name}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </DialogContent>
@@ -2826,6 +2791,34 @@ return (
                   <span className="font-mono text-sm text-green-500">{selectedDisk.driver}</span>
                 </div>
               )}
+
+              {selectedDisk.controller_slot && (() => {
+                // Fall back to the bare slot when the controller's PCI class isn't one we list
+                const controller = hardwareData?.pci_devices?.find((d) => d.slot === selectedDisk.controller_slot)
+                return (
+                  <div className="flex justify-between gap-4 border-b border-border/50 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">{t("hardware.labels.storageController")}</span>
+                    <span className="text-sm text-right">
+                      {controller ? (
+                        <button
+                          type="button"
+                          className="text-blue-400 hover:underline text-right"
+                          onClick={() => {
+                            setSelectedDisk(null)
+                            setSelectedPCIDevice(controller)
+                          }}
+                        >
+                          {/* lspci's "Device 84ca" placeholder means no subsystem name, so use the chip name */}
+                          {controller.sdevice && !/^Device [0-9a-f]{4}$/.test(controller.sdevice)
+                            ? controller.sdevice
+                            : controller.device}
+                        </button>
+                      ) : null}
+                      <span className="ml-2 font-mono text-muted-foreground">{selectedDisk.controller_slot}</span>
+                    </span>
+                  </div>
+                )
+              })()}
 
               {selectedDisk.rotation_rate !== undefined && selectedDisk.rotation_rate !== null && (
                 <div className="flex justify-between border-b border-border/50 pb-2">

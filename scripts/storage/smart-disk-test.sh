@@ -337,11 +337,11 @@ while true; do
               HOSTNAME=\$(hostname -s)
               TEST_RESULT=\$(nvme self-test-log ${DISK_SAFE} 2>/dev/null | head -20)
               if echo \"\$TEST_RESULT\" | grep -qi 'completed without error\|success'; then
-                python3 \"${NOTIFY_SCRIPT}\" --action send-raw --severity INFO \
+                python3 \"${NOTIFY_SCRIPT}\" --action send --type smart_test_complete --severity INFO \
                   --title \"\${HOSTNAME}: SMART Long Test Completed\" \
                   --message \"NVMe disk ${DISK_SAFE} (${DISK_LABEL_SAFE}) - Long self-test completed successfully.\" 2>/dev/null || true
               else
-                python3 \"${NOTIFY_SCRIPT}\" --action send-raw --severity WARNING \
+                python3 \"${NOTIFY_SCRIPT}\" --action send --type smart_test_complete --severity WARNING \
                   --title \"\${HOSTNAME}: SMART Long Test Completed\" \
                   --message \"NVMe disk ${DISK_SAFE} (${DISK_LABEL_SAFE}) - Long self-test completed. Check results for details.\" 2>/dev/null || true
               fi
@@ -376,15 +376,15 @@ while true; do
               HOSTNAME=\$(hostname -s)
               TEST_RESULT=\$(smartctl ${SMARTCTL_TYPE_SAFE} -l selftest ${DISK_SAFE} 2>/dev/null | grep -E '^# ?1')
               if echo \"\$TEST_RESULT\" | grep -qi 'Completed without error'; then
-                python3 \"${NOTIFY_SCRIPT}\" --action send-raw --severity INFO \
+                python3 \"${NOTIFY_SCRIPT}\" --action send --type smart_test_complete --severity INFO \
                   --title \"\${HOSTNAME}: SMART Long Test Completed\" \
                   --message \"Disk ${DISK_SAFE} (${DISK_LABEL_SAFE}) - Long self-test completed successfully.\" 2>/dev/null || true
               elif echo \"\$TEST_RESULT\" | grep -qi 'error\|fail'; then
-                python3 \"${NOTIFY_SCRIPT}\" --action send-raw --severity CRITICAL \
+                python3 \"${NOTIFY_SCRIPT}\" --action send --type smart_test_failed --severity CRITICAL \
                   --title \"\${HOSTNAME}: SMART Long Test FAILED\" \
                   --message \"Disk ${DISK_SAFE} (${DISK_LABEL_SAFE}) - Long self-test completed with ERRORS. Check disk health immediately.\" 2>/dev/null || true
               else
-                python3 \"${NOTIFY_SCRIPT}\" --action send-raw --severity INFO \
+                python3 \"${NOTIFY_SCRIPT}\" --action send --type smart_test_complete --severity INFO \
                   --title \"\${HOSTNAME}: SMART Long Test Completed\" \
                   --message \"Disk ${DISK_SAFE} (${DISK_LABEL_SAFE}) - Long self-test completed. Check results for details.\" 2>/dev/null || true
               fi

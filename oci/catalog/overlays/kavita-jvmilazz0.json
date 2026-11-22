@@ -16,5 +16,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Kavita is a cross-platform reading server designed to manage personal reading collections."
+    },
+    "description": {
+      "en_US": "Kavita is a cross-platform reading server designed to manage personal reading collections. It organizes and serves digital libraries of books, comics, and manga through an integrated web reader. Users can host their own library and share access with friends and family."
+    },
+    "tips": [
+      "Set up your admin account upon first access."
+    ],
+    "repository": "https://github.com/Kareadita/Kavita",
+    "screenshots": [
+      "https://github.com/user-attachments/assets/f016b34f-3c4c-4f07-8e72-12cd6f4e71ea"
+    ]
   }
 }

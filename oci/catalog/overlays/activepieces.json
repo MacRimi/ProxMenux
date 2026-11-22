@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Build and run automation flows from a self-hosted visual interface. This single-container profile uses Activepieces’ documented personal mode with embedded storage and an in-memory queue."
+    },
+    "description": {
+      "en_US": "Activepieces is an open-source workflow automation platform designed to connect applications and streamline tasks. It features a visual flow builder equipped with branches, loops, retries, and versioning. Users can integrate AI providers, build custom tools, and automate business processes with an extensive ecosystem of community-contributed components."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/activepieces/activepieces/HEAD/docs/resources/templates.gif",
+      "https://github.com/activepieces/activepieces/assets/1812998/76c97441-c285-4480-bc75-30a0c73ed340"
+    ]
+  }
+}

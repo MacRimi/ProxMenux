@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Host Git repositories and collaborate through a web interface with an integrated SSH server."
+    },
+    "description": {
+      "en_US": "Forgejo is a lightweight software forge for hosting Git repositories. It provides collaboration and project management tools such as issues, pull requests, wikis, and kanban boards. Additionally, it supports software distribution through release downloads and built-in package registries for multiple ecosystems."
+    }
+  }
+}

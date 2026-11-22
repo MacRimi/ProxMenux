@@ -8,5 +8,13 @@
       "required": false,
       "prompt": "Proxy address to reach the API (optional)"
     }
+  },
+  "catalog_ui": {
+    "screenshots": [
+      "https://raw.githubusercontent.com/Yidadaa/ChatGPT-Next-Web/HEAD/docs/images/cover.png",
+      "https://raw.githubusercontent.com/Yidadaa/ChatGPT-Next-Web/HEAD/docs/images/settings.png",
+      "https://raw.githubusercontent.com/Yidadaa/ChatGPT-Next-Web/HEAD/docs/images/more.png",
+      "https://raw.githubusercontent.com/Yidadaa/ChatGPT-Next-Web/HEAD/docs/images/mcp-market.png"
+    ]
   }
 }

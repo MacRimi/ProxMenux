@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Runs Proxmox Mail Gateway as a native LXC in front of your mail server, filtering spam and viruses with its own web interface, quarantine and statistics. Community packaging by Dockur, not an official Proxmox image."
+    },
+    "description": {
+      "en_US": "Proxmox Mail Gateway is an email security solution that filters incoming and outgoing email traffic. It protects mail servers against spam and viruses while offering quarantine management and flexible filtering rules. It also supports DKIM signing for outbound messages and provides statistics through a dedicated web interface."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/dockur/proxmox-mail/master/.github/screenshot.png"
+    ]
+  }
+}

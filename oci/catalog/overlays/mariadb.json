@@ -2,6 +2,15 @@
   "catalog_ui": {
     "launch": {
       "port": null
+    },
+    "title": {
+      "en_US": "MariaDB"
+    },
+    "tagline": {
+      "en_US": "Mariadb is one of the most popular database servers. Made by the original developers of MySQL."
+    },
+    "description": {
+      "en_US": "MariaDB is a database server created by the original developers of MySQL. It manages relational databases and processes SQL queries for applications. It also includes utility tools to check, analyze, optimize, and repair database tables."
     }
   },
   "first_run": {

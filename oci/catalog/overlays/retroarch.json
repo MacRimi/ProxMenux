@@ -10,5 +10,35 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "RetroArch"
+    },
+    "tagline": {
+      "en_US": "RetroArch is a frontend for emulators, game engines, and media players."
+    },
+    "description": {
+      "en_US": "RetroArch is a frontend for emulators, game engines, and media players. It enables users to run classic video games across a wide variety of systems through a single graphical interface. The platform centralizes game controls, settings, and emulation cores into a unified experience."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/XMB-main-menu.jpg",
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/ozone-main-menu.jpg",
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/rgui-main-menu.jpg",
+      "https://raw.githubusercontent.com/libretro/RetroArch/HEAD/docs/glui-main-menu.jpg"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

@@ -10,5 +10,14 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "ESPHome is a system to control your microcontrollers by simple yet powerful configuration files and control them remotely through Home Automation systems."
+    },
+    "description": {
+      "en_US": "ESPHome is a system designed to control microcontrollers using simple configuration files. It enables users to configure custom firmware for microcontrollers without requiring manual programming. The created devices can then be controlled remotely through home automation systems."
+    },
+    "repository": "https://github.com/esphome/esphome"
   }
 }

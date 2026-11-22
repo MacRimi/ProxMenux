@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import Image from "next/image"
@@ -32,7 +32,6 @@ export default async function LxcSambaGuide({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "guides.lxcSamba" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -52,7 +51,7 @@ export default async function LxcSambaGuide({
 
   return (
     <div className="min-h-screen bg-white text-gray-900 pt-16 flex flex-col">
-      <div className="container mx-auto px-4 pt-6 pb-16 flex-grow" style={{ maxWidth: "980px" }}>
+      <div className="container mx-auto px-4 pt-6 pb-16 grow" style={{ maxWidth: "980px" }}>
       <DocHeader
         title={t("header.title")}
         description={t("header.description")}

@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted nutrition and meal tracker with food logging, recipes, and nutrition data."
+    },
+    "description": {
+      "en_US": "NutriTrace is a self-hosted personal nutrition and meal tracker. It enables food logging across configurable meal slots, recipe management, and macro tracking. Users can monitor intermittent fasting, set adaptive energy expenditure goals, and look up ingredients using integrated nutrition databases."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/traceapps/nutritrace/HEAD/docs/screenshots/01-diary.png"
+    ]
+  }
+}

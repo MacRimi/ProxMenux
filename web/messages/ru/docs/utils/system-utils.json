@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "title": "Установщик системных утилит | Документация ProxMenux",
+    "description": "Установщик утилит командной строки для Proxmox VE с 25 пакетами в основном списке (htop, btop, iperf3, tmux, ...). Выбор отдельных пакетов, установка всех пакетов и предопределённые группы (базовые утилиты, разработка, сжатие, мультиплексоры, анализ, сеть). Группы могут включать дополнительные пакеты. Использует ensure_repositories + install_single_package.",
+    "ogTitle": "Установщик системных утилит | Документация ProxMenux",
+    "ogDescription": "Устанавливайте подобранные утилиты командной строки на Proxmox VE одним щелчком или выбирайте их вручную."
+  },
+  "header": {
+    "title": "Установка системных утилит",
+    "description": "Средство выбора из 25 утилит командной строки в основном списке PROXMENUX_UTILS. Предлагает выбор отдельных утилит, установку всех утилит, шесть предопределённых групп и проверку установки. Группы могут включать инструменты, не входящие в основной список. Использует общие вспомогательные функции ensure_repositories() + install_single_package() для единообразной работы с репозиториями и вывода результатов по каждому пакету.",
+    "section": "Утилиты"
+  },
+  "info": {
+    "title": "Что делает этот инструмент",
+    "body": "Устанавливает утилиты командной строки из списка из 25 пакетов. Каждая установка выполняется по одной схеме: <code>ensure_repositories</code> проверяет, что на хосте доступен пригодный для использования репозиторий Proxmox для текущей основной версии PVE, затем <code>install_single_package</code> устанавливает пакет и проверяет, что его команда доступна через PATH."
+  },
+  "opening": {
+    "heading": "Запуск установщика",
+    "intro": "В меню утилит выберите <strong>Установщик системных утилит</strong>. Главное меню предлагает девять вариантов действий:",
+    "imageAlt": "Меню установщика системных утилит с выбором отдельных пакетов, установкой всех утилит, предопределёнными группами и проверкой"
+  },
+  "actions": {
+    "heading": "9 действий в меню",
+    "headerOption": "Вариант",
+    "headerBehaviour": "Поведение",
+    "rows": [
+      {
+        "option": "1. Выбор отдельных пакетов",
+        "behaviourRich": "Список всех 25 пакетов с флажками. Используйте SPACE для переключения отметки и ENTER для подтверждения; устанавливаются только выбранные пакеты."
+      },
+      {
+        "option": "2. Установить ВСЕ утилиты",
+        "behaviourRich": "Установка всех пакетов из <code>PROXMENUX_UTILS</code> за один раз. Используйте после новой установки Proxmox."
+      },
+      {
+        "option": "3. Базовые",
+        "behaviourRich": "<code>grc</code>, <code>htop</code>, <code>tree</code>, <code>curl</code>, <code>wget</code>"
+      },
+      {
+        "option": "4. Разработка",
+        "behaviourRich": "<code>git</code>, <code>vim</code>, <code>nano</code>"
+      },
+      {
+        "option": "5. Сжатие",
+        "behaviourRich": "<code>zip</code>, <code>unzip</code>, <code>rsync</code>"
+      },
+      {
+        "option": "6. Терминальные мультиплексоры",
+        "behaviourRich": "<code>screen</code>, <code>tmux</code>"
+      },
+      {
+        "option": "7. Анализ",
+        "behaviourRich": "<code>jq</code>, <code>ncdu</code>, <code>iotop</code>"
+      },
+      {
+        "option": "8. Сеть",
+        "behaviourRich": "<code>iperf3</code>, <code>nethogs</code>, <code>nmap</code>, <code>tcpdump</code>, <code>lsof</code>"
+      },
+      {
+        "option": "9. Проверить установленные пакеты",
+        "behaviourRich": "Перебирает все записи в <code>PROXMENUX_UTILS</code>, проверяет наличие команды проверки в PATH и выводит сводку «Доступно / Отсутствует»."
+      }
+    ]
+  },
+  "packages": {
+    "heading": "25 пакетов",
+    "intro": "Определены в общем <code>scripts/global/utils-install-functions.sh</code> как <code>PROXMENUX_UTILS</code> (формат: <code>package:verify_command:description</code>). Другие ProxMenux scripts (например, средства запуска мониторинга сети для iftop / iptraf-ng / iperf3) повторно используют записи из этого списка, чтобы пакет и команда проверки оставались согласованными.",
+    "headerPackage": "Пакет",
+    "headerVerify": "Команда проверки",
+    "headerDescription": "Описание",
+    "rows": [
+      {
+        "package": "axel",
+        "verify": "axel",
+        "description": "Ускоритель загрузки"
+      },
+      {
+        "package": "aria2",
+        "verify": "aria2c",
+        "description": "Загрузчик из нескольких источников"
+      },
+      {
+        "package": "btop",
+        "verify": "btop",
+        "description": "Современный монитор ресурсов"
+      },
+      {
+        "package": "cabextract",
+        "verify": "cabextract",
+        "description": "Извлечение файлов CAB"
+      },
+      {
+        "package": "chntpw",
+        "verify": "chntpw",
+        "description": "Редактирование реестра / паролей Windows"
+      },
+      {
+        "package": "dos2unix",
+        "verify": "dos2unix",
+        "description": "Преобразование текстовых файлов DOS / Unix"
+      },
+      {
+        "package": "genisoimage",
+        "verify": "genisoimage",
+        "description": "Создание ISO-образов"
+      },
+      {
+        "package": "grc",
+        "verify": "grc",
+        "description": "Универсальное средство цветовой подсветки журналов"
+      },
+      {
+        "package": "htop",
+        "verify": "htop",
+        "description": "Интерактивный просмотр процессов"
+      },
+      {
+        "package": "iftop",
+        "verify": "iftop",
+        "description": "Использование сети в реальном времени"
+      },
+      {
+        "package": "intel-gpu-tools",
+        "verify": "intel_gpu_top",
+        "description": "Инструменты для графических процессоров Intel"
+      },
+      {
+        "package": "iotop",
+        "verify": "iotop",
+        "description": "Мониторинг дискового ввода-вывода"
+      },
+      {
+        "package": "iperf3",
+        "verify": "iperf3",
+        "description": "Тестирование пропускной способности сети"
+      },
+      {
+        "package": "ipset",
+        "verify": "ipset",
+        "description": "Управление наборами IP-адресов"
+      },
+      {
+        "package": "iptraf-ng",
+        "verify": "iptraf-ng",
+        "description": "Инструмент мониторинга сети"
+      },
+      {
+        "package": "libguestfs-tools",
+        "verify": "virt-filesystems",
+        "description": "Утилиты для работы с дисками виртуальных машин"
+      },
+      {
+        "package": "msr-tools",
+        "verify": "rdmsr",
+        "description": "Доступ к регистрам MSR процессора"
+      },
+      {
+        "package": "net-tools",
+        "verify": "netstat",
+        "description": "Устаревшие сетевые инструменты"
+      },
+      {
+        "package": "plocate",
+        "verify": "locate",
+        "description": "Быстрый поиск файлов"
+      },
+      {
+        "package": "s-tui",
+        "verify": "s-tui",
+        "description": "Stress-Terminal UI"
+      },
+      {
+        "package": "sshpass",
+        "verify": "sshpass",
+        "description": "Неинтерактивный вход через SSH"
+      },
+      {
+        "package": "tmux",
+        "verify": "tmux",
+        "description": "Терминальный мультиплексор"
+      },
+      {
+        "package": "unzip",
+        "verify": "unzip",
+        "description": "Распаковка ZIP-архивов"
+      },
+      {
+        "package": "wimtools",
+        "verify": "wimlib-imagex",
+        "description": "Управление образами WIM"
+      },
+      {
+        "package": "zip",
+        "verify": "zip",
+        "description": "Создание ZIP-архивов"
+      }
+    ]
+  },
+  "howItWorks": {
+    "heading": "Как выполняется установка отдельного пакета",
+    "items": [
+      "<code>ensure_repositories</code> определяет PVE версии 8 или 9 и считывает сведения о репозиториях через API Proxmox. Если на узле есть пригодный для использования репозиторий Proxmox, настройки узла остаются без изменений; если на узле нет активной подписки и настроен только репозиторий Enterprise, перед переключением на no-subscription запрашивается подтверждение, а после подтверждённого переключения запускается <code>apt-get update</code>.",
+      "<code>install_single_package \"pkg\" \"verify_cmd\" \"description\"</code> запускает <code>apt-get install -y \"$pkg\"</code> с отображением обратной связи (<code>msg_info</code> / <code>msg_ok</code> / <code>msg_error</code>)."
+    ],
+    "verifyIntro": "После установки доступность проверочной команды проверяется с помощью <code>command -v \"$verify_cmd\"</code>. Возможны три результата:",
+    "verifyOutcomes": [
+      "<strong>0 (успех):</strong> команда доступна, пакет учитывается в категории <em>Успешно</em>.",
+      "<strong>1 (ошибка):</strong> apt завершился с ошибкой, пакет учитывается в категории <em>С ошибкой</em>.",
+      "<strong>2 (предупреждение):</strong> apt завершился успешно, но ожидаемая команда не найдена в PATH — пакет учитывается в категории <em>С предупреждениями</em>."
+    ],
+    "summary": "По завершении групповой или выборочной установки в итоговом диалоговом окне отображается количество результатов по категориям <em>Успешно / С предупреждениями / Ошибка</em>."
+  },
+  "verify": {
+    "heading": "Проверка установленных пакетов",
+    "intro": "Пункт 9 работает в режиме «только для чтения»: он просматривает <code>PROXMENUX_UTILS</code> и выполняет <code>command -v</code> для каждой проверочной команды. Вывод выглядит следующим образом:",
+    "code": "Total: 25\nAvailable: 18\nMissing: 8\n\n✓ axel - Download accelerator\n✓ aria2c - Multi-source downloader\n✓ btop - Modern resource monitor\n✗ cabextract - Extract CAB files\n✓ dos2unix - Convert DOS / Unix text files\n✗ genisoimage - Create ISO images\n✓ grc - Generic log colorizer\n...",
+    "outro": "Полезно перед запуском скриптов, зависящих от этих инструментов (например, для <code>uup_dump_iso_creator.sh</code> нужны <code>aria2c</code> + <code>cabextract</code> + <code>wimlib-imagex</code>). Если чего-то не хватает, запустите установку соответствующей группы или укажите недостающие пакеты при выборочной установке."
+  },
+  "troubleshoot": {
+    "heading": "Устранение неполадок",
+    "reposTitle": "«Не удалось настроить репозитории. Установка прервана.»",
+    "reposBody": "Проверка репозиториев не пройдена: переход на репозиторий без подписки был отклонён, не удалось определить статус подписки или запись репозитория требует внимания. Причина указана в сообщении выше. Список репозиториев находится в <em>Node → Updates → Repositories</em>, а запуск <code>apt-get update</code> в консоли показывает ошибку, о которой сообщает apt.",
+    "warningsTitle": "Для пакета отображается статус «С предупреждениями», но после закрытия меню команда работает",
+    "warningsBody": "После <code>apt-get install</code> вспомогательный скрипт выполняет <code>hash -r</code>, немного ждёт и проверяет наличие ожидаемой команды с помощью <code>command -v</code>. Предупреждение означает, что проверка по-прежнему не пройдена; оно не указывает причину. Попробуйте открыть новую командную оболочку, а если команда всё ещё недоступна, проверьте установку пакета и PATH.",
+    "hangsTitle": "Установка через apt зависает",
+    "hangsBody": "Скорее всего, установка ожидает ответа на запрос debconf, скрытый из-за подавления вывода. Скрипт использует <code>DEBIAN_FRONTEND=noninteractive</code> для всех вызовов apt, что обычно подавляет запросы, но некоторые пакеты всё же требуют ввода пользователя. Прервите установку сочетанием <kbd>Ctrl</kbd>+<kbd>C</kbd>, затем выполните <code>apt-get install -y &lt;pkg&gt;</code> вручную в командной оболочке, чтобы увидеть запрос и принять решение."
+  },
+  "files": {
+    "heading": "Используемые файлы",
+    "code": "scripts/utilities/system_utils.sh                    # this script\nscripts/global/utils-install-functions.sh            # PROXMENUX_UTILS, install_single_package\nscripts/global/repository-functions.sh               # ensure_repositories\nscripts/global/repository_policy.py                  # reads and switches repositories through the Proxmox API\n/etc/apt/sources.list.d/proxmox.sources              # no-subscription source, written by Proxmox when the switch is accepted"
+  },
+  "related": {
+    "heading": "Связанные материалы",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Обновление системы Proxmox",
+        "tailRich": " — для фактического <code>apt full-upgrade</code> на хосте."
+      },
+      {
+        "href": "/docs/network/monitoring",
+        "label": "Инструменты мониторинга в реальном времени (сеть)",
+        "tailRich": " — использует iftop / iptraf-ng / iperf3 из этого же списка."
+      },
+      {
+        "href": "/docs/utils",
+        "label": "Обзор утилит",
+        "tailRich": " — вернуться к обзору раздела."
+      }
+    ]
+  }
+}

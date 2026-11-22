@@ -70,7 +70,12 @@ def apply_gpu_contract(template: dict[str, Any]) -> None:
 
 def apply_selkies_contract(template):
     profile = template['proxmox']['installer_profile']
-    if not template['container_contract']['image']['reference'].startswith('lscr.io/linuxserver/'):
+    # A LinuxServer image, or one whose reviewed Dockerfile is built on the
+    # LinuxServer Selkies base and so has the same init and GPU variables.
+    built_on_base = str(profile['selkies'].get('base', '')).startswith(
+        'FROM ghcr.io/linuxserver/baseimage-selkies:')
+    if not (template['container_contract']['image']['reference'].startswith('lscr.io/linuxserver/')
+            or built_on_base):
         raise ValueError(translate('The Selkies profile requires a verified LinuxServer image'))
     environment = template['container_contract']['environment']
     if not any(e['name'] == 'LC_ALL' for e in environment):

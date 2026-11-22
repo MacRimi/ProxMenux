@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Open Krusader in a browser and manage files from a directory you explicitly mount at /storage. The maintained jlesage image provides the graphical desktop; ProxMenux runs it as one native OCI LXC."
+    },
+    "description": {
+      "en_US": "Krusader is an advanced, twin-panel commander-style file manager for Unix-like systems. It provides extensive file management capabilities, including support for local and remote filesystems, archive handling, and advanced search. Users can also perform directory synchronization, compare file contents, and execute batch file renaming."
+    },
+    "screenshots": [
+      "https://krusader.org/static/img/slideshow/krusader-twinpanel-thumb.png",
+      "https://krusader.org/static/img/slideshow/krusader-terminal-thumb.png",
+      "https://krusader.org/static/img/slideshow/krusader-3rdhand-thumb.png",
+      "https://krusader.org/static/img/slideshow/krusader-synchronizer-thumb.png"
+    ]
+  }
+}

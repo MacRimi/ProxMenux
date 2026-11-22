@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage remote servers and browser-based terminals from a self-hosted web interface."
+    },
+    "description": {
+      "en_US": "Termix is an open-source, plugin-based server management platform. The core system manages hosts, credentials, user accounts, and access permissions, while modular plugins provide tools such as SSH terminals, remote desktop connections, file management, and container administration. It features an interface with tabs, split-screen views, and synchronization across web, desktop, and mobile platforms."
+    }
+  }
+}

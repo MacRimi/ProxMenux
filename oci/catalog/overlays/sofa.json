@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted movie and TV tracker with watch history, recommendations, and media-server integrations."
+    },
+    "description": {
+      "en_US": "Sofa is a self-hosted movie and TV tracker. It tracks episode-level progress for TV series, records watched movies, offers recommendations, and automatically logs completed plays from media servers like Plex, Jellyfin, or Emby. It also allows importing watch history from external services and syncing watchlists to automation tools like Sonarr and Radarr."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/jakejarvis/sofa/HEAD/screenshot.png"
+    ]
+  }
+}

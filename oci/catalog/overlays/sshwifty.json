@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web client for opening SSH or Telnet sessions in a browser. The official image listens on port 8182 without a database or volume; this profile supplies a generated shared key instead of leaving the web interface passwordless."
+    },
+    "description": {
+      "en_US": "Sshwifty is a web-based SSH and Telnet client that allows users to access remote command-line services directly inside a web browser. It provides a browser-accessible terminal interface to connect to remote servers without needing a local terminal emulator installed on the client machine. Session data is handled directly within the browser."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/nirui/sshwifty/HEAD/Screenshot.png"
+    ]
+  }
+}

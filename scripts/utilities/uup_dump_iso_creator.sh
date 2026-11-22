@@ -125,18 +125,18 @@ function run_uupdump_creator() {
         clear
         show_proxmenux_logo
         echo -e
-        msg_info "$(translate "Installing dependencies: ${MISSING[*]}")"
+        msg_info "$(translate "Installing dependencies:") ${MISSING[*]}"
         apt-get update -qq >/dev/null 2>&1
         msg_ok "$(translate "All dependencies installed and verified.")"
         # Build dependencies land on the host, so they are recorded;
         # building the ISO is an operation and is not.
         if declare -F pmx_install_pkg >/dev/null 2>&1; then
             if ! PMX_JOURNAL_SOURCE="uup_dump_iso_creator.sh" pmx_install_pkg "${MISSING[@]}"; then
-                msg_error "$(translate "Failed to install: ${MISSING[*]}")"
+                msg_error "$(translate "Failed to install:") ${MISSING[*]}"
                 exit 1
             fi
         elif ! apt-get install -y "${MISSING[@]}" >/dev/null 2>&1; then
-            msg_error "$(translate "Failed to install: ${MISSING[*]}")"
+            msg_error "$(translate "Failed to install:") ${MISSING[*]}"
             exit 1
         fi
     fi
@@ -151,7 +151,7 @@ function run_uupdump_creator() {
     #if [[ ${#FAILED[@]} -eq 0 ]]; then
     #    msg_ok "$(translate "All dependencies installed and verified.")"
     #else
-    #    msg_error "$(translate "Missing commands after installation: ${FAILED[*]}")"
+    #    msg_error "$(translate "Missing commands after installation:") ${FAILED[*]}"
     #    exit 1
     #fi
 
@@ -166,7 +166,7 @@ function run_uupdump_creator() {
 ######################################
 
     DEFAULT_TMP="/root/uup-temp"
-    USER_INPUT=$(dialog --backtitle "ProxMenux" --inputbox "Enter temporary folder path (default: $DEFAULT_TMP):" 10 60 "$DEFAULT_TMP" 3>&1 1>&2 2>&3)
+    USER_INPUT=$(dialog --backtitle "ProxMenux" --inputbox "$(printf "$(translate "Enter temporary folder path (default: %s):")" "$DEFAULT_TMP")" 10 60 "$DEFAULT_TMP" 3>&1 1>&2 2>&3)
     
 ######################################
 
@@ -237,10 +237,10 @@ function run_uupdump_creator() {
     echo -e
     echo -e "\n${BGN}=============== UUP Dump Creator ===============${CL}"
     echo -e "    ${BGN}🆔 ID:${CL} ${DGN}$BUILD_ID${CL}"
-    echo -e "    ${BGN}🌐 Language:${CL} ${DGN}$LANG${CL}"
-    echo -e "    ${BGN}💿 Edition:${CL} ${DGN}$EDITION${CL}"
-    echo -e "    ${BGN}🖥️ Architecture:${CL} ${DGN}$ARCH${CL}"
-    echo -e "    ${BGN}📁 Destination:${CL} ${DGN}$OUT_DIR${CL}"
+    echo -e "    ${BGN}🌐 $(translate "Language:")${CL} ${DGN}$LANG${CL}"
+    echo -e "    ${BGN}💿 $(translate "Edition:")${CL} ${DGN}$EDITION${CL}"
+    echo -e "    ${BGN}🖥️ $(translate "Architecture:")${CL} ${DGN}$ARCH${CL}"
+    echo -e "    ${BGN}📁 $(translate "Destination:")${CL} ${DGN}$OUT_DIR${CL}"
     echo -e "${BGN}===============================================${CL}\n"
 
 
@@ -262,10 +262,10 @@ mkdir -p files
 echo "https://git.uupdump.net/uup-dump/converter/archive/refs/heads/master.tar.gz" > files/converter_multi
 
 for prog in aria2c cabextract wimlib-imagex chntpw; do
-  which \$prog &>/dev/null || { echo "\$prog not found."; exit 1; }
+  which \$prog &>/dev/null || { printf '%s\n' "\$prog: $(translate "Command not found.")"; exit 1; }
 done
 
-which genisoimage &>/dev/null || which mkisofs &>/dev/null || { echo "genisoimage/mkisofs not found."; exit 1; }
+which genisoimage &>/dev/null || which mkisofs &>/dev/null || { echo "$(translate "genisoimage/mkisofs not found.")"; exit 1; }
 
 destDir="UUPs"
 tempScript="aria2_script.\$RANDOM.txt"
@@ -277,7 +277,7 @@ aria2c --no-conf --console-log-level=warn --log-level=info --log="aria2_download
   -o"\$tempScript" --allow-overwrite=true --auto-file-renaming=false \\
   "https://uupdump.net/get.php?id=$BUILD_ID&pack=$LANG&edition=$EDITION&aria2=2" || exit 1
 
-grep '#UUPDUMP_ERROR:' "\$tempScript" && { echo "❌ Error generating UUP download list."; exit 1; }
+grep '#UUPDUMP_ERROR:' "\$tempScript" && { echo "❌ $(translate "Error generating UUP download list.")"; exit 1; }
 
 aria2c --no-conf --console-log-level=warn --log-level=info --log="aria2_download.log" \\
   -x16 -s16 -j5 -c -R -d"\$destDir" -i"\$tempScript" || exit 1
@@ -293,7 +293,7 @@ EOF
     [[ -z "$UUP_FOLDER" ]] && msg_error "$(translate "No UUP folder found.")" && exit 1
 
     echo -e "\n${GN}=======================================${CL}"
-    echo -e "    💿 ${GN}Starting ISO conversion...${CL}"
+    echo -e "    💿 ${GN}$(translate "Starting ISO conversion...")${CL}"
     echo -e "${GN}=======================================${CL}\n"
 
 

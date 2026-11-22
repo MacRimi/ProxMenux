@@ -264,9 +264,8 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
       <Card>
         <CardHeader>
           {/* Edit / Save / Cancel sit in the card header — same pattern
-              as Health Thresholds and Notifications. Avatar actions
-              (upload / remove) stay independent of editMode because
-              they're explicit one-shot actions, not field edits. */}
+              as Health Thresholds and Notifications. Every change on this
+              card, the avatar included, waits for Edit. */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
               <UserIcon className="h-5 w-5 text-cyan-500" />
@@ -293,7 +292,7 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                   <Button
                     size="sm"
                     onClick={handleSaveDisplayName}
-                    disabled={savingDisplay || !hasDisplayChanges}
+                    disabled={savingDisplay}
                     className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
                   >
                     {savingDisplay ? (
@@ -322,7 +321,11 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-8">
+        <CardContent
+          className={`space-y-8${displayEditMode
+            ? " bg-accent pt-6 rounded-b-lg [&_input:not(:disabled)]:bg-background [&_input:disabled]:bg-transparent [&_input:disabled]:text-muted-foreground [&_textarea]:bg-background [&_[role=combobox]]:bg-background"
+            : ""}`}
+        >
           {/* ─── Avatar section ──────────────────────────────────────
               Big preview (160×160) so the operator can see the actual
               image they uploaded. `object-cover` keeps the aspect
@@ -364,8 +367,8 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                   variant="outline"
                   size="sm"
                   onClick={handleAvatarPick}
-                  disabled={uploadingAvatar}
-                  className="justify-start"
+                  disabled={!displayEditMode || uploadingAvatar}
+                  className="justify-start bg-card hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   <Upload className="h-3.5 w-3.5 mr-2" />
                   {profile?.has_avatar ? t("profilePage.avatar.replace") : t("profilePage.avatar.upload")}
@@ -375,8 +378,8 @@ export function Profile({ onOpenSecurity }: ProfileProps) {
                     variant="outline"
                     size="sm"
                     onClick={handleAvatarDelete}
-                    disabled={uploadingAvatar}
-                    className="justify-start text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                    disabled={!displayEditMode || uploadingAvatar}
+                    className="justify-start bg-card text-red-500 hover:text-red-500 hover:bg-red-500/10"
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
                     {t("profilePage.avatar.remove")}

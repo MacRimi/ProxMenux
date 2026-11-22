@@ -22,7 +22,7 @@ interface StepsProps {
 const Steps: React.FC<StepsProps> & { Step: typeof Step } = ({ children }) => {
   const items = React.Children.toArray(children).filter(React.isValidElement)
   return (
-    <div className="my-6 space-y-0">
+    <div className="my-6 stack-y-0">
       {items.map((child, index) => {
         // We expect each child to be a <Steps.Step>; inject the Step N badge
         // before its title. We rebuild the child so the rendering stays self

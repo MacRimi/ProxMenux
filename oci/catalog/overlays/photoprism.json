@@ -63,5 +63,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Your AI-Powered Photos App for the Decentralized Web\n\nPhotoPrism brings the magic of AI to your home TV, phone, and multiple devices, revolutionizing the way you manage and share your photos. Unlike traditional photo albums that require manual organization, PhotoPrism automatically tags and finds your pictures, making it easier than ever to relive your memories. Whether you're showing family photos on your TV or sharing vacation snapshots on your phone, PhotoPrism makes the experience seamless and enjoyable.\n\nPhotoPrism offers a host of features designed to enhance your photo management experience. With powerful search capabilities, automatic tagging, and a user-friendly interface, you'll find it easy to keep your photo collection organized. The app is free to use, with premium options available for those seeking additional features and support. Users can expect a smooth, intuitive experience that blends cutting-edge technology with everyday convenience.\n\nDeploying PhotoPrism on self-hosted server private cloud devices offers unparalleled convenience. Enjoy unlimited storage capacity, the speed of your local network, and access from multiple devices without the need for the internet. It's the perfect solution for NAS enthusiasts who value privacy and performance.\n"
+    },
+    "description": {
+      "en_US": "PhotoPrism is an AI-powered photo and video management application. It automatically tags, indexes, and organizes media libraries using facial recognition, location, and content detection. Users can search collections using advanced filters, explore travel memories on interactive maps, and access their media seamlessly across desktop and mobile devices."
+    },
+    "screenshots": [
+      "https://dl.photoprism.app/img/ui/2025/desktop-search.jpg",
+      "https://dl.photoprism.app/img/ui/2025/iphone-flowers-280px.png",
+      "https://dl.photoprism.app/img/ui/2025/iphone-places-africa-280px.png",
+      "https://dl.photoprism.app/img/ui/2025/iphone-crocus-280px.png"
+    ],
+    "repository": "https://github.com/photoprism/photoprism"
   }
 }

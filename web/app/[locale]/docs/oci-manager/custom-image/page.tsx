@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, setRequestLocale } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import { DocPage } from "@/components/docs/DocBlocks"
 
 const NAMESPACE = "docs.ociManager.customImage"
@@ -7,6 +7,8 @@ const URL = "https://proxmenux.com/docs/oci-manager/custom-image"
 
 const LINKS = {
   readmeLink: "https://github.com/MacRimi/ProxMenux/blob/main/oci/README.md#the-oci-compose-block-by-block",
+  stacksLink: "/docs/oci-manager/stacks",
+  sectionLink: "/docs/oci-manager/custom-image#compose-stacks",
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -22,6 +24,5 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  setRequestLocale(locale)
-  return <DocPage locale={locale} namespace={NAMESPACE} minutes={7} links={LINKS} />
+  return <DocPage locale={locale} namespace={NAMESPACE} minutes={10} links={LINKS} />
 }

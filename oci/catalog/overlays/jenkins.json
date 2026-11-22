@@ -15,5 +15,18 @@
         }
       }
     ]
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A server for creating pipelines for Jenkins continuous integration and delivery."
+    },
+    "description": {
+      "en_US": "Jenkins is an automation server designed for continuous integration and continuous delivery. It enables developers to automate the process of building, testing, and deploying software. The platform helps manage automated pipelines to streamline software delivery workflows."
+    },
+    "screenshots": [
+      "https://www.jenkins.io/images/post-images/2026/11/render-qa/test-case.png",
+      "https://www.jenkins.io/images/post-images/2026/10/holistic/overview.jpg",
+      "https://www.jenkins.io/images/post-images/2026/09/build-change-investigator/dependency-light.jpg"
+    ]
   }
 }

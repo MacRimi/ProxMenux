@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run the ISC-maintained BIND 9 image as a recursive DNS resolver. Custom authoritative zones require a separate configuration."
+    },
+    "description": {
+      "en_US": "BIND (Berkeley Internet Name Domain) is a complete implementation of the Domain Name System protocol. Its name server daemon can act as an authoritative name server, recursive resolver, DNS forwarder, or all three simultaneously. It provides advanced DNS capabilities, including split-horizon DNS views, automatic DNSSEC zone signing, response policy zones, and query rate limiting, alongside utility tools for lookups and server administration."
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { ArrowRight, Users, HelpCircle, ScrollText, Heart, Star, ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -50,7 +50,7 @@ function OptionCard({ option }: { option: SectionOption }) {
       href={option.href}
       className="group flex items-start gap-3 rounded-md border border-gray-200 bg-white p-3 transition-colors hover:border-blue-400 hover:bg-blue-50"
     >
-      <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-700">
         <Icon className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -70,7 +70,6 @@ export default async function AboutOverviewPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.about" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -133,7 +132,7 @@ export default async function AboutOverviewPage({
               <div className="font-semibold text-gray-900 mb-1">{card.title}</div>
               <div className="text-xs text-gray-600">{card.description}</div>
             </div>
-            <ExternalLink className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" aria-hidden />
+            <ExternalLink className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" aria-hidden />
           </a>
         ))}
       </div>

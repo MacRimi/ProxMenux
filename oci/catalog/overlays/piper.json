@@ -2,6 +2,12 @@
   "catalog_ui": {
     "launch": {
       "port": null
+    },
+    "tagline": {
+      "en_US": "Piper is a fast, local neural text to speech system that sounds great and is optimized for the Raspberry Pi 4. This container provides a Wyoming protocol server for Piper."
+    },
+    "description": {
+      "en_US": "Piper is a fast, local neural text-to-speech system designed to provide high-quality voice synthesis. It functions as a Wyoming protocol server, converting incoming text into natural-sounding speech entirely on local hardware without depending on external cloud services."
     }
   },
   "first_run": {

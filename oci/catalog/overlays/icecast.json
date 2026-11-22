@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "An internet radio and media streaming server. It accepts streams from a broadcaster or source client and distributes them to listeners over HTTP. The service is a single container and does not need a separate database."
+    },
+    "description": {
+      "en_US": "Icecast is an internet radio and media streaming server. It receives audio and media streams from a broadcaster or source client and distributes them to listeners over HTTP. It provides a lightweight platform for broadcasting live audio feeds and operating online radio stations."
+    }
+  }
+}

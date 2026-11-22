@@ -16,5 +16,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Piwigo is a photo gallery software for the web that comes with powerful features to publish and manage your collection of pictures."
+    },
+    "description": {
+      "en_US": "Piwigo is a web-based photo gallery application designed to manage and display picture collections. It allows users to organize, browse, and publish photos online. The application supports modular extension through plugins to adjust features and system behavior."
+    },
+    "tips": [
+      "A user and database must be created in a MySQL or MariaDB server for Piwigo to use.",
+      "Configuration files and email settings can be edited by enabling the Local Files Editor plugin from the plugins page."
+    ],
+    "screenshots": [
+      "https://piwigo.org/plugins/piwigo-website/images/home/top.webp"
+    ]
   }
 }

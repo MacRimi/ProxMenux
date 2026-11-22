@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted MQTT broker for home automation, IoT devices and messaging clients, with a built-in web dashboard and API. It stores node data in its persistent data volume and does not require a separate database service."
+    },
+    "description": {
+      "en_US": "EMQX is an MQTT messaging platform designed for IoT data infrastructure. It supports MQTT 5.0, 3.1.1, and 3.1, alongside protocols like CoAP, LwM2M, and MQTT-SN through gateways. The platform includes a SQL-based rule engine to process, transform, and route messages in real time to external databases and message queues. It also features a web dashboard for monitoring connections, managing access control, and orchestrating data pipelines."
+    }
+  }
+}

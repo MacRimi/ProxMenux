@@ -1,12 +1,15 @@
+import "../globals.css"
+import { Inter } from "next/font/google"
 import { Suspense } from "react"
 import Navbar from "@/components/navbar"
 import { PagefindHighlighter } from "@/components/pagefind-highlighter"
-import { LocaleHtmlSync } from "@/components/locale-html-sync"
 import type React from "react"
 import { notFound } from "next/navigation"
 import { NextIntlClientProvider, hasLocale } from "next-intl"
-import { setRequestLocale } from "next-intl/server"
+import { getMessages } from "next-intl/server"
 import { routing } from "@/i18n/routing"
+
+const inter = Inter({ subsets: ["latin"] })
 
 /**
  * Tell Next.js which locales to pre-render under [locale]. Required
@@ -18,19 +21,7 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
 }
 
-/**
- * Force every nested page to render statically. Without this Next.js
- * treats pages that don't explicitly call `setRequestLocale()` as
- * dynamic (because next-intl's `getRequestConfig` reads
- * `requestLocale` which internally falls back to `headers()`),
- * breaking the `output: "export"` build with
- * `StaticGenBailoutError: dynamic = "error" couldn't be rendered
- * statically because it used 'headers'`. Marking force-static here
- * spares us from adding `setRequestLocale(locale)` to all 100+ docs
- * pages individually — the locale comes from the [locale] segment of
- * the URL, which is part of `generateStaticParams`, so each combination
- * is pre-rendered without ever needing request headers.
- */
+// The site is a static export: every page is pre-rendered at build time.
 export const dynamic = "force-static"
 
 export const metadata = {
@@ -122,6 +113,39 @@ export const metadata = {
   },
 }
 
+// The namespaces client components read. Server pages translate during the
+// build, so the rest of the catalog stays out of every page.
+const CLIENT_MESSAGES = [
+  "nav",
+  "footer",
+  "hero",
+  "language",
+  "resources",
+  "rssLink",
+  "supportProject",
+  "tocPanel",
+  "docSidebar",
+  "docNav",
+  "docs.createVm.synology",
+  "docs.createVm.systemNas.synology",
+]
+
+type Messages = Record<string, unknown>
+
+function pickMessages(messages: Messages, paths: string[]): Messages {
+  const picked: Messages = {}
+  for (const path of paths) {
+    const keys = path.split(".")
+    let value: unknown = messages
+    for (const key of keys) value = (value as Messages | undefined)?.[key]
+    if (value === undefined) continue
+    let target = picked
+    for (const key of keys.slice(0, -1)) target = (target[key] ??= {}) as Messages
+    target[keys[keys.length - 1]] = value
+  }
+  return picked
+}
+
 export default async function LocaleLayout({
   children,
   params,
@@ -135,50 +159,48 @@ export default async function LocaleLayout({
     notFound()
   }
 
-  setRequestLocale(locale)
+  const messages = (await getMessages({ locale })) as Messages
 
   return (
-    <NextIntlClientProvider>
-      {/* LocaleHtmlSync writes `document.documentElement.lang = locale`
-          after hydration so the active language is reflected in <html lang>
-          for accessibility tools and SEO crawlers that execute JS. The
-          static root layout always serves lang="en" as the fallback for
-          users with JavaScript disabled. */}
-      <LocaleHtmlSync locale={locale} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            name: "ProxMenux",
-            description:
-              "Open-source, menu-driven tool for Proxmox VE management with a self-hosted web dashboard. Includes post-install tweaks, VM and LXC creation, GPU and Coral TPU passthrough, disk, storage and network workflows, plus a Health Monitor with notifications and a REST API.",
-            applicationCategory: "DeveloperApplication",
-            operatingSystem: "Linux",
-            offers: {
-              "@type": "Offer",
-              price: "0",
-              priceCurrency: "USD",
-            },
-            author: {
-              "@type": "Person",
-              name: "MacRimi",
-              url: "https://github.com/MacRimi",
-            },
-            license: "https://github.com/MacRimi/ProxMenux/blob/main/LICENSE",
-            codeRepository: "https://github.com/MacRimi/ProxMenux",
-            url: "https://proxmenux.com",
-            image: "https://proxmenux.com/main.png",
-          }),
-        }}
-      />
-      <Navbar />
-      <div className="pt-16 md:pt-16">{children}</div>
-      <script src="/pagefind/pagefind-highlight.js" type="module" defer />
-      <Suspense fallback={null}>
-        <PagefindHighlighter />
-      </Suspense>
-    </NextIntlClientProvider>
+    <html lang={locale} className="dark">
+      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+        <NextIntlClientProvider messages={pickMessages(messages, CLIENT_MESSAGES)}>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                name: "ProxMenux",
+                description:
+                  "Open-source, menu-driven tool for Proxmox VE management with a self-hosted web dashboard. Includes post-install tweaks, VM and LXC creation, GPU and Coral TPU passthrough, disk, storage and network workflows, plus a Health Monitor with notifications and a REST API.",
+                applicationCategory: "DeveloperApplication",
+                operatingSystem: "Linux",
+                offers: {
+                  "@type": "Offer",
+                  price: "0",
+                  priceCurrency: "USD",
+                },
+                author: {
+                  "@type": "Person",
+                  name: "MacRimi",
+                  url: "https://github.com/MacRimi",
+                },
+                license: "https://github.com/MacRimi/ProxMenux/blob/main/LICENSE",
+                codeRepository: "https://github.com/MacRimi/ProxMenux",
+                url: "https://proxmenux.com",
+                image: "https://proxmenux.com/main.png",
+              }),
+            }}
+          />
+          <Navbar />
+          <div className="pt-16 md:pt-16">{children}</div>
+          <script src="/pagefind/pagefind-highlight.js" type="module" defer />
+          <Suspense fallback={null}>
+            <PagefindHighlighter />
+          </Suspense>
+        </NextIntlClientProvider>
+      </body>
+    </html>
   )
 }

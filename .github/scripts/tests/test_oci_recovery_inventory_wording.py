@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import runpy
+import subprocess
 import sys
 import tempfile
 from types import ModuleType, SimpleNamespace
@@ -17,10 +18,11 @@ REMOVE = ROOT / 'oci/remote/oci_remove.py'
 PREVIEW_HOST = 'Host paths found in container configs or saved records (not targeted for removal):'
 EMPTY_HOST = 'No host directories found in the available container configs or saved records.'
 POST_HOST = 'Host directory listed in saved records (not targeted for removal):'
-UPDATE = ('All {count} containers of the application are updated together (main CT: {vmid}). If there are new '
-          'versions, all images are downloaded and verified, the application is stopped, each container is backed '
-          'up and replaced with its new image. If the operation fails after a container was changed, the backups are '
-          'restored. An operation that stops halfway is recovered from the OCI management menu.')
+UPDATE = ('All {count} containers of the application are checked together (main CT: {vmid}). If no images changed, '
+          'nothing is stopped or recreated. Otherwise the required images are prepared, the application is stopped '
+          'and every container is backed up. Only changed members and any required setup jobs are recreated. If '
+          "the operation fails after a container was changed, the whole application's backups are restored. "
+          'Interrupted operations can be recovered from the OCI management menu.')
 PENDING = ('A coordinated operation has a saved journal. Continuing attempts to recover the previous stack '
            'where needed, or finish cleanup for a completed operation. Recovery or cleanup can fail.')
 KEYS = (PREVIEW_HOST, EMPTY_HOST, POST_HOST, UPDATE, PENDING)
@@ -28,6 +30,10 @@ TRANSACTION = ROOT / 'oci/remote/oci_stack_transaction.py'
 
 
 def extracted(path, name, scope):
+    if name == 'remove':
+        # Operational cache cleanup is exercised by the engine tests; keep wording tests inert.
+        scope.setdefault('compose_jobs', SimpleNamespace(forget_completed=lambda *args: None))
+        scope.setdefault('public_routes', SimpleNamespace(remove=lambda *args: None))
     node = next(n for n in ast.parse(path.read_text()).body
                 if isinstance(n, ast.FunctionDef) and n.name == name)
     exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), scope)
@@ -52,7 +58,8 @@ class InventoryMessages(unittest.TestCase):
         state = ModuleType('oci_installation_state')
         state.parse_config = lambda raw: dict(line.split(': ', 1) for line in raw.decode().splitlines())
         scope = {'sys': SimpleNamespace(path=[]), 'source_text': lambda text: text or '',
-                 'translate': translate, 're': re}
+                 'translate': translate, 're': re, 'subprocess': subprocess,
+                 '_selected_configuration': remover.guest_config}
         summary = extracted(MENU, '_removal_summary', scope)
         with patch.dict(sys.modules, {'oci_instances': instances, 'oci_remove': remover,
                                       'oci_installation_state': state}):
@@ -69,6 +76,9 @@ class InventoryMessages(unittest.TestCase):
         self.assertNotIn('Host directories that are kept, with their content:', text)
 
     def test_removal_notice_qualifies_saved_record_source(self):
+        # Extracted operational functions must never inspect the real pmxcfs.
+        host = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        inert_path = lambda value: host / Path(value).name if str(value).startswith('/etc/pve/') else Path(value)
         events = []
         scope = {'members_of': lambda root, vmid: (101, {}, [101]),
                  'instances': SimpleNamespace(read=lambda root, vmid: {'installation_id': 'owned'},
@@ -79,8 +89,8 @@ class InventoryMessages(unittest.TestCase):
                  'remove_owned_host_firewall': lambda primary: True,
                  'run': lambda *args: events.append(('run', args)),
                  'subprocess': SimpleNamespace(run=lambda *args, **kwargs: None),
-                 'Path': Path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
-                 'image_cache': SimpleNamespace(prune=lambda root, lock: []),
+                 'Path': inert_path, 'shutil': SimpleNamespace(rmtree=lambda path: None),
+                 'image_cache': SimpleNamespace(prune=lambda root, lock: [], keep_for_reinstall=lambda record: None),
                  'work_backup': SimpleNamespace(forget=lambda root, vmid: None),
                  'oci_console': SimpleNamespace(remove_log=lambda vmid: events.append(('log', vmid))),
                  're': re, 'guest_node': lambda vmid: None,
@@ -113,8 +123,9 @@ class RecoveryMessages(unittest.TestCase):
         instances = ModuleType('oci_instances')
         instances.ROOT = Path('/inert')
         instances.read = lambda root, vmid: self.primary
-        self.modules = {'oci_instances': instances, 'oci_stack_replay': ModuleType('oci_stack_replay')}
-        self.scope = {'sys': SimpleNamespace(path=[], executable='python3'), 'Path': Path,
+        self.modules = {'oci_instances': instances, 'oci_stack_replay': ModuleType('oci_stack_replay'),
+                        'oci_stack_adapters': SimpleNamespace(menu_ready=lambda *args: False)}
+        self.scope = {'sys': SimpleNamespace(path=[], executable='python3'), 'Path': Path, 'CANCELLED': None,
                       'translate': lambda text: text, 'images': SimpleNamespace(offer_removal=lambda *args: None),
                       '_remove': lambda *args: self.fail('remove must not run'),
                       '_run_lifecycle': lambda command, title: self.calls.append((command, title)) or False}
@@ -159,7 +170,7 @@ class RecoveryMessages(unittest.TestCase):
         events = []
         scope = {'TERMINAL': {'committed', 'rolled-back'},
                  'translate': lambda message: message,
-                 'member_tx': SimpleNamespace(log=lambda message: None),
+                 'member_tx': SimpleNamespace(log=lambda message: None, time_phase=lambda *args: None),
                  'write': lambda path, state: Path(path).write_text(json.dumps(state)),
                  'msg_info': lambda message: None, 'msg_ok': lambda message: None,
                  'member': lambda adapter, vmid: f'CT {vmid}'}
@@ -193,7 +204,7 @@ class RecoveryMessages(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         paths = sorted((ROOT / 'lang').glob('*.json'))
-        self.assertEqual(len(paths), 7)
+        self.assertEqual(len(paths), 8)
         for path in paths:
             cache = json.loads(path.read_text())
             setattr(module, '_language', path.stem)

@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "title": "Bidragsgivare | ProxMenux-dokumentation",
+    "description": "Bakom varje version finns människor som utvecklar, granskar, översätter och testar ProxMenux. Den här sidan tackar både dagens bidragsgivare och dem som hjälpte projektet att ta sina första steg.",
+    "ogTitle": "Bidragsgivare | ProxMenux-dokumentation",
+    "ogDescription": "Bakom varje version finns människor som utvecklar, granskar, översätter och testar ProxMenux. Den här sidan tackar både dagens bidragsgivare och dem som hjälpte projektet att ta sina första steg."
+  },
+  "header": {
+    "title": "Bidragsgivare",
+    "description": "Bakom varje version finns människor som utvecklar, granskar, översätter och testar ProxMenux. Den här sidan tackar både dagens bidragsgivare och dem som hjälpte projektet att ta sina första steg.",
+    "section": "Om"
+  },
+  "active": {
+    "heading": "Utveckling, granskning och löpande samarbete",
+    "intro": "Vaso73, f3rs3n och jcastro bidrar regelbundet med förbättringar, rättningar och granskningar. Arbetet handlar om mer än att testa en version: de hjälper också till att bygga och felsöka nästa.",
+    "people": {
+      "Vaso73": "Förbättringar och rättningar i OCI manager och ProxMenux Monitor samt översättning och granskning av slovakiska texter.",
+      "f3rs3n": "Rättningar och granskning av skriptens och Monitors beteende tillsammans med löpande förbättringar av den italienska översättningen.",
+      "jcastro": "Utveckling och felsökning av OCI-, säkerhetskopierings- och Monitor-funktioner samt dokumentationsgranskning och tester sedan projektets början."
+    }
+  },
+  "code": {
+    "heading": "Fler bidrag till koden",
+    "intro": "Följande personer har också bidragit med kodändringar. Länkarna visar deras arbete; GitHubs historik samlar bidragen och de pull requests som har slagits samman.",
+    "viewWork": "Visa bidrag",
+    "history": "Bidragshistorik",
+    "merged": "Visa alla sammanslagna PR"
+  },
+  "community": {
+    "heading": "En gemenskap som också testar, översätter och dokumenterar",
+    "body": "Allt arbete är inte kod. Att återskapa ett fel, dela användbara loggar, testa annan hårdvara, förtydliga en förklaring eller föreslå en förbättring hjälper också ProxMenux framåt.",
+    "languages": "Ett särskilt tack till alla som granskar texter på sitt eget språk. Översättningar av menyerna, Monitor och dokumentationen gör projektet tillgängligt för fler och bekvämare att använda."
+  },
+  "testers": {
+    "heading": "Tack för de första testerna",
+    "intro": "Det här erkännandet har fortfarande sin plats. Dessa personer hjälpte till att validera tidiga versioner, testade projektet på sin egen utrustning och delade problem och förslag när ProxMenux började växa.",
+    "youtube": "YouTube"
+  },
+  "contribute": {
+    "heading": "Ditt bidrag är också välkommet",
+    "intro": "Du kan hjälpa till med en liten rättning, ett specifikt test eller en textgranskning. Du behöver inte utveckla en hel funktion.",
+    "ways": {
+      "code": {
+        "title": "Kod och granskning",
+        "body": "Utveckla funktioner, rätta fel eller granska en PR. Bidragsguiden förklarar hur du förbereder och föreslår ändringar."
+      },
+      "testing": {
+        "title": "Tester och diagnostik",
+        "body": "Prova betaversioner och dela steg för att återskapa problem samt loggar som hjälper andra att förstå dem."
+      },
+      "translations": {
+        "title": "Översättningar",
+        "body": "Granska meddelanden på ditt språk och hjälp till att hålla dem aktuella när nya funktioner läggs till."
+      },
+      "docs": {
+        "title": "Dokumentation och design",
+        "body": "Förtydliga en guide, lägg till en skärmbild eller förbättra gränssnittet så att andra lättare kan följa med."
+      }
+    },
+    "guide": "Bidragsguide",
+    "discuss": "Prata med gemenskapen"
+  },
+  "thanks": {
+    "title": "Tack för att ni gör det möjligt",
+    "body": "Till alla som nämns här och alla som hjälper till i en issue, ett samtal eller ett test: tack för tiden ni lägger på att förbättra ProxMenux."
+  }
+}

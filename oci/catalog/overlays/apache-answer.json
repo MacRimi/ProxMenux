@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create a community question-and-answer site with a single application and built-in SQLite storage."
+    },
+    "description": {
+      "en_US": "Apache Answer is an open-source question-and-answer platform designed for teams and communities of all sizes. It serves as an interactive space where users can post questions, share answers, and collaborate. The software supports expansion through a plugin architecture to tailor its capabilities as a community forum, support hub, or knowledge base."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/apache/answer/HEAD/docs/img/screenshot.png"
+    ]
+  }
+}

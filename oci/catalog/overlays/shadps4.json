@@ -10,5 +10,29 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "shadPS4"
+    },
+    "tagline": {
+      "en_US": "shadPS4 is an early PlayStation 4 emulator for Windows, Linux and macOS written in C++."
+    },
+    "description": {
+      "en_US": "shadPS4 is an early PlayStation 4 emulator written in C++. It allows users to run PlayStation 4 software and games on supported operating systems, including Windows, Linux, and macOS."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

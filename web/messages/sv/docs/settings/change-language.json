@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "title": "Byt språk | ProxMenux-dokumentation",
+    "description": "Välj mellan åtta språk för ProxMenux. Varje installation innehåller förgenererade JSON-kataloger med översättningar; ingen översättningstjänst eller Python-miljö behövs på värden. Menyn laddas om automatiskt.",
+    "ogTitle": "Byt språk | ProxMenux-dokumentation",
+    "ogDescription": "Välj ett av åtta språk för ProxMenux i Inställningar. Tillgängligt i varje installation."
+  },
+  "header": {
+    "title": "Byt språk",
+    "description": "Byt språk i ProxMenux mellan åtta språk som stöds. Valet sparas i config.json och menyn startas om på det nya språket. Varje installation innehåller översättningskatalogerna.",
+    "section": "Inställningar"
+  },
+  "intro": {
+    "title": "Vad detta är",
+    "body": "En dialog visar de åtta språken som stöds. ProxMenux sparar ditt val i <code>config.json</code> som <code>.language</code> och startar sedan om <code>config_menu.sh</code> så att det används direkt."
+  },
+  "warn": {
+    "title": "Tillgängligt i varje installation",
+    "body": "Inställningar visar alltid Byt språk. Katalogerna installeras i <code>/usr/local/share/proxmenux/lang/</code> <em>och</em> det valda språket lagras i <code>config.json</code>. Den äldre Python-miljön för översättning behövs inte."
+  },
+  "supported": {
+    "heading": "Stödda språk",
+    "headerCode": "Code",
+    "headerLang": "Språk",
+    "headerNotes": "Anteckningar",
+    "rows": [
+      {
+        "code": "en",
+        "lang": "engelska",
+        "notes": "Källspråk — mest korrekt"
+      },
+      {
+        "code": "es",
+        "lang": "spanska",
+        "notes": "Förgenererad JSON-katalog"
+      },
+      {
+        "code": "fr",
+        "lang": "franska",
+        "notes": "Förgenererad JSON-katalog"
+      },
+      {
+        "code": "de",
+        "lang": "tyska",
+        "notes": "Förgenererad JSON-katalog"
+      },
+      {
+        "code": "it",
+        "lang": "italienska",
+        "notes": "Förgenererad JSON-katalog"
+      },
+      {
+        "code": "pt",
+        "lang": "portugisiska",
+        "notes": "Förgenererad JSON-katalog"
+      },
+      {
+        "code": "sk",
+        "lang": "slovakiska",
+        "notes": "Förgenererad JSON-katalog"
+      },
+      {
+        "code": "sv",
+        "lang": "svenska",
+        "notes": "Förgenererad JSON-katalog"
+      }
+    ]
+  },
+  "englishTip": {
+    "title": "Engelska är den mest exakta",
+    "body": "Texter på andra språk hämtas från förgenererade JSON-kataloger som ingår i ProxMenux. Saknade översättningar ersätts med engelska; inga direkta översättningsanrop görs på värden. Engelskan är referensen vid tveksamma översättningar."
+  },
+  "underHood": {
+    "heading": "Hur det fungerar under huven",
+    "items": [
+      "Dialogen visar åtta språkkoder; välj en.",
+      "Om <code>config.json</code> finns uppdaterar <code>jq --arg lang \"$new_language\" '.language = $lang''</code> fältet på plats.",
+      "Om <code>config.json</code> inte existerar: en ny skapas med språkkoden i ett enda fältobjekt.",
+      "Bekräftelsedialog: <em>\"Språket har ändrats till [code]\"</em>.",
+      "<code>exec bash config_menu.sh</code> laddar om menyn Inställningar med det nya språket aktivt."
+    ]
+  },
+  "manual": {
+    "heading": "Manuell motsvarighet"
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "noOptionTitle": "Alternativ visas inte i Inställningar",
+    "noOptionBody": "Byt språk är alltid tillgängligt i aktuella versioner. Om alternativet saknas uppdaterar du ProxMenux med den officiella installeraren och öppnar Inställningar igen.",
+    "stillEnglishTitle": "Språket har ändrats men gränssnittet är fortfarande på engelska",
+    "stillEnglishBody": "Menyn startas om efter ändringen. Om du har öppnat ett nytt skal och startat en annan ingång till ProxMenux kör du <code>menu</code> igen för att använda det nya språket. Kontrollera med <code>jq -r '.language' /usr/local/share/proxmenux/config.json</code>."
+  },
+  "related": {
+    "heading": "Relaterad",
+    "items": [
+      {
+        "href": "/docs/settings/show-version-information",
+        "label": "Visa versionsinformation",
+        "tail": " — bekräftar versionskanal, översättningsfiler och aktuellt språk."
+      },
+      {
+        "href": "/docs/settings",
+        "label": "Översikt över inställningar",
+        "tail": "."
+      }
+    ]
+  }
+}

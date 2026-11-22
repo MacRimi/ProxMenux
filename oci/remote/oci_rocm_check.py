@@ -12,6 +12,7 @@ import argparse
 import re
 import subprocess
 import sys
+from oci_ui import translate
 
 # A model of five operators (convolution, pooling and a dense layer), enough
 # to make ROCm compile and run on the GPU without downloading anything.
@@ -72,7 +73,8 @@ def main():
     try:
         check(args.vmid)
     except RuntimeError as error:
-        print(error, file=sys.stderr)
+        message = translate('the GPU did not answer in time') if str(error) == 'the GPU did not answer in time' else str(error)
+        print(message, file=sys.stderr)
         return 1
     return 0
 

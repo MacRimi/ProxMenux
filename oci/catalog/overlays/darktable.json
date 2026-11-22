@@ -18,6 +18,37 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 6,
+      "memory_mb": 8192
     }
-  }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "darktable"
+    },
+    "tagline": {
+      "en_US": "darktable is an open source photography workflow application and raw developer. A virtual lighttable and darkroom for photographers. It manages your digital negatives in a database, lets you view them through a zoomable lighttable and enables you to develop raw images and enhance them."
+    },
+    "description": {
+      "en_US": "Darktable is an open-source photography workflow application and raw developer designed as a virtual lighttable and darkroom. It organizes digital negatives within a database and provides a zoomable lighttable to view and sort files. Users can non-destructively develop, process, and enhance raw camera images."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/45535283/148689197-e53dd75f-32f1-4297-9a0f-a9547fd4e7c7.jpg"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

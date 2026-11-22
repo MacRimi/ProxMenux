@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Formatera eller radera en fysisk disk | ProxMenux-dokumentation",
+    "description": "Radera och formatera fysiska diskar på Proxmox VE med ProxMenux. Fyra driftlägen, systemdiskar dolda, diskar som används av körande gäster blockerade och dubbel bekräftelse med inmatning av hela sökvägen.",
+    "ogTitle": "Formatera eller radera en fysisk disk | ProxMenux-dokumentation",
+    "ogDescription": "Radera eller formatera en fysisk disk på Proxmox. Säkerhetsfilter, fyra driftlägen och dubbel bekräftelse."
+  },
+  "header": {
+    "title": "Formatera / radera fysisk disk",
+    "description": "Radera eller formatera en fysisk disk på Proxmox-värden. ProxMenux döljer systemdiskar, varnar om all annan användning innan du bekräftar, blockerar diskar som används av en körande VM eller CT och kräver dubbel bekräftelse (ja/nej och inmatning av hela disksökvägen) innan data förstörs.",
+    "section": "Diskhanterare · Verktyg"
+  },
+  "danger": {
+    "title": "Destruktivt verktyg",
+    "body": "Varje operation här skriver till disken. Det finns ingen undo. ProxMenux tillämpar strikta säkerhetsfilter och bekräftelser, men ansvaret för att välja rätt disk är din. Läs diskvägen högt två gånger innan du skriver den."
+  },
+  "howRuns": {
+    "heading": "Så körs skriptet",
+    "body": "Flödet har två faser med tre säkerhetskontroller emellan. I fas 1 samlas diskval, driftläge och filsystemsuppgifter in. Ingenting skrivs förrän fas 2 klarar en sista förnyad kontroll direkt före körningen."
+  },
+  "visibility": {
+    "heading": "Synlighetsregler",
+    "intro": "Innan menyn visas filtrerar ProxMenux disklistan. Bara systemdiskar döljs; all annan användning visas så att du kan avgöra själv:",
+    "items": [
+      "<strong>Döljs</strong>: diskar med en systemmontering (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), en aktiv swappartition eller en medlem i ZFS-rotpoolen, samt skrivskyddade enheter.",
+      "<strong>Visas, blockeras vid bekräftelse</strong>: diskar som refereras av en <strong>körande</strong> VM eller CT.",
+      "<strong>Visas med en varning</strong>: diskar som refereras i en stoppad VM- eller LXC-konfiguration, diskar med monterade datapartitioner samt aktiva ZFS / LVM / RAID-medlemmar."
+    ],
+    "safetyTitle": "Säkerhet vid bekräftelse och utförande",
+    "safetyItems": [
+      "Diskar med gamla eller aktiva metadata visar detaljerade varningar <em>innan</em> du bekräftar.",
+      "Diskar som används av en <strong>körande</strong> VM <strong>blockeras helt</strong> vid bekräftelsen.",
+      "Monterade datapartitioner avmonteras automatiskt vid körningen och alla aktiva ZFS-pooler på disken exporteras. Om en partition inte kan avmonteras avbryts körningen (en ny kontroll görs direkt innan något skrivs).",
+      "Två bekräftelser krävs alltid: en <em>ja/nej</em>-dialog och exakt inmatning av hela disksökvägen."
+    ]
+  },
+  "modes": {
+    "heading": "Operationslägen",
+    "intro": "Efter att ha valt en disk väljer du en av fyra lägen. De skiljer sig åt i vad de förstör och vad de lämnar efter sig:",
+    "headerMode": "Läge",
+    "headerPart": "Partitionstabell",
+    "headerData": "Data",
+    "headerUseCase": "Användningsfall",
+    "rows": [
+      {
+        "mode": "1. Radera allt",
+        "part": "Förstörd",
+        "data": "Signaturer raderade",
+        "useCase": "Tar bort partitionstabellen och metadata för filsystem och RAID, nollställer de första och sista 16 MiB och kör TRIM på hela disken om enheten stöder discard. Övriga data skrivs inte över och kan fortfarande gå att återställa på en HDD; detta är ingen säker radering."
+      },
+      {
+        "mode": "2. Ta bort FS-etiketter",
+        "part": "Bevarad",
+        "data": "Bevarad",
+        "useCase": "Tar bort gamla ZFS/LVM/RAID-signaturer så att disken inte tas i bruk automatiskt. Användardata skrivs inte över i sin helhet, men borttagna signaturer kan göra dem oåtkomliga."
+      },
+      {
+        "mode": "3. Nollställ alla data",
+        "part": "Bevarad",
+        "data": "Förstörda (överskrivna med nollor)",
+        "useCase": "Skriv över befintliga partitioner med nollor och behåll partitionstabellen. Oallokerat utrymme och SSD-reservområden omfattas inte; detta garanterar inte fullständig datasanering av enheten."
+      },
+      {
+        "mode": "4. Fullständigt format",
+        "part": "Ny GPT",
+        "data": "Förstörd",
+        "useCase": "Redo att använda disk med en enda ny partition och ett nytt filsystem eller en ny ZFS-pool."
+      }
+    ],
+    "fullFormatOutro": "<strong>Fullständig formatering</strong> ställer en fråga till efter bekräftelsen:",
+    "fullFormatItems": [
+      "<strong>Filsystem</strong>: <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portabelt), <code>btrfs</code> eller <code>zfs</code>. Om <code>mkfs.exfat</code> saknas installerar ProxMenux <code>exfatprogs</code>; om <code>mkfs.btrfs</code> saknas avbryts åtgärden med ett tips.",
+      "<strong>ZFS-poolnamn</strong> (endast ZFS): föreslås som <code>pool_&lt;disk&gt;</code>. Poolen skapas med <code>ashift=12</code> och <code>lz4</code>-komprimering."
+    ]
+  },
+  "steps": {
+    "heading": "Steg-för-steg",
+    "stepLabel": "Steg",
+    "list": [
+      {
+        "title": "Välj en ledig disk",
+        "body": "ProxMenux listar de diskar som klarar filtret ovan, med modell och storlek. All metadata som hittas på disken (ZFS / LVM / RAID-signaturer, monterade partitioner, gästreferenser) visas i bekräftelsesammanfattningen så att du vet vad du är på väg att skriva över."
+      },
+      {
+        "title": "Välj ett operationsläge",
+        "bodyRich": "Välj <strong>Radera allt</strong>, <strong>Ta bort FS-etiketter</strong>, <strong>Nollställ alla data</strong> eller <strong>Fullständig formatering</strong> enligt tabellen ovan."
+      },
+      {
+        "title": "Bekräfta två gånger",
+        "bodyRich": "ProxMenux visar en sammanfattning av åtgärden. Bekräfta i ja/nej-dialogen och <strong>skriv hela disksökvägen</strong> exakt som den visas, exempelvis <code>/dev/sdc</code>. All annan inmatning avbryter."
+      },
+      {
+        "title": "(Endast fullständig formatering) Välj filsystem",
+        "body": "ext4 / xfs / exfat / btrfs / zfs. För ZFS även poolnamnet."
+      },
+      {
+        "title": "Re-validering och utförande",
+        "body": "Direkt före skrivningen kontrollerar skriptet diskens tillstånd igen. Det avbryts om disken nu har en systemmontering, en aktiv swappartition eller är medlem i ZFS-rotpoolen, eller om en körande VM eller CT använder den. Monterade datapartitioner avmonteras och aktiva ZFS-pooler på disken exporteras. Sedan utförs den valda åtgärden."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Manuella motsvarigheter",
+    "body": "Om du föredrar att köra motsvarande kommandon för hand:"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disk som inte anges i menyn",
+    "notListedBody": "Det filtrerades för säkerhet. Bara systemdiskar döljs: en disk med en systemmontering (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), en aktiv swappartition eller en medlem i ZFS-rotpoolen, eller en skrivskyddad enhet. Datamonteringar, gästreferenser och ZFS / LVM / RAID-medlemskap döljer inte en disk. Kör <code>lsblk -f</code>, <code>swapon --show</code> och <code>zpool status</code> på värden för att förstå varför.",
+    "busyTitle": "\"Disk may be busy\" / avmontering misslyckades",
+    "busyBody": "Något håller fortfarande en öppen fil på en partition av den disken - oftast en container eller ett skal vars cwd är inuti en monteringspunkt. Identifiera det med <code>lsof | grep /dev/sdX</code> eller <code>fuser -vm /dev/sdX1</code>, stoppa det och sedan köra verktyget igen."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "SMART-status och disktest",
+        "tail": " — Kontrollera en disk före / efter att ha torkat för att bekräfta att den är frisk."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importera disk till VM",
+        "tail": " — passera en nyformaterad disk till en VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Lägg till lokal disk som Proxmox lagring",
+        "tail": " - registrera en torkad disk som en Proxmox lagringspool."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Kommandon för lagring och diskar",
+        "tail": " — referens för lsblk, blkid och parted."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Disk Manager översikt",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -92,13 +92,6 @@
       "blocks": [
         {
           "p": "The security review uses the Lynis report of the host. When Lynis has not been run yet, or its report is older than the threshold of the policy, a dialog offers <strong>Run with Lynis</strong>, which takes a few minutes longer, or <strong>Run without Lynis</strong>, which uses the existing report."
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/lynis-dialog.png",
-            "alt": "Dialog that offers to run the assessment with or without Lynis",
-            "caption": "The Lynis dialog before a security review."
-          }
         }
       ]
     },

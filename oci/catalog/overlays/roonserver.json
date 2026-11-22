@@ -22,5 +22,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Roon music software transforms your listening experience with rich metadata, discovery features, and audiophile sound. It works with streaming services and local files.\n\nRoon brings all your music together and adds bios, reviews, photos, lyrics, tour dates, and cross-linked credits for performers, songwriters, producers, engineers, and composers. Everything about music - browsing, discovery, collecting, and listening - is more engaging with Roon.\n\nRoonServer is the central server component. It runs on a Linux amd64/x86_64 host, stores the Roon database and settings, and serves your library to Roon Remote clients and audio endpoints on your local network. It is controlled from the Roon app and does not provide a browser-based WebUI.\n"
+    },
+    "description": {
+      "en_US": "Roon is a music player and library management platform that centralizes music collections from local files and streaming services. It enriches the browsing experience by aggregating metadata such as artist biographies, reviews, lyrics, photos, and detailed credits. The software streams audio across network-connected devices, smart speakers, and compatible endpoints. Roon Server functions as the central core that stores the library database and distributes sound throughout the local network."
+    },
+    "screenshots": [
+      "https://static-pr.roonlabs.net/1920w-gdrive-1Npv8AMdr8D48p6fYdVam9gHLmqGwoNOS.jpg"
+    ]
   }
 }

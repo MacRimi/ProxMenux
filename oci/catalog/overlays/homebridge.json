@@ -23,5 +23,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Homebridge is a lightweight NodeJS server you can run on your home network that emulates the iOS HomeKit API. It supports Plugins, which are community-contributed modules that provide a basic bridge from HomeKit to various 3rd-party APIs provided by manufacturers of \"smart home\" devices."
+    },
+    "description": {
+      "en_US": "Homebridge is a lightweight server that emulates the iOS HomeKit API on your local network. It allows you to integrate smart home devices that do not natively support HomeKit by using community plugins. Through its web interface, you can configure settings, manage plugins, and control connected devices."
+    },
+    "tips": [
+      "The web interface allows you to install, remove, and update plugins, modify config.json, and restart Homebridge."
+    ],
+    "screenshots": [
+      "https://user-images.githubusercontent.com/3979615/71886653-b16d3f80-3190-11ea-9ff8-49dc4ae4fff0.png"
+    ],
+    "repository": "https://github.com/homebridge/homebridge"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Organize links and integrations for homelab services behind a single dashboard. The project-maintained image stores its configuration under /config and runs without an external database or sidecar."
+    },
+    "description": {
+      "en_US": "Organizr is an HTPC and homelab services organizer written in PHP. It provides a unified dashboard to organize and access different services through a single interface. Users and administrators can manage accounts and customize tabs directly within the application."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/16184466/53615856-35cc5a80-3b9d-11e9-8428-1f2ae05da2c9.png",
+      "https://user-images.githubusercontent.com/16184466/53615857-35cc5a80-3b9d-11e9-82bf-91987c529e72.png",
+      "https://user-images.githubusercontent.com/16184466/53615858-35cc5a80-3b9d-11e9-8149-01a7fcd9160a.png",
+      "https://user-images.githubusercontent.com/16184466/53615855-35cc5a80-3b9d-11e9-882b-f09f3eb18173.png"
+    ]
+  }
+}

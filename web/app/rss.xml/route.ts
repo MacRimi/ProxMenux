@@ -33,6 +33,17 @@ function extractFirstImage(rawContent: string): string | null {
   return `https://proxmenux.com/${url}`
 }
 
+// Size of a release image of this repository, which an enclosure has to state.
+function imageBytes(url: string): number | null {
+  const name = url.match(/\/images\/([^/]+)$/)?.[1]
+  if (!name) return null
+  try {
+    return fs.statSync(path.join(process.cwd(), "..", "images", name)).size
+  } catch {
+    return null
+  }
+}
+
 function escapeXml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -180,15 +191,15 @@ export async function GET() {
         (entry) => `
     <item>
       <title>${escapeXml(entry.title)}</title>
-      <description>${escapeXml(entry.content.replace(/<[^>]*>/g, '').substring(0, 200))}...</description>
+      <description><![CDATA[${entry.image ? `<img src="${entry.image}" alt="${escapeXml(entry.title)}"/><br/>` : ""}${entry.content.replace(/<[^>]*>/g, '').substring(0, 200)}...]]></description>
       <content:encoded><![CDATA[${entry.content}]]></content:encoded>
       <link>${entry.url}</link>
       <guid isPermaLink="true">${entry.url}</guid>
       <pubDate>${new Date(entry.date).toUTCString()}</pubDate>
       <category>Changelog</category>${entry.image ? `
       <media:thumbnail url="${escapeXml(entry.image)}"/>
-      <media:content url="${escapeXml(entry.image)}" medium="image"/>
-      <enclosure url="${escapeXml(entry.image)}" type="image/png" length="0"/>` : ""}
+      <media:content url="${escapeXml(entry.image)}" medium="image" type="image/png"/>${imageBytes(entry.image) ? `
+      <enclosure url="${escapeXml(entry.image)}" type="image/png" length="${imageBytes(entry.image)}"/>` : ""}` : ""}
     </item>`,
       )
       .join("")}

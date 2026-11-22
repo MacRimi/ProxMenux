@@ -18,6 +18,37 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 4096
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Ardour is an open source, collaborative effort of a worldwide team including musicians, programmers, and professional recording engineers."
+    },
+    "description": {
+      "en_US": "Ardour is an open source audio software project created through the collaborative effort of a worldwide team of musicians, programmers, and professional recording engineers. It provides an environment tailored for audio production and recording workflows. The application is built to serve the practical needs of musicians and audio engineers."
+    },
+    "screenshots": [
+      "https://ardour.org/images/ardour-og.png",
+      "https://ardour.org/images/retina_no_plugs2.png",
+      "https://ardour.org/images/editor4.png",
+      "https://ardour.org/images/mixer4.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

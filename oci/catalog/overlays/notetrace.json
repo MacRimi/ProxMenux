@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted notes and notebooks with attachments, backups, and optional multi-user accounts."
+    },
+    "description": {
+      "en_US": "NoteTrace is a self-hosted note-taking application designed for quick thought capture, checklists, and reminders. It organizes notes in a clean card grid or timeline view and features a Markdown editor with inter-note linking, voice recordings with transcription, drawings, and file attachments. The application functions offline in web browsers and mobile apps, syncing changes once reconnected. It also allows seamless imports from platforms like Google Keep, Evernote, and Obsidian."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/traceapps/notetrace/HEAD/docs/screenshots/01-notes.png"
+    ]
+  }
+}

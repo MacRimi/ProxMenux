@@ -63,5 +63,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "phpMyAdmin"
+    },
+    "tagline": {
+      "en_US": "Phpmyadmin is a free software tool written in PHP, intended to handle the administration of MySQL over the Web. phpMyAdmin supports a wide range of operations on MySQL and MariaDB."
+    },
+    "description": {
+      "en_US": "PhpMyAdmin is a web-based administration tool designed to manage MySQL and MariaDB databases. It provides a graphical interface to interact with database servers directly from a web browser. It allows users to perform a wide range of operations including managing tables, executing SQL queries, and administering database content."
+    }
   }
 }

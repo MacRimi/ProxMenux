@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted event photo gallery for guests, with moderation, QR-code sharing, and local SQLite storage."
+    },
+    "description": {
+      "en_US": "Guestroll is a self-hosted event photo gallery designed for gathering photos from attendees. Guests scan a QR code to open the camera directly in their mobile browser and submit photos without installing an app or creating an account. Hosts can manage multiple events, moderate submissions, showcase a live photo wall on screens, and export entire albums as ZIP archives."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/achedon12/guestroll/HEAD/docs/assets/screenshots/moderation.png",
+      "https://raw.githubusercontent.com/achedon12/guestroll/HEAD/docs/assets/screenshots/guest.png",
+      "https://raw.githubusercontent.com/achedon12/guestroll/HEAD/docs/assets/screenshots/wall.png",
+      "https://raw.githubusercontent.com/achedon12/guestroll/HEAD/docs/assets/screenshots/share.png"
+    ]
+  }
+}

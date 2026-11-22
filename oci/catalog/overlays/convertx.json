@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "ConvertX is a self-hosted file conversion service that allows users to convert files between different formats through an intuitive web interface. It supports a wide range of file types including documents, images, videos, and audio files, making it a comprehensive solution for all your file conversion needs.\n\nThe service is designed with simplicity and ease of use in mind. Users can simply upload their files, select the desired output format, and let ConvertX handle the conversion process. The web interface provides a clean and user-friendly experience, with drag-and-drop support and batch conversion capabilities.\n\nConvertX runs entirely on your own infrastructure, ensuring that your files remain private and secure. There's no need to upload sensitive documents to third-party services, giving you full control over your data. The service is containerized for easy deployment and can be integrated into existing home server setups.\n\n**Key Features:**\n- Support for multiple file formats (documents, images, videos, audio)\n- Intuitive web interface with drag-and-drop support\n- Batch conversion capabilities\n- Self-hosted for privacy and security\n- Containerized for easy deployment\n- No file size limitations\n\n**Learn More:**\n- [ConvertX GitHub Repository](https://github.com/c4illin/convertx)\n"
+    },
+    "description": {
+      "en_US": "ConvertX is a self-hosted online file converter that allows users to convert files between different formats via a web interface. It integrates multiple conversion tools to support over a thousand file formats across images, documents, videos, audio, and more. The application features multi-file batch processing, account support, and password protection."
+    },
+    "tips": [
+      "Anyone can register the first account upon setup, so create your account immediately."
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/C4illin/ConvertX/main/images/preview.png"
+    ],
+    "repository": "https://github.com/C4illin/ConvertX"
   }
 }

@@ -53,5 +53,17 @@
         "retrieval": null
       }
     ]
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "PocketBase is an open-source backend solution that combines a real-time database, authentication, file storage, and an admin dashboard into a single, portable executable."
+    },
+    "description": {
+      "en_US": "PocketBase is an open-source backend written in Go. It features an embedded SQLite database with realtime subscriptions, built-in file and user management, and a simple REST-ish API. It also includes an administrative dashboard UI for managing data and application settings."
+    },
+    "repository": "https://github.com/pocketbase/pocketbase",
+    "screenshots": [
+      "https://i.imgur.com/aCBbjKx.png"
+    ]
   }
 }

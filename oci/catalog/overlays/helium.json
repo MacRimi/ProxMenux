@@ -10,5 +10,32 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Helium is a Chromium-based web browser made for people, with love. Privacy-first with unbiased ad-blocking."
+    },
+    "description": {
+      "en_US": "Helium is a Chromium-based web browser focused on privacy and ad-blocking. It provides a familiar navigation experience while blocking intrusive trackers and advertisements without bias. It can be accessed remotely through a streaming web interface to browse external or local network services within an isolated environment."
+    },
+    "screenshots": [
+      "https://helium.computer/landing/interface/vertical.avif",
+      "https://helium.computer/landing/interface/dynamic-tabs.avif",
+      "https://helium.computer/landing/interface/compact.avif",
+      "https://helium.computer/landing/interface/classic.avif"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

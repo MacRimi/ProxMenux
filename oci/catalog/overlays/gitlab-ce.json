@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "GitLab Community Edition includes Git hosting, merge requests, issue tracking and CI/CD coordination. Its official all-in-one image includes PostgreSQL, Redis and Gitaly."
+    },
+    "description": {
+      "en_US": "GitLab Community Edition is a self-hosted Git repository management platform. It provides source code hosting, code review through merge requests, and issue tracking for software projects. It also coordinates continuous integration and continuous delivery workflows."
+    }
+  }
+}

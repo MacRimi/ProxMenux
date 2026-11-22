@@ -5,7 +5,13 @@ serves every published page under locale-prefixed URLs:
 
 - `/en/<path>` — English, the source of truth
 - `/es/<path>` — Spanish
+- `/de/<path>` — German
+- `/fr/<path>` — French
+- `/it/<path>` — Italian
+- `/pt/<path>` — Portuguese
 - `/sk/<path>` — Slovak, with English fallback where needed
+- `/sv/<path>` — Swedish
+- `/ru/<path>` — Russian
 
 We use [`next-intl`](https://next-intl.dev) for the i18n plumbing. Anyone
 can translate the docs without writing TypeScript: most of the work is
@@ -148,6 +154,18 @@ Example:
 
 ### 4. Test locally
 
+From the repository root, check the available catalogs without using a
+translation provider:
+
+```bash
+python3 .github/scripts/check_web_docs_catalogs.py
+```
+
+For a full locale-completion change, add `--require-complete` to also require
+every English file and leaf. This validates schema, placeholders, rich-text
+tags, literal code and rendering metadata; it does not replace linguistic
+review. Partial translations can continue to use the English fallback.
+
 ```bash
 cd web
 npm run dev
@@ -230,13 +248,12 @@ This is the more involved path. Use the pilot
    `routing.locales` in `i18n/routing.ts`).
 3. If the page exports `metadata`, replace it with `generateMetadata()`
    that reads from `getTranslations({ namespace: '<page>.meta' })`.
-4. Call `setRequestLocale(locale)` near the top of the component body.
-5. Call `await getTranslations({ locale, namespace: 'docs.<section>.<page>' })`
+4. Call `await getTranslations({ locale, namespace: 'docs.<section>.<page>' })`
    and rename it to `t`.
-6. Replace every English string in JSX with `t('key')` (plain text) or
+5. Replace every English string in JSX with `t('key')` (plain text) or
    `t.rich('key', { code, strong, em, link, ... })` for strings with
    inline tags.
-7. For lists / tables of structured items (e.g. table rows, nav items),
+6. For lists / tables of structured items (e.g. table rows, nav items),
    pull the array from `getMessages()` and iterate.
 
 ### JSON file structure
@@ -306,12 +323,48 @@ registers a renderer for them.
 
 ---
 
+## Language style: Spanish (es)
+
+The same criterion applies to the Monitor (`AppImage/messages/es`), the terminal menus (`lang/es.json`) and the documentation (`web/messages/es`). It is Spain Spanish, written with rigour but without formality.
+
+- **Address the reader as *tú*, never *usted*:** «Introduce la ruta», «Comprueba la conexión», «Déjalo vacío», «tus backups».
+- **Buttons, menu options, tab names and short action labels use the infinitive, without address:** «Guardar», «Eliminar la GPU de la configuración», «Activar 2FA», «Añadir GPU a un LXC». A full instruction sentence uses *tú*: «Selecciona una opción».
+- **Status messages say what happened:** «Backup creado», «No se necesitan cambios».
+- **Spain vocabulary:** *pulsar* (not *presionar*), *introducir* (not *ingresar*), *volver* (not *regresar*), *elegir* or *seleccionar*, *hacer clic*, *añadir* (not *agregar*), *fallo* (not *falla* as a noun), *usuario* (not *operador*), *monitorización* (not *monitoreo*). The key is **Intro**, not *Enter* or *Entrar*.
+- **Destructive actions use *eliminar*,** not *quitar*.
+- **Activate and deactivate:** an action or switch of the user is *activar/desactivar*; a technical state can stay *habilitado/deshabilitado*.
+- **Kept in English:** backup, snapshot, host, pool, slot, datastore, the application categories of OCI manager Apps and Community Scripts, product names, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox web interface).
+- **Translated:** *pila* (stack), *puente* (bridge), *pasarela* (gateway) when they are common nouns; *Secure Gateway* is a product name and stays as it is.
+- **One canonical form for repeated phrases,** for example «Pulsa Intro para volver al menú…».
+- **Documentation quotes screen texts exactly as the Spanish interface shows them,** and page titles end in «Documentación de ProxMenux».
+
+---
+
+## Language style: Russian (ru)
+
+The same criterion applies to the Monitor (`AppImage/messages/ru`), the terminal menus (`lang/ru.json`) and the documentation (`web/messages/ru`). It is modern written Russian: respectful and plain, without officialese or machine-translation calques.
+
+- **Address the reader as *Вы*, capitalized in all case forms** (*Вас, Вам, Ваш, Вами*): «Ваш диск исправен!», «Замените URL в примере официальным URL скрипта для Вашего приложения.» A full instruction sentence uses the polite *-те* imperative that goes with it: «Убедитесь, что monitor.service работает корректно.», «Войдите, чтобы открыть панель мониторинга». Lowercase *вы* only where the text does not address the reader.
+- **Buttons, menu options, tab names and short action labels use the infinitive or the noun, without address:** «Сохранить», «Удалить», «Изменить», «Отмена», «Закрыть», «Копировать в буфер обмена», «Выход», «Назад».
+- **Status messages say what happened or what is true, never «мы»:** «В норме», «Предупреждение», «Скопировано», «Не удалось подключиться к серверу ProxMenux».
+- **One canonical term per concept** (as it ships in the merged Russian catalogs): *backup* → «резервная копия», «создать резервную копию» (not the colloquial «бэкап»), *snapshot* → «снимок», *backup destination* → «место назначения», *backup jobs* → «задания резервного копирования», *node* → «узел», *pool* → «пул», *storage* → «хранилище», *Dashboard* (of ProxMenux) → «панель мониторинга», *backend* → «серверная часть» in UI strings (*backend* stays in raw API errors).
+- **VM is «ВМ».** In running Russian text write «ВМ» («Активные ВМ и LXC»); *LXC* and *CT* stay as they are.
+- **Screen texts are quoted with «ёлочки».** Russian prose quoting a menu item names it exactly as the translated catalog renders it — «Удалить ProxMenux», «Скрипты сообщества», «Установить/обновить Coral TPU на хосте».
+- **Kept in Latin:** product and component names (ProxMenux, Proxmox VE, Proxmox Backup Server, ZFS, LXC, QEMU, Borg, Coral TPU), CLI commands and flags, config keys, file names, URLs, the OCI manager Apps and Community Scripts categories, and the labels of other software as they appear on its screen (for example `Datacenter > Storage` in the Proxmox VE web UI). The site tagline keeps its established wording «Интерактивное меню и веб-панель управления для Proxmox VE» — «веб-панель управления» is correct there even though the app's dashboard is «панель мониторинга».
+- **Documentation page titles** follow the existing SEO-style title of each page; brand names inside them stay in Latin («ProxMenux Monitor — Веб-панель мониторинга для Proxmox VE…»); there is no fixed «Документация ProxMenux» suffix. The site nav label stays «Документация».
+- **Punctuation and placeholders:** «ёлочки» balanced, the em dash where Russian requires it; `{time}`, `{{count}}`, `%s` and ICU plural syntax stay byte-identical to the English source.
+
+---
+
 ## Adding a new locale
 
 If you want to add a language that isn't in the project yet:
 
 1. Create `messages/<locale>/common.json` and the page catalogs. The automated
-   builder can provide the initial baseline.
+   builder can provide the initial baseline when explicitly dispatched. It
+   does not run on merge: changing English and its translations together must
+   not trigger machine retranslation of the reviewed text. Offline validation
+   still runs automatically for website changes.
 2. Review the shared navigation and a representative set of documentation
    pages with a native speaker.
 3. Add the locale code to `routing.ts` only when the locale is ready to be

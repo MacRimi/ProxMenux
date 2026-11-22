@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { Fragment, useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
 import {
@@ -21,6 +21,7 @@ import {
 import Image from "next/image"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
+import { ProxMenuxMark } from "./proxmenux-mark"
 
 interface OnboardingSlide {
   id: number
@@ -96,6 +97,8 @@ const slides: OnboardingSlide[] = [
   },
 ]
 
+export const ONBOARDING_CLOSED_EVENT = "proxmenux-onboarding-closed"
+
 export function OnboardingCarousel() {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -109,6 +112,14 @@ export function OnboardingCarousel() {
       setOpen(true)
     }
   }, [])
+
+  // The release notes wait for the tour: two identical dialogs on top of each
+  // other made closing the first one look as if nothing happened.
+  const [wasOpen, setWasOpen] = useState(false)
+  useEffect(() => {
+    if (open) setWasOpen(true)
+    else if (wasOpen) window.dispatchEvent(new Event(ONBOARDING_CLOSED_EVENT))
+  }, [open, wasOpen])
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
@@ -154,7 +165,10 @@ export function OnboardingCarousel() {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
+      {/* Its own round close button sits on the banner: the dialog's default
+          one is hidden, and opening does not put a focus ring on a button. */}
+      <DialogContent hideClose onOpenAutoFocus={(e) => e.preventDefault()}
+        className="max-w-4xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
         <DialogTitle className="sr-only">{t("onboarding.dialogTitle")}</DialogTitle>
         <div className="relative bg-card rounded-lg overflow-hidden shadow-2xl">
           <Button
@@ -203,7 +217,14 @@ export function OnboardingCarousel() {
 
           <div className="p-4 md:p-8 space-y-3 md:space-y-6 max-h-[60vh] md:max-h-none overflow-y-auto">
             <div className="space-y-2 md:space-y-3">
-              <h2 className="text-xl md:text-3xl font-bold text-foreground text-balance">{slideTitle}</h2>
+              <h2 className="text-xl md:text-3xl font-bold text-foreground md:whitespace-nowrap" aria-label={slideTitle}>
+                {slideTitle.split("ProxMenux").map((part, index) => (
+                  <Fragment key={index}>
+                    {index > 0 && <ProxMenuxMark weight={700} />}
+                    {part}
+                  </Fragment>
+                ))}
+              </h2>
               <p className="text-sm md:text-lg text-muted-foreground leading-relaxed text-pretty">
                 {slideDescription}
               </p>

@@ -16,5 +16,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Frigate adapted as a native Proxmox OCI LXC with persistent configuration, selectable recording storage, tmpfs cache and optional GPU or detector devices."
+    },
+    "description": {
+      "en_US": "Frigate is a local network video recorder featuring real-time AI object detection for IP cameras. It uses OpenCV and TensorFlow to identify objects locally while minimizing system resource consumption. The application supports continuous 24/7 recording, retention rules based on detected objects, camera re-streaming, and low-latency live viewing."
+    },
+    "screenshots": [
+      "https://github.com/blakeblackshear/frigate/assets/569905/5e713cb9-9db5-41dc-947a-6937c3bc376e",
+      "https://github.com/blakeblackshear/frigate/assets/569905/6fed96e8-3b18-40e5-9ddc-31e6f3c9f2ff",
+      "https://github.com/blakeblackshear/frigate/assets/569905/d6788a15-0eeb-4427-a8d4-80b93cae3d74",
+      "https://github.com/blakeblackshear/frigate/assets/569905/d7885fc3-bfe6-452f-b7d0-d957cb3e31f5"
+    ]
   }
 }

@@ -35,8 +35,23 @@ nodelist {
 """
 
 
+class GraceTimer:
+    """Departures wait for a grace; these tests let it run out at once."""
+    pending = []
+
+    def __init__(self, interval, function, args=()):
+        self.function, self.args, self.cancelled, self.daemon = function, args, False, False
+
+    def start(self):
+        GraceTimer.pending.append(self)
+
+    def cancel(self):
+        self.cancelled = True
+
+
 class ClusterMembershipTests(unittest.TestCase):
     def setUp(self):
+        GraceTimer.pending = []
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
         conf = Path(folder.name) / "corosync.conf"
@@ -54,7 +69,8 @@ class ClusterMembershipTests(unittest.TestCase):
                      patch.object(notification_events.startup_grace, "is_real_system_boot",
                                   side_effect=lambda: self.booting),
                      patch.object(notification_events._shared_state, "is_startup_health_grace",
-                                  side_effect=lambda: self.booting)):
+                                  side_effect=lambda: self.booting),
+                     patch.object(notification_events.threading, "Timer", GraceTimer)):
             item.start()
             self.addCleanup(item.stop)
         self.queue = Queue()
@@ -62,6 +78,10 @@ class ClusterMembershipTests(unittest.TestCase):
 
     def notified(self, line):
         self.watcher._check_cluster_events(line, "corosync")
+        while GraceTimer.pending:
+            timer = GraceTimer.pending.pop(0)
+            if not timer.cancelled:
+                timer.function(*timer.args)
         events = []
         while True:
             try:

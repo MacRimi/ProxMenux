@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Publish short posts, links and media on a personal timeline that you control. Ech0 includes accounts, comments, RSS and local data storage in one lightweight service."
+    },
+    "description": {
+      "en_US": "Ech0 is a self-hosted personal microblog platform designed for publishing short posts, links, and media to a personal timeline. It features Markdown editing with live previews, media attachments, tag organization, and built-in comment moderation. Users maintain full ownership of their data while providing RSS feeds and lightweight social interactions."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/lin-snow/Ech0/HEAD/docs/imgs/screenshot.png"
+    ]
+  }
+}

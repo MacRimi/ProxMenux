@@ -10,5 +10,22 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "Nextcloud + PostgreSQL"
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/nextcloud/screenshots/master/nextcloud-hub-25-files.png"
+    ],
+    "tagline": {
+      "en_US": "Nextcloud with a PostgreSQL database and a Redis cache, each in its own LXC container."
+    },
+    "description": {
+      "en_US": "Nextcloud is a self-hosted productivity and file-sharing platform designed to keep your personal or organization data private. It enables users to store, synchronize, and share files across multiple devices. The platform also includes tools for managing calendars, contacts, email, and collaborative communication."
+    },
+    "tips": [
+      "ProxMenux generates the administrator password and shows it at the end of the installation. Change it after the first login."
+    ]
   }
 }

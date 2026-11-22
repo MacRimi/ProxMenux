@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "USB-Laufwerk in LXC einbinden und per Samba freigeben | ProxMenux",
+    "description": "Eine USB-Festplatte oder einen USB-Stick in einem privilegierten LXC-Container unter Proxmox VE zugänglich machen, Samba installieren und die Inhalte im Netzwerk freigeben.",
+    "ogTitle": "USB-Laufwerk in LXC einbinden und per Samba freigeben",
+    "ogDescription": "USB-Laufwerk einem privilegierten LXC-Container unter Proxmox VE zugänglich machen, Samba installieren und den Inhalt im LAN freigeben."
+  },
+  "header": {
+    "title": "USB-Festplatte oder -Stick in LXC einbinden und per Samba im Netzwerk freigeben",
+    "description": "Eine USB-Festplatte oder einen USB-Stick in einem privilegierten LXC-Container unter Proxmox VE zugänglich machen, Samba installieren und die Inhalte im Netzwerk freigeben.",
+    "section": "Leitfäden"
+  },
+  "recommended": {
+    "calloutTitle": "Empfohlen",
+    "calloutIntro": "ProxMenux bietet beide Teile dieses Ablaufs als geführte Menüs an:",
+    "items": [
+      "<strong>Datenträgerverwaltung → Physischen Datenträger formatieren/löschen</strong> für die Formatierung.",
+      "<strong>Speicher und Freigaben → LXC-Netzwerkfreigaben → Samba-Server in LXC</strong> für die Installation im privilegierten Container und die Samba-Konfiguration."
+    ],
+    "calloutOutro": "Die geführten Abläufe berücksichtigen die Berechtigungen unprivilegierter Container und bieten Freigabeprofile für Lesen/Schreiben, Nur-Lesen oder eigene Einstellungen sowie die Gruppe sharedfiles. Diese Anleitung beschreibt die manuellen Schritte, damit Sie sie nachvollziehen oder selbst konfigurieren können."
+  },
+  "intro": {
+    "body": "Ein zusätzliches USB-Laufwerk kann für einen Proxmox-Host hilfreich sein, besonders bei Mini-PCs mit wenig internem Erweiterungsplatz. Diese Anleitung erklärt:",
+    "stepsTitle": "Was Sie einrichten",
+    "steps": [
+      "Ein USB-Laufwerk einem privilegierten LXC-Container zugänglich machen.",
+      "Installieren von Samba im Container.",
+      "Teilen der Festplatteninhalte über das LAN."
+    ],
+    "useCasesTitle": "Anwendungsfälle",
+    "useCases": [
+      "Torrent-Dateien speichern und im Netzwerk bereitstellen.",
+      "Speicher für einen Medienserver wie Plex, Jellyfin oder Emby bereitstellen.",
+      "Dokumente speichern, die Paperless automatisch einliest.",
+      "Generischer NAS-Speicher für das Heimnetzwerk."
+    ],
+    "privilegedCalloutTitle": "Privilegierter Container für diese Anleitung",
+    "privilegedCalloutBody": "Diese Anleitung verwendet einen privilegierten LXC-Container mit einem Blockgerät als <code>mp0</code>. Bei unprivilegierten Containern können Sie stattdessen das Dateisystem auf dem Host einhängen und sein Verzeichnis per Bind-Mount mit passenden ID-Zuordnungen und Berechtigungen durchreichen. Siehe <strong>Speicher und Freigaben → LXC-Einhängepunkte</strong> in ProxMenux."
+  },
+  "attach": {
+    "heading": "1. USB-Laufwerk in LXC einbinden",
+    "identifyHeading": "1.1 Identifizieren Sie das Gerät",
+    "identifyBody": "Vergleichen Sie die Datenträgerliste <strong>vor</strong> und <strong>nach</strong> dem Anschließen des USB-Laufwerks. Das neue Gerät ist das gesuchte Laufwerk.",
+    "beforeLabel": "Vorher:",
+    "afterLabel": "Nachher:",
+    "imageBeforeAlt": "Festplattenliste vor dem Hinzufügen von USB-Laufwerk",
+    "imageAfterAlt": "Festplattenliste nach dem Hinzufügen von USB-Laufwerk",
+    "lsblkBody": "Mit <code>lsblk -o NAME,SIZE,MODEL,SERIAL</code> listen Sie Blockgeräte mit Modell und Seriennummer auf.",
+    "stableCalloutTitle": "Wichtig — Verwenden Sie eine stabile Kennung",
+    "stableCalloutBody": "Der Gerätename <code>/dev/sdb1</code> kann sich nach einem Neustart ändern, besonders bei mehreren USB-Laufwerken. Ermitteln Sie die dauerhafte Kennung:",
+    "stableCalloutCode": "ls -l /dev/disk/by-id/",
+    "stableCalloutAfter": "Verwenden Sie in der LXC-Konfiguration den Eintrag <code>/dev/disk/by-id/usb-...</code> der gewünschten Partition statt <code>/dev/sdb1</code>. Wählen Sie die Partition, nicht den ganzen Datenträger. Sie bleibt so bei geänderter Geräteerkennung identifizierbar.",
+    "formatHeading": "1.2 Formatieren Sie die Festplatte",
+    "formatBody": "ext4 eignet sich für Linux-Freigaben: Es unterscheidet Groß-/Kleinschreibung und unterstützt POSIX-ACLs sowie große Dateien. Das Formatieren zerstört den Inhalt des vorhandenen Dateisystems. Prüfen Sie die Partition und führen Sie den Befehl auf dem <strong>Proxmox-Host</strong> aus:",
+    "formatCode": "mkfs.ext4 /dev/sdb1",
+    "formatAfter": "Ersetzen Sie <code>/dev/sdb1</code> durch die tatsächliche Partition oder deren dauerhaften Pfad <code>/dev/disk/by-id/usb-...-part1</code>.",
+    "mkdirHeading": "1.3 Einhängepunkt im LXC-Container erstellen",
+    "mkdirBody": "Erstellen Sie im LXC das Verzeichnis, in dem die Festplatte angezeigt wird (jeder Name funktioniert):",
+    "mkdirCode": "mkdir /mnt/lxc_USB",
+    "wireHeading": "1.4 Gerät in LXC einbinden",
+    "wireBody": "Bearbeiten Sie auf dem <strong>Proxmox-Host</strong> die Containerkonfiguration. Ersetzen Sie <code>'<'CTID'>'</code> durch die Container-ID:",
+    "wireEditCode": "nano /etc/pve/lxc/CTID.conf",
+    "wireAddLine": "Fügen Sie diese Zeile hinzu:",
+    "wireConfigCode": "mp0: /dev/disk/by-id/usb-VENDOR_MODEL_SERIAL-part1,mp=/mnt/lxc_USB,backup=0",
+    "wireShortForm": "Alternativ können Sie den kürzeren Eintrag <code>mp0: /dev/sdb1,mp=/mnt/lxc_USB,backup=0</code> verwenden, wenn Sie das Risiko einer Änderung des Gerätepfads akzeptieren.",
+    "wireBackupNote": "Das Beispiel setzt <code>backup=0</code>. Inhalte von Geräte- und Bind-Mounts werden nicht in Container-Sicherungen mit <code>vzdump</code> aufgenommen. Sichern Sie die Daten des externen Laufwerks separat.",
+    "restartHeading": "1.5 Starten Sie den LXC neu und setzen Sie Berechtigungen",
+    "restartBody": "Starten Sie den CT neu, um den Mount Point anzuwenden:",
+    "restartCode": "pct reboot CTID",
+    "permsBody": "Erstellen Sie im LXC-Container zuerst das Freigabekonto, bevor Sie ihm das Verzeichnis zuweisen, und setzen Sie dann die Berechtigungen:",
+    "permsCode": "adduser --system --group --no-create-home --shell /usr/sbin/nologin proxmenux\nmkdir -p /mnt/lxc_USB\nchown -R proxmenux:proxmenux /mnt/lxc_USB\nchmod 770 /mnt/lxc_USB",
+    "permsNoteTitle": "Notiz",
+    "permsNote": "Ersetzen Sie <code>proxmenux</code> durch Ihren Kontonamen. Der Modus <code>770</code> erlaubt Eigentümer und Gruppe den Zugriff und sperrt andere aus. Er ist restriktiver als <code>chmod -R 777</code>. Das Konto wird hier erstellt und in Schritt 2.2 bei Samba registriert."
+  },
+  "samba": {
+    "heading": "2. Installieren Sie Samba",
+    "installHeading": "2.1 Installieren Sie das Paket im LXC",
+    "installCode": "apt-get update\napt-get install -y samba",
+    "confirmBody": "Bestätigen Sie, dass der Dienst läuft:",
+    "confirmCode": "systemctl status smbd.service",
+    "userHeading": "2.2 Freigabekonto prüfen",
+    "userBody": "Das Systemkonto <code>proxmenux</code> wurde in Schritt 1.5 ohne Anmeldeshell erstellt. Prüfen Sie es vor dem Setzen des Samba-Passworts und verwenden Sie durchgehend Ihren gewählten Namen:",
+    "userCode": "id proxmenux",
+    "passwordBody": "Setzen Sie das Samba-Passwort. Es ist vom Systempasswort getrennt, da Samba einen eigenen Anmeldedatenspeicher führt:",
+    "passwordCode": "smbpasswd -a proxmenux",
+    "aclHeading": "2.3 Eigentümer und ACLs festlegen",
+    "aclBody": "Wenn <code>chown</code> aus Schritt 1.5 genügt, sind die Dateirechte eingerichtet. Für mehrere Benutzer mit unterschiedlichen Rechten auf denselben Pfad können Sie ACLs verwenden:",
+    "aclCode": "apt-get install -y acl\nsetfacl -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB\nsetfacl -d -R -m \"u:proxmenux:rwx\" /mnt/lxc_USB    # default ACL — applies to new files"
+  },
+  "configure": {
+    "heading": "3. Samba-Freigabe konfigurieren",
+    "editHeading": "3.1 Bearbeiten smb.conf",
+    "editCode": "nano /etc/samba/smb.conf",
+    "appendBody": "Fügen Sie am Dateiende eine Freigabedefinition hinzu:",
+    "shareCode": "[lxc_usb]\n    comment = Shared USB storage\n    path = /mnt/lxc_USB\n    read only = no\n    writable = yes\n    browseable = yes\n    guest ok = no\n    valid users = proxmenux\n    create mask = 0660\n    directory mask = 0770",
+    "validUsersNoteTitle": "Notiz",
+    "validUsersNote": "Die <code>valid users = proxmenux</code>-Linie beschränkt den Zugriff auf diesen einzelnen Samba-Benutzer. Verwenden Sie für den gruppenbasierten Zugriff <code>valid users = @samba_users</code>, nachdem Sie den/die Benutzer zu einer Gruppe namens <code>samba_users</code> hinzugefügt haben.",
+    "reloadHeading": "3.2 Samba neu laden",
+    "reloadCode": "systemctl restart smbd"
+  },
+  "verify": {
+    "heading": "4. Zugang prüfen",
+    "body": "Suchen Sie von jedem LAN-Client zu <code>\\\\'<'CT_IP'>'</code> (Windows) oder <code>smb://'<'CT_IP'>'</code> (macOS / Linux-Dateimanager). Authentifizierung mit dem Samba-Benutzer (<code>proxmenux</code>) und dem Passwort, das Sie mit <code>smbpasswd</code> festgelegt haben.",
+    "image1Alt": "Samba-Serverzugriff von einem Client",
+    "image2Alt": "Samba-Authentifizierungsaufforderung",
+    "usageBody": "Sie können die Freigabe im Container und über das Netzwerk verwenden:",
+    "image3Alt": "USB-Laufwerk über die Freigabe nutzen"
+  },
+  "troubleshoot": {
+    "heading": "Fehlerbehebung",
+    "items": [
+      "<strong><code>pct reboot</code> meldet „device not found“:</strong> Prüfen Sie, ob der Gerätepfad in <code>mp0</code> auf dem Host existiert. Kontrollieren Sie <code>ls -l /dev/disk/by-id/</code> und korrigieren Sie den Pfad.",
+      "<strong>Der Container startet, aber <code>/mnt/lxc_USB</code> ist leer:</strong> Der Datenträger ist möglicherweise nicht eingehängt oder sein Dateisystem ist leer. Prüfen Sie auf dem Host mit <code>pct exec '<'CTID'>' -- mount | grep lxc_USB</code>. Fehlt der Mount, prüfen Sie Konfiguration, Gerätepfad und Startfehler.",
+      "<strong>Die Samba-Anmeldung klappt, aber Schreiben meldet „Permission denied“:</strong> Prüfen Sie Linux-Dateirechte und Schreibeinstellungen der Freigabe. Kontrollieren Sie <code>chown</code> und <code>setfacl</code> in den Abschnitten 1.5 und 2.3.",
+      "<strong>Die Freigabe wird nicht gefunden, aber <code>smb://'<'ip'>'/lxc_usb</code> funktioniert:</strong> Die ältere NetBIOS-Erkennung nutzt <code>nmbd</code>. Modernes Windows nutzt WS-Discovery. Installieren Sie unter Debian 12 <code>apt-get install -y wsdd</code>; unter Debian 13, wo <code>wsdd</code> nicht im stabilen Archiv ist, <code>apt-get install -y wsdd2</code>. Prüfen Sie Dienst und Firewall. Nur <code>nmbd</code> zu aktivieren stellt kein WS-Discovery bereit.",
+      "<strong>Weiteren Benutzer zur Freigabe hinzufügen:</strong> Erstellen Sie das Konto mit <code>adduser</code>, registrieren Sie es mit <code>smbpasswd -a</code> und ergänzen Sie die kommaseparierte Liste <code>valid users =</code>. Vergeben Sie auch die nötigen Dateirechte oder ACLs."
+    ]
+  }
+}

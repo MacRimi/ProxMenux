@@ -2021,6 +2021,13 @@ hb_ensure_borg() {
     #                                                without the new AppImage)
     command -v borg >/dev/null 2>&1 && { echo "borg"; return 0; }
 
+    # Cached/bundled/downloaded borg-linux64 below is AMD64 only. A native
+    # distro Borg may be used above, but never try a foreign cached executable.
+    if [[ "$(uname -m)" != x86_64 ]]; then
+        msg_error "$(hb_translate "Native Borg is unavailable. Install the native borgbackup package on this host to use Borg backups.")"
+        return 1
+    fi
+
     local appimage_cache="$HB_STATE_DIR/borg"
     [[ -x "$appimage_cache" ]] && { echo "$appimage_cache"; return 0; }
 

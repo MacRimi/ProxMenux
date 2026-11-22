@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "Post-Install: Virtualisering | ProxMenux Dokumentation",
+    "description": "Virtualiseringsalternativ i ProxMenux anpassningsbara skript efter installationen: installerar automatiskt rätt gästagent om Proxmox körs i en VM och aktiverar IOMMU / VFIO så att PCI-enheter (GPU:er, nätverkskort, HBA:er) kan genomkopplas till dina VM:ar."
+  },
+  "header": {
+    "title": "Post-Install: Virtualisering",
+    "section": "Inställningar efter installation av Proxmox"
+  },
+  "intro": {
+    "title": "Vad denna kategori täcker",
+    "body": "Två oberoende alternativ. <strong>Installera rätt gästagent</strong> hjälper när Proxmox självt körs inuti en annan hypervisor. <strong>Aktivera VFIO IOMMU-stöd</strong> är det alternativ de flesta behöver: aktiverar kärnfunktioner för att genomkoppla en GPU, HBA eller ett nätverkskort direkt till en VM med nästan nativ prestanda."
+  },
+  "guestAgent": {
+    "heading": "Installera relevant gästagent",
+    "intro": "Identifierar Proxmox-värdens virtualiseringsmiljö med <code>systemd-detect-virt</code> och <code>dmidecode</code> och installerar rätt gästverktyg så att den yttre hypervisorn kan kommunicera korrekt med Proxmox: ordnad avstängning, klocksynkronisering, IP-rapportering med mera.",
+    "headerDetected": "Detekterad värd",
+    "headerPackage": "Paket installerat",
+    "rows": [
+      {
+        "detected": "QEMU / KVM",
+        "package": "qemu-guest-agent"
+      },
+      {
+        "detected": "VMware (ESXi, Workstation)",
+        "package": "open-vm-tools"
+      },
+      {
+        "detected": "VirtualBox",
+        "package": "virtualbox-guest-utils"
+      },
+      {
+        "detected": "Bare metal (ingen)",
+        "package": " — ingen åtgärd, inget installeras"
+      }
+    ],
+    "skipTitle": "Hoppa över detta när Proxmox körs direkt på maskinvaran",
+    "skipBody": "Om Proxmox körs direkt på maskinvaran, vilket är vanligast, ändrar alternativet ingenting: detektorn returnerar <code>none</code> och skriptet avslutas utan ändringar. Det gäller bara de installationer som kör Proxmox <em>som gäst</em> för test eller labb."
+  },
+  "vfio": {
+    "heading": "Aktivera VFIO IOMMU-stöd",
+    "intro": "Aktiverar IOMMU på värden och läser in kärnmodulerna för PCI-genomkoppling (<code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code>). Då kan du tilldela en fysisk enhet till en VM, vars gäst får direkt åtkomst med nästan nativ prestanda.",
+    "whoTitle": "Vem behöver detta",
+    "whoItems": [
+      "Du vill genomkoppla en GPU till en Windows-VM för spel eller en macOS-VM.",
+      "Du har en dedikerad 10G NIC för en brandvägg / router VM (OPNsense, pfSense).",
+      "Du vill passera en HBA direkt till en TrueNAS/Unraid VM för ZFS på nakna diskar.",
+      "Du planerar att använda <em>Coral TPU</em>, ett inspelningskort eller en SDR-dongel i en VM."
+    ],
+    "whoOutro": "Om inget av dessa stämmer kan du säkert hoppa över det här alternativet. För vidarekoppling till en <strong>LXC</strong> (inte en VM), krävs <em>inte</em> IOMMU.",
+    "doesTitle": "Vad ProxMenux gör",
+    "doesIntro": "Funktionen tar hänsyn till starthanteraren: den identifierar ZFS (systemd-boot) eller LVM/ext4 (GRUB) och skriver till rätt fil. Den är idempotent — parametrar som redan finns läggs inte till igen.",
+    "headerBoot": "Starttyp",
+    "headerFile": "Ändrad fil",
+    "headerPost": "Steg efter uppdatering",
+    "bootRows": [
+      {
+        "boot": "systemd-boot (ZFS)",
+        "file": "/etc/kernel/cmdline",
+        "post": "proxmox-boot-tool refresh"
+      },
+      {
+        "boot": "GRUB (LVM/ext4)",
+        "file": "/etc/default/grub",
+        "post": "update-grub"
+      }
+    ],
+    "kernelIntro": "Tillagda kärnparametrar:",
+    "modulesIntro": "Kärnmoduler som läggs till i <code>/etc/modules</code>:",
+    "blacklistIntro": "Konflikterande drivrutiner svartlistas i <code>/etc/modprobe.d/blacklist.conf</code>:",
+    "blacklistTitle": "Svartlistade GPU-drivrutiner förhindrar GPU-användning på värden",
+    "blacklistBody": "Svartlistan hindrar värdkärnan från att binda <em>någon</em> GPU-drivrutin så att VFIO kan ta över GPU:n. Det är önskat för genomkoppling till en VM, men är <strong>motsatsen</strong> till vad du behöver för att <link>installera NVIDIA-drivrutiner på värden</link>, till exempel för LXC-transkodning. Välj en väg per GPU:",
+    "pathItems": [
+      "<strong>GPU → VM:</strong> aktivera VFIO/IOMMU här och låt GPU-drivrutinerna vara svartlistade.",
+      "<strong>GPU → LXC (eller värd):</strong> hoppa över det här alternativet, använd NVIDIA-värdinstallationen, svartlista inte nvidia/nouveau.",
+      "<strong>Två GPU:er:</strong> en kan tilldelas en VM och den andra en LXC, men du behöver mer detaljerad konfiguration: bind bara ett kort till <code>vfio-pci</code> med PCI-ID. Standardsvartlistan är för bred för detta — redigera <code>blacklist.conf</code> efteråt."
+    ],
+    "acsTitle": "Om pcie_acs_override — förstå vad du aktiverar",
+    "acsBody": "<code>pcie_acs_override=downstream,multifunction</code> lättar på kontrollen av PCIe Access Control Services. Kärnan kan dela IOMMU-grupper som firmware rapporterar som odelbara, ibland det enda sättet att genomkoppla en enhet utan hela gruppen. Avvägningen är <strong>minskad isolering mellan enheter</strong>: en skadlig eller komprometterad VM med genomkoppling får större attackyta via DMA. Acceptabelt i ett hemlabb, men överväg noga på värdar med opålitliga arbetslaster. Ta bort parametern från <code>/etc/kernel/cmdline</code> eller <code>/etc/default/grub</code> efter skriptet om den inte behövs och uppdatera starthanteraren igen.",
+    "rebootTitle": "Omstart krävs",
+    "rebootBody": "IOMMU, VFIO-moduler och svartlistan börjar gälla efter ombyggnad av initramfs och omstart. Skriptet kör <code>update-initramfs -u -k all</code>, uppdaterar starthanteraren och markerar ”omstart krävs” så att Anpassningsbar frågar i slutet.",
+    "verifyTitle": "Verifiering efter omstart",
+    "revertTitle": "Kan återställas från Avinstallera-menyn",
+    "revertBody": "<link>Avinstallera optimeringar</link> återställer alla ändringar: tar bort IOMMU-parametrarna från <code>/etc/kernel/cmdline</code> eller GRUB, VFIO-modulerna från <code>/etc/modules</code> och drivrutinernas svartlistposter samt bygger om initramfs. En omstart krävs för att återställningen ska börja gälla."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — naturliga nästa steg när IOMMU + VFIO är aktiverat."
+      },
+      {
+        "label": "Lägg till Controller eller NVMe till VM",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "tail": " — samma genomkopplingsinfrastruktur för lagringsstyrenheter."
+      },
+      {
+        "label": "GPU Passthrough kommandon",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — IOMMU verifiering referens."
+      },
+      {
+        "label": "Avinstallera optimeringar",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — återställ IOMMU / VFIO utan rester."
+      },
+      {
+        "label": "Anpassningsbar efterinstallation",
+        "href": "/docs/post-install/customizable",
+        "tail": " — tillbaka till den överordnade menyn."
+      }
+    ]
+  }
+}

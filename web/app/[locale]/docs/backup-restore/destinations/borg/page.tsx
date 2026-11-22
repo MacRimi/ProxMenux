@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
@@ -40,7 +40,7 @@ export async function generateMetadata({
 }
 
 type PriorityRow = { priority: string; source: string; detail: string }
-type RepoTypeRow = { type: string; url: string; detail: string }
+type RepoTypeRow = { type: string; url: string; urlNote?: string; detail: string }
 type StrategyRow = { mode: string; label: string; detail: string }
 type FileRow = { file: string; content: string }
 type EnvRow = { var: string; value: string; purpose: string }
@@ -53,7 +53,6 @@ export default async function BorgDestinationPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.backupRestore.destinations.borg" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -152,7 +151,7 @@ export default async function BorgDestinationPage({
             {repoTypeRows.map((row, idx) => (
               <tr key={row.type} className={idx < repoTypeRows.length - 1 ? "border-b border-gray-100" : ""}>
                 <td className="px-3 py-2 align-top font-mono text-xs whitespace-nowrap"><strong>{row.type}</strong></td>
-                <td className="px-3 py-2 align-top font-mono text-xs whitespace-nowrap">{row.url}</td>
+                <td className="px-3 py-2 align-top font-mono text-xs whitespace-nowrap">{row.url}{row.urlNote && ` (${row.urlNote})`}</td>
                 <td className="px-3 py-2 align-top">{t.rich(`repoTypes.rows.${idx}.detail`, { code })}</td>
               </tr>
             ))}

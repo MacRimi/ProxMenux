@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import Link from "next/link"
+import { Link } from "@/i18n/navigation"
 import { BookOpen, ExternalLink, Shield, Activity, Database, FileCode, ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Footer from "@/components/footer"
@@ -158,7 +158,7 @@ export default function LinuxResourcesPage() {
           </p>
         </div>
 
-        <div className="space-y-10 mb-16">
+        <div className="stack-y-10 mb-16">
           {resourceCategories.map((category, index) => (
             <div key={index} className="mb-8">
               <div className="flex items-center gap-3 mb-4">

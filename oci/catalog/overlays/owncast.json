@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Host a live stream with an RTMP ingest endpoint and a public viewing page. The profile generates an administrator password and stream key, then passes both to Owncast at startup."
+    },
+    "description": {
+      "en_US": "Owncast is a self-hosted, single-user live video streaming and chat server. It allows users to broadcast live video while retaining full control over content, moderation, and audience data. The platform provides a web-based viewing interface complete with an interactive chat and video player, and it is compatible with broadcasting software that supports RTMP."
+    },
+    "screenshots": [
+      "https://owncast.online/images/owncast-splash.png"
+    ]
+  }
+}

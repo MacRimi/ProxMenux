@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Zigbee2MQTT bridges Zigbee devices to MQTT and provides a web interface for configuration and monitoring."
+    },
+    "description": {
+      "en_US": "Zigbee2MQTT allows you to use Zigbee devices without proprietary vendor bridges or gateways. It bridges events and enables device control over MQTT, allowing you to integrate Zigbee devices into your smart home infrastructure. It also provides web-based interfaces to monitor and configure connected devices and their capabilities."
+    }
+  }
+}

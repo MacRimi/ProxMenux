@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create and share text snippets and uploaded files from a private web interface."
+    },
+    "description": {
+      "en_US": "MicroBin is a lightweight pastebin and file sharing application. It enables users to share code snippets, raw text, and file attachments securely with optional end-to-end encryption. Uploads can be configured to be private or public, editable, and set to expire automatically or remain permanently. It also includes built-in URL redirection and QR code generation."
+    }
+  }
+}

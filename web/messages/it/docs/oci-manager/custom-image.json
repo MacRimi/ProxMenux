@@ -1,0 +1,384 @@
+{
+  "meta": {
+    "title": "Installare un’immagine non presente nel catalogo | ProxMenux",
+    "description": "Adatta un’immagine OCI da un file Compose, un URL, un comando docker run o un riferimento all’immagine e verifica cosa può riprodurre ProxMenux prima di installarla."
+  },
+  "header": {
+    "title": "Installa un’immagine non presente nel catalogo",
+    "description": "L’immagine viene adattata dal suo file Compose, da un comando docker run o dal solo riferimento. Il risultato viene mostrato per la revisione prima di creare qualsiasi LXC.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "blocks": [
+        {
+          "calloutInfo": {
+            "title": "Lo stesso convertitore e lo stesso installer",
+            "body": "L’opzione <strong>Installa un’immagine non presente nel catalogo</strong> usa il convertitore e l’installer dei modelli del catalogo. La differenza è che il contratto viene generato al momento dalla definizione fornita e verificato prima di creare qualsiasi LXC."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sources",
+      "title": "Come viene descritta l’immagine",
+      "intro": "La prima schermata chiede come viene descritta l’immagine. Quattro opzioni forniscono una definizione da adattare, una quinta usa solo il nome dell’immagine e altre tre leggono un oci-compose già scritto.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Opzione",
+              "Cosa legge"
+            ],
+            "rows": [
+              [
+                "Incolla il file Compose nel terminale",
+                "Incolla il contenuto YAML nel terminale e termina con Ctrl+D."
+              ],
+              [
+                "Leggi il file Compose da questo host",
+                "Un percorso sul nodo, <code>/root/docker-compose.yml</code> per impostazione predefinita. Il file deve esistere e non superare 256 KiB."
+              ],
+              [
+                "Scarica il file Compose da un indirizzo",
+                "Un indirizzo <code>http://</code> o <code>https://</code> che fornisce il contenuto YAML grezzo. Vengono scaricati al massimo 256 KiB."
+              ],
+              [
+                "Incolla il comando docker run nel terminale",
+                "Il comando pubblicato dal progetto. Vengono adattati porte, ambiente, volumi, dispositivi, capability, utente, memoria condivisa e le altre opzioni supportate."
+              ],
+              [
+                "Solo il riferimento all’immagine, senza file Compose",
+                "Un riferimento come <code>ghcr.io/user/application:latest</code>. Viene interrogato il registro e vengono conservati i metadati OCI dell’immagine."
+              ],
+              [
+                "Incolla un oci-compose nel terminale",
+                "Incolla il JSON nel terminale e termina con Ctrl+D. Non viene convertito: viene verificato e installato così come è scritto."
+              ],
+              [
+                "Leggi un oci-compose da questo host",
+                "Un file JSON sul nodo, <code>/root/oci-compose.json</code> per impostazione predefinita, di massimo 2 MiB."
+              ],
+              [
+                "Scarica un oci-compose da un indirizzo",
+                "Un indirizzo <code>http://</code> o <code>https://</code> che fornisce il file JSON. Vengono scaricati al massimo 2 MiB."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-source-menu.png",
+            "alt": "Menu per scegliere come descrivere un’immagine non presente nel catalogo",
+            "caption": "Modi per descrivere un’immagine non presente nel catalogo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference-only",
+      "title": "Cosa fornisce il solo riferimento all’immagine",
+      "intro": "L’immagine contiene i metadati del processo, ma non tutto l’ambiente che normalmente aggiunge un file Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Letto dall’immagine",
+              "Non presente nell’immagine",
+              "Conseguenza"
+            ],
+            "rows": [
+              [
+                "<code>Entrypoint</code>, <code>Cmd</code>, <code>User</code>, <code>WorkingDir</code> e l’ambiente incorporato",
+                "Variabili presenti solo nella documentazione",
+                "Vengono aggiunte durante l’installazione o con Modifica"
+              ],
+              [
+                "Volumi dichiarati dall’immagine",
+                "Directory dell’host indicate solo nel file Compose",
+                "I percorsi aggiuntivi vengono inseriti prima dell’installazione"
+              ],
+              [
+                "Porte <code>EXPOSE</code>",
+                "L’URL, il protocollo o il controllo funzionale del servizio",
+                "Vengono confermati la porta e il metodo di verifica del servizio"
+              ],
+              [
+                "Architetture e digest nel registro",
+                "Dispositivi, privilegi o dipendenze esterne",
+                "Non vengono abilitati senza una definizione che li richieda"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Verifica prima di installare",
+      "intro": "Dopo aver adattato la definizione, ProxMenux mostra come l’ha interpretata prima di chiedere VMID, risorse o storage.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Analizza",
+                "body": "Vengono letti servizi, immagine, porte, percorsi, ambiente, dispositivi, sicurezza e controllo di stato."
+              },
+              {
+                "title": "Interroga il registro",
+                "body": "L’immagine deve esistere nel registro e vengono elencate le architetture pubblicate. Per un registro privato viene usato l’account salvato per quel registro."
+              },
+              {
+                "title": "Elenca ciò che non viene applicato",
+                "body": "Vengono elencati label, reti Docker, impostazioni Swarm e altre chiavi che non hanno effetto su un LXC."
+              },
+              {
+                "title": "Blocca le opzioni senza equivalente sicuro",
+                "body": "Le chiavi senza un equivalente sicuro compaiono in <strong>Opzioni senza equivalente</strong> e impediscono di proseguire con l’installazione. Non vengono ignorate senza avviso."
+              },
+              {
+                "title": "Richiedi i segreti",
+                "body": "Le variabili il cui nome indica una password, un token o una chiave vengono richieste come dati sensibili durante l’installazione."
+              }
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/oci-manager/custom-review.png",
+            "alt": "Riepilogo di come ProxMenux ha interpretato il file Compose",
+            "caption": "Riepilogo mostrato prima che l’installer chieda VMID e risorse."
+          }
+        },
+        {
+          "p": "Dopo aver accettato il riepilogo, il flusso è quello del catalogo: nome, modalità predefinita o avanzata, VMID, CPU, memoria, rete, avvio con il nodo, percorsi persistenti e aggiuntivi, dispositivi compatibili e riepilogo finale."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "Esempi di input",
+      "blocks": [
+        {
+          "codeGrid": {
+            "items": [
+              {
+                "title": "Compose",
+                "code": "services:\n  app:\n    image: ghcr.io/example/app:latest\n    ports:\n      - \"8080:8080\"\n    volumes:\n      - ./config:/config\n      - /srv/media:/media\n    environment:\n      TZ: Europe/Madrid"
+              },
+              {
+                "title": "docker run",
+                "code": "docker run -d \\\n  --name app \\\n  -p 8080:8080 \\\n  -e TZ=Europe/Madrid \\\n  -v app-config:/config \\\n  -v /srv/media:/media \\\n  ghcr.io/example/app:latest"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "oci-compose",
+      "title": "Un oci-compose scritto a mano",
+      "intro": "Un oci-compose è il file JSON da cui viene installata un’applicazione. Il catalogo ne conserva uno per ogni applicazione. Lo stesso formato può essere scritto a mano e installato con questa opzione.",
+      "blocks": [
+        {
+          "p": "In un file scritto a mano l’autore decide immagine, porte, variabili, volumi e domande dell’installazione. ProxMenux completa il resto durante la lettura. Il formato può esprimere ciò che Compose non prevede: il testo di una domanda, una password generata all’installazione, un profilo GPU, il proprietario di ciascun volume, il controllo del primo avvio o le credenziali mostrate alla fine."
+        },
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Verifica",
+                "body": "I file con errori non vengono installati. Ogni errore indica il campo interessato; se il JSON non è valido, vengono segnalate riga e colonna."
+              },
+              {
+                "title": "Rivedi",
+                "body": "Un file valido mostra cosa installa: immagine, indirizzo web, porte, percorsi persistenti, variabili richieste dall’installer e file che verranno scritti."
+              },
+              {
+                "title": "Installa",
+                "body": "L’installazione è la stessa delle applicazioni del catalogo, con impostazioni predefinite o avanzate."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Un file che determina i privilegi",
+            "body": "Un oci-compose stabilisce cosa viene montato nel container e con quali privilegi. La revisione lo mostra prima dell’installazione: installa solo file provenienti da fonti attendibili."
+          }
+        },
+        {
+          "p": "Il <readmeLink>README del motore OCI</readmeLink> descrive il formato blocco per blocco con due esempi completi. Anche il record di un’installazione può essere letto nello stesso modo: viene usato solo il modello originale, senza alcuna delle risposte di quell’installazione."
+        }
+      ]
+    },
+    {
+      "id": "compose-stacks",
+      "title": "File Compose con più servizi",
+      "intro": "Un file Compose con più servizi viene installato come stack: un LXC nativo per servizio, collegati da un bridge privato e avviati nell’ordine delle loro dipendenze. <stacksLink>Applicazioni con più container</stacksLink> descrive come uno stack viene creato, verificato e aggiornato. Questa sezione tratta ciò che decide il file Compose.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Servizio",
+              "Come viene riconosciuto",
+              "Quando è pronto"
+            ],
+            "rows": [
+              [
+                "Principale",
+                "Quello indicato in <code>x-casaos.main</code>. Senza, il primo servizio che pubblica una porta, oppure il primo del file.",
+                "La sua porta web pubblicata risponde in HTTP, oppure il suo <code>healthcheck</code> riesce. Serve una porta TCP pubblicata."
+              ],
+              [
+                "Database o cache",
+                "La sua immagine è PostgreSQL, MariaDB, MongoDB, Redis, Valkey o Meilisearch.",
+                "Il controllo che ProxMenux ha per quel server, come <code>pg_isready</code>, a meno che il servizio dichiari un proprio <code>healthcheck</code>."
+              ],
+              [
+                "Worker",
+                "Qualsiasi altro servizio che resta in esecuzione.",
+                "Il suo <code>healthcheck</code>. Senza, HTTP sulla porta che pubblica, TCP su una porta che elenca solo sotto <code>expose</code>, oppure solo che l’LXC sia in esecuzione."
+              ],
+              [
+                "Job singolo",
+                "Un servizio che un altro attende con <code>condition: service_completed_successfully</code>.",
+                "Termina con codice 0 entro 300 secondi."
+              ]
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Un <code>healthcheck</code> viene eseguito dentro l’LXC del suo servizio, come <code>CMD</code> o <code>CMD-SHELL</code>. Un controllo <code>CMD-SHELL</code> non può usare variabili come <code>$PORT</code>, perché non viene eseguito con l’ambiente dell’applicazione: bisogna scrivere il valore.",
+              "<code>interval</code>, <code>timeout</code>, <code>start_period</code> e <code>retries</code> stabiliscono per quanto tempo si attende il controllo, al massimo 3600 secondi in totale.",
+              "Un servizio che un altro attende con <code>condition: service_healthy</code> ha bisogno di un proprio <code>healthcheck</code>, a meno che sia un database o una cache della tabella."
+            ]
+          }
+        },
+        {
+          "p": "Un job singolo prepara qualcosa che gli altri servizi richiedono, come una migrazione del database, e termina."
+        },
+        {
+          "list": {
+            "items": [
+              "Il suo <code>restart</code> deve essere <code>no</code> o assente. Il servizio principale, e un servizio che altri attendono con <code>service_healthy</code>, non possono essere job.",
+              "Viene eseguito prima dei servizi che lo attendono. Un’esecuzione riuscita viene registrata, e gli avvii successivi la rieseguono solo se cambiano la sua immagine o la sua configurazione (ambiente, mount, dispositivi). Un cambio di CPU, memoria o dimensione del disco non la riesegue.",
+              "Proxmox non lo avvia al boot e il watchdog non lo sorveglia."
+            ]
+          }
+        },
+        {
+          "list": {
+            "items": [
+              "Un volume o un percorso dell’host che più servizi montano diventa un’unica directory dell’host montata in ciascuno, e l’installazione chiede dove metterla. Ogni servizio che la monta deve avere gli stessi <code>PUID</code> e <code>PGID</code> (1000 se non sono impostati).",
+              "Ogni servizio che pubblica una porta TCP riceve un indirizzo sulla LAN oltre a quello privato, e l’installazione chiede un indirizzo per ciascuno."
+            ]
+          }
+        },
+        {
+          "p": "Le applicazioni leggono spesso il proprio indirizzo pubblico da una variabile come <code>APP_PUBLIC_URL</code>, e dentro uno stack <code>localhost</code> è l’LXC del servizio stesso. Una variabile con <code>PUBLIC</code> o <code>EXTERNAL</code> tra le parole del suo nome, che termina con <code>_URL</code>, <code>_URI</code> o <code>_ORIGIN</code> e il cui valore punta a <code>localhost</code>, <code>127.0.0.1</code>, <code>0.0.0.0</code> o <code>::1</code>, viene riscritta con l’indirizzo LAN del servizio che pubblica quella porta, con la porta del suo container. Quel servizio ha bisogno di un indirizzo statico."
+        },
+        {
+          "code": {
+            "title": "Un URL pubblico riscritto",
+            "code": "services:\n  web:\n    image: ghcr.io/example/web:latest\n    ports:\n      - \"8080:3000\"\n  worker:\n    image: ghcr.io/example/worker:latest\n    environment:\n      APP_PUBLIC_URL: http://localhost:8080/app\n\n# APP_PUBLIC_URL nel LXC del worker (web: 192.168.1.50)\nhttp://192.168.1.50:3000/app"
+          }
+        },
+        {
+          "p": "Quando l’URL non può essere riscritto, lo stack non viene installato e uno di questi messaggi ne spiega il motivo:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Messaggio",
+              "Causa"
+            ],
+            "rows": [
+              [
+                "<strong>L’URL pubblico locale è ambiguo; specifica un URL esplicito</strong>",
+                "Più di un servizio pubblica quella porta."
+              ],
+              [
+                "<strong>Nessuna porta pubblicata corrisponde all’URL pubblico locale; specifica un URL esplicito</strong>",
+                "Nessun servizio pubblica quella porta."
+              ],
+              [
+                "<strong>Gli URL pubblici automatici richiedono indirizzi statici per i frontend o URL espliciti</strong>",
+                "Il servizio a cui punta l’URL ha un indirizzo DHCP."
+              ],
+              [
+                "<strong>URL controllo servizio non valido</strong>",
+                "L’URL è malformato o la sua porta non è valida."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "private-registries",
+      "title": "Immagini in registri privati",
+      "intro": "Un’immagine in un registro privato, come un pacchetto privato su GitHub o un repository privato su Docker Hub, viene letta con un account salvato in ProxMenux.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Il registro nega l’accesso all’immagine",
+                "body": "Quando il registro indica che l’immagine richiede un account, la revisione propone di accedere a quel registro e legge di nuovo l’immagine."
+              },
+              {
+                "title": "Accedi",
+                "body": "Un nome utente e una password o un token autorizzato a scaricare l’immagine. Il registro li verifica e vengono salvati solo se accettati."
+              },
+              {
+                "title": "Installa e mantieni aggiornato",
+                "body": "L’account viene usato per scaricare l’immagine durante l’installazione e anche per aggiornamenti, Modifica, Ricrea, watchdog e ricerca degli aggiornamenti del Monitor, su qualsiasi nodo del cluster."
+              }
+            ]
+          }
+        },
+        {
+          "p": "<strong>Account dei registri</strong>, nel menu principale di OCI manager Apps, elenca gli account salvati per registro e utente, senza mostrarne i segreti. Da ogni account puoi verificare, scaricare o installare un’immagine e aggiornare o rimuovere le credenziali."
+        },
+        {
+          "list": {
+            "items": [
+              "GitHub (<code>ghcr.io</code>): l’utente è l’account GitHub e la password è un token di accesso personale con il permesso <code>read:packages</code>.",
+              "Docker Hub (<code>docker.io</code>): l’utente è l’account Docker Hub e la password è un token di accesso con permesso di lettura.",
+              "Altri registri, anche con una porta propria come <code>registry.example.com:5000</code>: nome utente e password o token forniti da quel registro."
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Dove vengono salvati gli account",
+            "body": "In <code>/etc/pve/priv/proxmenux/registry-auth.json</code>, leggibile solo da root, nella stessa cartella in cui Proxmox conserva le password degli storage. <code>/etc/pve</code> è condiviso tra tutti i nodi del cluster, quindi un account aggiunto su un nodo viene usato su tutti. Il backup dell’host include il file e la disinstallazione di ProxMenux lo rimuove da tutti i nodi."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Definizioni che non vengono installate",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Un Dockerfile senza immagine pubblicata: prima occorre creare l’immagine e pubblicarla in un registro OCI.",
+              "Un file Compose con più servizi viene installato come descritto in <sectionLink>File Compose con più servizi</sectionLink>, tranne quando dichiara più di una rete, una rete esterna, opzioni sui volumi di primo livello, dipendenze opzionali (<code>required: false</code>) o servizi che dipendono da quello principale.",
+              "In uno stack, un servizio che usa <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> o <code>extra_hosts</code> viene contrassegnato « richiede una verifica per lo stack », e lo stack non viene installato.",
+              "<code>configs</code>, segreti esterni o formati di dispositivi che non possono essere adattati senza ambiguità.",
+              "Sostituzioni della shell come <code>$(command)</code>: occorre inserire direttamente il valore risultante.",
+              "Opzioni <code>docker run</code> non riconosciute e <code>--env-file</code>: usa invece un file Compose con valori espliciti."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

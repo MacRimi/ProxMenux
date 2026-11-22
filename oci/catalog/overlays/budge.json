@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "budge is an open source 'budgeting with envelopes' personal finance app."
+    },
+    "description": {
+      "en_US": "Budge is an open-source personal finance application designed around the envelope budgeting method. It helps users organize their income by allocating money into designated spending categories. Through this approach, individuals can monitor their expenses and maintain discipline over their personal finances."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/linuxserver/budge/HEAD/images/budget.png",
+      "https://raw.githubusercontent.com/linuxserver/budge/HEAD/images/account.png"
+    ]
   }
 }

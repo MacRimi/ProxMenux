@@ -7,9 +7,11 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import struct
 import sys
 import tarfile
+import time
 import zlib
 from pathlib import Path
 
@@ -36,7 +38,34 @@ def progress(text: str) -> None:
         pass
 
 
-def verify_blob(archive: tarfile.TarFile, member: tarfile.TarInfo, position: int, total: int) -> None:
+class Status:
+    """How much of the archive is checked, for whoever shows it on screen:
+    `checked total` in the file OCI_VERIFY_STATUS names, rewritten at most
+    every half second. Without that variable nothing is written."""
+
+    def __init__(self, total: int) -> None:
+        self.path = os.environ.get("OCI_VERIFY_STATUS")
+        self.total = total
+        self.checked = 0
+        self.written = 0.0
+
+    def add(self, size: int, final: bool = False) -> None:
+        self.checked += size
+        now = time.monotonic()
+        if not self.path or (not final and now - self.written < 0.5):
+            return
+        self.written = now
+        try:
+            temporary = self.path + ".tmp"
+            with open(temporary, "w", encoding="ascii") as handle:
+                handle.write(f"{self.checked} {self.total}\n")
+            os.replace(temporary, self.path)
+        except OSError:
+            pass
+
+
+def verify_blob(archive: tarfile.TarFile, member: tarfile.TarInfo, position: int, total: int,
+                status: Status | None = None) -> None:
     expected_digest = member.name.rsplit("/", 1)[-1]
     source = archive.extractfile(member)
     if source is None:
@@ -63,6 +92,8 @@ def verify_blob(archive: tarfile.TarFile, member: tarfile.TarInfo, position: int
                     f"{translate('Corrupted gzip layer')} {expected_digest[:16]}: {exc}"
                 ) from exc
         processed += len(chunk)
+        if status is not None:
+            status.add(len(chunk))
         if member.size >= PROGRESS_STEP and processed >= next_progress:
             percentage = min(100, processed * 100 // member.size)
             progress(f"    {human_mib(processed)} / {human_mib(member.size)} ({percentage}%)")
@@ -95,22 +126,81 @@ def verify_archive(path: Path) -> None:
     try:
         with tarfile.open(path, mode="r:*") as archive:
             members = archive.getmembers()
-            names = {member.name.lstrip("./") for member in members}
-            missing = {"index.json", "oci-layout"} - names
+            files = {}
+            for member in members:
+                name = member.name.removeprefix('./')
+                if member.isdir():
+                    continue
+                if name in files or not member.isfile():
+                    raise VerificationError(translate('Missing OCI metadata:') + ' duplicate or non-regular member: ' + name)
+                files[name] = member
+            missing = {'index.json', 'oci-layout'} - files.keys()
             if missing:
-                raise VerificationError(
-                    f"{translate('Missing OCI metadata:')} " + ", ".join(sorted(missing))
-                )
+                raise VerificationError(translate('Missing OCI metadata:') + ' ' + ', '.join(sorted(missing)))
+
+            def document(name):
+                member = files[name]
+                if member.size > 16 * 1024**2:
+                    raise ValueError('Oversized OCI metadata')
+                value = json.load(archive.extractfile(member))
+                if not isinstance(value, dict):
+                    raise ValueError('Invalid OCI metadata object')
+                return value
+
+            def referenced(descriptor):
+                if not isinstance(descriptor, dict) or not re.fullmatch(r'sha256:[a-f0-9]{64}', descriptor.get('digest', '')):
+                    raise ValueError('Invalid OCI blob descriptor')
+                name = 'blobs/' + descriptor['digest'].replace(':', '/')
+                if name not in files:
+                    raise ValueError('Missing referenced blob: ' + descriptor['digest'])
+                if type(descriptor.get('size')) is not int or descriptor['size'] != files[name].size:
+                    raise ValueError('Wrong referenced blob size: ' + descriptor['digest'])
+                return name
+
+            visited = set()
+            def manifest(descriptor, depth=0):
+                if depth > 16:
+                    raise ValueError('OCI manifest nesting exceeds limit')
+                name = referenced(descriptor)
+                if name in visited:
+                    return
+                visited.add(name)
+                data = document(name)
+                if 'manifests' in data:
+                    children = data['manifests']
+                    if not isinstance(children, list) or not children:
+                        raise ValueError('Invalid OCI manifest index')
+                    for child in children:
+                        manifest(child, depth+1)
+                else:
+                    document(referenced(data['config']))
+                    if not isinstance(data['layers'], list):
+                        raise ValueError('Invalid OCI layer list')
+                    for layer in data['layers']:
+                        referenced(layer)
+
+            try:
+                if document('oci-layout').get('imageLayoutVersion') != '1.0.0':
+                    raise ValueError('Unsupported OCI layout')
+                index = document('index.json')
+                if not isinstance(index.get('manifests'), list) or not index['manifests']:
+                    raise ValueError('Missing OCI manifests')
+                for descriptor in index['manifests']:
+                    manifest(descriptor)
+            except (ValueError, KeyError, TypeError, RecursionError) as error:
+                raise VerificationError(translate('Missing OCI metadata:') + ' ' + str(error)) from error
             blobs = [
                 member
                 for member in members
                 if member.isfile()
-                and member.name.lstrip("./").startswith("blobs/sha256/")
+                and member.name.removeprefix("./").startswith("blobs/sha256/")
             ]
             if not blobs:
                 raise VerificationError(translate("The OCI archive contains no SHA-256 blobs"))
+            status = Status(sum(member.size for member in blobs))
             for position, member in enumerate(blobs, start=1):
-                verify_blob(archive, member, position, len(blobs))
+                verify_blob(archive, member, position, len(blobs), status)
+            status.add(0, final=True)
     except (tarfile.TarError, OSError) as exc:
         raise VerificationError(f"{translate('Cannot read the OCI archive:')} {exc}") from exc
     progress(f"OCI integrity verified: {path}")
@@ -164,7 +254,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("archive", type=Path)
     parser.add_argument("--extracted-mib", action="store_true",
-                        help="print the estimated unpacked size in MiB (0 when unknown)")
+                        help=translate("print the estimated unpacked size in MiB (0 when unknown)"))
     args = parser.parse_args()
     if args.extracted_mib:
         try:

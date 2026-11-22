@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run Dgraph’s single-container standalone distribution, which starts its required local Dgraph components together."
+    },
+    "description": {
+      "en_US": "Dgraph is a horizontally scalable and distributed GraphQL database with a graph backend. It provides ACID transactions, consistent replication, and linearizable reads for high-throughput queries. The system tightly controls data layout on disk to optimize query performance and reduce network latency. It supports GraphQL query syntax and delivers responses in JSON or Protocol Buffers over gRPC and HTTP."
+    }
+  }
+}

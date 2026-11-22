@@ -8,5 +8,19 @@
       "required": false,
       "prompt": "Shoutrrr addresses for the notifications (optional)"
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Program to keep DNS A and/or AAAA records updated for multiple DNS providers"
+    },
+    "description": {
+      "en_US": "ddns-updater is a lightweight dynamic DNS updater that keeps DNS A and AAAA records synchronized with your public IP address across multiple DNS providers. It periodically checks your public IP address using HTTP or DNS fetchers and updates records whenever changes occur. The application includes a web user interface to monitor record statuses and supports alerts via notification services."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/qdm12/ddns-updater/master/readme/webui-desktop.gif",
+      "https://raw.githubusercontent.com/qdm12/ddns-updater/master/readme/webui-mobile.png"
+    ],
+    "website": "https://hub.docker.com/r/qmcgaw/ddns-updater/",
+    "repository": "https://github.com/qdm12/ddns-updater"
   }
 }

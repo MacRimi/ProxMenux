@@ -10,5 +10,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Databag is a federated chat app for self-hosting that focuses on user privacy and security; the service includes clients for iOS, Android, and browser."
+    },
+    "description": {
+      "en_US": "Databag is a federated chat application designed for self-hosting with an emphasis on user privacy and security. It allows users to run their own messaging service and communicate privately. The service can be accessed via web browsers as well as dedicated clients for Android and iOS."
+    },
+    "repository": "https://github.com/balzack/databag",
+    "screenshots": [
+      "https://raw.githubusercontent.com/balzack/databag/HEAD/doc/browser.png",
+      "https://raw.githubusercontent.com/balzack/databag/HEAD/doc/mobile.png"
+    ]
   }
 }

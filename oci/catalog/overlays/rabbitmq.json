@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "RabbitMQ routes messages between services using AMQP and other protocols. This single-node profile uses the official management image, a persistent data volume and a generated administrator password; it does not include cluster nodes or application producers and consumers."
+    },
+    "description": {
+      "en_US": "RabbitMQ is a multi-protocol messaging and streaming broker. It enables applications and services to communicate asynchronously by routing messages through queues and streams. It supports numerous standard protocols including AMQP, MQTT, and STOMP."
+    }
+  }
+}

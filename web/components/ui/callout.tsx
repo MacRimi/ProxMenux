@@ -64,7 +64,7 @@ export const Callout: React.FC<CalloutProps> = ({
         className,
       )}
     >
-      <Icon className={cn("h-5 w-5 flex-shrink-0 mt-0.5", icon)} aria-hidden="true" />
+      <Icon className={cn("h-5 w-5 shrink-0 mt-0.5", icon)} aria-hidden="true" />
       <div className="flex-1 min-w-0">
         {title && <p className="font-semibold mb-1">{title}</p>}
         <div className="text-sm leading-relaxed">{children}</div>

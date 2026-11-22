@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Diagnóstico | ProxMenux Documentation",
-    "description": "Tres comprobaciones de diagnóstico puntuales de solo lectura: Mostrar tabla de rutas, Test de conectividad y Diagnóstico avanzado. Pura inspección — nunca escribe en /etc/network/interfaces y nunca ejecuta un comando modificador (con una excepción explícita y opt-in para purgar NetworkManager cuando se detecta).",
-    "ogTitle": "Diagnóstico | ProxMenux Documentation",
+    "title": "Diagnóstico | Documentación de ProxMenux",
+    "description": "Tres comprobaciones de diagnóstico puntuales de solo lectura: Mostrar tabla de rutas, Test de conectividad y Diagnóstico avanzado. Pura inspección: nunca escribe en /etc/network/interfaces ni ejecuta comandos modificadores, con una excepción explícita que requiere tu aceptación para purgar NetworkManager si se detecta.",
+    "ogTitle": "Diagnóstico | Documentación de ProxMenux",
     "ogDescription": "Diagnóstico de red de solo lectura para el host Proxmox: rutas, alcanzabilidad, estadísticas avanzadas."
   },
   "header": {
@@ -21,12 +21,12 @@
   "connectivity": {
     "heading": "Test de conectividad",
     "intro": "Envía dos sondas ICMP a tres destinos en secuencia y reporta cada uno. Luego ejecuta un <code>nslookup google.com</code> para verificar la resolución DNS independientemente de ICMP.",
-    "headerTest": "Test",
+    "headerTest": "Prueba",
     "headerTarget": "Destino",
     "headerConfirms": "Qué confirma",
     "rows": [
       {
-        "test": "Google DNS",
+        "test": "DNS de Google",
         "target": "8.8.8.8",
         "confirms": "Alcanzabilidad externa por IP anycast conocida"
       },
@@ -36,7 +36,7 @@
         "confirms": "Segunda opinión independiente si Google bloquea ICMP"
       },
       {
-        "test": "Gateway",
+        "test": "Pasarela",
         "target": "(ruta por defecto)",
         "confirms": "Conectividad L2 / L3 con el router local"
       },
@@ -53,7 +53,7 @@
     "heading": "Diagnóstico avanzado",
     "intro": "Agrega estadísticas de red a nivel global y ejecuta una batería de comprobaciones de problemas comunes. Reporta el número de conexiones activas, puertos en escucha, total de interfaces y señala dos antipatrones explícitamente:",
     "items": [
-      "<strong>NetworkManager corriendo en un host Proxmox.</strong> NetworkManager y el <code>ifupdown</code> de Proxmox entran en conflicto — los dos intentan gestionar interfaces, lo que provoca bridges que flapean o se niegan a levantar. Si se detecta, la herramienta ofrece un prompt interactivo para detenerlo, deshabilitarlo y purgarlo (es el <em>único</em> diagnóstico que puede modificar el sistema, y solo tras consentimiento explícito).",
+      "<strong>NetworkManager ejecutándose en un host Proxmox.</strong> NetworkManager y el <code>ifupdown</code> de Proxmox entran en conflicto: ambos intentan gestionar las interfaces, lo que provoca bridges con caídas intermitentes o que no se activan. Si se detecta, la herramienta ofrece una confirmación interactiva para detenerlo, deshabilitarlo y purgarlo (es el <em>único</em> diagnóstico que puede modificar el sistema, y solo tras consentimiento explícito).",
       "<strong>Direcciones IP duplicadas en distintas interfaces.</strong> Dos interfaces con la misma IPv4 causan conectividad intermitente extremadamente difícil de depurar desde dentro de la VM. Se detecta vía <code>ip -4 addr show | sort | uniq -d</code>."
     ],
     "nmTitle": "El prompt de NetworkManager es la única acción modificadora aquí",
@@ -80,7 +80,7 @@
         "tail": " — cuando un vmbrX se queda sin su puerto físico."
       },
       {
-        "label": "Análisis de config y limpieza guiada",
+        "label": "Análisis de configuración y limpieza guiada",
         "href": "/docs/network/config-analysis",
         "tail": " — cuando una NIC antigua sigue declarada pero ya no está."
       },

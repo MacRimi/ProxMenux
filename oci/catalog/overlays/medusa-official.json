@@ -28,5 +28,14 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Medusa is an automatic video library manager for television shows."
+    },
+    "description": {
+      "en_US": "Medusa is an automatic video library manager for television shows. It monitors for new episodes of configured shows and automates searching, downloading, and post-processing across supported torrent and NZB indexers. It also manages metadata, renames and sorts video files, and handles subtitle searches."
+    },
+    "repository": "https://github.com/pymedusa/Medusa"
   }
 }

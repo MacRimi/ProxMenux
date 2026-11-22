@@ -1,5 +1,5 @@
-"""Recreate on a multi-container application edits the extra paths and devices
-of its application container, and never its own data."""
+"""Modify on a multi-container application edits the paths and devices of its
+application container, and never removes its own data."""
 
 from pathlib import Path
 import sys
@@ -27,15 +27,28 @@ CONFIG = {
 
 
 class ScriptedUI:
-    def __init__(self, kept_paths, kept_devices, delete=True):
-        self.kept = {"Extra paths to keep (unmark one to remove it)": kept_paths,
-                     "Devices to keep (unmark one to remove it)": kept_devices}
+    """Answers the editor of paths in order: menu choices, then the devices to keep."""
+
+    def __init__(self, choices, kept_devices, delete=True, answers=()):
+        self.choices = list(choices)
+        self.answers = list(answers)
+        self.kept_devices = kept_devices
         self.delete = delete
-        self.offered = {}
+        self.offered = []
+        self.messages = []
+
+    def choose(self, text, options, default=None, **_):
+        self.offered.append([tag for tag, _label in options])
+        return self.choices.pop(0)
+
+    def ask(self, text, default=None, **_):
+        return self.answers.pop(0)
+
+    def message(self, text, title=None):
+        self.messages.append(text)
 
     def checklist(self, text, options, default=None):
-        self.offered[text] = [tag for tag, _label in options]
-        return self.kept[text]
+        return self.kept_devices
 
     def confirm(self, text, default=False):
         return self.delete if "deletes its container volume" in text else False
@@ -49,26 +62,41 @@ class StackRecreationTests(unittest.TestCase):
         self.assertEqual([m["vmid"] for m in stack_recreation.application_members(primary)], [129])
 
     def test_the_data_of_the_recipe_is_never_offered_for_removal(self, *_):
-        ui = ScriptedUI(["/media-extra", "/host-extra"], ["/dev/ttyACM1"])
+        ui = ScriptedUI(["/opt/recipes/mediafiles", "/media-extra", "back", "done"], ["/dev/ttyACM1"])
         self.assertIsNone(stack_recreation.plan_changes(ui, MEMBER))
-        self.assertEqual(ui.offered["Extra paths to keep (unmark one to remove it)"], ["/media-extra", "/host-extra"])
+        self.assertEqual(ui.offered[0], ["/opt/recipes/staticfiles", "/opt/recipes/mediafiles", "/media-extra",
+                                         "/host-extra", "add", "done"])
+        self.assertEqual(len(ui.messages), 1)
+        self.assertEqual(ui.offered[2], ["read_only", "remove", "back"])
 
-    def test_unmarked_paths_and_devices_are_removed(self, *_):
-        changes = stack_recreation.plan_changes(ScriptedUI([], []), MEMBER)
+    def test_removed_paths_and_devices(self, *_):
+        ui = ScriptedUI(["/media-extra", "remove", "/host-extra", "remove", "done"], [])
+        changes = stack_recreation.plan_changes(ui, MEMBER)
         self.assertEqual(changes["remove_mounts"], ["/media-extra", "/host-extra"])
         self.assertEqual(changes["remove_devices"], ["/dev/ttyACM1"])
-        self.assertEqual((changes["add_mounts"], changes["add_devices"]), ([], []))
+        self.assertEqual((changes["add_mounts"], changes["add_devices"], changes["change_mounts"]), ([], [], {}))
 
     def test_a_volume_is_kept_when_its_deletion_is_not_confirmed(self, *_):
-        changes = stack_recreation.plan_changes(ScriptedUI([], ["/dev/ttyACM1"], delete=False), MEMBER)
+        ui = ScriptedUI(["/media-extra", "remove", "/host-extra", "remove", "done"], ["/dev/ttyACM1"], delete=False)
+        changes = stack_recreation.plan_changes(ui, MEMBER)
         self.assertEqual(changes["remove_mounts"], ["/host-extra"])
+
+    def test_a_path_from_the_host_changes_its_directory_and_its_read_only_mode(self, *_):
+        ui = ScriptedUI(["/host-extra", "source", "/host-extra", "read_only", "done"], ["/dev/ttyACM1"],
+                        answers=["/mnt/nas/share"])
+        changes = stack_recreation.plan_changes(ui, MEMBER)
+        self.assertEqual(changes["change_mounts"], {"/host-extra": {"source": "/mnt/nas/share", "read_only": True}})
+        self.assertEqual(changes["remove_mounts"], [])
 
     def test_the_summary_lists_what_changes(self, *_):
         changes = {"remove_mounts": ["/media-extra"], "remove_devices": [], "add_devices": [
             {"host_path": "/dev/ttyACM0"}], "add_mounts": [
             {"type": "host-bind", "container_path": "/scans", "source": "/mnt/scans"}]}
         text = stack_recreation.summary(MEMBER, changes)
-        for expected in ("CT 129", "+ /scans", "- /media-extra", "+ /dev/ttyACM0", "are not changed"):
+        changes["change_mounts"] = {"/host-extra": {"source": "/mnt/nas"}}
+        text = stack_recreation.summary(MEMBER, changes)
+        for expected in ("CT 129", "+ /scans", "- /media-extra", "+ /dev/ttyACM0", "~ /host-extra",
+                         "/mnt/nas", "are not changed"):
             self.assertIn(expected, text)
 
 
@@ -82,7 +110,27 @@ class StackModifyValidationTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
     def changes(self, **values):
-        return {"remove_mounts": [], "add_mounts": [], "remove_devices": [], "add_devices": [], **values}
+        return {"remove_mounts": [], "add_mounts": [], "change_mounts": {}, "remove_devices": [],
+                "add_devices": [], **values}
+
+    def test_only_a_mounted_path_from_the_host_changes_its_directory(self):
+        with patch.object(self.modify.host_mounts, "validate_source"):
+            self.modify.validate(129, self.changes(change_mounts={"/host-extra": {"source": "/mnt/nas"}}))
+            self.modify.validate(129, self.changes(change_mounts={"/media-extra": {"read_only": True}}))
+            for change in ({"/nope": {"source": "/mnt/nas"}}, {"/media-extra": {"source": "/mnt/nas"}},
+                           {"/host-extra": {"size": 4}}):
+                with self.subTest(change=change), self.assertRaises(ValueError):
+                    self.modify.validate(129, self.changes(change_mounts=change))
+
+    def test_a_changed_path_keeps_its_key_and_options(self):
+        calls = []
+        self.modify.run.side_effect = lambda *args: calls.append(args) or "\n".join(
+            f"{key}: {value}" for key, value in CONFIG.items()) + "\n"
+        with patch.object(self.modify, "host_directory", side_effect=lambda path: path), \
+                patch.object(self.modify.oci_nested_mounts, "follow"):
+            self.modify.apply(129, self.changes(change_mounts={"/host-extra": {"source": "/mnt/nas",
+                                                                               "read_only": True}}))
+        self.assertIn(("pct", "set", "129", "--mp3", "/mnt/nas,mp=/host-extra,backup=0,ro=1"), calls)
 
     def test_a_path_that_overlaps_the_data_is_refused(self):
         mount = {"type": "managed-volume", "container_path": "/opt/recipes/mediafiles/sub", "source": "local-lvm",

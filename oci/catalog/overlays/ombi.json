@@ -10,5 +10,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Ombi allows you to host your own Plex Request and user management system."
+    },
+    "description": {
+      "en_US": "Ombi is a media request and user management system designed for Plex servers. It allows shared users to request movies and TV shows through a dedicated interface. Administrators can manage incoming requests, communicate notes to users, and track reported media issues. The system can also automatically send weekly newsletters highlighting newly added content."
+    },
+    "tips": [
+      "Follow the setup wizard on initial install",
+      "Configure the required services after completing the setup wizard"
+    ],
+    "screenshots": [
+      "https://i.imgur.com/kBXIqer.png"
+    ]
   }
 }

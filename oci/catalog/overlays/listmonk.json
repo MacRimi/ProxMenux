@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage mailing lists, subscribers and email campaigns with a private PostgreSQL database."
+    },
+    "description": {
+      "en_US": "listmonk is a standalone, self-hosted newsletter and mailing list manager. It uses a PostgreSQL database as its data store to handle subscribers and message delivery. It provides a web interface for creating campaigns, organizing lists, and tracking communications."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/689b5fbb-dd25-4956-a36f-e3226a65f9c4"
+    ]
+  }
+}

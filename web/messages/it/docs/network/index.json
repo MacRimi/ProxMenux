@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "title": "Gestione della rete Proxmox — Bridge, bond, diagnostica, riparazione | ProxMenux",
+    "description": "Diagnostica di sola lettura, analisi con suggerimenti e riparazioni guidate per lo stack di rete Debian / Proxmox (/etc/network/interfaces). Ispeziona bridge e bond, avvia strumenti di monitoraggio in tempo reale, rendi persistenti i nomi delle interfacce, crea backup e riavvia la rete in sicurezza, con backup obbligatori e anteprime passo passo.",
+    "ogTitle": "Gestione della rete Proxmox — Bridge, bond, diagnostica, riparazione",
+    "ogDescription": "Diagnostica, analisi e riparazioni guidate per lo stack di rete Proxmox con backup obbligatori e anteprime passo-passo.",
+    "twitterTitle": "Gestione della rete Proxmox | ProxMenux",
+    "twitterDescription": "Bridge, bond, diagnostica e riparazioni guidate per lo stack di rete Proxmox con backup obbligatori."
+  },
+  "header": {
+    "title": "Gestione rete",
+    "description": "Diagnostica di sola lettura, rapporti di analisi con suggerimenti e riparazioni guidate per il classico stack di rete Debian/Proxmox. Ogni operazione distruttiva crea prima un backup e mostra in anteprima le modifiche esatte prima di applicarle.",
+    "section": "Rete"
+  },
+  "intro": {
+    "title": "A cosa serve questo menu",
+    "body": "Ispeziona, diagnostica e, quando necessario, ripara la configurazione di rete dell’host Proxmox senza perdere l’accesso remoto. Gli strumenti seguono un principio: <strong>prima leggere, poi proporre e infine applicare solo con consenso esplicito e un backup di sicurezza</strong>. Non esiste un pulsante «Correggi tutto automaticamente»."
+  },
+  "openingMenu": {
+    "heading": "Apertura del menu",
+    "intro": "Dal menu principale di ProxMenux, seleziona <strong>Rete</strong>. Vedrai questo:",
+    "imageAlt": "Menù Gestione rete con diagnostica, monitoraggio, analisi, riparazione, nomi persistenti e opzioni di backup"
+  },
+  "safety": {
+    "heading": "Il modello di sicurezza",
+    "body": "Modificare la configurazione di rete di un host Proxmox remoto è uno dei modi più semplici per perdere l’accesso. ProxMenux ne tiene conto per ogni azione. Gli strumenti si dividono in tre livelli di comportamento: scegli la scheda che corrisponde al tuo obiettivo:"
+  },
+  "tiers": {
+    "readOnly": {
+      "title": "Sola lettura",
+      "body": "Ispezione pura. Non può modificare il sistema in nessuna circostanza.",
+      "items": [
+        "Tabella di routing, test di connettività, statistiche avanzate",
+        "Monitoraggio del traffico dal vivo (iftop, iptraf-ng)",
+        "Test della larghezza di banda (iperf3)"
+      ]
+    },
+    "analyze": {
+      "title": "Analizzare, quindi suggerire",
+      "body": "Rileva i problemi, stampa un rapporto con i comandi di shell proposti e si ferma. Si decide se entrare nella riparazione guidata dopo.",
+      "items": [
+        "Analisi della configurazione del ponte",
+        "Analisi della configurazione di rete"
+      ]
+    },
+    "apply": {
+      "title": "Applicare con backup",
+      "body": "Modifica il sistema. Crea sempre prima un backup del file interessato con data e ora e mostra un’anteprima prima di scrivere.",
+      "items": [
+        "Nomi persistenti delle interfacce (file .link)",
+        "Backup manuale, ripristino e riavvio del servizio"
+      ]
+    }
+  },
+  "classicTitle": "Solo pila classica",
+  "classicBody": "Ogni funzione di analisi e riparazione controlla il gestore di rete attivo prima di toccare qualsiasi cosa. Se l'host esegue <strong>netplan</strong>, <strong>systemd-networkd</strong> o <strong>NetworkManager</strong>, lo strumento si interrompe immediatamente con un messaggio chiaro — il menu supporta solo il classico stack Debian/Proxmox a <code>/etc/network/interfaces</code>. Questo è intenzionale: la modifica di un file netplan con regole scritte per <code>ifupdown</code> avrebbe corrotto silenziosamente la configurazione.",
+  "backups": {
+    "heading": "Dove vengono salvati i backup",
+    "intro": "Ogni riparazione guidata, ripristino o backup manuale scrive una copia di <code>/etc/network/interfaces</code> con data e ora in <code>/var/backups/proxmenux/</code>:",
+    "rollbackIntro": "Per ripristinare manualmente la configurazione precedente da una console:"
+  },
+  "readOnlySection": {
+    "heading": "Ispezione di sola lettura",
+    "body": "Il punto di partenza quando qualcosa non va. Semplice ispezione: non scrive mai in <code>/etc/network/interfaces</code> e non esegue comandi che modificano il sistema, con un’unica eccezione esplicita: la rimozione completa di NetworkManager, se rilevato, richiede il tuo consenso. Utilizzabile in sicurezza via SSH in qualsiasi momento.",
+    "options": [
+      {
+        "title": "Diagnostica",
+        "description": "Tre controlli puntuali di sola lettura: Mostra tabella di routing, Test di connettività e Diagnostica avanzata. Semplice ispezione: non scrive mai nel sistema."
+      },
+      {
+        "title": "Strumenti di monitoraggio dal vivo",
+        "description": "Tre strumenti avviabili in modo interattivo: iftop (larghezza di banda in tempo reale per coppia di host), iptraf-ng (monitor del traffico con più modalità) e iperf3 (test della larghezza di banda, modalità server / client)."
+      }
+    ]
+  },
+  "analyzeSection": {
+    "heading": "Analizzare, quindi suggerire",
+    "body": "Da usare quando un’ispezione o un’effettiva interruzione del servizio indica un problema di configurazione. Ogni strumento esamina la parte pertinente di <code>/etc/network/interfaces</code>, stampa un rapporto dettagliato con l’esatto comando shell che risolverebbe ogni problema e <strong>si ferma</strong>. Se in seguito accetti la riparazione guidata facoltativa, ogni modifica viene preceduta da un backup e mostrata in anteprima prima della scrittura.",
+    "options": [
+      {
+        "title": "Analisi dei bridge e riparazione guidata",
+        "description": "Rileva bridge vmbrX con porte mancanti o non valide, situazione tipica dopo la rinumerazione PCI. Mostra prima un rapporto e ripara solo se accetti la procedura guidata in 5 passaggi."
+      },
+      {
+        "title": "Analisi della configurazione e pulizia guidata",
+        "description": "Trova le interfacce fisiche dichiarate in /etc/network/interfaces che non esistono più, ossia configurazioni orfane rimaste dopo modifiche hardware. Le segnala e propone una rimozione guidata."
+      }
+    ]
+  },
+  "applySection": {
+    "heading": "Applicare con backup",
+    "body": "Questi strumenti scrivono su disco per loro natura. Ciascuno crea un backup del file interessato con data e ora prima della scrittura e le opzioni distruttive, come ripristino e riavvio, richiedono una conferma esplicita sì/no. I <em>nomi persistenti delle interfacce</em> diventano effettivi al prossimo riavvio, non subito: puoi quindi pianificarne l’impostazione in sicurezza anche su un host remoto.",
+    "options": [
+      {
+        "title": "Nomi di interfaccia persistenti",
+        "description": "Associa i nomi delle interfacce (eno1, enp3s0, …) agli indirizzi MAC tramite file .link di systemd. I nomi restano invariati dopo cambi di slot PCI, aggiornamenti del kernel e aggiunta o rimozione di altre schede di rete."
+      },
+      {
+        "title": "Backup e riavvio delle interfacce",
+        "description": "snapshot manuale di /etc/network/interfaces, sfoglia e ripristina i backup precedenti, visualizza la configurazione live e riavvia il servizio di rete quando necessario."
+      }
+    ]
+  },
+  "consoleTitle": "Prepara un accesso alla console",
+  "consoleSubTitle": "Prima di qualsiasi riparazione su un host remoto",
+  "consoleBody": "Se sei connesso via SSH e hai un solo percorso di accesso all’host, prepara un’alternativa prima di applicare modifiche alla rete: console fisica / IPMI / iKVM oppure un’altra macchina sulla stessa LAN. Le riparazioni guidate sono sicure e offrono sempre un comando per annullare le modifiche, ma un bridge configurato male o una connessione interrotta può comunque lasciarti senza accesso finché non raggiungi la console."
+}

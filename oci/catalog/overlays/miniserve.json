@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A lightweight web server for sharing files and directories, with optional authentication and uploads."
+    },
+    "description": {
+      "en_US": "miniserve is a lightweight, self-contained HTTP server designed to quickly share files and directories. It generates an interactive web interface with search and sorting capabilities, allowing users to browse, download single files, or download entire directories as compressed archives. It also supports optional file uploading, directory creation, QR code access, and HTTP authentication."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/svenstaro/miniserve/HEAD/screenshot.png"
+    ]
+  }
+}

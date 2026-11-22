@@ -16,5 +16,14 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Nginx Proxy Manager is a simple, powerful tool to help you host multiple websites on a single server."
+    },
+    "description": {
+      "en_US": "Nginx Proxy Manager is a tool designed to help host multiple websites on a single server. It manages reverse proxy configurations and directs incoming web traffic to local or remote services. It simplifies setting up and maintaining hosts through a centralized interface."
+    },
+    "repository": "https://github.com/jc21/nginx-proxy-manager"
   }
 }

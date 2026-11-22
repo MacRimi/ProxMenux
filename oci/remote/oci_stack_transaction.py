@@ -26,6 +26,7 @@ PHASES = {'prepared', 'preparing', 'stopping', 'backing-up', 'replacing',
 
 
 def save(path, state, phase):
+    member_tx.time_phase(state, phase, 'stack phase')
     if state.get('phase') != phase:
         member_tx.log(f'stack phase: {phase}')
     state['phase'] = phase
@@ -133,6 +134,16 @@ def _apply(path, plan, adapter):
             state['prepared'][str(candidate['vmid'])] = adapter.prepare(candidate, plan['operation'])
             save(path, state, 'preparing')
         adapter.validate(plan)
+        if not recreate and all(item.get('unchanged') is True for item in state['prepared'].values()):
+            state['no_change'] = True
+            save(path, state, 'committed')
+            if hasattr(adapter, 'finalize'):
+                adapter.finalize(state)
+            return state
+        if not recreate and hasattr(adapter, 'prepare_changed_stack'):
+            adapter.prepare_changed_stack(state)
+            save(path, state, 'preparing')
+            adapter.validate(plan)
         state['stop_intent'] = True
         save(path, state, 'stopping')
         msg_info(translate('Stopping the stack...'))
@@ -153,6 +164,9 @@ def _apply(path, plan, adapter):
         state['replacement_intent'] = True
         save(path, state, 'replacing')
         for vmid in plan['start_order']:
+            if not recreate and state['prepared'][str(vmid)].get('unchanged') is True:
+                member_tx.log(f'keeping unchanged image: CT {vmid}')
+                continue
             msg_info(f"{translate('Recreating') if recreate else translate('Updating')} {member(adapter, vmid)}...")
             adapter.replace(vmid, state['prepared'][str(vmid)], state['id'])
             msg_ok(f"{translate('Recreated:') if recreate else translate('Updated:')} {member(adapter, vmid)}")

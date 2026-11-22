@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted manga reader server with a web interface. The image uses its built-in H2 database by default and does not need a separate database service."
+    },
+    "description": {
+      "en_US": "Suwayomi Server is a self-hosted manga reader server equipped with a web interface. It allows users to browse, read, and manage manga collections across multiple extension sources. The server can track reading progress, download chapters in formats like CBZ, and perform automated backups of library data and settings."
+    }
+  }
+}

@@ -62,7 +62,7 @@ type Bridge = {
 type Guest = {
   id: string
   label: string
-  kind: "lxc" | "vm" | "host"
+  kind: "lxc" | "vm" | "host" | "interface"
   bridge: string
   rx: number
   tx: number
@@ -87,6 +87,8 @@ const ICONS: Record<string, string> = {
   vm: `<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 6h.01"/><path d="M6 18h.01"/>`,
 }
 
+ICONS.interface = ICONS.bridge
+
 const COLORS = {
   host: "var(--amber-500, #f59e0b)",
   lxc: "var(--cyan-500, #06b6d4)",
@@ -97,6 +99,7 @@ const COLORS = {
   // just another NIC.
   bond: "var(--orange-500, #f97316)",
   bridge: "var(--cyan-500, #06b6d4)",
+  interface: "var(--cyan-500, #06b6d4)",
   gray: "#525252",
 }
 

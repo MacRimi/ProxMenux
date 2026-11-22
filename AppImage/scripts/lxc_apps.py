@@ -28,6 +28,7 @@ from __future__ import annotations
 import datetime
 import copy
 import concurrent.futures
+import glob
 import hashlib
 import ipaddress
 import json
@@ -44,9 +45,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
 from typing import Any, Optional
+import local_app_icons
 
 _APPS_DIR = "/etc/proxmenux/apps"
+_PVE_NODES = "/etc/pve/nodes"
 _PCT_BIN = "/usr/sbin/pct"
 _PROBE_TIMEOUT_SEC = 15
 _GITHUB_TIMEOUT_SEC = 15
@@ -592,21 +596,30 @@ def helper_update_selected(vmid, slug: str, targets=None) -> bool:
     return any(f"app:{app.get('id')}" in targets for app in matching)
 
 
-def _write_sidecar(vmid, data: dict) -> bool:
+def _write_sidecar(vmid, data: dict, copies: bool = False) -> bool:
+    """`copies`: the registrations changed, so the copies that travel with
+    the container are written too. Results of checks never are."""
     _migrate_update_methods(data)
+    # The registrations of a container keep one identity wherever they go,
+    # so the copy a container carries is recognised after a restore.
+    if not data.get("watch_id"):
+        data["watch_id"] = uuid.uuid4().hex
     _ensure_dir()
     path = _sidecar_path(vmid)
     tmp = f"{path}.tmp.{os.getpid()}"
     try:
-        with open(tmp, "w") as f:
-            json.dump({k: v for k, v in data.items() if k != '_revision'}, f, indent=2, sort_keys=True)
-        os.chmod(tmp, 0o600)
-        with _sidecar_cache_lock:
-            os.replace(tmp, path)
-            snapshot = _publish_sidecar_snapshot(path, data, _sidecar_signature(os.stat(path)))
-            data['_revision'] = snapshot['_revision']
+        with local_app_icons.protect_references(vmid, data):
+            with open(tmp, "w") as f:
+                json.dump({k: v for k, v in data.items() if k != '_revision'}, f, indent=2, sort_keys=True)
+            os.chmod(tmp, 0o600)
+            with _sidecar_cache_lock:
+                os.replace(tmp, path)
+                snapshot = _publish_sidecar_snapshot(path, data, _sidecar_signature(os.stat(path)))
+                data['_revision'] = snapshot['_revision']
+        if copies:
+            _sync_copies(vmid, data)
         return True
-    except OSError as e:
+    except (OSError, local_app_icons.IconError) as e:
         print(f"[ProxMenux] lxc_apps: could not write sidecar {path}: {e}")
         try:
             os.unlink(tmp)
@@ -617,6 +630,167 @@ def _write_sidecar(vmid, data: dict) -> bool:
 
 def _new_app_id() -> str:
     return uuid.uuid4().hex[:12]
+
+
+# ── Copies that travel with the container (app_watch_copies) ─────────
+_APP_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+_COPY_RECONCILE_SECONDS = 300
+
+
+def _sync_copies(vmid, data: dict) -> None:
+    try:
+        import app_watch_copies
+        app_watch_copies.write(vmid, data)
+    except Exception as e:  # The record on the node is what counts.
+        print(f"[ProxMenux] lxc_apps: copies of CT {vmid} not written: {e}")
+
+
+def _remove_copies(vmid) -> None:
+    try:
+        import app_watch_copies
+        app_watch_copies.remove(vmid)
+    except Exception as e:
+        print(f"[ProxMenux] lxc_apps: copies of CT {vmid} not removed: {e}")
+
+
+def _adopt_copy(vmid, source: dict, origin: str, machine) -> dict:
+    """The registrations a container brought, validated as if the user had
+    entered them here. An app that does not validate is left out."""
+    apps = []
+    for app in source.get("apps") or []:
+        if not isinstance(app, dict):
+            continue
+        entered = {k: v for k, v in app.items() if k not in ("id", "state", "created_at", "updated_at")}
+        ok, cfg = validate_config(entered, vmid=vmid)
+        if not ok and "logo_url" in entered:
+            # A logo cached for another VMID is not this container's.
+            entered.pop("logo_url")
+            ok, cfg = validate_config(entered, vmid=vmid)
+        if not ok:
+            print(f"[ProxMenux] lxc_apps: CT {vmid}: an app of its copy was left out: {cfg}")
+            continue
+        app_id = app.get("id") if isinstance(app.get("id"), str) and _APP_ID_RE.match(app["id"]) else _new_app_id()
+        apps.append({"id": app_id, **cfg, "state": _empty_state(),
+                     "created_at": app.get("created_at") if isinstance(app.get("created_at"), str) else _now_iso()})
+    slugs = [s for s in source.get("dismissed_slugs") or [] if isinstance(s, str) and _HELPER_SLUG_RE.match(s)]
+    sidecar = {"vmid": int(vmid), "apps": apps, "created_at": _now_iso(), "updated_at": _now_iso(),
+               "watch_id": source["watch_id"], "identity": {"machine_id": machine} if machine else {},
+               "dismissed_slugs": slugs}
+    try:
+        import access_log
+        access_log.record("app_watch.adopted", None, f"CT {int(vmid)}", {"from": origin, "apps": len(apps)})
+    except Exception:
+        pass
+    return sidecar
+
+
+def reconcile_copies(vmid) -> Optional[str]:
+    """Bring the registrations of a container in line with the copies.
+
+    A running container that carries registrations other than those of its
+    VMID (restored under another VMID or in another order) gets its own
+    back. A container without a record on this node (migrated here) gets
+    the one of the cluster. A container without a copy whose machine ID is
+    not the one recorded is marked: its registrations may belong to another
+    container. Returns what was done, or None."""
+    import app_watch_copies as copies
+    pid = copies.running_pid(vmid)
+    machine = copies.machine_id(vmid, pid) if pid else None
+    with _cache_lock:
+        local = _read_sidecar(vmid)
+        carried = copies.read_container(vmid, pid) if pid else None
+        if carried and (not local or local.get("watch_id") != carried["watch_id"]):
+            source, origin = carried, "container"
+        elif not local and not carried:
+            cluster = copies.read_cluster(vmid)
+            known = (cluster or {}).get("identity", {}).get("machine_id") if isinstance(cluster, dict) else None
+            # Only the same container: a new one with a reused VMID is not.
+            source, origin = (cluster, "cluster") if cluster and machine and known == machine else (None, None)
+        else:
+            source, origin = None, None
+        if source:
+            sidecar = _adopt_copy(vmid, source, origin, machine)
+            copies.forget(vmid)
+            _write_sidecar(vmid, sidecar, copies=True)
+            return "adopted-" + origin
+        if not local or not pid:
+            return None
+        recorded = (local.get("identity") or {}).get("machine_id")
+        if not carried and recorded and machine and recorded != machine:
+            if not local.get("registration_mismatch"):
+                local["registration_mismatch"] = True
+                _write_sidecar(vmid, local, copies=False)
+            return "mismatch"
+        changed = False
+        if machine and recorded != machine:
+            local["identity"] = {"machine_id": machine}
+            changed = True
+        if local.pop("registration_mismatch", None):
+            changed = True
+        if not carried or copies.digest(copies.payload(vmid, local)) != copies.digest(carried):
+            copies.forget(vmid)
+            changed = True
+        if changed:
+            _write_sidecar(vmid, local, copies=True)
+            return "copied"
+    return None
+
+
+def _local_containers() -> list:
+    try:
+        names = os.listdir("/etc/pve/local/lxc")
+    except OSError:
+        return []
+    return sorted(int(n[:-5]) for n in names if n.endswith(".conf") and n[:-5].isdigit())
+
+
+def _forget_removed_containers() -> None:
+    """The cluster copy of a VMID that no node has any more."""
+    try:
+        import app_watch_copies as copies
+        if not os.path.ismount("/etc/pve") or not copies.CLUSTER.is_dir():
+            return
+        existing = {p.stem for p in Path("/etc/pve/nodes").glob("*/lxc/*.conf")}
+        for path in copies.CLUSTER.glob("*.json"):
+            if path.stem.isdigit() and path.stem not in existing:
+                copies.remove_cluster(int(path.stem))
+    except Exception as e:
+        print(f"[ProxMenux] lxc_apps: cluster copies not tidied: {e}")
+
+
+def _copy_reconciler_loop() -> None:
+    time.sleep(60)
+    while True:
+        for vmid in _local_containers():
+            try:
+                reconcile_copies(vmid)
+            except Exception as e:
+                print(f"[ProxMenux] lxc_apps: reconcile CT {vmid} failed: {e}")
+        _forget_removed_containers()
+        time.sleep(_COPY_RECONCILE_SECONDS)
+
+
+_copy_reconciler_started = False
+
+
+def reconcile_after_start(vmid, delay: int = 15) -> None:
+    """A container that starts may be one just restored: its own copy is
+    read as soon as it is up, not at the next pass."""
+    def later():
+        time.sleep(delay)
+        try:
+            reconcile_copies(vmid)
+        except Exception as e:
+            print(f"[ProxMenux] lxc_apps: reconcile CT {vmid} after start failed: {e}")
+    threading.Thread(target=later, daemon=True, name=f"app-watch-copies-{int(vmid)}").start()
+
+
+def start_copy_reconciler() -> None:
+    global _copy_reconciler_started
+    if _copy_reconciler_started:
+        return
+    _copy_reconciler_started = True
+    threading.Thread(target=_copy_reconciler_loop, daemon=True, name="app-watch-copies").start()
 
 
 # ── Validation ─────────────────────────────────────────────────────
@@ -933,7 +1107,7 @@ def validate_bulk_update(payload: Any) -> tuple[bool, Any]:
     return True, {"targets": ["os", *sorted(item for item in targets if item != "os")]}
 
 
-def validate_config(payload: dict) -> tuple[bool, Any]:
+def validate_config(payload: dict, *, vmid: Optional[int] = None) -> tuple[bool, Any]:
     """Return (True, normalised_config_without_state_id) or
     (False, error). Rejects anything that would give shell-injection
     at check-time. Only the five fixed installed_via methods are
@@ -1175,9 +1349,16 @@ def validate_config(payload: dict) -> tuple[bool, Any]:
     # payloads through the App card's <img src>.
     logo = (payload.get("logo_url") or "").strip()
     if logo:
-        if not _LOGO_URL_RE.match(logo):
-            return _err("logo_url must be an http(s) URL (max 512 chars)")
+        if not _LOGO_URL_RE.match(logo) and not local_app_icons.valid_url(vmid, logo):
+            return _err("logo_url must be an http(s) URL or this VM's cached local icon")
         conf["logo_url"] = logo
+
+    # Native discovery identity is separate from a curated helper/updater.
+    discovery_id = payload.get("discovery_id")
+    if discovery_id is not None:
+        if not isinstance(discovery_id, str) or not re.fullmatch(r"(?:native|docker)-[0-9a-f]{24}", discovery_id):
+            return _err("invalid discovery_id")
+        conf["discovery_id"] = discovery_id
 
     # Optional helper_slug — set by the frontend when the user picks
     # an auto-detected app (primary or extra). Persisted so we can
@@ -3317,7 +3498,7 @@ def test_config(vmid, payload: dict) -> tuple[bool, Any]:
     bad local detector from a bad repository/tag filter.  Probe output is
     never returned: a user-selected file or command could contain secrets.
     """
-    ok, config = validate_config(payload)
+    ok, config = validate_config(payload, vmid=vmid)
     if not ok:
         return False, config
 
@@ -3388,7 +3569,7 @@ def set_dismissed_slug(vmid, slug: str, dismissed: bool) -> tuple[bool, Any]:
             current = [s for s in current if s != slug]
         sidecar["dismissed_slugs"] = current
         sidecar["updated_at"] = _now_iso()
-        if not _write_sidecar(vmid, sidecar):
+        if not _write_sidecar(vmid, sidecar, copies=True):
             return False, "could not persist sidecar (permission?)"
     return True, _read_sidecar(vmid)
 
@@ -3401,7 +3582,7 @@ def _find_app(sidecar: dict, app_id: str) -> Optional[dict]:
 
 
 def add_app(vmid, payload: dict, notify: bool = True) -> tuple[bool, Any]:
-    ok, cfg = validate_config(payload)
+    ok, cfg = validate_config(payload, vmid=vmid)
     if not ok:
         return False, cfg
     with _cache_lock:
@@ -3418,7 +3599,7 @@ def add_app(vmid, payload: dict, notify: bool = True) -> tuple[bool, Any]:
             "created_at": _now_iso(),
         })
         sidecar["updated_at"] = _now_iso()
-        if not _write_sidecar(vmid, sidecar):
+        if not _write_sidecar(vmid, sidecar, copies=True):
             return False, "could not persist sidecar (permission?)"
     # Kick a first check so the UI shows real numbers immediately
     check_app(vmid, new_id, force=True, notify=notify)
@@ -3426,7 +3607,7 @@ def add_app(vmid, payload: dict, notify: bool = True) -> tuple[bool, Any]:
 
 
 def update_app(vmid, app_id: str, payload: dict) -> tuple[bool, Any]:
-    ok, cfg = validate_config(payload)
+    ok, cfg = validate_config(payload, vmid=vmid)
     if not ok:
         return False, cfg
     with _cache_lock:
@@ -3444,7 +3625,7 @@ def update_app(vmid, app_id: str, payload: dict) -> tuple[bool, Any]:
             "id": app_id, **cfg, "state": state, "created_at": created,
         }
         sidecar["updated_at"] = _now_iso()
-        if not _write_sidecar(vmid, sidecar):
+        if not _write_sidecar(vmid, sidecar, copies=True):
             return False, "could not persist sidecar"
     check_app(vmid, app_id, force=True)
     return True, _read_sidecar(vmid)
@@ -3504,14 +3685,59 @@ def delete_app(vmid, app_id: str) -> bool:
             except OSError:
                 pass
         if before != len(sidecar["apps"]):
-            _write_sidecar(vmid, sidecar)
+            return _write_sidecar(vmid, sidecar, copies=True)
         return True
+
+
+def forget_guest(vmid) -> None:
+    """A destroyed guest takes its registrations with it, scheduled updates
+    included, so a new guest that reuses the VMID starts with nothing."""
+    key = str(int(vmid))
+    path = _sidecar_path(vmid)
+    _remove_copies(vmid)
+    with _cache_lock:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            print(f"[ProxMenux] lxc_apps: could not forget CT {key}: {exc}")
+        with _sidecar_cache_lock:
+            _sidecar_cache.pop(path, None)
+        dismissed = _oci_dismissed()
+        if dismissed.pop(key, None) is not None:
+            _save_oci_dismissed(dismissed)
+    with _docker_inventory_lock:
+        _docker_inventory_cache.pop(key, None)
+    for cache in (_detected_apps_cache, _port_probe_cache, _docker_web_links_cache):
+        cache.pop(key, None)
+    for probe in [probe for probe in list(_file_probe_cache) if probe[0] == key]:
+        _file_probe_cache.pop(probe, None)
+
+
+def forget_missing_guests() -> None:
+    """Registrations of guests that no node of the cluster has any more,
+    removed while the Monitor was not running."""
+    if not os.path.isdir(_PVE_NODES):
+        return
+    try:
+        names = os.listdir(_APPS_DIR)
+    except OSError:
+        return
+    for name in names:
+        vmid = name[:-5] if name.endswith(".json") else ""
+        if not vmid.isdigit():
+            continue
+        if not (glob.glob(f"{_PVE_NODES}/*/lxc/{vmid}.conf")
+                or glob.glob(f"{_PVE_NODES}/*/qemu-server/{vmid}.conf")):
+            forget_guest(vmid)
 
 
 def delete_all(vmid) -> bool:
     sidecar = _read_sidecar(vmid) or {}
     if any(a.get("installed_via") == "oci_image" for a in sidecar.get("apps") or []):
         _dismiss_oci_registration(vmid)
+    _remove_copies(vmid)
     try:
         os.unlink(_sidecar_path(vmid))
         return True
@@ -4331,7 +4557,87 @@ def _detect_with_alt_healing(vmid, app: dict) -> tuple:
     return installed, err, False
 
 
+_oci_check_locks: dict = {}
+_oci_check_locks_guard = threading.Lock()
+
+
 def check_app(
+    vmid, app_id: str, force: bool = False, notify: bool = True,
+) -> Optional[dict]:
+    # Keep legacy detectors' locking unchanged. OCI network requests use a
+    # per-app lock and hold the shared cache lock only while reading/saving.
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid)
+        app = _find_app(sidecar, app_id) if sidecar else None
+        if not app or app.get("installed_via") != "oci_image":
+            return _check_non_oci_app(vmid, app_id, force=force, notify=notify)
+    return _check_oci_app(vmid, app_id, force=force, notify=notify)
+
+
+def _check_oci_app(vmid, app_id, force=False, notify=True):
+    key = (int(vmid), app_id)
+    with _oci_check_locks_guard:
+        lock = _oci_check_locks.setdefault(key, threading.Lock())
+    with lock:
+        with _cache_lock:
+            sidecar = _read_sidecar(vmid)
+            app = _find_app(sidecar, app_id) if sidecar else None
+            if not app or app.get("installed_via") != "oci_image":
+                return sidecar
+            state = app.get("state") or _empty_state()
+            if not force and state.get("checked_at"):
+                try:
+                    checked = datetime.datetime.strptime(state["checked_at"].rstrip("Z"), "%Y-%m-%dT%H:%M:%S")
+                    age = (datetime.datetime.utcnow() - checked).total_seconds()
+                    if 0 <= age < _UPSTREAM_CACHE_TTL_SEC:
+                        return sidecar
+                except (ValueError, TypeError):
+                    pass
+            before_app = copy.deepcopy(app)
+            before_record = _read_oci_record(vmid)
+
+        # No global cache lock is held while waiting for registries. The same
+        # native resolver, credentials and digest comparisons are retained.
+        result = _oci_image_versions(
+            vmid, known=state, with_latest=not _oci_secondary_member(before_record))
+        if result.get("busy"):
+            _recheck_after_oci_operation(vmid, app_id)
+            return _read_sidecar(vmid)
+
+        with _cache_lock:
+            # Re-read rather than writing the pre-query copy: other apps,
+            # schedules and registrations may have changed while we waited.
+            sidecar = _read_sidecar(vmid)
+            app = _find_app(sidecar, app_id) if sidecar else None
+            if app != before_app or _read_oci_record(vmid) != before_record:
+                return sidecar  # Never publish a result for a replaced/edited app.
+            app["state"] = {
+                "installed_version": result.get("installed_version"),
+                "latest_version": result.get("latest_version"),
+                "latest_published_at": None,
+                "update_available": result.get("update_available"),
+                "error": result.get("error"),
+                "checked_at": _now_iso(),
+                "installed_digest": result.get("installed_digest"),
+                "installed_registry_digest": result.get("installed_registry_digest"),
+                "registry_retry": bool(result.get("registry_retry")),
+                "latest_digest": result.get("latest_digest"),
+                "latest_layers": result.get("latest_layers"),
+                "image_created": result.get("image_created"),
+                "latest_image_created": result.get("latest_image_created"),
+                "image_reference": result.get("image_reference"),
+                "image_repository": result.get("image_repository"),
+            }
+            sidecar["updated_at"] = _now_iso()
+            _write_sidecar(vmid, sidecar)
+        if app["state"]["registry_retry"]:
+            _retry_oci_registry(vmid, app_id)
+        if notify and app["state"]["update_available"]:
+            _fire_update_notification(vmid, app)
+        return sidecar
+
+
+def _check_non_oci_app(
     vmid, app_id: str, force: bool = False, notify: bool = True,
 ) -> Optional[dict]:
     with _cache_lock:
@@ -4361,40 +4667,6 @@ def check_app(
                     return sidecar
             except (ValueError, TypeError):
                 pass
-
-        if app.get("installed_via") == "oci_image":
-            # A secondary container of a stack shows the version it runs; the
-            # registry is not asked, because it is not updated on its own.
-            result = _oci_image_versions(
-                vmid, known=state, with_latest=not _oci_secondary_member(_read_oci_record(vmid)))
-            if result.get("busy"):
-                _recheck_after_oci_operation(vmid, app_id)
-                return sidecar
-            app["state"] = {
-                "installed_version": result.get("installed_version"),
-                "latest_version": result.get("latest_version"),
-                "latest_published_at": None,
-                "update_available": result.get("update_available"),
-                "error": result.get("error"),
-                "checked_at": _now_iso(),
-                "installed_digest": result.get("installed_digest"),
-                "installed_registry_digest": result.get("installed_registry_digest"),
-                "registry_retry": bool(result.get("registry_retry")),
-                "latest_digest": result.get("latest_digest"),
-                "image_created": result.get("image_created"),
-                "latest_image_created": result.get("latest_image_created"),
-                "image_reference": result.get("image_reference"),
-                "image_repository": result.get("image_repository"),
-            }
-            sidecar["updated_at"] = _now_iso()
-            _write_sidecar(vmid, sidecar)
-            if app["state"]["registry_retry"]:
-                _retry_oci_registry(vmid, app_id)
-            # The payload names an image by its build date and digest when it
-            # states no version, so it decides whether there is anything to send.
-            if notify and app["state"]["update_available"]:
-                _fire_update_notification(vmid, app)
-            return sidecar
 
         installed, inst_err, _healed = _detect_with_alt_healing(vmid, app)
         # Trigger the upstream fetch when ANY upstream source is
@@ -4922,7 +5194,8 @@ def get_active_apps() -> dict:
         if not apps:
             continue
         out[str(vmid)] = [
-            {**_summarise_app(a), 'state_revision': sidecar.get('_revision')}
+            {**_summarise_app(a), 'state_revision': sidecar.get('_revision'),
+             'registration_mismatch': bool(sidecar.get('registration_mismatch'))}
             for a in apps
         ]
     return out
@@ -5354,6 +5627,10 @@ def _probe_docker_web_links(vmid) -> list[dict]:
     Stopped containers are included from their persistent HostConfig bindings,
     so their links remain registrable before the workload is started again.
     """
+    import docker_app_discovery
+    shared = docker_app_discovery.cached_web_links(vmid, _docker_service_catalog_meta)
+    if shared is not None:
+        return shared
     key = str(vmid)
     now = time.time()
     with _docker_web_links_lock:
@@ -5409,7 +5686,12 @@ def _probe_docker_web_links(vmid) -> list[dict]:
                             if not isinstance(binding, dict):
                                 continue
                             host_ip = str(binding.get("HostIp") or "").strip()
-                            if host_ip in {"127.0.0.1", "::1"}:
+                            try:
+                                import ipaddress
+                                bind_ip = ipaddress.ip_address(host_ip or "0.0.0.0")
+                                if bind_ip.is_loopback or (getattr(bind_ip, "ipv4_mapped", None) and bind_ip.ipv4_mapped.is_loopback):
+                                    continue
+                            except ValueError:
                                 continue
                             try:
                                 host_port = int(binding.get("HostPort"))
@@ -5457,7 +5739,55 @@ def _helper_slug_meta(vmid) -> Optional[dict]:
 
 _OCI_INSTANCE_ROOT = "/usr/local/share/proxmenux/oci/instances"
 _OCI_CATALOG_INDEX = "/usr/local/share/proxmenux/oci/engine/catalog/index.json"
+_OCI_ENGINE_DIR = "/usr/local/share/proxmenux/oci/engine"
 _oci_catalog_cache: tuple[float, dict, dict] | None = None
+_oci_catalog_dir_cache: tuple[float, tuple[str, float], str] | None = None
+
+
+def oci_catalog_dir() -> str:
+    """The catalog the OCI engine is using now.
+
+    A catalog refresh keeps the new catalog in a snapshot of its own and
+    leaves the one shipped with the engine untouched, so the Monitor asks the
+    engine which one is active instead of reading a fixed path. The engine
+    answers in a separate process: importing its package would configure the
+    registry accounts inside the Monitor. The shipped catalog is the fallback.
+    """
+    global _oci_catalog_dir_cache
+    shipped = os.path.dirname(_OCI_CATALOG_INDEX)
+    now = time.time()
+    # A refresh from the OCI menu rewrites the channel pointer: a changed
+    # pointer is read again at once instead of after the cache expires.
+    try:
+        pointers = os.path.join(os.path.dirname(_OCI_ENGINE_DIR), "catalog-cache")
+        stamp = max((os.stat(os.path.join(pointers, name)).st_mtime
+                     for name in os.listdir(pointers) if name.endswith("-current.json")), default=0.0)
+    except OSError:
+        stamp = 0.0
+    shipped_key = (shipped, stamp)
+    if (_oci_catalog_dir_cache and _oci_catalog_dir_cache[1] == shipped_key
+            and now - _oci_catalog_dir_cache[0] < 60):
+        return _oci_catalog_dir_cache[2]
+    active = shipped
+    if os.path.isdir(os.path.join(_OCI_ENGINE_DIR, "src")):
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c",
+                 "import sys; sys.path.insert(0, sys.argv[1] + '/src'); "
+                 "from proxmenux_oci.catalog_refresh import current_catalog; "
+                 "print(current_catalog(sys.argv[1]))", _OCI_ENGINE_DIR],
+                capture_output=True, text=True, timeout=15)
+            answer = result.stdout.strip()
+            if result.returncode == 0 and os.path.isfile(os.path.join(answer, "index.json")):
+                active = answer
+        except (OSError, subprocess.SubprocessError):
+            pass
+    _oci_catalog_dir_cache = (now, shipped_key, active)
+    return active
+
+
+def _oci_catalog_index_path() -> str:
+    return os.path.join(oci_catalog_dir(), "index.json")
 
 
 def _oci_catalog_icons() -> dict:
@@ -5482,7 +5812,7 @@ def _oci_catalog_entries() -> tuple[dict, dict]:
     icons: dict = {}
     templates: dict = {}
     try:
-        with open(_OCI_CATALOG_INDEX, encoding="utf-8") as handle:
+        with open(_oci_catalog_index_path(), encoding="utf-8") as handle:
             for item in (json.load(handle) or {}).get("applications", []):
                 item = item or {}
                 icon = item.get("icon")
@@ -5502,6 +5832,48 @@ def _oci_catalog_entries() -> tuple[dict, dict]:
     return icons, templates
 
 
+_oci_icon_themes_cache: tuple[float, dict] | None = None
+
+
+def oci_icon_themes() -> dict:
+    """The icon to draw on the dark theme, keyed by the icon it replaces.
+
+    The OCI catalog and the Community Scripts catalog mark the icons that are
+    a black mark on a transparent background: they take the light version of
+    their icon set, or "invert" when there is none. Keyed by URL, so an icon
+    saved with an installation or a link gets it as well.
+    """
+    global _oci_icon_themes_cache
+    now = time.time()
+    if _oci_icon_themes_cache and now - _oci_icon_themes_cache[0] < 600:
+        return _oci_icon_themes_cache[1]
+    themes: dict = {}
+    try:
+        with open(_oci_catalog_index_path(), encoding="utf-8") as handle:
+            for item in (json.load(handle) or {}).get("applications", []):
+                icon = (item or {}).get("icon")
+                dark = (item or {}).get("icon_dark")
+                if not (isinstance(icon, str) and icon.startswith("https://")):
+                    continue
+                if dark == "invert" or (isinstance(dark, str) and dark.startswith("https://")):
+                    themes[icon] = dark
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    try:
+        import managed_installs
+        for entry in (managed_installs._fetch_helpers_cache() or {}).values():
+            logo = (entry or {}).get("logo")
+            dark = (entry or {}).get("logo_dark")
+            if not (isinstance(logo, str) and logo.startswith("https://")):
+                continue
+            if dark == "invert" or (isinstance(dark, str) and dark.startswith("https://")):
+                themes.setdefault(logo, dark)
+    except Exception:
+        pass
+    _oci_icon_themes_cache = (now, themes)
+    return themes
+
+
 def _oci_catalog_first_run(template_id) -> dict:
     """The first_run contract of the current catalog template. An existing
     install keeps a copy from the day it was created; what the catalog added
@@ -5510,7 +5882,7 @@ def _oci_catalog_first_run(template_id) -> dict:
     if not template:
         return {}
     try:
-        with open(os.path.join(os.path.dirname(_OCI_CATALOG_INDEX), template), encoding="utf-8") as handle:
+        with open(os.path.join(oci_catalog_dir(), template), encoding="utf-8") as handle:
             first_run = (json.load(handle) or {}).get("first_run")
     except (OSError, ValueError, TypeError, AttributeError):
         return {}
@@ -5591,6 +5963,10 @@ def _dismiss_oci_registration(vmid) -> None:
         return
     data = _oci_dismissed()
     data[str(int(vmid))] = record["installation_id"]
+    _save_oci_dismissed(data)
+
+
+def _save_oci_dismissed(data) -> None:
     _ensure_dir()
     tmp = f"{_OCI_DISMISSED_FILE}.tmp.{os.getpid()}"
     try:
@@ -5679,7 +6055,8 @@ def _register_oci_installation(vmid) -> bool:
         return False
     with _cache_lock:
         sidecar = _read_sidecar(vmid)
-        if sidecar and sidecar.get("apps"):
+        registered = bool(sidecar and sidecar.get("apps"))
+        if registered:
             # An application registered before its logo could be resolved
             # takes it now; nothing else of what is registered is touched.
             missing = [app for app in sidecar["apps"]
@@ -5688,8 +6065,10 @@ def _register_oci_installation(vmid) -> bool:
             if logo:
                 for app in missing:
                     app["logo_url"] = logo
-                _write_sidecar(vmid, sidecar)
-            return False
+                _write_sidecar(vmid, sidecar, copies=True)
+    if registered:
+        _follow_adguard_setup(vmid)
+        return False
     meta = _oci_instance_meta(vmid)
     if not meta or not meta.get("name") or not _NAME_RE.match(str(meta["name"])):
         return False
@@ -5704,6 +6083,11 @@ def _register_oci_installation(vmid) -> bool:
         port = meta.get("endpoint_port")
         endpoints = [{"port": port, "scheme": meta.get("endpoint_scheme"), "path": meta.get("endpoint_path"),
                       "description": "", "logo_url": ""}] if isinstance(port, int) else []
+    if meta.get("template_id") == "image-adguard-home" and not secondary:
+        # The same addresses the App tab shows: its interface, and the
+        # first-run setup until it is done (see _follow_adguard_setup).
+        endpoints = [{"port": 80, "scheme": "http", "path": "/", "description": ""},
+                     {"port": 3000, "scheme": "http", "path": "/", "description": "Config"}]
     ports = []
     for endpoint in endpoints:
         entry = {"port": endpoint["port"], "scheme": endpoint.get("scheme") or "http",
@@ -5914,9 +6298,9 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         "ports": ports,
         "endpoints": endpoints,
         "service_ports": service_ports,
-        # The exact image this container was created from. Its digest is what
-        # an update is decided on; the version label is only for reading.
+        # The archive can have a different manifest from the registry image.
         "installed_digest": str(observed_image.get("manifest_digest") or "").strip() or None,
+        "installed_image": observed_image,
         # The digest the registry served that image under. An image published
         # with a Docker-format manifest is saved under another one.
         "registry_digest": registry_digest if re.fullmatch(r"sha256:[0-9a-f]{64}", registry_digest) else None,
@@ -5924,23 +6308,77 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
     }
 
 
+def _guest_ipv4(vmid) -> Optional[str]:
+    """The first IPv4 address of a running container, or None."""
+    try:
+        result = subprocess.run(['lxc-info', '-n', str(int(vmid)), '-iH'],
+                                capture_output=True, text=True, timeout=3, check=True)
+        return next(str(ipaddress.IPv4Address(value.strip()))
+                    for value in result.stdout.splitlines()
+                    if value.strip() and ipaddress.ip_address(value.strip()).version == 4)
+    except (OSError, ValueError, StopIteration, subprocess.SubprocessError):
+        return None
+
+
+def _answers_http(ip: str, port: int) -> bool:
+    try:
+        with socket.create_connection((ip, port), timeout=1) as connection:
+            connection.settimeout(1)
+            connection.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
+            return connection.recv(32).startswith(b'HTTP/')
+    except OSError:
+        return False
+
+
 def oci_adguard_setup_available(vmid) -> bool:
     """Probe only this OCI application's setup endpoint, without caching it."""
     meta = _oci_instance_meta(vmid)
     if not meta or meta.get('template_id') != 'image-adguard-home':
         return False
-    try:
-        result = subprocess.run(['lxc-info', '-n', str(int(vmid)), '-iH'],
-                                capture_output=True, text=True, timeout=3, check=True)
-        ip = next(str(ipaddress.IPv4Address(value.strip()))
-                  for value in result.stdout.splitlines()
-                  if value.strip() and ipaddress.ip_address(value.strip()).version == 4)
-        with socket.create_connection((ip, 3000), timeout=1) as connection:
-            connection.settimeout(1)
-            connection.sendall(b'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
-            return connection.recv(32).startswith(b'HTTP/')
-    except (OSError, ValueError, StopIteration, subprocess.SubprocessError):
-        return False
+    ip = _guest_ipv4(vmid)
+    return bool(ip) and _answers_http(ip, 3000)
+
+
+def _follow_adguard_setup(vmid) -> None:
+    """AdGuard Home serves its interface on :80 and, until its first-run setup
+    is done, the setup on :3000, which then goes away. Its automatic
+    registration shows the same as the App tab: :80 always, and :3000 as
+    "Config" only while it still answers. A port the user added is left alone."""
+    if (_oci_instance_meta(vmid) or {}).get('template_id') != 'image-adguard-home':
+        return
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid) or {}
+        apps = [app for app in sidecar.get('apps', []) if app.get('installed_via') == 'oci_image']
+        has_setup = any(port.get('port') == 3000 for app in apps for port in app.get('ports', []))
+        lacks_ui = any(not any(port.get('port') == 80 for port in app.get('ports', [])) for app in apps)
+    if not has_setup and not lacks_ui:
+        return
+    setup_done = False
+    if has_setup:
+        ip = _guest_ipv4(vmid)
+        setup_done = bool(ip) and not _answers_http(ip, 3000) and _answers_http(ip, 80)
+    with _cache_lock:
+        sidecar = _read_sidecar(vmid) or {}
+        changed = False
+        for app in sidecar.get('apps', []):
+            if app.get('installed_via') != 'oci_image':
+                continue
+            ports = app.get('ports', [])
+            moved = list(ports)
+            if not any(port.get('port') == 80 for port in moved):
+                template = next((port for port in moved if port.get('port') == 3000), None)
+                if template is not None:
+                    moved.insert(0, dict(template, port=80, description=''))
+            if setup_done:
+                moved = [port for port in moved if port.get('port') != 3000]
+            else:
+                moved = [dict(port, description='Config') if port.get('port') == 3000
+                         and not port.get('description') else port for port in moved]
+            if moved != ports:
+                app['ports'] = moved
+                changed = True
+        if changed:
+            _write_sidecar(vmid, sidecar, copies=True)
 
 
 _OCI_REMOTE_DIR = "/usr/local/share/proxmenux/oci/engine/remote"
@@ -5968,14 +6406,22 @@ def _oci_repository(reference: str) -> str:
     return repository
 
 
-def _oci_resolve(module, reference: str, architecture: str) -> dict:
+def _oci_resolve(module, reference: str, architecture: str, known=None) -> dict:
     # One retry: an anonymous registry answers the occasional request with an
     # error that the next one does not repeat.
-    try:
+    def resolve():
+        # Older installed engines remain compatible; both paths use their
+        # native resolver. No separate registry client or verdict is added.
+        metadata = getattr(module, "resolve_candidate_metadata", None)
+        if known is not None and callable(metadata):
+            return metadata(reference, architecture, known)
         return module.resolve_candidate(reference, architecture)
+
+    try:
+        return resolve()
     except RuntimeError:
         time.sleep(2)
-        return module.resolve_candidate(reference, architecture)
+        return resolve()
 
 
 # What the panel shows, translated, when the registry of an image did not answer.
@@ -6009,12 +6455,10 @@ def _retry_oci_registry(vmid, app_id: str) -> None:
 def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = True) -> dict:
     """Installed and published version of a container ProxMenux installed.
 
-    Nothing is inferred. The installation record names the image and the
-    exact digest the container was created from; the registry says which
-    digest the same tag points at today. An update is available when those
-    two differ — the version strings only say which one it is, and they are
-    not compared, because a rebuild can keep its number and a build id such
-    as ``b1ee1dc8-ls55`` has no order to compare.
+    The installation record captures the image originally deployed, while
+    the registry supplies the image published under the reference today.
+    The native updater decides whether both describe the same image.
+    Version strings are only displayed because a rebuild can keep its version.
 
     The installed version is read by digest, which never changes, so a
     previous answer for the same digest is reused instead of asked again.
@@ -6058,24 +6502,42 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
         result["installed_version"] = _oci_guest_version(vmid, meta.get("template_id"))
     if not with_latest:
         return result
+    current_digest = result.get("installed_registry_digest") or installed_digest
+    cached_metadata = None
+    if (known.get("installed_digest") == installed_digest
+            and known.get("image_reference") == reference and known.get("latest_digest")
+            and (known["latest_digest"] == current_digest
+                 or isinstance(known.get("latest_layers"), list))):
+        # A previously different digest needs its layers for the updater's
+        # comparison; older Monitor caches did not store them.
+        cached_metadata = {"manifest_digest": known["latest_digest"],
+                           "version": known.get("latest_version"),
+                           "created": known.get("latest_image_created"),
+                           "layers": known.get("latest_layers"),
+                           "architecture": architecture}
     try:
-        latest = _oci_resolve(module, reference, architecture)
+        latest = _oci_resolve(module, reference, architecture, known=cached_metadata)
     except Exception:
         # A registry that does not answer says nothing new about the image:
         # what the last check found for this same image still stands.
         if known.get("installed_digest") == installed_digest and known.get("latest_digest"):
             result.update(latest_digest=known.get("latest_digest"), latest_version=known.get("latest_version"),
+                          latest_layers=known.get("latest_layers"),
                           latest_image_created=known.get("latest_image_created"),
                           update_available=known.get("update_available"), registry_retry=True)
             return result
         return {**result, "error": _OCI_REGISTRY_UNREACHABLE, "registry_retry": True}
     latest_digest = latest.get("manifest_digest")
-    # The image decides. An application whose version did not move can still
-    # have a new image — a rebuild on a patched base — and that is an update
-    # for a container whose application only changes when its image does.
-    replaced = bool(latest_digest) and latest_digest != (result.get("installed_registry_digest") or installed_digest)
+    if cached_metadata and latest_digest == cached_metadata["manifest_digest"] and "layers" not in latest:
+        # A fresh lookup confirmed the immutable platform digest. The
+        # metadata fast path omits layers, so reuse the matching saved list.
+        latest = {**latest, "layers": cached_metadata["layers"]}
+    replaced = bool(latest_digest) and latest_digest != current_digest
+    if replaced and meta.get("installed_image"):
+        replaced = not module.same_image(latest, meta["installed_image"])
     result.update(latest_digest=latest_digest, latest_version=latest.get("version"),
-                  latest_image_created=latest.get("created"), update_available=replaced)
+                  latest_layers=latest.get("layers"), latest_image_created=latest.get("created"),
+                  update_available=replaced)
     return result
 
 

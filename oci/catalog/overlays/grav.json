@@ -10,5 +10,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Grav is a Fast, Simple, and Flexible, file-based Web-platform."
+    },
+    "description": {
+      "en_US": "Grav is a fast, simple, and flexible file-based web platform and content management system. It operates without a traditional database, using flat files to manage and render website content. It is useful for publishing web pages, managing content, and building modern websites with minimal overhead."
+    }
   }
 }

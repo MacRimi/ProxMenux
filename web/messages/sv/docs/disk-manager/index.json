@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Proxmox diskhanterare: VM/LXC, SMART-test och radering | ProxMenux",
+    "description": "Hantera fysiska diskar på en Proxmox VE-värd med ProxMenux: anslut diskar till VM eller LXC (qm set scsi/sata/virtio, pct mp), importera img/qcow2/vmdk/raw-avbildningar, tilldela hela HBA:er eller NVMe-styrenheter, radera med säkerhetskontroller och kör SMART-självtester.",
+    "ogTitle": "Proxmox diskhanterare: VM/LXC, SMART-test och radering",
+    "ogDescription": "Anslut diskar till VM/LXC, importera avbildningar, använd PCI-passthrough för styrenheter, radera med säkerhetskontroller och kör SMART-test på Proxmox VE.",
+    "twitterTitle": "Proxmox diskhanterare | ProxMenux",
+    "twitterDescription": "Anslut diskar till VM/LXC, importera avbildningar, PCI-passthrough, radering med säkerhetskontroller och SMART-test."
+  },
+  "header": {
+    "title": "Diskhanteraren",
+    "description": "Menyn Diskhanterare samlar ProxMenux-verktyg för värdens fysiska diskar: anslutning till VM och LXC, import av diskavbildningar, passthrough av en hel styrenhet eller NVMe-enhet, radering med säkerhetskontroller och SMART-test.",
+    "section": "Diskhanteraren"
+  },
+  "intro": {
+    "title": "Vad denna meny är för",
+    "body": "Verktygen arbetar med <strong>fysiska diskar som värden ser och avbildningsfiler lagrade på den</strong>. Menyn har tre grupper: <strong>VM</strong> (anslut diskar eller importera avbildningar), <strong>LXC</strong> (anslut diskar till containrar) och <strong>Verktyg</strong> (formatering och SMART-status). Anslutning och radering döljer eller blockerar systemdiskar och använda diskar; SMART-kontroller kan granska dem utan att radera dem."
+  },
+  "opening": {
+    "heading": "Öppna menyn",
+    "body": "Från ProxMenux huvudmenyn väljer du <strong>Disk Manager</strong>. Du kommer att se detta:",
+    "imageAlt": "Disk Manager-menyn med VM, LXC och Utilities block"
+  },
+  "groups": {
+    "heading": "Tre verktygsgrupper",
+    "intro": "Disk Manager-menyn är organiserad i tre grupper - <strong>VM</strong>, <strong>LXC</strong> och <strong>Utilities</strong>. Klicka på ett kort för att hoppa direkt till verktygen i den gruppen.",
+    "vmTitle": "VM",
+    "vmBody": "Verktyg för befintliga virtuella maskiner. VM:n måste vara avstängd; ProxMenux kontrollerar detta innan konfigurationen ändras.",
+    "vmItems": [
+      "Importera disk till VM",
+      "Importera diskavbildning till virtuell dator",
+      "Lägg till styrenhet eller NVMe i en VM"
+    ],
+    "lxcTitle": "LXC",
+    "lxcBody": "Verktyg för befintliga LXC-containrar. Skriptet kräver en privilegierad container och erbjuder att ändra flaggan vid behov. Läs först informationen om konvertering och filägarskap på verktygets sida.",
+    "lxcItems": [
+      "Importera disk till LXC"
+    ],
+    "utilitiesTitle": "Verktyg",
+    "utilitiesBody": "Värdsida verktyg som fungerar på diskarna själva, oberoende av någon VM eller container.",
+    "utilitiesItems": [
+      "Formatera / radera fysisk disk",
+      "SMART-status och disktest"
+    ]
+  },
+  "vm": {
+    "heading": "VM",
+    "intro": "Verktyg för befintliga virtuella maskiner. VM:n måste vara avstängd; ProxMenux kontrollerar detta innan konfigurationen ändras.",
+    "options": [
+      {
+        "icon": "HardDrive",
+        "href": "/docs/disk-manager/import-disk-vm",
+        "title": "Importera disk till VM",
+        "description": "Bifoga en otilldelad fysisk disk till en befintlig VM. Stöder SATA / SCSI / VirtIO / IDE, använder ihållande /dev/disk/by-id vägar."
+      },
+      {
+        "icon": "FileDown",
+        "href": "/docs/disk-manager/import-disk-image-vm",
+        "title": "Importera diskavbildning till virtuell dator",
+        "description": "Importera diskavbildningar (.img / .qcow2 / .vmdk / .raw) till en befintlig VM. Två faser med qm importdisk i bakgrunden."
+      },
+      {
+        "icon": "Cpu",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "title": "Lägg till styrenhet eller NVMe i en VM",
+        "description": "PCI-passthrough av en hel SATA/SAS-HBA eller NVMe-enhet till en VM. Hanterar aktivering av IOMMU och konfliktkontroll."
+      }
+    ]
+  },
+  "lxc": {
+    "heading": "LXC",
+    "intro": "Verktyg för befintliga LXC-containrar. Skriptet kräver en privilegierad container och erbjuder att ändra flaggan vid behov. Läs först informationen om konvertering och filägarskap på verktygets sida.",
+    "options": [
+      {
+        "icon": "Boxes",
+        "href": "/docs/disk-manager/import-disk-lxc",
+        "title": "Importera disk till LXC",
+        "description": "Bifoga en otilldelad fysisk disk till en befintlig LXC-behållare som fästpunkt. Hantera filsystemdetektering / format och privilegierad omvandling."
+      }
+    ]
+  },
+  "utilities": {
+    "heading": "Verktyg",
+    "intro": "Värdsida verktyg som fungerar på diskarna själva, oberoende av någon VM eller container.",
+    "options": [
+      {
+        "icon": "Eraser",
+        "href": "/docs/disk-manager/format-disk",
+        "title": "Formatera eller radera fysisk disk (med säkerhetskontroller)",
+        "description": "Radera diskar med strikta säkerhetskontroller: bara helt lediga diskar visas och dubbel bekräftelse krävs alltid."
+      },
+      {
+        "icon": "Activity",
+        "href": "/docs/disk-manager/smart-disk-test",
+        "title": "SMART-status och disktest",
+        "description": "Kör SMART hälsokontroller och kort / långa självtester på SATA, SAS och NVMe-enheter. Exporterar JSON för monitorn."
+      }
+    ]
+  },
+  "safety": {
+    "title": "Säkerhetsregler för diskanslutning och radering",
+    "intro": "Anslutning och radering filtrerar bort enheter som kan skada värden:",
+    "items": [
+      "<strong>Systemdisken</strong>, rotpoolen, swap och aktiva ZFS/LVM/RAID-medlemmar döljs alltid.",
+      "Diskar som är <strong>monterade</strong> någonstans på värden döljs eller blockeras vid körningen.",
+      "Diskar som <strong>refereras av en körande VM eller LXC</strong> kan inte tilldelas om eller raderas.",
+      "Åtgärder som ändrar värdens tillstånd, exempelvis aktivering av IOMMU eller radering, kräver uttrycklig bekräftelse."
+    ]
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/storage-share",
+        "label": "Lagrings- och delningshanterare",
+        "tail": " - registrera lagring i Proxmox själv (NFS / Samba / iSCSI / lokal) och dela mappar mellan värd och CT."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Kommandon för lagring och diskar",
+        "tail": " - blockenheter, LVM, pvesm, SMART referens."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Kommandon för ZFS-hantering",
+        "tail": " — för ZFS pooler och datamängder."
+      },
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "tail": " - samma IOMMU / VFIO-koncept som tillämpas på GPU."
+      }
+    ]
+  }
+}

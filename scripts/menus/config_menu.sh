@@ -92,6 +92,50 @@ remove_registry_logins() {
     rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
 }
 
+# The copies of the app registrations the cluster keeps go with the Monitor.
+# /etc/pve is shared by the cluster, so the other nodes lose them too.
+remove_app_watch_copies() {
+    mountpoint -q /etc/pve || return 0
+    [[ -d /etc/pve/priv/proxmenux/apps ]] || return 0
+    pmx_record_execution "Remove the cluster copies of app registrations" "rm -rf /etc/pve/priv/proxmenux/apps"
+    rm -rf /etc/pve/priv/proxmenux/apps
+    rmdir /etc/pve/priv/proxmenux 2>/dev/null || true
+}
+
+remove_usbip_sharing() {
+    local manager="$BASE_DIR/scripts/devices/usbip_manager.py"
+    local config="/etc/proxmenux/usbip/config.json" id unit
+    if [[ -f "$manager" && -f "$config" ]] && command -v jq >/dev/null 2>&1; then
+        for id in $(jq -r '.imports[]?.id' "$config" 2>/dev/null); do
+            pmx_record_execution "Remove USB/IP client connection" "python3 $manager remove-import $id"
+            python3 "$manager" remove-import "$id" >/dev/null 2>&1 || true
+        done
+        pmx_record_execution "Disable USB/IP server" "python3 $manager server-disable"
+        python3 "$manager" server-disable >/dev/null 2>&1 || true
+    fi
+    for unit in /etc/systemd/system/proxmenux-usbip-*.service; do
+        [[ -f "$unit" ]] && grep -q '^# Managed by ProxMenux USB/IP' "$unit" || continue
+        systemctl disable --now "$(basename "$unit")" >/dev/null 2>&1 || true
+        pmx_remove_file "$unit"
+    done
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    # The transport account holds the authorized client keys. Remove it only
+    # when ProxMenux created it, so a reinstall does not revive old clients.
+    local home=/var/lib/proxmenux-usbip
+    if getent passwd proxmenux-usbip >/dev/null && [[ -f "$home/.proxmenux-owned" ]]; then
+        pkill -KILL -u proxmenux-usbip >/dev/null 2>&1 || true
+        pmx_record_execution "Remove USB/IP transport account" "userdel proxmenux-usbip"
+        userdel proxmenux-usbip >/dev/null 2>&1 || true
+        getent group proxmenux-usbip >/dev/null && groupdel proxmenux-usbip >/dev/null 2>&1
+        rm -rf "$home"
+    fi
+    if [[ -d /etc/proxmenux/usbip ]]; then
+        pmx_record_execution "Remove USB/IP configuration" "rm -rf /etc/proxmenux/usbip"
+        rm -rf /etc/proxmenux/usbip
+    fi
+    rmdir /etc/proxmenux 2>/dev/null || true
+}
+
 uninstall_proxmenux_monitor() {
 
     # 1. Stop service if it is running
@@ -103,6 +147,7 @@ uninstall_proxmenux_monitor() {
     fi
 
     remove_monitor_notification_target
+    remove_app_watch_copies
 
     # 2. Disable service if enabled
     if systemctl is-enabled --quiet "${MONITOR_SERVICE}"; then
@@ -436,6 +481,79 @@ toggle_monitor_service() {
     fi
 }
 
+MONITOR_SETUP_CODE_FILE="$BASE_DIR/monitor-setup-code"
+
+# How the Monitor is reached, as the Monitor reads its auth.json: undecided,
+# password, proxmox, read_only or open.
+monitor_access_mode() {
+    local auth_file="$MONITOR_CONFIG_DIR/auth.json"
+    [ -f "$auth_file" ] || { echo "undecided"; return; }
+    python3 - "$auth_file" <<'PY' 2>/dev/null || echo "undecided"
+import json, sys
+config = json.load(open(sys.argv[1]))
+if config.get("enabled"):
+    print("password")
+elif config.get("pve_auth"):
+    print("proxmox")
+elif config.get("access_mode") in ("read_only", "open"):
+    print(config["access_mode"])
+elif config.get("declined"):
+    print("open")
+else:
+    print("undecided")
+PY
+}
+
+# A one-time code: the Monitor asks for it before anyone can create its account
+# or choose how it is reached, so nobody else on the network can do it first.
+create_monitor_setup_code() {
+    local raw
+    raw=$(LC_ALL=C tr -dc 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' </dev/urandom 2>/dev/null | head -c 12)
+    [ ${#raw} -eq 12 ] || return 1
+    ( umask 077; printf '%s\n' "${raw:0:4}-${raw:4:4}-${raw:8:4}" > "$MONITOR_SETUP_CODE_FILE" ) || return 1
+    chmod 600 "$MONITOR_SETUP_CODE_FILE" 2>/dev/null || true
+}
+
+show_monitor_setup_code() {
+    local mode server_ip code
+    mode=$(monitor_access_mode)
+    case "$mode" in
+        password|proxmox)
+            dialog --clear --backtitle "$BACKTITLE" \
+                   --title "$(translate "Show Monitor Setup Code")" \
+                   --msgbox "\n$(translate "ProxMenux Monitor already has an account: no setup code is needed.")\n\n$(translate "To start again without an account, use:") $(translate "Reset ProxMenux Monitor Password")" 12 70
+            return
+            ;;
+        open)
+            dialog --clear --backtitle "$BACKTITLE" \
+                   --title "$(translate "Show Monitor Setup Code")" \
+                   --msgbox "\n$(translate "ProxMenux Monitor is open without a password: no setup code is needed to add one.")" 10 70
+            return
+            ;;
+    esac
+
+    if [ ! -s "$MONITOR_SETUP_CODE_FILE" ]; then
+        if ! dialog --clear --backtitle "$BACKTITLE" \
+                    --title "$(translate "Show Monitor Setup Code")" \
+                    --yesno "\n$(translate "There is no setup code. Do you want to create a new one?")" 9 70; then
+            return
+        fi
+        if ! create_monitor_setup_code; then
+            dialog --clear --backtitle "$BACKTITLE" \
+                   --title "$(translate "Show Monitor Setup Code")" \
+                   --msgbox "\n\n$(translate "Could not create the setup code.")" 9 60
+            return
+        fi
+    fi
+
+    code=$(head -n 1 "$MONITOR_SETUP_CODE_FILE")
+    server_ip=$(hostname -I | awk '{print $1}')
+    # whiptail, so the code can be selected and copied from the screen.
+    whiptail --backtitle "$BACKTITLE" \
+           --title "$(translate "Show Monitor Setup Code")" \
+           --msgbox "\n$(translate "Setup code:")  $code\n\n$(translate "Enter it in ProxMenux Monitor to create its account or choose how it is reached. It can be used once.")\n\nhttp://${server_ip:-<IP>}:8008" 14 74
+}
+
 reset_monitor_password() {
     # Recovery path for operators who lost the Monitor login credentials.
     # Wipes only the identity claims from auth.json (username / password /
@@ -493,15 +611,24 @@ reset_monitor_password() {
     msg_info "$(translate "Clearing login credentials...")"
     local tmp
     tmp=$(mktemp)
+    # The next account set up takes over the main administrator's uid, so
+    # its API tokens keep working (auth_manager.PREVIOUS_ADMIN).
     if jq '
-            .enabled       = false
+            .previous_admin = ((([.users[]? | select(.legacy == true)] + [.users[]? | select(.profile == "admin")])
+                                | map(select(.uid)) | first
+                                | if . then {uid: .uid, session_version: (.session_version // 0)} else null end)
+                               // .previous_admin)
+          | .enabled       = false
           | .configured    = false
           | .username      = ""
           | .password_hash = ""
           | .declined      = false
+          | del(.access_mode)
           | .totp_enabled  = false
           | .totp_secret   = null
           | .backup_codes  = []
+          | .users         = []
+          | .pve_auth      = false
         ' "$auth_file" > "$tmp" 2>/dev/null; then
         chmod 0600 "$tmp" 2>/dev/null || true
         mv "$tmp" "$auth_file"
@@ -523,6 +650,13 @@ reset_monitor_password() {
         msg_warn "$(translate "Could not restart the service — start it manually with systemctl start") $MONITOR_SERVICE"
     fi
 
+    # The next visit decides again: a new setup code keeps that decision to
+    # whoever reset it from this console.
+    local setup_code=""
+    if create_monitor_setup_code; then
+        setup_code=$(head -n 1 "$MONITOR_SETUP_CODE_FILE")
+    fi
+
     local server_ip
     server_ip=$(hostname -I | awk '{print $1}')
     echo ""
@@ -533,6 +667,9 @@ reset_monitor_password() {
         echo -e "${TAB}${BL}http://${server_ip}:8008${CL}"
     else
         msg_info2 "$(translate "Open the dashboard from this host on port 8008 to create a new admin account.")"
+    fi
+    if [ -n "$setup_code" ]; then
+        echo -e "${TAB}$(translate "Setup code:") ${YWB}${setup_code}${CL}"
     fi
     echo ""
     msg_success "$(translate "Press Enter to return to menu...")"
@@ -603,6 +740,10 @@ show_config_menu() {
             menu_options+=("$option_num" "$(translate "Reset ProxMenux Monitor Password")")
             option_actions[$option_num]="reset_monitor_password"
             ((option_num++))
+
+            menu_options+=("$option_num" "$(translate "Show Monitor Setup Code")")
+            option_actions[$option_num]="show_monitor_setup_code"
+            ((option_num++))
         fi
 
         menu_options+=("$option_num" "$(translate "Change Release Channel")")
@@ -653,6 +794,9 @@ show_config_menu() {
             "reset_monitor_password")
                 reset_monitor_password
                 ;;
+            "show_monitor_setup_code")
+                show_monitor_setup_code
+                ;;
             "change_release_channel")
                 change_release_channel
                 ;;
@@ -677,7 +821,7 @@ change_language() {
     local new_language
     new_language=$(dialog --clear --backtitle "$BACKTITLE" \
                           --title "$(translate "Change Language")" \
-                          --menu "$(translate "Select a new language for the menu:")" 22 60 8 \
+                          --menu "$(translate "Select a new language for the menu:")" 22 60 9 \
                           "en" "$(translate "English")" \
                           "de" "$(translate "German")" \
                           "es" "$(translate "Spanish")" \
@@ -685,7 +829,8 @@ change_language() {
                           "it" "$(translate "Italian")" \
                           "pt" "$(translate "Portuguese")" \
                           "sk" "Slovenčina" \
-                          "sv" "Svenska" 3>&1 1>&2 2>&3)
+                          "sv" "Svenska" \
+                          "ru" "Русский" 3>&1 1>&2 2>&3)
     
     if [ -z "$new_language" ]; then
         dialog --clear --backtitle "$BACKTITLE" \
@@ -747,7 +892,7 @@ show_version_info() {
             fi
             local translated_status=$(translate "$status")
             case "$status" in
-                "installed"|"already_installed"|"created"|"already_exists"|"upgraded"|"updated")
+                "installed"|"already_installed"|"installed_from_github"|"created"|"already_exists"|"upgraded"|"updated")
                     info_message+="✓ $component: $translated_status\n"
                     ;;
                 *)
@@ -789,6 +934,13 @@ show_version_info() {
 # ==========================================================
 uninstall_proxmenu() {
     local FUNC_VERSION="1.0"
+    # Pending native tasks outlive the console. Do not erase their operation
+    # journal or permit reinstall to forget a reservation.
+    if [[ -f "$BASE_DIR/scripts/lxc/plain_lxc.py" ]] && ! /usr/bin/python3 -I -B \
+        "$BASE_DIR/scripts/lxc/plain_lxc.py" --check-uninstall >/dev/null; then
+        dialog --msgbox "$(translate "Check pending plain LXC operations before uninstalling ProxMenux.")" 10 70
+        return 1
+    fi
     pmx_journal_context "uninstall_proxmenu" "$FUNC_VERSION"
     if ! dialog --clear --backtitle "$BACKTITLE" \
                 --title "Uninstall ProxMenux" \
@@ -805,8 +957,27 @@ uninstall_proxmenu() {
                            "jq" "JSON processor" OFF \
                            3>&1 1>&2 2>&3)
 
+    # Share the CLI's ephemeral lock, outside the tree being removed. Holding
+    # it through the whole uninstall closes the check/delete/new-admission race.
+    local plain_lxc_lock_fd=""
+    if [[ -f "$BASE_DIR/scripts/lxc/plain_lxc.py" ]]; then
+        install -d -m 0700 /run/proxmenux-plain-lxc || return 1
+        (umask 077; : >> /run/proxmenux-plain-lxc/controller.lock) || return 1
+        exec {plain_lxc_lock_fd}<> /run/proxmenux-plain-lxc/controller.lock || return 1
+        if ! flock -n "$plain_lxc_lock_fd"; then
+            exec {plain_lxc_lock_fd}>&-
+            dialog --msgbox "$(translate "Check pending plain LXC operations before uninstalling ProxMenux.")" 10 70
+            return 1
+        fi
+    fi
+
     # Perform uninstallation with progress bar
     (
+        if [[ -f "$BASE_DIR/scripts/lxc/plain_lxc.py" ]] && ! /usr/bin/python3 -I -B \
+            "$BASE_DIR/scripts/lxc/plain_lxc.py" --check-uninstall >/dev/null; then
+            echo "100" ; echo "$(translate "Plain LXC state needs review; uninstallation stopped.")"
+            exit 1
+        fi
         echo "10" ; echo "Removing ProxMenu files..."
         sleep 1
 
@@ -819,6 +990,7 @@ uninstall_proxmenu() {
         fi
 
         echo "50" ; echo "Removing ProxMenu files..."
+        remove_usbip_sharing
         pmx_remove_file "$INSTALL_DIR/$MENU_SCRIPT"
         pmx_remove_file "/usr/local/bin/proxmenux-console"
         pmx_record_execution "Remove ProxMenux application directory" "rm -rf $BASE_DIR"
@@ -855,6 +1027,9 @@ uninstall_proxmenu() {
         else
             pmx_edit_file /etc/motd '/This system is optimised by: ProxMenux/d'
         fi
+
+        # The change journal above writes under BASE_DIR again.
+        rm -rf "$BASE_DIR"
         
         echo "100" ; echo "Uninstallation complete!"
         sleep 1
@@ -862,6 +1037,13 @@ uninstall_proxmenu() {
     ) | dialog --clear --backtitle "$BACKTITLE" \
                --title "Uninstalling ProxMenux" \
                --gauge "Starting uninstallation..." 10 60 0
+
+    local uninstall_worker_status="${PIPESTATUS[0]}"
+    if [[ "$uninstall_worker_status" != 0 ]]; then
+        [[ -n "$plain_lxc_lock_fd" ]] && exec {plain_lxc_lock_fd}>&-
+        dialog --msgbox "$(translate "Uninstallation stopped. Review pending operations before trying again.")" 10 70
+        return 1
+    fi
     
     # Show completion message
     local final_message="ProxMenux has been uninstalled successfully.\n\n"

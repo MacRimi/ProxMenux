@@ -22,5 +22,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "SickGear"
+    },
+    "tagline": {
+      "en_US": "SickGear provides management of TV shows and/or Anime, it detects new episodes, links downloader apps, and more.."
+    },
+    "description": {
+      "en_US": "SickGear is a management application for TV shows and anime. It detects new episodes as they become available and integrates with downloader tools to automate content retrieval. The application helps users organize and maintain their television and anime libraries effortlessly."
+    }
   }
 }

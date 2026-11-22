@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "High-performance relay for the Nostr protocol, served over WebSocket."
+    },
+    "description": {
+      "en_US": "strfry is a high-performance relay for the Nostr protocol, serving client and relay connections over WebSocket. It stores all event data locally using an embedded LMDB database, removing the need for an external database server. The relay features durable writes, real-time event streaming across relays, and set reconciliation via the negentropy protocol for efficient synchronization."
+    }
+  }
+}

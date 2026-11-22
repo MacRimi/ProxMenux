@@ -1,0 +1,453 @@
+{
+  "schema_version": "0.4.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-authelia",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Authelia",
+      "es_ES": "Authelia"
+    },
+    "tagline": {
+      "en_US": "Single sign-on and multi-factor authentication",
+      "es_ES": "Inicio de sesión único y autenticación multifactor"
+    },
+    "description": {
+      "en_US": "An open-source authentication and authorization server for protecting web applications. This single-image profile provides a local SQLite database and file notifications; configure your domain, reverse proxy and access rules before protecting other services.",
+      "es_ES": "Servidor de autenticación y autorización de código abierto para proteger aplicaciones web. Este perfil de una sola imagen incluye una base de datos SQLite local y notificaciones en archivo; configura el dominio, el proxy inverso y las reglas de acceso antes de proteger otros servicios."
+    },
+    "category": "security",
+    "category_label": "Authentication & Security",
+    "author": "Authelia",
+    "developer": "Authelia",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/authelia.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 9091,
+      "path": "/"
+    },
+    "website": "https://www.authelia.com/",
+    "documentation": "https://www.authelia.com/integration/deployment/docker/",
+    "repository": "https://github.com/authelia/authelia",
+    "tips": [
+      "The installer creates a unique admin password and stores only its Argon2id hash in /config/users_database.yml. The password is shown in the installation result.",
+      "Authelia requires an HTTPS portal URL and a cookie domain matching that hostname. If you use Nginx Proxy Manager, follow the official integration guide and configure trusted proxies and forward-auth separately.",
+      "The default notifier writes messages to /config/notification.txt. Configure SMTP in /config/configuration.yml if you want email delivery.",
+      "The initial access-control policy is one_factor. Add explicit access-control rules before attaching Authelia to protected proxy hosts."
+    ],
+    "mini_changelog": [],
+    "display_version": "4.39.28",
+    "updated_at": "2026-09-17"
+  },
+  "source": {
+    "provider": "authelia",
+    "repository": "https://github.com/authelia/authelia",
+    "default_branch": "master",
+    "revision": "8da42b2348b0351c6284a2940a9c5eec3d4cd3fd",
+    "readme_raw_url": "https://raw.githubusercontent.com/authelia/authelia/v4.39.28/examples/compose/lite/compose.yml",
+    "readme_pushed_at": "2026-09-17T12:13:30Z",
+    "compose_sha256": "848ce0f70e502981a050ac200d9d1882978a6c3b0f9f0dfcc6d52ce66ca37fb5",
+    "generated_at": "2026-11-03T09:10:57+00:00",
+    "image_repository_url": "https://hub.docker.com/r/authelia/authelia"
+  },
+  "container_contract": {
+    "service_name": "authelia",
+    "container_name": "authelia",
+    "image": {
+      "reference": "docker.io/authelia/authelia:4.39.28",
+      "registry": "docker.io",
+      "repository": "docker.io/authelia/authelia",
+      "tag": "4.39.28",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "PROXMENUX_ADMIN_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "proxmenux-first-start"
+      },
+      {
+        "name": "AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "proxmenux-generated"
+      },
+      {
+        "name": "AUTHELIA_SESSION_SECRET",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "proxmenux-generated"
+      },
+      {
+        "name": "AUTHELIA_STORAGE_ENCRYPTION_KEY",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "proxmenux-generated"
+      },
+      {
+        "name": "X_AUTHELIA_CONFIG_FILTERS",
+        "example": "template",
+        "required": true,
+        "sensitive": false,
+        "source": "authelia-container"
+      },
+      {
+        "name": "PROXMENUX_AUTHELIA_COOKIE_DOMAIN",
+        "example": "",
+        "prompt": "Authelia session cookie domain for this portal (for example example.com)",
+        "required": true,
+        "sensitive": false,
+        "source": "administrator"
+      },
+      {
+        "name": "PROXMENUX_AUTHELIA_URL",
+        "example": "",
+        "prompt": "Public HTTPS URL used to open this Authelia portal (for example https://auth.example.com)",
+        "required": true,
+        "sensitive": false,
+        "source": "administrator"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "config",
+        "container_path": "/config",
+        "compose_source_example": "./authelia",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 9091,
+        "published_example": 9091,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "services:\n  authelia:\n    entrypoint:\n    - /bin/sh\n    - /usr/local/bin/proxmenux-authelia-bootstrap\n    environment:\n      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET: ${GENERATED_RESET_PASSWORD_JWT_SECRET}\n      AUTHELIA_SESSION_SECRET: ${GENERATED_SESSION_SECRET}\n      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${GENERATED_STORAGE_ENCRYPTION_KEY}\n      PROXMENUX_ADMIN_PASSWORD: ${GENERATED_ADMIN_PASSWORD}\n      PROXMENUX_AUTHELIA_COOKIE_DOMAIN: ${AUTHELIA_COOKIE_DOMAIN}\n      PROXMENUX_AUTHELIA_URL: ${AUTHELIA_URL}\n      X_AUTHELIA_CONFIG_FILTERS: template\n    image: docker.io/authelia/authelia:4.39.28\n    ports:\n    - 9091:9091\n    restart: unless-stopped\n    volumes:\n    - ./authelia:/config\n"
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Authelia Web UI",
+        "scheme": "http",
+        "port": 9091,
+        "path": "/",
+        "source": "official-image"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Authelia administrator",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "password_environment": "PROXMENUX_ADMIN_PASSWORD",
+        "change_required": false,
+        "source": "Generated on first start and stored as an Argon2id hash in the persistent users file."
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 512,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 60
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "runtime": {
+        "compose_entrypoint": [
+          "/bin/sh",
+          "/usr/local/bin/proxmenux-authelia-bootstrap"
+        ]
+      },
+      "generated_sensitive_environment": {
+        "PROXMENUX_ADMIN_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 24,
+          "prompt": false
+        },
+        "AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": false
+        },
+        "AUTHELIA_SESSION_SECRET": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": false
+        },
+        "AUTHELIA_STORAGE_ENCRYPTION_KEY": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": false
+        }
+      },
+      "minimum_secret_length": {
+        "PROXMENUX_ADMIN_PASSWORD": 24,
+        "AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET": 32,
+        "AUTHELIA_SESSION_SECRET": 32,
+        "AUTHELIA_STORAGE_ENCRYPTION_KEY": 32
+      },
+      "generated_files": [
+        {
+          "container_path": "/config/configuration.yml",
+          "mode": "0600",
+          "owner": "mapped-root",
+          "only_if_missing": true,
+          "content": "---\nserver:\n  address: 'tcp://:9091'\n\nlog:\n  level: 'info'\n\ntotp:\n  issuer: 'Authelia'\n\nidentity_validation:\n  reset_password:\n    jwt_secret: 'configured-by-environment'\n\nauthentication_backend:\n  file:\n    path: '/config/users_database.yml'\n    watch: true\n\naccess_control:\n  default_policy: 'one_factor'\n\nsession:\n  secret: 'configured-by-environment'\n  cookies:\n    - name: 'authelia_session'\n      domain: '{{ env \"PROXMENUX_AUTHELIA_COOKIE_DOMAIN\" }}'\n      authelia_url: '{{ env \"PROXMENUX_AUTHELIA_URL\" }}'\n      expiration: '1 hour'\n      inactivity: '5 minutes'\n\nstorage:\n  encryption_key: 'configured-by-environment'\n  local:\n    path: '/config/db.sqlite3'\n\nnotifier:\n  filesystem:\n    filename: '/config/notification.txt'\n"
+        },
+        {
+          "container_path": "/usr/local/bin/proxmenux-authelia-bootstrap",
+          "mode": "0700",
+          "owner": "mapped-root",
+          "only_if_missing": false,
+          "content": "#!/bin/sh\nset -eu\numask 077\n\nusers_file=/config/users_database.yml\nif [ ! -s \"$users_file\" ]; then\n  : \"${PROXMENUX_ADMIN_PASSWORD:?ProxMenux did not provide an initial administrator password}\"\n  mkdir -p /config\n  hash_output=$(authelia crypto hash generate argon2 --password \"$PROXMENUX_ADMIN_PASSWORD\" --no-confirm)\n  password_hash=$(printf '%s\\n' \"$hash_output\" | sed -n 's/^Digest: //p')\n  case \"$password_hash\" in\n    '$argon2id$'*) ;;\n    *) printf '%s\\n' 'Authelia did not return an Argon2id password hash' >&2; exit 1 ;;\n  esac\n  temporary_file=\"${users_file}.tmp.$$\"\n  cat >\"$temporary_file\" <<EOF\nusers:\n  admin:\n    disabled: false\n    displayname: 'Authelia Administrator'\n    password: \"$password_hash\"\n    groups:\n      - 'admins'\nEOF\n  chmod 0600 \"$temporary_file\"\n  mv -f \"$temporary_file\" \"$users_file\"\nfi\nunset PROXMENUX_ADMIN_PASSWORD\nexec /app/entrypoint.sh \"$@\"\n"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 9091,
+        "path": "/api/health",
+        "timeout_seconds": 240,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": true
+      }
+    },
+    "adaptations": [
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-environment-overlay",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "behavioral_impact": "None expected.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "stop-grace-period",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-shm-size",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-command",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "behavioral_impact": "None expected.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-process-runtime",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-healthcheck",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-cpu-priority",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-resource-limits",
+        "upstream_behavior": "mem_limit sets the memory ceiling; ulimits sets process soft/hard resource limits.",
+        "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
+        "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
+        "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-identity",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-network-mode",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-capabilities-and-sysctls",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "docker-engine-metadata",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-device-passthrough",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "id": "compose-host-ipc",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "validation": "not-requested-by-compose"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "stop_signal",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "A single-image profile for the Authelia authentication portal. ProxMenux creates a unique initial administrator account; the local notifier and SQLite storage are kept in /config. Reverse-proxy trust and explicit access-control rules remain administrator settings."
+  },
+  "validation": {
+    "schema": "pending-local-validation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

@@ -8,6 +8,18 @@
       "LXCFS is skipped only in the monitor CT so that the limited container RAM/CPU is not shown.",
       "Uses lxc.include with /etc/pve/proxmenux/host-monitor, which every node of the cluster shares; vzdump does not include it, so it must be copied when restoring outside the cluster.",
       "The CPU limit is applied as cpulimit, without hiding processors through affinity."
+    ],
+    "tagline": {
+      "en_US": "Glances is an open-source system cross-platform monitoring tool. It allows real-time monitoring of various aspects of your system such as CPU, memory, disk, network usage etc."
+    },
+    "description": {
+      "en_US": "Glances is an open-source system monitoring tool designed to monitor your host system and containers. It provides real-time system metrics through either a console interface or a web-based user interface. Additionally, it can export collected statistics to CSV or JSON files as well as time-series databases."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/nicolargo/glances/HEAD/docs/_static/glances-summary.png",
+      "https://raw.githubusercontent.com/nicolargo/glances/HEAD/docs/_static/glances-webui-with-alert.png",
+      "https://raw.githubusercontent.com/nicolargo/glances/HEAD/docs/_static/glances-client-server.png",
+      "https://raw.githubusercontent.com/nicolargo/glances/HEAD/docs/_static/screenshot-fetch.png"
     ]
   },
   "container_contract": {

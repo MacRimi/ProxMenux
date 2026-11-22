@@ -19,8 +19,16 @@
   "entryPoints": {
     "heading": "The two entry points",
     "rows": [
-      { "entry": "ProxMenux Scripts (TUI)", "path": "menu → Utilities → Host Config Backup", "detail": "Dialog-based flow, SSH-friendly. The main menu presents the six options directly. Uses <code>backup_menu</code> in <code>backup_host.sh</code>." },
-      { "entry": "ProxMenux Monitor (Web UI)", "path": "Backups tab → Create backup", "detail": "Wizard-style flow. Same six options presented as a two-step form (destination → profile). Same backend functions are invoked over the Flask API." }
+      {
+        "entry": "ProxMenux Scripts (TUI)",
+        "path": "menu → Host Backup & Restore → Backup host configuration",
+        "detail": "Dialog-based flow, SSH-friendly. The main menu entry opens Host Config Backup / Restore; Backup host configuration leads to the six options. Uses <code>backup_menu</code> in <code>backup_host.sh</code>."
+      },
+      {
+        "entry": "ProxMenux Monitor (Web UI)",
+        "path": "Backups tab → Create backup",
+        "detail": "Wizard-style flow. Same six options presented as a two-step form (destination → profile). Same backend functions are invoked over the Flask API."
+      }
     ]
   },
   "modes": {
@@ -34,18 +42,48 @@
     "heading": "The six-option matrix",
     "intro": "The choice determines both which backend runs and what path selection strategy is applied. Cross-reference the destination-specific pages for the configuration details of each cell.",
     "rows": [
-      { "combo": "1", "destination": "PBS", "profile": "Default", "action": "Uploads the default profile plus persistent extras to a configured PBS repository." },
-      { "combo": "2", "destination": "Borg", "profile": "Default", "action": "Creates an archive with the default profile plus persistent extras in the selected Borg repository." },
-      { "combo": "3", "destination": "Local", "profile": "Default", "action": "Writes a <code>.tar.zst</code> archive with the default profile plus persistent extras to the configured local target." },
-      { "combo": "4", "destination": "PBS", "profile": "Custom", "action": "Opens the path picker before the PBS upload; the user ticks paths and can add new ones." },
-      { "combo": "5", "destination": "Borg", "profile": "Custom", "action": "Opens the path picker before the Borg archive create." },
-      { "combo": "6", "destination": "Local", "profile": "Custom", "action": "Opens the path picker before writing the local <code>.tar.zst</code>." }
+      {
+        "combo": "1",
+        "destination": "PBS",
+        "profile": "Default",
+        "action": "Uploads the default profile plus persistent extras to a configured PBS repository."
+      },
+      {
+        "combo": "2",
+        "destination": "Borg",
+        "profile": "Default",
+        "action": "Creates an archive with the default profile plus persistent extras in the selected Borg repository."
+      },
+      {
+        "combo": "3",
+        "destination": "Local",
+        "profile": "Default",
+        "action": "Writes a <code>.tar.zst</code> archive with the default profile plus persistent extras to the configured local target."
+      },
+      {
+        "combo": "4",
+        "destination": "PBS",
+        "profile": "Custom",
+        "action": "Opens the path picker before the PBS upload; the user ticks paths and can add new ones."
+      },
+      {
+        "combo": "5",
+        "destination": "Borg",
+        "profile": "Custom",
+        "action": "Opens the path picker before the Borg archive create."
+      },
+      {
+        "combo": "6",
+        "destination": "Local",
+        "profile": "Custom",
+        "action": "Opens the path picker before writing the local <code>.tar.zst</code>."
+      }
     ]
   },
   "profiles": {
     "heading": "Default vs Custom profile",
     "defaultTitle": "Default profile",
-    "defaultBody": "The default profile is the curated list from <code>hb_default_profile_paths</code> (documented in <em>How it works</em> under <em>Path categories</em>) plus every entry in the persistent extras file <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. The user confirms the destination and encryption options and the backup proceeds without further path selection.",
+    "defaultBody": "The default profile is the curated list from <code>hb_default_profile_paths</code> (documented in <em>How it works</em> under <em>Path categories</em>) plus every entry in the persistent extras file <code>/usr/local/share/proxmenux/backup-extra-paths.txt</code>. The user picks the destination and encryption options and the backup proceeds without further path selection.",
     "customTitle": "Custom profile",
     "customBody": "The custom profile opens a checklist showing every path in the default profile (unchecked) and every persistent extra (pre-checked, prefixed with <code>[+]</code>). The user ticks the set for this run and can press <em>Add custom path</em> to append a new absolute path. Any path added inline is persisted to <code>backup-extra-paths.txt</code> so future backups pick it up automatically without re-adding it. Removing a persistent extra unticks it for this run but does not delete it from the file — deletion is a separate <em>Manage custom paths</em> action outside the backup flow.",
     "customPickerAlt": "Custom profile checklist showing the default-profile paths (unchecked) and persistent extras (pre-checked with a [+] prefix), plus buttons to add a new path or confirm the selection.",
@@ -57,23 +95,36 @@
     "heading": "What runs regardless of destination",
     "intro": "After the profile is resolved, every backend runs the same staging pipeline before diverging into its own upload path. <code>hb_prepare_staging</code> assembles the archive tree in <code>/tmp/proxmenux-DESTINATION-stage.XXXXXX</code> and populates each of the three payloads.",
     "steps": [
-      { "step": "1", "name": "rootfs assembly", "detail": "Runs <code>rsync -a</code> for each selected path into <code>staging_root/rootfs/</code>. The pmxcfs database at <code>/var/lib/pve-cluster/config.db</code> is captured separately via <code>sqlite3 .backup</code> to produce a consistent snapshot without stopping the cluster, and the <code>.db-wal</code> / <code>.db-shm</code> sidecars are excluded from the rsync; when <code>sqlite3</code> is not available a <code>config.db.raw-fallback</code> is dropped instead, and the restore promotes it on import. Volatile subpaths (bash history, caches, trash) are excluded from <code>/root/</code>. Paths absent from the source are recorded in <code>metadata/missing_paths.txt</code> without stopping the backup." },
-      { "step": "2", "name": "Manifest generation", "detail": "<code>build_manifest.sh</code> orchestrates the six collectors and writes <code>manifest.json</code> at the top of staging. On collector failure, the affected section falls back to a documented empty default; the manifest is still valid." },
-      { "step": "3", "name": "Package inventory", "detail": "<code>apt-mark showmanual</code> is captured verbatim into <code>metadata/packages.manual.list</code>. Component state is already inside the restored rootfs (<code>components_status.json</code>) because <code>/usr/local/share/proxmenux/</code> is part of the default profile." },
-      { "step": "4", "name": "Run info", "detail": "<code>metadata/run_info.env</code> records the backup run identity — hostname, timestamp, kernel version — used by the restore's compatibility check to determine the cross-kernel direction." },
-      { "step": "5", "name": "Notification (start)", "detail": "<code>hb_notify_lifecycle \"start\"</code> fires. If notifications are configured in the Monitor, an user-facing <em>Host backup started</em> event is emitted. Silent if no channels are configured." }
+      {
+        "step": "1",
+        "name": "rootfs assembly",
+        "detail": "Runs <code>rsync -a</code> for each selected path into <code>staging_root/rootfs/</code>. The pmxcfs database at <code>/var/lib/pve-cluster/config.db</code> is captured separately via <code>sqlite3 .backup</code> to produce a consistent snapshot without stopping the cluster, and the <code>.db-wal</code> / <code>.db-shm</code> sidecars are excluded from the rsync; when <code>sqlite3</code> is not available a <code>config.db.raw-fallback</code> is dropped instead, and the restore promotes it on import. Volatile subpaths (bash history, caches, trash) are excluded from <code>/root/</code>. Paths absent from the source are recorded in <code>metadata/missing_paths.txt</code> without stopping the backup."
+      },
+      {
+        "step": "2",
+        "name": "Manifest generation",
+        "detail": "<code>build_manifest.sh</code> orchestrates the six collectors and writes <code>manifest.json</code> at the top of staging. On collector failure, the affected section falls back to a documented empty default; the manifest is still valid."
+      },
+      {
+        "step": "3",
+        "name": "Package inventory",
+        "detail": "<code>apt-mark showmanual</code> is captured verbatim into <code>metadata/packages.manual.list</code>. Component state is already inside the restored rootfs (<code>components_status.json</code>) because <code>/usr/local/share/proxmenux/</code> is part of the default profile."
+      },
+      {
+        "step": "4",
+        "name": "Run info",
+        "detail": "<code>metadata/run_info.env</code> records the backup run identity — hostname, timestamp, kernel version — used by the restore's compatibility check to determine the cross-kernel direction."
+      },
+      {
+        "step": "5",
+        "name": "Notification (start)",
+        "detail": "<code>hb_notify_lifecycle \"start\"</code> fires. If notifications are configured in the Monitor, a user-facing <em>Host backup started</em> event is emitted. Silent if no channels are configured."
+      }
     ]
   },
   "included": {
     "heading": "What goes in and what stays out",
-    "intro": "Every path in the resolved profile (default + persistent extras + custom-mode selection) is copied with <code>rsync -aAXH --numeric-ids</code>. A shared exclusion list applies to every path, and two directories carry additional path-specific exclusions.",
-    "globalTitle": "Global exclusions (applied to every path)",
-    "globalItems": [
-      "<code>images/</code> — image dumps.",
-      "<code>dump/</code> — vzdump outputs.",
-      "<code>tmp/</code> — temporary files.",
-      "<code>*.log</code> — log files."
-    ],
+    "intro": "Every path in the resolved profile (default + persistent extras + custom-mode selection) is copied with <code>rsync -aAXH --numeric-ids</code>. There is no global exclusion list; a few directories carry path-specific exclusions.",
     "rootTitle": "<code>/root/</code> exclusions",
     "rootBody": "<code>/root/</code> is part of the default profile so user scripts and config land in the archive. Volatile subpaths are dropped:",
     "rootItems": [
@@ -102,24 +153,33 @@
       "<strong><code>/home/USER</code></strong> — not in the default profile. Add it as a custom path when a system carries user home directories that must survive a restore."
     ],
     "customPathsTitle": "How custom paths are handled",
-    "customPathsBody": "A custom path added inline in Custom mode or persisted in <code>backup-extra-paths.txt</code> goes through the same <code>rsync</code> pipeline as default-profile paths. Global exclusions apply. If the custom path happens to be under <code>/root/</code> or <code>/usr/local/share/proxmenux/</code>, the path-specific exclusions above still apply. Every archived path — default or custom — is recorded in <code>metadata/paths_archived.txt</code>. Paths that do not exist on the source are recorded in <code>metadata/missing_paths.txt</code> without stopping the backup."
+    "customPathsBody": "A custom path added inline in Custom mode or persisted in <code>backup-extra-paths.txt</code> goes through the same <code>rsync</code> pipeline as default-profile paths. If the custom path happens to be under <code>/root/</code> or <code>/usr/local/share/proxmenux/</code>, the path-specific exclusions above still apply. Every archived path — default or custom — is recorded in <code>metadata/selected_paths.txt</code>. Paths that do not exist on the source are recorded in <code>metadata/missing_paths.txt</code> without stopping the backup, and paths that fail to copy in <code>metadata/failed_paths.txt</code>."
   },
   "archiveStructure": {
     "heading": "Archive structure",
     "intro": "The staging directory produced by every backend follows the same layout regardless of destination. The tarball, PBS <code>.pxar</code> or Borg archive stores this tree verbatim.",
-    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── paths_archived.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
+    "tree": "backup-[timestamp]/\n├── manifest.json                  # structured host state (kernel_params, hardware, storage, guests, components, source_host)\n├── metadata/\n│   ├── packages.manual.list       # output of apt-mark showmanual\n│   ├── run_info.env               # hostname, timestamp, kernel version, pmxcfs method\n│   ├── selected_paths.txt         # exact list of paths that reached rootfs/\n│   └── missing_paths.txt          # paths from the profile absent on source\n└── rootfs/\n    ├── etc/                       # /etc/pve, /etc/network, /etc/systemd/network, /etc/ssh, /etc/apt, ...\n    ├── root/                      # /root without volatile subpaths\n    ├── usr/local/                 # /usr/local/bin, /usr/local/sbin, /usr/local/share/proxmenux (state only)\n    └── var/                       # /var/lib/pve-cluster (config.db via sqlite3 .backup), /var/spool/cron/crontabs"
   },
   "confirmation": {
     "heading": "Confirmation summary",
-    "body": "Before the backend writes anything to the destination, ProxMenux shows a summary dialog with the destination, backup ID or archive name, encryption state, and the list of paths being copied. Cancelling here aborts the backup cleanly — the staging directory is removed by the <code>trap</code> hook set on the backend function and no partial data reaches the destination."
+    "body": "Before the backend writes anything to the destination, ProxMenux prints a summary in the terminal with the destination, backup ID or archive name, encryption state, and the list of paths being copied. There is no confirm or cancel step at this point; the copy starts right after. If the backup fails or is interrupted, the staging directory is removed by the <code>trap</code> hook set on the backend function and no partial data reaches the destination."
   },
   "writing": {
     "heading": "Writing to the destination",
     "intro": "Once the user confirms, each backend runs its own write step. The mechanics are covered in the destination pages; the shared surface is the log, the sidecar and the completion notification.",
     "rows": [
-      { "topic": "Log file", "detail": "Every backend writes its full output to <code>/tmp/proxmenux-DESTINATION-backup-YYYYMMDD_HHMMSS.log</code> and, on failure, offers to open it in a scrollable dialog. The log path is printed in the completion summary only when the file has content." },
-      { "topic": "Sidecar (local only)", "detail": "<code>hb_write_archive_sidecar</code> drops a <code>*.proxmenux.json</code> next to the local archive so the Monitor identifies it as a ProxMenux host backup even after moves or renames." },
-      { "topic": "Notification (complete/fail)", "detail": "<code>hb_notify_lifecycle \"complete\"</code> or <code>\"fail\"</code> fires with duration, archive size and — for failures — the last error-looking line from the log." }
+      {
+        "topic": "Log file",
+        "detail": "Every backend writes its full output to <code>/tmp/proxmenux-DESTINATION-backup-YYYYMMDD_HHMMSS.log</code> and, on failure, offers to open it in a scrollable dialog. The log path is printed in the completion summary only when the file has content."
+      },
+      {
+        "topic": "Sidecar (local only)",
+        "detail": "<code>hb_write_archive_sidecar</code> drops a <code>*.proxmenux.json</code> next to the local archive so the Monitor identifies it as a ProxMenux host backup even after moves or renames."
+      },
+      {
+        "topic": "Notification (complete/fail)",
+        "detail": "<code>hb_notify_lifecycle \"complete\"</code> or <code>\"fail\"</code> fires with duration, archive size and — for failures — the last error-looking line from the log."
+      }
     ]
   },
   "finishedScreens": {
@@ -133,9 +193,21 @@
   "whereNext": {
     "heading": "Where to go next",
     "items": [
-      { "label": "Destinations", "href": "/docs/backup-restore/destinations", "tail": " — configuration details for Local, PBS and Borg." },
-      { "label": "Scheduled jobs", "href": "/docs/backup-restore/scheduled-jobs", "tail": " — running the same backup unattended on a schedule instead of interactively." },
-      { "label": "Restoring", "href": "/docs/backup-restore/restoring", "tail": " — the flow that consumes what this page produces." }
+      {
+        "label": "Destinations",
+        "href": "/docs/backup-restore/destinations",
+        "tail": " — configuration details for Local, PBS and Borg."
+      },
+      {
+        "label": "Scheduled jobs",
+        "href": "/docs/backup-restore/scheduled-jobs",
+        "tail": " — running the same backup unattended on a schedule instead of interactively."
+      },
+      {
+        "label": "Restoring",
+        "href": "/docs/backup-restore/restoring",
+        "tail": " — the flow that consumes what this page produces."
+      }
     ]
   }
 }

@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Automatically convert and optimize your media library with a plugin-based workflow."
+    },
+    "description": {
+      "en_US": "Unmanic is an automated file library optimizer and manager. It scans and monitors your library to convert files into uniform formats, move them based on timestamps, or run custom commands based on file size and extension. The built-in scheduler and file monitor automatically queue non-conforming or newly added files, while a web interface lets you track and manage tasks."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/Unmanic/unmanic/HEAD/docs/images/unmanic-dashboard-processing-anime.png",
+      "https://raw.githubusercontent.com/Unmanic/unmanic/HEAD/docs/images/unmanic-file-size-data-panel-anime.png",
+      "https://raw.githubusercontent.com/Unmanic/unmanic/HEAD/docs/images/unmanic-list-installed-plugins.png"
+    ]
+  }
+}

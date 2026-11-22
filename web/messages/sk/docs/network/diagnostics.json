@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Diagnostika | Dokumentácia ProxMenux",
+    "description": "Tri jednorazové diagnostické kontroly iba na čítanie: Zobraziť smerovaciu tabuľku, Test pripojenia a Pokročilá diagnostika. Iba kontrola — nikdy nezapisuje do /etc/network/interfaces ani nespúšťa príkazy meniace systém, s jedinou výslovnou výnimkou: úplné odstránenie zisteného NetworkManager vyžaduje váš súhlas.",
+    "ogTitle": "Diagnostika | Dokumentácia ProxMenux",
+    "ogDescription": "Sieťová diagnostika iba na čítanie pre hostiteľa Proxmoxu: smerovanie, dosiahnuteľnosť, pokročilé štatistiky."
+  },
+  "header": {
+    "title": "Diagnostika",
+    "description": "Tri jednorazové kontroly aktuálneho stavu siete iba na čítanie: smerovacia tabuľka, test pripojenia a pokročilé štatistiky. Žiadna nezapisuje do /etc/network/interfaces — bezpečné použitie kedykoľvek, aj cez SSH. Pre interaktívne sledovanie v reálnom čase pozrite Nástroje na sledovanie v reálnom čase.",
+    "section": "Sieť"
+  },
+  "intro": {
+    "title": "Čo to robí?",
+    "body": "Zobrazuje informácie o smerovaní, dosiahnuteľnosti a súhrnných štatistikách <strong>bez akýchkoľvek zmien</strong>. Overte ním správne fungovanie siete alebo odhaľte duplicitné IP adresy. Na nepretržité sledovanie prevádzky pozrite <monitoringLink>Nástroje na sledovanie v reálnom čase</monitoringLink>; na zobrazenie nespracovaného konfiguračného súboru pozrite <backupLink>Záloha a reštart rozhraní</backupLink>."
+  },
+  "routing": {
+    "heading": "Zobraziť smerovaciu tabuľku",
+    "body": "Zobrazí všetky trasy aktuálne používané jadrom (<code>ip route show</code>) a zvýrazní predvolenú bránu. Umožňuje overiť, že prevádzka do internetu odchádza očakávaným rozhraním a žiadne zvyšné trasy nemajú prednosť."
+  },
+  "connectivity": {
+    "heading": "Otestovať pripojenie",
+    "intro": "Postupne odošle na každý z troch cieľov dve sondy ICMP a vypíše výsledky. Potom spustí <code>nslookup google.com</code> na overenie prekladu DNS nezávisle od ICMP.",
+    "headerTest": "Skúška",
+    "headerTarget": "Cieľ",
+    "headerConfirms": "Čo potvrdzuje",
+    "rows": [
+      {
+        "test": "Google DNS",
+        "target": "8.8.8.8",
+        "confirms": "Externá dosiahnuteľnosť cez známu IP adresu anycast"
+      },
+      {
+        "test": "Cloudflare DNS",
+        "target": "1.1.1.1",
+        "confirms": "Nezávislé druhé stanovisko, ak Google blokuje ICMP"
+      },
+      {
+        "test": "Brána",
+        "target": "(štandardná trasa)",
+        "confirms": "L2 / L3 pripojenie k miestnemu routeru"
+      },
+      {
+        "test": "Preklad DNS",
+        "target": "google.com",
+        "confirms": "DNS server je dosiahnuteľný a odpovedá"
+      }
+    ],
+    "readingTitle": "Čítanie výsledku",
+    "readingBody": "Ak test brány prejde, ale verejné servery DNS neodpovedajú, máte lokálne pripojenie, no nemáte internet — skontrolujte pripojenie brány smerom k poskytovateľovi. Ak preklad DNS zlyhá, ale ping na <code>8.8.8.8</code> funguje, problém je v resolveri, nie v sieti: skontrolujte <code>/etc/resolv.conf</code>."
+  },
+  "advanced": {
+    "heading": "Pokročilá diagnostika",
+    "intro": "Zhromažďuje štatistiky celej siete a vykonáva sériu kontrol bežných problémov. Hlási počet aktívnych pripojení, načúvajúce porty a celkový počet rozhraní a výslovne upozorňuje na dve nevhodné konfigurácie:",
+    "items": [
+      "<strong>NetworkManager beží na hostiteľovi Proxmox.</strong> NetworkManager a <code>ifupdown</code> systému Proxmox sú v konflikte: oba sa pokúšajú spravovať rozhrania, takže mosty opakovane menia stav alebo sa nedajú aktivovať. Ak sa zistí NetworkManager, nástroj ponúkne interaktívne potvrdenie jeho zastavenia, zakázania a úplného odstránenia (ide o <em>jedinú</em> diagnostiku, ktorá môže meniť systém, a to iba po výslovnom súhlase).",
+      "<strong>Duplicitné IP adresy na rôznych rozhraniach.</strong> Dve rozhrania s rovnakou IPv4 adresou spôsobujú občasné výpadky pripojenia, ktoré sa zvnútra VM veľmi ťažko diagnostikujú. Zisťujú sa cez <code>ip -4 addr show | sort | uniq -d</code>."
+    ],
+    "nmTitle": "Výzva pre NetworkManager je tu jedinou akciou, ktorá môže meniť systém",
+    "nmBody": "Všetky ostatné kontroly pokročilej diagnostiky sú iba na čítanie. Odstránenie NetworkManager vyžaduje potvrdenie áno/nie a spustí <code>systemctl stop / disable</code> + <code>apt-get purge -y network-manager</code>. Ak odmietnete, nič sa nezmení."
+  },
+  "troubleshoot": {
+    "heading": "Riešenie problémov",
+    "gwTitle": "Test pripojenia hlási zlyhanie brány, ale hostiteľ má prístup na internet",
+    "gwBody": "Niektoré smerovače neodpovedajú na ICMP na internom rozhraní, aj keď správne preposielajú prevádzku. V konzole skúste <code>traceroute 8.8.8.8</code>: ak je druhým skokom váš poskytovateľ a test verejného DNS prešiel, brána funguje aj napriek neúspešnému pingu.",
+    "dupTitle": "Pokročilá diagnostika stále hlási duplicitné IP adresy aj po odstránení jednej z nich",
+    "dupBody": "Kontrola skúma aktuálny stav jadra, nie konfiguračný súbor. Overte ho príkazom <code>ip -4 addr show</code>; ak je duplicitná adresa stále prítomná, niektoré rozhranie ju stále používa. Pomocou <code>ip addr del &lt;IP&gt;/&lt;mask&gt; dev &lt;iface&gt;</code> ju odstráňte z aktuálneho stavu a potom upravte <code>/etc/network/interfaces</code>, ak je nastavená aj natrvalo."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Nástroje na sledovanie v reálnom čase",
+        "href": "/docs/network/monitoring",
+        "tail": " — Interaktívne iftop / iptraf-ng / iperf3 spúšťače."
+      },
+      {
+        "label": "Analýza mostov a oprava so sprievodcom",
+        "href": "/docs/network/bridge-analysis",
+        "tail": " — Keď vmbrX chýba fyzický port."
+      },
+      {
+        "label": "Analýza konfigurácie a čistenie so sprievodcom",
+        "href": "/docs/network/config-analysis",
+        "tail": " — keď je stará sieťová karta stále deklarovaná, ale už nie je prítomná."
+      },
+      {
+        "label": "Záloha a reštart rozhraní",
+        "href": "/docs/network/backup-restore",
+        "tail": " — na vytvorenie snímky konfigurácie pred každou zmenou."
+      }
+    ]
+  }
+}

@@ -11,8 +11,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    
+    # Native builds only: every AppImage payload (runtime, wheels, tools)
+    # must come from a runner of the target CPU.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86_64
+          - runner: ubuntu-22.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
@@ -75,6 +85,6 @@ jobs:
     - name: Upload AppImage artifact
       uses: actions/upload-artifact@v7
       with:
-        name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage
+        name: ProxMenux-${{ steps.version.outputs.VERSION }}-AppImage-${{ matrix.arch }}
         path: AppImage/dist/*.AppImage
         retention-days: 30

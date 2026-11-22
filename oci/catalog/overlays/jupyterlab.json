@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run JupyterLab from the official Jupyter Docker Stacks image. The image includes Python and the Jupyter server; notebook files persist in the work directory. ProxMenux generates an access token during installation and shows it when setup finishes."
+    },
+    "description": {
+      "en_US": "JupyterLab is a web-based user interface for interactive computing and data science. It enables users to create and execute code, work with notebooks, and manage computational workflows. The environment provides a flexible workspace for working with data, visualization tools, and scientific libraries."
+    },
+    "screenshots": [
+      "https://jupyter.org/assets/homepage/labpreview.png",
+      "https://jupyter.org/assets/homepage/labpreview.webp",
+      "https://jupyter.org/assets/homepage/voilapreview.png",
+      "https://jupyter.org/assets/homepage/voilapreview.webp"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Syncs watch history, ratings and watchlists between Plex, Jellyfin, Emby and trackers such as Trakt and SIMKL."
+    },
+    "description": {
+      "en_US": "CrossWatch tracks viewing activity and synchronizes watchlists, ratings, history, playback progress, and collections across media servers and tracking services. It supports server-to-server, server-to-tracker, and tracker-to-tracker syncing with customizable routes and schedules. The application includes tools to review changes interactively, fix incorrect metadata matches, and maintain a local snapshot archive."
+    },
+    "tips": [
+      "Connect the accounts you want to use as your first step.",
+      "Create a sync pair by choosing which services to connect and what to sync.",
+      "Use Interactive Sync if you want to review additions, updates, and removals before applying them."
+    ],
+    "screenshots": [
+      "https://github.com/user-attachments/assets/06355278-8cdc-4a13-95ae-89f924fd0975"
+    ]
+  }
+}

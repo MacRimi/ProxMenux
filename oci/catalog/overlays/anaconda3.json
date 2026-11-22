@@ -64,5 +64,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Your machine learning Env work with Jupyter Lab"
+    },
+    "description": {
+      "en_US": "Anaconda is an open data science platform powered by Python. It comes bundled with a large collection of packages for data science and machine learning. It also includes the conda dependency and environment manager, allowing users to organize environments and access packages across Python and R."
+    }
   }
 }

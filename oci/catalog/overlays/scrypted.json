@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage cameras and integrate video devices with Apple HomeKit, Google Home, Alexa and Home Assistant from one self-hosted platform."
+    },
+    "description": {
+      "en_US": "Scrypted is a high performance home video integration platform and network video recorder with smart detections. It enables low-latency video streaming to ecosystem platforms including Apple HomeKit, Google Home, and Alexa. The system works with most security cameras to bridge video feeds across smart home environments."
+    },
+    "screenshots": [
+      "https://github.com/koush/scrypted/assets/73924/57e1d556-cd3d-4448-81f9-a6c51b6513de"
+    ]
+  }
+}

@@ -149,7 +149,7 @@
   ],
   "iptablesTip": {
     "title": "iptables vs nftables",
-    "bodyRich": "Modern Debian / Proxmox uses <strong>nftables</strong> as the underlying firewall engine. The classic <code>iptables -L -n -v</code> command still works as a translation layer, but the source of truth is <code>nft list ruleset</code>. <code>pve-firewall</code> commands are Proxmox's wrapper that emits nftables rules from the cluster firewall config."
+    "bodyRich": "The classic <code>pve-firewall</code> service generates iptables rules. The alternative proxmox-firewall service uses <strong>nftables</strong>. Inspect the iptables-based backend with <code>iptables -L -n -v</code> and the nftables backend with <code>nft list ruleset</code>. Use the tools for the enabled backend; do not assume these listings are interchangeable."
   },
   "related": {
     "heading": "Related",

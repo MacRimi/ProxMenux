@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Store notes as Markdown files, search and tag them from a responsive web interface. Authentication is configured during installation."
+    },
+    "description": {
+      "en_US": "Flatnotes is a self-hosted note-taking web application that uses a flat folder of markdown files for storage without relying on a database. It provides a clean, distraction-free interface featuring raw and WYSIWYG editing modes, note tagging, and full-text search. Because notes are stored as standard markdown files, you can access and edit them with other applications at any time."
+    }
+  }
+}

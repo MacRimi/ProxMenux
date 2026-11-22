@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Forwards and caches DNS queries for the network through the upstream servers chosen."
+    },
+    "description": {
+      "en_US": "Dnsmasq is a lightweight DNS and DHCP server designed for local networks. It acts as a forwarding DNS resolver, routing queries to configured upstream servers while caching responses to speed up repeated lookups. It also provides local domain name resolution, custom DNS record management, and DHCP lease assignments."
+    }
+  }
+}

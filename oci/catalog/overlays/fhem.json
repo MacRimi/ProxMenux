@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A flexible home automation server with a browser interface and a large module ecosystem. This profile uses the upstream recommended minimal image and persists the FHEM configuration and data directory."
+    },
+    "description": {
+      "en_US": "FHEM is a flexible house automation system designed to automate everyday tasks in home environments. It coordinates and manages smart devices, sensors, and actuators through an extensive module ecosystem. Users can configure and monitor their setup using built-in web interface variants."
+    }
+  }
+}

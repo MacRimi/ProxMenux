@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import posixpath
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -40,8 +41,10 @@ SUPPORTED_SERVICE_KEYS = {
     "shm_size",
     "stdin_open",
     "stop_grace_period",
+    "stop_signal",
     "sysctls",
     "tty",
+    "tmpfs",
     "ulimits",
     "user",
     "volumes",
@@ -58,6 +61,18 @@ LINUX_CAPABILITIES = {
     "SYS_PACCT", "SYS_PTRACE", "SYS_RAWIO", "SYS_RESOURCE", "SYS_TIME",
     "SYS_TTY_CONFIG", "SYSLOG", "WAKE_ALARM",
 }
+
+# Linux signal names accepted by LXC. Keep independent of the review host OS.
+_STOP_SIGNALS = set("HUP INT QUIT ILL TRAP ABRT IOT BUS FPE KILL USR1 SEGV USR2 PIPE ALRM TERM STKFLT CHLD CLD CONT STOP TSTP TTIN TTOU URG XCPU XFSZ VTALRM PROF WINCH IO POLL PWR SYS UNUSED RTMIN RTMAX".split())
+
+def _stop_signal(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    name = value.strip().upper()
+    if name.startswith("SIG"):
+        name = name[3:]
+    return "SIG" + name if name in _STOP_SIGNALS else None
+
 
 SENSITIVE_NAME = re.compile(
     r"(?:PASS|PASSWORD|TOKEN|SECRET|API_?KEY|PRIVATE_KEY|CREDENTIAL|(?:^|_)KEY(?:$|_))",
@@ -174,6 +189,24 @@ def _split_short_mount(value: str) -> tuple[str | None, str, str | None]:
     return ":".join(parts[:-2]), parts[-2], parts[-1]
 
 
+# Host device nodes a Compose file may bind as a volume. They are passed to
+# the LXC as devices: a mount at that path would hide the device.
+DEVICE_NODE_BINDS = ("/dev/net/tun", "/dev/fuse", "/dev/kvm")
+
+
+def _device_bind(item: Any) -> str | None:
+    """The `source:target` of a volume that binds a host device node."""
+    if isinstance(item, dict):
+        if item.get("type", "bind") != "bind":
+            return None
+        source, target = item.get("source"), item.get("target")
+    else:
+        source, target, _ = _split_short_mount(str(item))
+    if str(source or "") in DEVICE_NODE_BINDS and str(target or "") == str(source):
+        return f"{source}:{target}"
+    return None
+
+
 def _mount_contract(value: Any, optional: set[str]) -> list[dict[str, Any]]:
     if value is None:
         return []
@@ -181,6 +214,12 @@ def _mount_contract(value: Any, optional: set[str]) -> list[dict[str, Any]]:
         raise ConversionError("volumes must be a list")
     result: list[dict[str, Any]] = []
     for index, item in enumerate(value):
+        if isinstance(item, dict) and item.get("type") == "tmpfs":
+            # Volatile mounts are represented by the native tmpfs profile,
+            # never by a managed disk or a host directory.
+            continue
+        if _device_bind(item):
+            continue
         if isinstance(item, dict):
             source = item.get("source")
             target = item.get("target")
@@ -395,6 +434,110 @@ def _shm_installer_profile(value: Any) -> dict[str, Any]:
     }
 
 
+def _compose_tmpfs_mounts(service: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """Translate the two Compose tmpfs syntaxes, or refuse an unsafe/lossy map.
+
+    Sizes use the existing native MiB contract (rounded up, like shm_size).
+    An omitted size is resolved to half the selected LXC RAM by the planner.
+    """
+    raw = service.get("tmpfs", [])
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list) or any(not isinstance(v, str) for v in raw):
+        return None
+    volumes = service.get("volumes") or []
+    if not isinstance(volumes, list):
+        return None
+    entries: list[tuple[str, dict[str, Any]]] = []
+    for value in raw:
+        target, separator, options = value.partition(":")
+        if separator and not options:
+            return None
+        parsed: dict[str, Any] = {}
+        for option in options.split(",") if separator else []:
+            key, equal, setting = option.partition("=")
+            if key in parsed or key not in {"size", "mode", "uid", "gid", "rw", "ro", "nosuid", "nodev", "noexec"}:
+                return None
+            if bool(equal) != (key in {"size", "mode", "uid", "gid"}):
+                return None
+            parsed[key] = setting if equal else True
+        entries.append((target, parsed))
+    for volume in volumes:
+        if not isinstance(volume, dict) or volume.get("type") != "tmpfs":
+            continue
+        if set(volume) - {"type", "target", "read_only", "tmpfs"}:
+            return None
+        options = volume.get("tmpfs", {})
+        if not isinstance(options, dict) or set(options) - {"size", "mode"}:
+            return None
+        if not isinstance(volume.get("read_only", False), bool):
+            return None
+        entries.append((volume.get("target"), {**options, "ro" if volume.get("read_only") else "rw": True}))
+    result: list[dict[str, Any]] = []
+    targets: list[str] = ["/dev/shm"] if service.get("shm_size") is not None else []
+    # These native adaptations add their own mounts after Compose parsing.
+    # Detect collisions now, before the installer allocates any resources.
+    if str(service.get('ipc') or '').casefold() == 'host' and not any(t == '/dev/shm' for t, _ in entries):
+        if '/dev/shm' not in targets:
+            targets.append('/dev/shm')
+    if str(service.get('image', '')).split('@', 1)[0].split(':', 1)[0] == 'lscr.io/linuxserver/libreoffice':
+        targets.append('/run/nginx')
+    persistent = []
+    for volume in volumes:
+        if isinstance(volume, dict):
+            if volume.get("type") == "tmpfs":
+                continue
+            target = volume.get("target")
+        elif isinstance(volume, str):
+            _, target, _ = _split_short_mount(volume)
+        else:
+            continue
+        if isinstance(target, str):
+            persistent.append(("/" + posixpath.normpath(target).lstrip("/")).rstrip("/"))
+    for target, options in entries:
+        if (not isinstance(target, str) or not re.fullmatch(r"/[A-Za-z0-9_./-]+", target)
+                or any(part in (".", "..", "") for part in target.split("/")[1:])
+                or not (target in {"/tmp", "/run", "/dev/shm"} or target.startswith(("/tmp/", "/run/", "/var/cache/")))):
+            return None
+        if any(target == other or target.startswith(other + "/") or other.startswith(target + "/")
+               for other in [*targets, *persistent]):
+            return None
+        if "rw" in options and "ro" in options:
+            return None
+        try:
+            size = _shm_size_mb(options["size"]) if "size" in options else 512
+        except (OverflowError, ValueError):
+            return None
+        if size is None:
+            return None
+        mode = options.get("mode", "1777")
+        if isinstance(mode, bool):
+            return None
+        if isinstance(mode, int):
+            if not 0 <= mode <= 0o7777:
+                return None
+            mode = "0" + format(mode, "03o")
+        elif isinstance(mode, str) and re.fullmatch(r"0?[0-7]{3,4}", mode):
+            mode = "0" + format(int(mode, 8), "03o")
+        else:
+            return None
+        ids: dict[str, int] = {}
+        for key in ("uid", "gid"):
+            value = options.get(key, 0)
+            if isinstance(value, bool) or not re.fullmatch(r"[0-9]{1,10}", str(value)) or int(value) > 4294967294:
+                return None
+            ids[key] = int(value)
+        result.append({
+            "id": f"compose-tmpfs-{len(result)}", "container_path": target,
+            "default_size_mb": size, "minimum_size_mb": 1, "prompt_size": False,
+            **({"size_from_memory": True} if "size" not in options else {}),
+            "mount_options": ["ro" if "ro" in options else "rw", "nosuid", "nodev", *(["noexec"] if "noexec" in options else [])],
+            "owner_strategy": "mapped-application-user", **ids, "mode": mode,
+        })
+        targets.append(target)
+    return result
+
+
 def _healthcheck_installer_profile(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict) or value.get("disable") is True:
         return {}
@@ -463,7 +606,7 @@ def _extra_hosts(value: Any) -> list[dict[str, str]] | None:
     for raw_host, raw_address in entries:
         host = str(raw_host).strip()
         address = str(raw_address).strip()
-        if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", host):
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,252}", host):
             return None
         if address != "host-gateway" and not re.fullmatch(r"[0-9A-Fa-f:.]+", address):
             return None
@@ -593,6 +736,10 @@ def _device_installer_profile(
 ) -> tuple[dict[str, Any], list[str]]:
     optional = optional or set()
     raw_devices = service.get("devices")
+    volumes = service.get("volumes")
+    device_binds = [bind for bind in map(_device_bind, volumes) if bind] if isinstance(volumes, list) else []
+    if device_binds and (raw_devices is None or isinstance(raw_devices, list)):
+        raw_devices = [*(raw_devices or []), *device_binds]
     requests: list[dict[str, Any]] = []
     blockers: list[str] = []
     nvidia_requested = _nvidia_requested(service)
@@ -839,6 +986,8 @@ def _compose_option_blockers(
     service: dict[str, Any], optional_devices: set[str] | None = None
 ) -> list[str]:
     blockers: list[str] = []
+    if _compose_tmpfs_mounts(service) is None:
+        blockers.append('tmpfs-format-options-or-overlap')
     if service.get('mem_limit') is not None:
         memory = _shm_size_mb(service['mem_limit'])
         if memory is None or memory < 16:
@@ -889,6 +1038,8 @@ def _compose_option_blockers(
         blockers.append("mac-address-format")
     _, device_blockers = _device_installer_profile(service, optional_devices)
     blockers.extend(device_blockers)
+    if "stop_signal" in service and _stop_signal(service["stop_signal"]) is None:
+        blockers.append("stop-signal-format")
     runtime = service.get("runtime")
     if runtime is not None and str(runtime).casefold() != "nvidia":
         blockers.append(f"runtime-value:{runtime}")
@@ -921,6 +1072,10 @@ def _compose_installer_profile(
     optional_security: set[str] | None = None,
 ) -> dict[str, Any]:
     profile = _shm_installer_profile(service.get("shm_size"))
+    volatile = _compose_tmpfs_mounts(service)
+    if volatile:
+        profile.setdefault("tmpfs_mounts", []).extend(volatile)
+        profile["non_persistent_image_volumes"] = [entry["container_path"] for entry in volatile]
     if str(service.get("image", "")).split("@", 1)[0].split(":", 1)[0] == "lscr.io/linuxserver/libreoffice":
         # LXC's volatile /run hides the directory shipped in the OCI rootfs.
         profile.setdefault("tmpfs_mounts", []).append({
@@ -949,6 +1104,10 @@ def _compose_installer_profile(
         profile.setdefault("runtime", {})["command"] = service["command"]
     if "entrypoint" in service and service["entrypoint"] is not None:
         profile.setdefault("runtime", {})["compose_entrypoint"] = service["entrypoint"]
+    if service.get("stop_signal") is not None:
+        halt_signal = _stop_signal(service["stop_signal"])
+        if halt_signal is not None:
+            profile.setdefault("runtime", {})["halt_signal"] = halt_signal
     if service.get("working_dir") is not None:
         profile.setdefault("runtime", {})["working_directory"] = str(service["working_dir"])
     if service.get("user") is not None:
@@ -972,8 +1131,9 @@ def _compose_installer_profile(
         ] = {"strategy": "token-hex", "bytes": 16, "prompt": False}
     device_profile, _ = _device_installer_profile(service, optional_devices)
     _merge_installer_profile(profile, device_profile)
-    if str(service.get("ipc") or "").casefold() == "host" and "tmpfs_mounts" not in profile:
-        profile["tmpfs_mounts"] = [
+    if str(service.get("ipc") or "").casefold() == "host" and not any(
+            mount['container_path'] == '/dev/shm' for mount in profile.get('tmpfs_mounts', [])):
+        profile.setdefault("tmpfs_mounts", []).extend([
             {
                 "id": "compose-ipc-shm",
                 "container_path": "/dev/shm",
@@ -982,7 +1142,7 @@ def _compose_installer_profile(
                 "size_prompt": "Shared memory size for the GPU workload in MB",
                 "mount_options": ["rw", "nosuid", "nodev"],
             }
-        ]
+        ])
     network_mode = _network_mode(service.get("network_mode"))
     if network_mode:
         profile.setdefault("network", {})["compose_mode"] = network_mode
@@ -1580,7 +1740,7 @@ def convert_readme(
                 "environment": "import-image-env-then-apply-compose-overrides",
                 "user": "import-from-oci-image",
                 "working_dir": "import-from-oci-image",
-                "stop_signal": "import-from-oci-image",
+                "stop_signal": "apply-compose-override" if service.get("stop_signal") is not None else "import-from-oci-image",
             },
             **(
                 {"installer_profile": _compose_installer_profile(service, markers["devices"], markers["security_opt"])}

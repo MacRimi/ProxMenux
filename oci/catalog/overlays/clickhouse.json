@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run a single ClickHouse server with a generated password, access management enabled and persistent database files."
+    },
+    "description": {
+      "en_US": "ClickHouse is an open-source column-oriented database management system. It is designed for fast data processing and analytical queries. Users utilize it to generate analytical reports from data in real time."
+    }
+  }
+}

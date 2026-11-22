@@ -1,5 +1,6 @@
 "use client"
 
+import { ProxMenuxMark } from "./proxmenux-mark"
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
@@ -12,13 +13,21 @@ import { getApiUrl } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
 import Image from "next/image"
+import { PveLogin } from "./pve-login"
+import { proxmoxProduct } from "../lib/use-platform"
 
 interface LoginProps {
   onLogin: () => void
+  // Proxmox accounts may sign in: alone, or next to the local account.
+  pveAuth?: boolean
+  localAccount?: boolean
+  // The Monitor runs on a Proxmox Backup Server: its accounts are those.
+  pbs?: boolean
 }
 
-export function Login({ onLogin }: LoginProps) {
+export function Login({ onLogin, pveAuth = false, localAccount = true, pbs = false }: LoginProps) {
   const t = useT()
+  const [method, setMethod] = useState<"local" | "pve">(localAccount ? "local" : "pve")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [totpCode, setTotpCode] = useState("")
@@ -27,6 +36,7 @@ export function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [oidc, setOidc] = useState<{ provider_name: string; login_url: string } | null>(null)
   const lastAutoSubmittedTotp = useRef("")
 
   useEffect(() => {
@@ -41,6 +51,10 @@ export function Login({ onLogin }: LoginProps) {
     // sees a blank/stuck dashboard.
     try {
       sessionStorage.removeItem("proxmenux-auth-401-handled")
+      if (sessionStorage.getItem("proxmenux-oidc-error")) {
+        setError(t("oidc.loginFailed"))
+        sessionStorage.removeItem("proxmenux-oidc-error")
+      }
     } catch {
       // private browsing — best-effort
     }
@@ -53,6 +67,10 @@ export function Login({ onLogin }: LoginProps) {
       setPassword(savedPassword)
       setRememberMe(true)
     }
+    fetch(getApiUrl("/api/auth/oidc/status"), { cache: "no-store" })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (data?.enabled) setOidc(data) })
+      .catch(() => {})
   }, [])
 
   const submitLogin = async (totpOverride?: string) => {
@@ -166,12 +184,26 @@ export function Login({ onLogin }: LoginProps) {
             </div>
           </div>
           <div>
-            <h1 className="text-3xl font-bold">{t("app.title")}</h1>
+            <h1 className="text-3xl font-bold" aria-label={t("app.title")}><ProxMenuxMark weight={700} /> Monitor</h1>
             <p className="text-muted-foreground mt-2">{t("login.subtitle")}</p>
           </div>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6 shadow-lg">
+          {pveAuth && localAccount && (
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1 mb-4">
+              {(["local", "pve"] as const).map(option => (
+                <button key={option} type="button" aria-pressed={method === option} onClick={() => { setMethod(option); setError("") }}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${method === option ? "bg-blue-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-background/60"}`}>
+                  {option === "local" ? t("pveLogin.localAccount") : t("pveLogin.tab", { product: proxmoxProduct(pbs) })}
+                </button>
+              ))}
+            </div>
+          )}
+          {pveAuth && method === "pve" ? <PveLogin onLogin={onLogin} pbs={pbs} /> : <>
+          {oidc && !requiresTotp && <Button asChild variant="outline" className="w-full mb-4">
+            <a href={oidc.login_url}>{t("oidc.login", { provider: oidc.provider_name })}</a>
+          </Button>}
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
@@ -256,21 +288,24 @@ export function Login({ onLogin }: LoginProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="totp-code" className="text-sm">
-                    {t("login.authenticationCode")}
-                  </Label>
-                  <Input
-                    id="totp-code"
-                    type="text"
-                    placeholder="000000"
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 9))}
-                    className="text-center text-lg tracking-widest font-mono text-base"
-                    maxLength={9}
-                    disabled={loading}
-                    autoComplete="one-time-code"
-                    autoFocus
-                  />
+                  {/* Password managers read the field's siblings and skip it when they mention a backup code. */}
+                  <div className="space-y-2">
+                    <Label htmlFor="totp-code" className="text-sm">
+                      {t("login.authenticationCode")}
+                    </Label>
+                    <Input
+                      id="totp-code"
+                      type="text"
+                      placeholder="000000"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 9))}
+                      className="text-center text-lg tracking-widest font-mono text-base"
+                      maxLength={9}
+                      disabled={loading}
+                      autoComplete="one-time-code"
+                      autoFocus
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground text-center">
                     {t("login.backupCodeHint")}
                   </p>
@@ -296,6 +331,7 @@ export function Login({ onLogin }: LoginProps) {
               {loading ? t("login.signingIn") : requiresTotp ? t("login.verifyCode") : t("login.signIn")}
             </Button>
           </form>
+          </>}
         </div>
 
         <p className="text-center text-sm text-muted-foreground">{`ProxMenux Monitor v${APP_VERSION}`}</p>

@@ -50,9 +50,12 @@ def before_update(vmid, storage):
     """A storage that cannot receive the file gets its own backup first."""
     if dump_dir(storage) is not None:
         return None
+    # Like transaction.run(), scope PVE's creation umask to this child only.
+    # PBS reads the temporary LXC config as the guest-mapped UID; inheriting
+    # a private caller umask (077) makes its traversal/config files unreadable.
     subprocess.run(['vzdump', str(vmid), '--storage', storage, '--mode', 'snapshot',
                     '--compress', 'zstd', '--notes-template', 'ProxMenux OCI: before the image update'],
-                   check=True)
+                   check=True, umask=0o022)
     return storage
 
 

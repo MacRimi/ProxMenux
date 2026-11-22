@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -33,7 +33,6 @@ export default async function BetaProgramPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.settings.betaProgram" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -144,7 +143,7 @@ export default async function BetaProgramPage({
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("manual.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("manual.intro")}</p>
-      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`# Check current channel (returns "beta" or "stable")
+      <pre className="rounded-md bg-gray-100 p-4 overflow-x-auto text-xs font-mono text-gray-800 leading-relaxed border border-gray-200">{`# Check current channel (returns "active" for beta, or "stable")
 jq -r '.beta_program.status // "stable"' /usr/local/share/proxmenux/config.json
 
 # Switch to Stable

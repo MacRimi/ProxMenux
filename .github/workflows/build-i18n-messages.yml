@@ -42,8 +42,8 @@ on:
         type: boolean
         default: false
       languages:
-        description: 'Comma-separated locales. Default: es,de,fr,it,pt,sk,sv (guardrail protects Vaso73 sk).'
-        default: 'es,de,fr,it,pt,sk,sv'
+        description: 'Comma-separated locales. Default: es,de,fr,it,pt,sk,sv,ru (guardrail protects Vaso73 sk).'
+        default: 'es,de,fr,it,pt,sk,sv,ru'
 
 # Prevent two runs from racing on the same branch and fighting over the
 # auto-commit. cancel-in-progress:false because a full first-run may take
@@ -94,7 +94,7 @@ jobs:
           # Keep this fallback in sync with the workflow_dispatch input
           # default above AND with DEFAULT_LANGUAGES in the Python script —
           # `push` triggers hit this branch (inputs are empty on push).
-          LANGS="${LANGS:-es,de,fr,it,pt,sk,sv}"
+          LANGS="${LANGS:-es,de,fr,it,pt,sk,sv,ru}"
           python .github/scripts/build_i18n_messages.py \
             --source AppImage/messages/en/common.json \
             --messages-dir AppImage/messages \

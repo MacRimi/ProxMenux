@@ -48,8 +48,25 @@ class HostProfileTests(unittest.TestCase):
     def test_an_amd_host_is_not_offered_nvidia(self, *_):
         amd = {"intel": [], "amd": [NODE], "nvidia": False}
         self.assertEqual(self.offered("frigate", amd, kfd=True)[0], ["none", "vaapi", "rocm"])
-        self.assertEqual(self.offered("ollama", amd, kfd=True)[0], ["cpu", "rocm"])
-        self.assertEqual(self.offered("llamacpp", amd, kfd=True)[0], ["cpu", "rocm"])
+        self.assertEqual(self.offered("ollama", amd, kfd=True)[0], ["cpu", "vulkan", "rocm"])
+        self.assertEqual(self.offered("llamacpp", amd, kfd=True)[0], ["cpu", "vulkan", "rocm"])
+
+    def test_a_radeon_780m_gets_rocm_as_experimental_with_its_generation(self, *_):
+        # gfx1103 is not among the kernels of the Ollama and llama.cpp ROCm
+        # images; it runs presented as gfx1100. Without its compute device,
+        # Vulkan still uses it.
+        amd = {"intel": [], "amd": [NODE], "nvidia": False, "amd_gfx_target": 110003}
+        for app in ("ollama", "llamacpp"):
+            with patch("proxmenux_oci.installer.confirm_experimental_rocm", return_value=True):
+                plan = self.offered(app, amd, kfd=True, answer="rocm")[2]
+            override = [item["value"] for item in plan["environment"] if item["name"] == "HSA_OVERRIDE_GFX_VERSION"]
+            self.assertEqual(override, ["11.0.0"], app)
+            if app == "ollama":
+                self.assertIn({"name": "OLLAMA_IGPU_ENABLE", "value": "1", "sensitive": False}, plan["environment"])
+            self.assertEqual(self.offered(app, amd, kfd=False)[0], ["cpu", "vulkan"], app)
+        # Ollama leaves an integrated GPU out unless it is told to use it.
+        plan = self.offered("ollama", amd, kfd=False, answer="vulkan")[2]
+        self.assertIn({"name": "OLLAMA_IGPU_ENABLE", "value": "1", "sensitive": False}, plan["environment"])
 
     def test_rocm_is_not_offered_without_its_compute_device(self, *_):
         amd = {"intel": [], "amd": [NODE], "nvidia": False}
@@ -58,7 +75,7 @@ class HostProfileTests(unittest.TestCase):
     def test_an_intel_and_nvidia_host_is_not_offered_amd(self, *_):
         both = {"intel": [NODE], "amd": [], "nvidia": True}
         self.assertEqual(self.offered("frigate", both)[0], ["none", "vaapi", "nvidia"])
-        self.assertEqual(self.offered("llamacpp", both)[0], ["cpu", "nvidia", "intel"])
+        self.assertEqual(self.offered("llamacpp", both)[0], ["cpu", "nvidia", "vulkan", "intel"])
 
     def test_a_host_without_gpu_is_told_and_not_asked(self, *_):
         nothing = {"intel": [], "amd": [], "nvidia": False}

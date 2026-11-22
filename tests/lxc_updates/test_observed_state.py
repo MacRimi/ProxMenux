@@ -114,7 +114,7 @@ class ObservedStateRoutesTests(unittest.TestCase):
             self.commands.append(command)
             if command[-2:] == ["cat", "/etc/os-release"]:
                 return SimpleNamespace(returncode=0, stdout=self.release, stderr="")
-            if command[-1] == "apt list --upgradable 2>/dev/null":
+            if command[-1] == "LC_ALL=C apt list --upgradable 2>/dev/null":
                 return SimpleNamespace(returncode=0, stdout="Listing...\n", stderr="")
             raise AssertionError(f"Unexpected guest command: {command}")
 

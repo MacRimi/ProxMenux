@@ -123,6 +123,16 @@ def ask_addresses(ui, bridge: str, labels: list[str], current: dict[str, str] | 
     return {label: str(interface) for label, interface in interfaces.items()}, gateway
 
 
+def ask_vlan_tag(ui, current: int | None = None) -> int | None:
+    """The VLAN of the access interface, None when it carries no tag."""
+    text = str(ui.ask(translate("VLAN tag (empty = none)"), str(current or ""), required=False) or "").strip()
+    if not text:
+        return None
+    if not re.fullmatch(r"[0-9]+", text) or not 1 <= int(text) <= 4094:
+        raise ValueError(translate("The VLAN tag must be a number from 1 to 4094"))
+    return int(text)
+
+
 def ask_ipv4(ui, bridge: str, current: str | None = None,
              current_gateway: str | None = None) -> tuple[str, str | None]:
     addresses, gateway = ask_addresses(ui, bridge, [""], {"": current} if current else None, current_gateway)

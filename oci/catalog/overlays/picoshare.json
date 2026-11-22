@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Upload files and share direct links through a small web interface. ProxMenux generates the required administrator passphrase and stores PicoShare data in a persistent volume."
+    },
+    "description": {
+      "en_US": "PicoShare is a minimalist web application for sharing files on the web without restrictions on file size or media format. It generates direct download links that allow recipients to view or download content without ads or accounts. Uploaded images, audio, and video files are preserved and shared directly without re-encoding or resizing."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/mtlynch/picoshare/master/docs/readme-assets/demo.gif"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Serves NTP time to the network from upstream servers, without adjusting the clock of the Proxmox host."
+    },
+    "description": {
+      "en_US": "Chrony is a versatile implementation of the Network Time Protocol (NTP). It operates as an NTP server that synchronizes time from upstream servers and provides accurate time to network clients. It tracks clock offset and frequency relative to estimated true time, allowing it to serve time across a network without requiring adjustments to the host system clock."
+    }
+  }
+}

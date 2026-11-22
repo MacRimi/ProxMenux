@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "title": "Vytvoriť VM: systém NAS | Dokumentácia ProxMenux",
+    "description": "Vytvárajte VM NAS v Proxmox VE pomocou ProxMenux: Synology DSM so zavádzačom, TrueNAS SCALE/CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS a FygoOS. Umbrel OS je dostupný cez komunitný skript.",
+    "ogTitle": "Vytvoriť VM: systém NAS | Dokumentácia ProxMenux",
+    "ogDescription": "Vytvárajte VM NAS v Proxmox VE pomocou ProxMenux: Synology DSM so zavádzačom, TrueNAS SCALE/CORE, OpenMediaVault, XigmaNAS, Rockstor, ZimaOS a FygoOS.",
+    "ogImageAlt": "ProxMenux Menu systému NAS"
+  },
+  "header": {
+    "title": "Vytvoriť VM: Systém NAS",
+    "description": "ProxMenux podporuje osem systémov NAS ako samostatné VM a voliteľnú inštaláciu Umbrel OS cez komunitný skript. Väčšina zdieľa automatický postup ISO; Synology DSM používa špecializovaného sprievodcu zavádzačom.",
+    "section": "Virtuálne stroje"
+  },
+  "intro": {
+    "title": "Ako funguje výber systému NAS",
+    "body": "Pri všeobecnom postupe ISO sa výber NAS pokúsi zistiť najnovšie stabilné vydanie na zrkadle projektu, podľa potreby použije náhradnú verziu, stiahne ISO a otvorí spoločné nastavenia CPU, RAM, diskov a siete. Synology DSM a ZimaOS majú samostatné inštalátory."
+  },
+  "image": {
+    "alt": "ProxMenux Systémový volič NAS",
+    "caption": "Systémový volič NAS"
+  },
+  "flowBadges": {
+    "loader": "Postup so zavádzačom",
+    "auto-iso": "Tok auto-ISO",
+    "dedicated": "Vyhradený skript"
+  },
+  "labels": {
+    "base": "Základ",
+    "fileSystem": "Súborový systém",
+    "viewDetails": "Zobraziť detaily"
+  },
+  "supported": {
+    "heading": "Podporované systémy NAS",
+    "cards": [
+      {
+        "name": "Synology DSM",
+        "tagline": "DiskStation Manager so zavádzačom ARC/RR. Pred prvým spustením treba nakonfigurovať zavádzač.",
+        "icon": "HardDrive",
+        "base": "Linux (vlastné)",
+        "fileSystem": "Btrfs, ext4",
+        "href": "/docs/create-vm/system-nas/synology",
+        "flow": "loader"
+      },
+      {
+        "name": "TrueNAS SCALE",
+        "tagline": "TrueNAS založený na Debiane s aplikáciami Docker v súčasných vydaniach a ZFS ako hlavným súborovým systémom. Staršie vydania SCALE používali Kubernetes.",
+        "icon": "Database",
+        "base": "Debian Linux",
+        "fileSystem": "ZFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#truenas-scale",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "TrueNAS CORE",
+        "tagline": "TrueNAS založený na FreeBSD so zameraním na úložisko ZFS. Jails a pluginy v CORE 13.3 sú zastarané a bez podpory.",
+        "icon": "Database",
+        "base": "FreeBSD",
+        "fileSystem": "ZFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#truenas-core",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "OpenMediaVault",
+        "tagline": "Ľahká NAS na báze Debianu s modulárnou architektúrou pluginu. Skvelé pre starší hardvér.",
+        "icon": "Server",
+        "base": "Debian Linux",
+        "fileSystem": "ext4, XFS, Btrfs",
+        "href": "/docs/create-vm/system-nas/system-nas-others#openmediavault",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "XigmaNAS",
+        "tagline": "NAS založený na FreeBSD, pôvodný nástupca FreeNAS so zameraním na ZFS a jednoduchosť.",
+        "icon": "Database",
+        "base": "FreeBSD",
+        "fileSystem": "ZFS, UFS",
+        "href": "/docs/create-vm/system-nas/system-nas-others#xigmanas",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "Rockstor",
+        "tagline": "NAS na báze openSUSE postavený okolo Btrfs. Rock-ons (Docker) rozširuje funkčnosť.",
+        "icon": "HardDrive",
+        "base": "openSUSE Leap",
+        "fileSystem": "Btrfs",
+        "href": "/docs/create-vm/system-nas/system-nas-others#rockstor",
+        "flow": "auto-iso"
+      },
+      {
+        "name": "ZimaOS",
+        "tagline": "Ľahké NAS OS zamerané na médiá, aplikácie Docker a domáce automatizácie. Používa svoj vlastný inštalátor.",
+        "icon": "MonitorIcon",
+        "base": "Buildroot (vznikol z CasaOS)",
+        "fileSystem": "ext4",
+        "href": "/docs/create-vm/system-nas/system-nas-others#zimaos",
+        "flow": "dedicated"
+      },
+      {
+        "name": "FygoOS",
+        "tagline": "Medzinárodná edícia fnOS: NAS založený na Debiane s úložnými zväzkami, aplikáciami a streamovaním médií, spravovaný cez webové rozhranie a aplikácie Fygo.",
+        "icon": "Server",
+        "base": "Debian Linux",
+        "fileSystem": "Btrfs, ext4",
+        "href": "/docs/create-vm/system-nas/system-nas-others#fygoos",
+        "flow": "auto-iso"
+      }
+    ]
+  },
+  "umbrel": {
+    "title": "Komunitná možnosť: Umbrel OS",
+    "bodyRich": "Deviata položka v ponuke NAS je <strong>Umbrel OS</strong>. Spúšťa <umbrelLink>inštalátor komunitných skriptov</umbrelLink> udržiavaný mimo ProxMenux, takže tu nie je zdokumentovaný. Inštalačný program spracuje celý životný cyklus a na konci vytlačí svoje predvolené poverenia."
+  },
+  "zfsMem": {
+    "title": "Pravidlo pamäte ZFS",
+    "bodyRich": "Pre základnú prevádzku TrueNAS prideľte aspoň <strong>8 GB RAM</strong>, pri náročnej záťaži viac. ZFS využíva RAM pre cache ARC, no pre všetky NAS so ZFS neplatí univerzálny výkonnostný prah 8 GB. Overte požiadavky distribúcie a pamäť dimenzujte podľa diskov, služieb a aplikácií; ľahké zostavy OMV alebo Rockstor môžu potrebovať menej."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/create-vm/system-nas/synology",
+        "label": "VM Synology",
+        "tail": " — samostatný inštalátor Synology DSM (Xpenology) na Proxmox."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Iné systémy NAS",
+        "tail": " — TrueNAS, OpenMediaVault, Rockstor, XigmaNAS, FygoOS a podobne."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — pripojiť fyzické disky k VM NAS; pre produkciu sa uprednostňujú pred virtuálnymi diskami."
+      },
+      {
+        "href": "/docs/help-info/zfs-commands",
+        "label": "Príkazy na správu ZFS",
+        "tail": " — užitočné, ak distribúcia NAS používa ZFS."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Prehľad vytvárania VM",
+        "tail": "."
+      }
+    ]
+  }
+}

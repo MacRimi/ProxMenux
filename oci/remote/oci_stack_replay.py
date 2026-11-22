@@ -10,6 +10,7 @@ import os
 import oci_console
 import oci_gpu_devices
 import oci_nested_mounts
+import oci_usb_passthrough
 from oci_ui import translate
 
 
@@ -78,7 +79,7 @@ def immich_record(record):
     cuda = capabilities is not None
     devices = [{'kind': 'nvidia-runtime', 'runtime_mode': 'dynamic'}] if cuda else []
     for item in projection['native_devices']:
-        fields = dict(p.split('=', 1) for p in item['value'].split(',') if '=' in p)
+        fields = oci_gpu_devices.device_fields(item['value'])
         path = fields.get('path')
         if cuda and path and path.startswith('/dev/nvidia'):
             continue
@@ -109,7 +110,7 @@ def immich_record(record):
         if native in runtime:
             translated[target] = runtime[native]
     result = portable_record(record, {'generated_files': projection['generated_files'], 'runtime': translated})
-    result['deployment']['devices'] = devices
+    result['deployment']['devices'] = devices + recorded_usb(record)
     if cuda:
         result['deployment']['environment'] = [e for e in result['deployment']['environment']
                                              if e['name'] != 'NVIDIA_DRIVER_CAPABILITIES']
@@ -255,7 +256,7 @@ def translated_devices(projection):
     Anything else has no translation and stops the update before it starts."""
     devices = []
     for item in projection['native_devices']:
-        fields = dict(part.split('=', 1) for part in item['value'].split(',') if '=' in part)
+        fields = oci_gpu_devices.device_fields(item['value'])
         path = fields.get('path')
         if not (oci_gpu_devices.gpu_path(path) or oci_gpu_devices.peripheral_path(path)):
             raise ValueError(translate('The stack contains devices or directives without a translation'))
@@ -263,8 +264,17 @@ def translated_devices(projection):
     return devices
 
 
+def recorded_usb(record):
+    """The USB devices a member passes by its identity: they are not devN
+    lines, so they come from its record, checked against the lines its
+    configuration has for them."""
+    devices = [device for device in record['deployment'].get('devices', []) if oci_usb_passthrough.recorded(device)]
+    oci_usb_passthrough.check(record.get('observed', {}).get('config', '').encode(), {'devices': devices})
+    return copy.deepcopy(devices)
+
+
 def with_devices(record, result):
-    result['deployment']['devices'] = translated_devices(normalize(record))
+    result['deployment']['devices'] = translated_devices(normalize(record)) + recorded_usb(record)
     return result
 
 
@@ -507,8 +517,11 @@ def normalize(record):
     names = set()
     def add_environment(value):
         name, equals, content = value.partition('=')
-        if not equals or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name) or name in names:
+        if not equals or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name):
             raise ValueError(translate('Ambiguous or invalid environment variable'))
+        # A variable set twice takes its last value, as it does in LXC.
+        if name in names:
+            environment[:] = [item for item in environment if item['name'] != name]
         names.add(name)
         environment.append({'name': name, 'value': content})
     for line in config.splitlines():
@@ -571,6 +584,8 @@ def normalize(record):
     for key, value in mount_lines:
         source = value.split(',', 1)[0]
         opts = options(value)
+        if opts.get('idmap'):
+            raise ValueError(translate('Mount ID mapping currently supports standalone OCI applications only'))
         target = opts.get('mp', '')
         if (not target.startswith('/') or target == '/' or '..' in Path(target).parts
                 or str(Path(target)) != target or any(target == other or target.startswith(other + '/')
@@ -625,6 +640,7 @@ def normalize(record):
                    and line.partition(': ')[0] not in ('lxc.environment.runtime', 'lxc.init.cwd',
                                                        'lxc.signal.halt', 'lxc.console.logfile')
                    and not oci_nested_mounts.own(line)
+                   and not oci_usb_passthrough.own(line)
                    and not oci_console.is_start_mark_hook(line)]
     return {'schema_version': 1, 'deployment': plan, 'runtime': runtime,
             'preserved_native': preserved, 'generated_files': copy.deepcopy(files),

@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Send and receive push notifications through simple HTTP requests, mobile apps and a web interface. The profile stores the message cache and enables authentication with anonymous access denied by default."
+    },
+    "description": {
+      "en_US": "ntfy is an HTTP-based publish-subscribe notification service. It allows you to send push notifications to phones and desktops from any computer or script using simple PUT or POST requests. It is useful for alerting, automation notifications, and real-time message delivery across connected devices."
+    },
+    "screenshots": [
+      "https://ntfy.sh/_next/static/media/screenshot-web-1.fa698e7f.png"
+    ]
+  }
+}

@@ -28,5 +28,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Ubooquity is a free, lightweight and easy-to-use home server for your comics and ebooks. Use it to access your files from anywhere, with a tablet, an e-reader, a phone or a computer."
+    },
+    "description": {
+      "en_US": "Ubooquity is a lightweight home server designed for comics and ebooks. It allows you to organize your reading collection and access your files remotely from anywhere. Readers can browse and read their digital media using a computer, tablet, phone, or e-reader."
+    },
+    "tips": [
+      "Set an administrator password upon first accessing the admin page."
+    ]
   }
 }

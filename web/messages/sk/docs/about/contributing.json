@@ -1,0 +1,293 @@
+{
+  "meta": {
+    "title": "Prispievanie k ProxMenux | ProxMenux Dokumentácia",
+    "description": "Ako prispieť do ProxMenux: model vetiev (main / develop / feature/*), postup pull requestu, hlavička skriptu s autorstvom a voliteľným odkazom na podporu, dvojfázové rozhranie, funkcie správ a cesta od vetvy funkcie po stabilné vydanie.",
+    "ogTitle": "Prispievanie k ProxMenux",
+    "ogDescription": "Model vetiev, pracovný postup, autorstvo v hlavičke a dvojfázové rozhranie, ktoré musia prispievatelia dodržiavať."
+  },
+  "header": {
+    "title": "Prispievanie k ProxMenux",
+    "description": "ProxMenux víta príspevky komunity: nové skripty, opravy existujúcich, vylepšenia dialógov, preklady aj integrácie. Táto stránka vysvetľuje štruktúru repozitára, model vetiev a postup pull requestu, hlavičku skriptu s autorstvom a voliteľným odkazom na podporu aj pravidlá návrhu pre každý príspevok.",
+    "section": "O projekte"
+  },
+  "twoPagesCallout": {
+    "title": "Dve súvisiace stránky, jeden projekt",
+    "body": "Nemýľte si túto stránku s <contributorsLink>Prispievateľmi</contributorsLink>: tá oslavuje ľudí, ktorí už prispievajú (testeri, recenzenti, vývojári). Táto stránka je pre <em>vás</em> – potenciálneho prispievateľa – a vysvetľuje, ako poslať PR, ktoré bude zlúčené."
+  },
+  "branching": {
+    "heading": "Model vetiev",
+    "intro": "ProxMenux používa trojstupňový vetviaci model:",
+    "headerBranch": "Vetva",
+    "headerPurpose": "Účel",
+    "rows": [
+      {
+        "branch": "main",
+        "purposeRich": "Stabilný kód pripravený na produkciu. Sem sa začleňujú iba zmeny pripravené na vydanie. Túto verziu dostanú používatelia pri bežnej inštalácii ProxMenux."
+      },
+      {
+        "branch": "develop",
+        "purposeRich": "Aktívna vývojová vetva. Všetky nové zmeny sa najskôr začleňujú sem; ide o kanál „beta“. Keď je stabilné vydanie pripravené, z tejto vetvy sa prenesie do <code>main</code>."
+      },
+      {
+        "branch": "feature/*",
+        "purposeRich": "Krátkodobé vetvy pre funkciu, opravu alebo vylepšenie. Vzniknú z <code>develop</code> a po kontrole sa cez pull request zlúčia späť do <code>develop</code>."
+      }
+    ],
+    "calloutTitle": "Čo to znamená pre užívateľov",
+    "calloutBody": "Používatelia vetvy <code>main</code> dostávajú otestované vydania. Kto chce nové funkcie skôr a znesie občasné nedostatky, môže sledovať <code>develop</code>. Nové funkcie vždy najprv prejdú cez <code>develop</code>; bez tohto cyklu sa do <code>main</code> nedostanú."
+  },
+  "workflow": {
+    "heading": "Postup pull requestu",
+    "intro": "Od nápadu po začlenenie do vydania v piatich krokoch:",
+    "step1Lead": "<strong>Vytvorte vetvu pre funkciu z <code>develop</code></strong>:",
+    "step1Code": "git clone https://github.com/MacRimi/ProxMenux.git\ncd ProxMenux\ngit checkout develop\ngit pull origin develop\ngit checkout -b feature/your-feature-name",
+    "step1Trail": "Použite výstižný názov vetvy: <code>feature/zfs-arc-tuning</code>, <code>feature/fix-iommu-detection</code>, <code>feature/add-tailscale-script</code>.",
+    "step2Lead": "<strong>Pracujte na svojich zmenách a posuňte vetvu:</strong>",
+    "step2Code": "# Make your changes, then:\ngit add scripts/...\ngit commit -m \"Add ZFS ARC tuning script\"\ngit push -u origin feature/your-feature-name",
+    "step3": "<strong>Otvorte pull request do <code>develop</code></strong>, nie do <code>main</code>. Na GitHube overte, že základná vetva je <code>develop</code>. Opíšte účel skriptu, jeho zmeny a verzie Proxmox VE, na ktorých ste ho testovali.",
+    "step4": "<strong>Po kontrole sa zmeny zlúčia do <code>develop</code>.</strong> Správca skontroluje kvalitu kódu, hlavičky a dvojfázové rozhranie. Ak vyžiada úpravy, odošlite ďalšie commity do rovnakej vetvy; PR sa aktualizuje automaticky.",
+    "step5": "<strong>Stabilné vydania sa prenášajú z <code>develop</code> do <code>main</code>.</strong> Pri vydaní sa <code>main</code> posunie na <code>develop</code> pomocou fast-forward a označí sa tagom. Váš príspevok sa stane súčasťou ďalšej stabilnej verzie."
+  },
+  "scriptHeader": {
+    "heading": "Hlavička skriptu: metadáta a popis",
+    "intro": "Každý skript ProxMenux začína dvoma susednými blokmi komentárov, ktoré tvoria hlavičku. <strong>Oba sú povinné</strong>: prezradia autora a účel bez potreby čítať samotný kód.",
+    "bullets": [
+      "<strong>Horný blok: metadáta.</strong> Autor, voliteľné odkazy na GitHub a podporu, správca, autorské práva, licencia, verzia a dátum aktualizácie. Tu prebieha aj <em>uznanie prispievateľov</em>: pri novom skripte uveďte svoje meno a voliteľne stránku GitHub a profil podpory, napríklad Ko-fi, GitHub Sponsors alebo Buy Me a Coffee.",
+      "<strong>Dolný blok: popis.</strong> Krátky odsek v jednoduchej angličtine vysvetľuje skript. Číta sa <em>pred</em> kódom a musí sám objasniť účel, hlavné akcie, dotknuté zdroje a predpoklady."
+    ],
+    "licenseCalloutTitle": "Licenčná linka je pevne stanovená GPL-3.0",
+    "licenseCalloutBody": "ProxMenux je vydaný pod <strong>GNU General Public License v3.0</strong>. Všetky skripty používajú rovnakú licenciu; riadok <code>License</code> v hlavičke musí obsahovať odkaz GPL-3.0 z príkladu nižšie. Nie je to voľba pre jednotlivý skript. Prispením súhlasíte s vydaním pod GPL-3.0: každý môže skript čítať, upraviť a ďalej šíriť vrátane zmien pri zachovaní rovnakej licencie. Úplné znenie: <licenseLink>MacRimi/ProxMenux/LICENSE</licenseLink>.",
+    "templateCode": "#!/bin/bash\n\n# ==========================================================\n# ProxMenux - A menu-driven script for Proxmox VE management\n# ==========================================================\n# Author      : Your Name\n# GitHub      : github.com/yourhandle\n# Sponsor     : ko-fi.com/yourhandle\n# Maintainer  : MacRimi\n# Copyright   : (c) 2026 MacRimi & contributors\n# License     : (GPL-3.0) (https://github.com/MacRimi/ProxMenux/blob/main/LICENSE)\n# Version     : 1.0\n# Last Updated: DD/MM/YYYY\n# ==========================================================\n# Description:\n# Short paragraph explaining what the script does.\n# Mention the main actions (e.g. \"creates a ZFS pool\",\n# \"configures IOMMU and reboots\", \"imports an ISO into a VM\"),\n# the resources it touches, and any prerequisites the user\n# should be aware of before running it.\n# ==========================================================",
+    "optionalNote": "Riadky <code>GitHub</code> a <code>Sponsor</code> sú voliteľné – vynechajte ich, ak ich nechcete zverejniť. Všetko ostatné sa vyžaduje.",
+    "whyCalloutTitle": "Prečo na tom záleží",
+    "whyCalloutBody": "Prispievanie do otvoreného softvéru je dobrovoľná práca. Meno a prípadný odkaz na podporu priamo v zdrojovom kóde zviditeľňujú autorstvo pri každom čítaní; nestratí sa za názvom projektu. Popis má iný význam: je prvou vecou, ktorú číta budúci správca alebo zvedavý používateľ. Jasný popis často rozhoduje, či skriptu dôverujú alebo sa mu vyhnú."
+  },
+  "structure": {
+    "heading": "Štruktúra projektu",
+    "intro": "Kde sa v repozitári nachádzajú jednotlivé druhy skriptov:",
+    "treeCode": "scripts/\n├── menus/              # Top-level menu scripts (entry points)\n├── storage/            # Disk, storage and passthrough scripts\n├── share/              # NFS, Samba, local share scripts\n├── vm/                 # VM creation and configuration scripts\n├── gpu_tpu/            # GPU / TPU passthrough scripts\n├── post_install/       # Post-install automation scripts\n├── backup_restore/     # Backup and restore scripts\n├── utilities/          # System utility scripts\n├── global/             # Shared helper libraries (sourced by other scripts)\n├── utils.sh            # Shared utility functions and message helpers\n└── help_info_menu.sh   # Interactive help and command reference",
+    "outro": "Každý skript pri štarte načíta <code>utils.sh</code> pomocou source, aby získal funkcie správ, indikátor priebehu, farby a prekladový systém. Zdieľané pomocné knižnice v <code>scripts/global/</code> výslovne načítavajú skripty, ktoré ich potrebujú."
+  },
+  "twoPhase": {
+    "heading": "Dvojfázová politika návrhu UI",
+    "intro": "Ide o najdôležitejšie pravidlo ProxMenux a najčastejší dôvod požiadaviek na úpravu PR. Každý skript je rozdelený na <strong>presne dve fázy</strong>:",
+    "headerPhase": "Fáza",
+    "headerPurpose": "Účel",
+    "headerScreen": "Stav obrazovky",
+    "rows": [
+      {
+        "phaseRich": "<strong>Fáza 1: výber</strong>",
+        "purposeRich": "Zbierajte každé rozhodnutie užívateľa. Spustite všetky potrebné prípravné práce (sondy, skeny, kontroly).",
+        "screenRich": "Prekrytia <code>dialog</code>. Ak kontrola medzi ponukami trvá viac ako sekundu či dve, zobrazte indikátor <code>msg_info</code>, aby používateľ vedel, že skript nezamrzol. Tesne pred ďalším dialógom zavolajte <code>stop_spinner</code>."
+      },
+      {
+        "phaseRich": "<strong>Fáza 2: vykonanie</strong>",
+        "purposeRich": "Vykonajte všetky operácie. Na obrazovke postupne zobrazujte úplnú históriu priebehu.",
+        "screenRich": "Viditeľné hlásenia <code>msg_info</code> / <code>msg_ok</code>; nikdy nie <code>dialog</code>."
+      }
+    ],
+    "principle": "Zásada: <strong>najprv zhromaždiť všetky voľby, potom všetko vykonať</strong>. Používateľ najprv pracuje s prehľadným dialógovým menu (fáza 1) a potom sleduje vykonávanie vo forme záznamu (fáza 2). Fázy sa nemiešajú: počas vykonávania sa neotvárajú dialógy a počas výberu sa nevypisuje priebeh.",
+    "phase1Heading": "Fáza 1: typický vzor",
+    "phase1Code": "# Silent preparatory work between dialogs\nmsg_info \"$(translate \"Checking disk assignments...\")\"\nASSIGNED_TO=$(check_assignments \"$DISK\")\nstop_spinner   # ← clears line silently, result saved in variable\n\n# Next dialog can now use ASSIGNED_TO\nif [ -n \"$ASSIGNED_TO\" ]; then\n    dialog --yesno \"$(translate \"Disk already assigned. Continue?\")\" $UI_YESNO_H $UI_YESNO_W\nfi\n\n# Collect multiple decisions per item with parallel arrays\ndeclare -a DISK_LIST=()\ndeclare -a DISK_FORMAT_TYPES=()\ndeclare -a DISK_MOUNT_POINTS=()\nfor DISK in $SELECTED; do\n    msg_info \"$(translate \"Analyzing disk...\")\"\n    CURRENT_FS=$(lsblk -no FSTYPE \"$DISK\" | xargs)\n    stop_spinner\n\n    FORMAT=$(dialog --backtitle \"$BACKTITLE\" \\\n        --title \"$(translate \"Select Filesystem\")\" \\\n        --menu \"...\" $UI_SHORT_MENU_H $UI_SHORT_MENU_W $UI_SHORT_MENU_LIST_H \\\n        \"ext4\" \"...\" \"xfs\" \"...\" \"btrfs\" \"...\" \\\n        2>&1 >/dev/tty)\n    [ -z \"$FORMAT\" ] && continue\n\n    DISK_LIST+=(\"$DISK\")\n    DISK_FORMAT_TYPES+=(\"$FORMAT\")\ndone",
+    "phase1RulesIntro": "<strong>Pravidlá pre fázu 1:</strong>",
+    "phase1Rules": [
+      "Ak beží indikátor <code>msg_info</code> a potrebujete otvoriť ponuku <code>dialog</code> alebo <code>whiptail</code>, najprv zavolajte <code>stop_spinner</code>. Indikátor nemôže bežať súčasne s prekrytím týchto nástrojov. Ak indikátor nebeží, volanie nie je potrebné.",
+      "Použite <code>show_proxmenux_logo</code> + <code>msg_title</code> + <code>msg_info</code> na vizuálny kontext dlhej operácie vo fáze 1, napríklad kontroly trvajúcej päť sekúnd či viac. Funkcia už vyčistí obrazovku, preto pred ňou nevolajte <code>clear</code>.",
+      "Nevolajte <code>show_proxmenux_logo</code> medzi dialógovými menumi, kde nie je čo zobraziť, a vyčistenie obrazovky prázdneho terminálu je len vizuálny hluk.",
+      "Uložte všetky rozhodnutia a výsledky sondy v premenných alebo paralelných poliach. Viditeľné zhrnutie sa uskutoční na začiatku fázy 2, nie vo fáze 1."
+    ],
+    "phase2Heading": "Fáza 2: typický vzor",
+    "phase2Code": "# ── PHASE 2 — EXECUTION ─────────────────────────────\nshow_proxmenux_logo\nmsg_title \"$(translate \"My Script Title\")\"\n\n# Recap Phase 1 preparatory results — show what was already done\nmsg_ok \"$(translate \"CT $CTID selected.\")\"\nmsg_ok \"$(translate \"Repositories verified.\")\"\nmsg_ok \"$(translate \"Disks to process: ${#DISK_LIST[@]}\")\"\n\n# Now execute operations\nfor i in \"${!DISK_LIST[@]}\"; do\n    DISK=\"${DISK_LIST[$i]}\"\n    FORMAT=\"${DISK_FORMAT_TYPES[$i]}\"\n\n    msg_info \"$(translate \"Formatting\") $DISK $(translate \"as\") $FORMAT...\"\n    mkfs.\"$FORMAT\" \"$DISK\" >/dev/null 2>&1\n    msg_ok \"$(translate \"Formatted.\")\"\ndone\n\nmsg_ok \"$(translate \"Completed. ${#DISK_LIST[@]} disk(s) processed.\")\"\nmsg_success \"$(translate \"Press Enter to return to menu...\")\"\nread -r",
+    "phase2Rules": "<strong>Pravidlá fázy 2:</strong> začnite s <code>show_proxmenux_logo + msg_title</code> a hneď zhrňte výsledky fázy 1 riadkami <code>msg_ok</code>. Už nevolajte <code>show_proxmenux_logo</code>, pretože by vymazalo nahromadený priebeh. Nevolajte <code>dialog</code>; pri nevyhnutnom rozhodnutí za behu použite <code>whiptail</code> podľa nasledujúcej časti."
+  },
+  "dialogVsWhiptail": {
+    "headingRich": "Kedy používať <code>dialog</code> vs <code>whiptail</code>",
+    "intro": "Oba nástroje vykresľujú textové používateľské rozhranie, ale na obrazovke sa správajú odlišne. ProxMenux ich preto používa v dvoch samostatných fázach.",
+    "headerTool": "Nástroj",
+    "headerWhen": "Kedy ju použiť",
+    "headerEffect": "Účinok na obrazovku",
+    "rows": [
+      {
+        "toolRich": "<strong><code>dialog</code></strong>",
+        "whenRich": "<strong>Vždy vo fáze 1.</strong> Každý interaktívny výber, napríklad VM, disk, súborový systém alebo potvrdenie akcie, používa <code>dialog</code>. Ide o predvolený nástroj rozhrania ProxMenux.",
+        "effectRich": "Preberá terminál: vyčistí obrazovku, kreslí jej prekrývanie a pri zatvorení vráti terminál do svojho predchádzajúceho stavu. Fáza 1, pretože zatiaľ nič užitočné neukazuje."
+      },
+      {
+        "toolRich": "<strong><code>whiptail</code></strong>",
+        "whenRich": "<strong>Iba vo fáze 2, iba ak je to nevyhnutné.</strong> Typickým prípadom je výzva na reštartovanie na konci vykonávania. Nesiahajte po <code>whiptail</code>, aby ste sa spýtali „pokračovať?“ uprostred vykonávania — toto rozhodnutie malo byť urobené vo fáze 1.",
+        "effectRich": "Ľahšie prekrytie, ktoré <em>nevymaže</em> kontext terminálu. Nahromadená história <code>msg_ok</code>/<code>msg_info</code> z fázy 2 zostane viditeľná za dialógom. Preto je vhodné, keď už obrazovka zobrazuje priebeh."
+      }
+    ],
+    "calloutTitle": "Prečo je rozdelenie dôležité",
+    "calloutBody": "Ak zavoláte <code>dialog</code> uprostred fázy 2, zmiznú všetky riadky <code>msg_ok</code>, ktoré používateľ dovtedy sledoval. Vymažete tým viditeľný záznam vykonaných krokov. <code>whiptail</code> tomu zabráni. Pravidlo teda nie je svojvoľné: zachováva používateľovi prehľad o tom, čo skript doteraz urobil.",
+    "rebootHeading": "Výzva na reštart: typické použitie whiptail vo fáze 2",
+    "rebootIntro": "Ak môže byť po skončení skriptu potrebný reštart, napríklad po zapnutí IOMMU alebo zmene parametrov jadra, výzva na konci fázy 2 používa <code>whiptail</code>. Vždy pridajte vetvu Nie, ktorá upozorní, aby používateľ nepoužíval dotknutý zdroj pred reštartom:",
+    "rebootCode": "if [[ \"$HOST_REBOOT_REQUIRED\" == \"yes\" ]]; then\n  echo \"\"\n  if whiptail --title \"$(translate \"Reboot Required\")\" --yesno \\\n    \"\\n$(translate \"A host reboot is required before starting the VM. Reboot now?\")\" \\\n    13 78; then\n      msg_warn \"$(translate \"Rebooting the system...\")\"\n      reboot\n  else\n      echo \"\"\n      msg_info2 \"$(translate \"Do not start the VM until the system has been rebooted.\")\"\n  fi\nfi\n\nmsg_success \"$(translate \"Press Enter to return to menu...\")\"\nread -r"
+  },
+  "messageFunctions": {
+    "heading": "Prehľad funkcií správ",
+    "intro": "Všetky sú definované v <code>utils.sh</code>. Používajte ich pre výstup viditeľný používateľovi, aby skripty mali jednotný vzhľad. Ak potrebujete novú funkciu, napríklad úroveň závažnosti alebo pomocníka rozloženia, navrhnite ju v pull requeste. Po kontrole sa pridá do <code>utils.sh</code>, ak má širšie využitie.",
+    "headerFunction": "Funkcia",
+    "headerWhen": "Kedy používať",
+    "headerSpinner": "Indikátor priebehu",
+    "rows": [
+      {
+        "function": "msg_info \"text\"",
+        "whenRich": "Prebieha operácia.",
+        "spinner": "Spustí"
+      },
+      {
+        "function": "stop_spinner",
+        "whenRich": "Koniec tichej prípravnej práce vo fáze 1: zastaví indikátor a vyčistí riadok.",
+        "spinner": "Zastaví"
+      },
+      {
+        "function": "msg_ok \"text\"",
+        "whenRich": "Operácia bola úspešná. Použite aj pre zapnutú funkciu, hoci je ešte potrebný reštart.",
+        "spinner": "Zastaví"
+      },
+      {
+        "function": "msg_warn \"text\"",
+        "whenRich": "Skutočné varovanie alebo zhoršený stav.",
+        "spinner": "Zastaví"
+      },
+      {
+        "function": "msg_error \"text\"",
+        "whenRich": "Závažná chyba.",
+        "spinner": "Zastaví"
+      },
+      {
+        "function": "msg_info2 \"text\"",
+        "whenRich": "Neblokujúce odporúčanie, tyrkysový informačný riadok.",
+        "spinner": "Zastaví"
+      },
+      {
+        "function": "msg_success \"text\"",
+        "whenRich": "Záverečná výzva „Stlačte Enter pre návrat“ na konci fázy 2.",
+        "spinner": "Zastaví"
+      },
+      {
+        "function": "msg_title \"text\"",
+        "whenRich": "Tučný nadpis so zabudovanými rozostupmi. Používa sa na začiatku fázy 2.",
+        "spinner": "—"
+      },
+      {
+        "function": "show_proxmenux_logo",
+        "whenRich": "Vyčistí obrazovku a zobrazí logo. Na začiatku fázy 2 sa volá <em>raz</em>.",
+        "spinner": "—"
+      }
+    ]
+  },
+  "dialogConventions": {
+    "heading": "Pravidlá používania dialog",
+    "bullets": [
+      "Každému volaniu <code>dialog</code> a <code>whiptail</code> vždy odovzdajte <code>--backtitle \"$BACKTITLE\"</code>. <code>$BACKTITLE</code> je vždy <code>\"ProxMenux\"</code>, nastavené raz v hlavičke skriptu a nikdy neprepísané. Rámec rozhrania musí používateľovi ukazovať názov projektu, nie vlastný nadpis skriptu.",
+      "Vždy zabaľte titulky a správy s <code>$(translate \"...\")</code>.",
+      "Vždy presmerujte <code>dialog</code> výstup pomocou <code>2&gt;&amp;1 &gt;/dev/tty</code> — zachytený stdout sa stane výberom používateľa, zatiaľ čo samotné dialógové okno sa kreslí na terminál.",
+      "Použite štandardné premenné rozmerov UI (<code>$UI_MENU_H</code>, <code>$UI_MSG_W</code>, atď.) pre konzistentnú veľkosť medzi skriptmi.",
+      "Vždy skontrolujte prázdne / zrušené výbery a zaobchádzajte s nimi elegantne."
+    ],
+    "exampleIntro": "Úplný príklad: vytvorenie ponuky na výber VM a spracovanie zrušenia.",
+    "exampleCode": "# 1) Build the list of VMs as alternating \"ID  NAME\" pairs.\n#    dialog --menu expects this exact shape: tag1 description1 tag2 description2 ...\nVM_LIST=\"\"\nfor vmid in $(qm list | awk 'NR>1 {print $1}'); do\n    vm_name=$(qm config \"$vmid\" | awk -F': ' '/^name:/ {print $2}')\n    VM_LIST=\"$VM_LIST $vmid \\\"$vm_name\\\"\"\ndone\n\n# 2) Show the dialog. Captured stdout is the user's selection (the VMID).\nVMID=$(eval \"dialog --backtitle \\\"\\$BACKTITLE\\\" \\\n    --title \\\"\\$(translate \\\"Select VM\\\")\\\" \\\n    --menu \\\"\\$(translate \\\"Choose a VM from the list:\\\")\\\" \\\n    \\$UI_MENU_H \\$UI_MENU_W \\$UI_MENU_LIST_H \\\n    $VM_LIST \\\n    2>&1 >/dev/tty\")\n\n# 3) Empty result means the user pressed Cancel or Esc — exit silently.\nif [ -z \"$VMID\" ]; then\n    exit 0\nfi\n\n# 4) Continue with the rest of Phase 1, knowing VMID is now set.\necho \"User selected VMID=$VMID\""
+  },
+  "translation": {
+    "heading": "Politika prekladu",
+    "intro": "Všetky užívateľsky viditeľné reťazce musia byť zabalené s funkciou <code>translate</code>. ProxMenux ich automaticky prekladá do všetkých podporovaných jazykov, ktoré píšete anglicky, užívateľ číta ich rodný jazyk.",
+    "code": "msg_ok \"$(translate \"Operation completed successfully.\")\"\nmsg_error \"$(translate \"Failed to start container\") $CTID.\"\ndialog --title \"$(translate \"Select Storage\")\" ...",
+    "bullets": [
+      "Reťazce píšte po anglicky; preklad sa spracuje automaticky pri zostavení.",
+      "Udržujte stručnosť. Ak je to možné, nepoužívajte premenné vo vnútri dlhých viet.",
+      "<strong>Neprekladajte</strong> názvy premenných, cesty ani technické identifikátory."
+    ]
+  },
+  "variableStyle": {
+    "heading": "Pravidlá premenných a štýlu",
+    "bullets": [
+      "Pre premenné úrovne skriptov použite <code>UPPER_CASE</code>.",
+      "Pre lokálne funkčné premenné (vyhlásiť s <code>local</code>) použite <code>lower_case</code>.",
+      "Všetky rozvinutia premenných uzavrite do úvodzoviek: <code>\"$VAR\"</code>, nie <code>$VAR</code>.",
+      "Použite <code>[[ ]]</code> pre podmienky, nie <code>[ ]</code> (s výnimkou prípadov, keď sa POSIX vyžaduje).",
+      "<code>show_proxmenux_logo</code> je správny spôsob vyčistenia obrazovky: vyčistí ju a zobrazí logo projektu pre vizuálny kontext. Zavolajte ho raz na začiatku fázy 2 a voliteľne pred dlhou prípravnou kontrolou s indikátorom vo fáze 1."
+    ],
+    "standardNamesIntro": "Štandardné názvy premenných v rámci projektu:",
+    "standardNamesCode": "CTID         # container ID\nVMID         # virtual machine ID\nDISK         # device path (e.g. /dev/sdb)\nPARTITION    # partition path (e.g. /dev/sdb1)\nSTORAGE      # Proxmox storage name\nMOUNT_POINT  # filesystem mount path",
+    "redirectHeading": "Presmerovanie výstupu nástroja počas fázy 2",
+    "redirectIntro": "Fáza 2 zobrazuje prehľadný záznam riadkov <code>msg_info → msg_ok</code>. Ak volaný nástroj, napríklad apt, mkfs, qm, pct alebo dd, zapisuje na stdout/stderr, posúva správy a naruší prehľad. Používateľ potom nerozozná priebeh skriptu od podrobného výstupu nástroja.",
+    "withoutRedirectIntro": "<strong>Bez presmerovania</strong>: čo používateľ vidí, ak neošetríte rušivý výstup.",
+    "withoutRedirectCode": "ℹ Installing kernel package...\nReading package lists... Done\nBuilding dependency tree... Done\nReading state information... Done\nThe following NEW packages will be installed:\n  proxmox-kernel-6.5\n0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.\nNeed to get 12.5 MB of archives.\nAfter this operation, 47.2 MB of additional disk space will be used.\nGet:1 http://download.proxmox.com/debian/pve trixie/pve-no-subscription amd64 ...\n... [200+ more lines of dpkg output] ...\n✓ Kernel installed.",
+    "withRedirectIntro": "<strong>S presmerovaním</strong> — ako vyzerá tá istá operácia, keď je šum odoslaný inam:",
+    "withRedirectCode": "ℹ Installing kernel package...\n✓ Kernel installed.\nℹ Configuring kernel command line...\n✓ Configured.\nℹ Refreshing boot loader...\n✓ Boot loader updated.",
+    "twoPatternsIntro": "Dva vzory na výber:",
+    "discardLead": "<strong>Zahodiť výstup</strong>, ak ho nepotrebujete: najjednoduchšia a najrýchlejšia možnosť.",
+    "discardCode": "DEBIAN_FRONTEND=noninteractive apt-get install -y \"$package\" >/dev/null 2>&1",
+    "logLead": "<strong>Pošlite výstup do súboru denníka</strong>, keď ho budete chcieť neskôr skontrolovať (ladenie neúspešnej inštalácie, kontrola toho, čo dpkg skutočne urobil). Toto je preferovaný vzor pre akúkoľvek operáciu apt:",
+    "logCode": "apt-get install -y \"$package\" >> \"$log_file\" 2>&1",
+    "referenceOutro": "<code>scripts/global/update-pve9_2.sh</code> je referenčná implementácia: každé volanie <code>apt-get</code> zapisuje do súboru záznamu. Používateľ vidí iba prehľadný tok <code>msg_info → msg_ok</code>, no pri probléme možno zo súboru presne zistiť, čo apt vykonal."
+  },
+  "dosAndDonts": {
+    "heading": "Čo robiť a čomu sa vyhnúť",
+    "doHeading": "✅ Robiť",
+    "doBullets": [
+      "<code>stop_spinner</code> pred <code>dialog</code> vo fáze 1 iba vtedy, keď <code>msg_info</code> spinner beží.",
+      "Fáza 2 začína s <code>show_proxmenux_logo + msg_title + msg_ok</code> zhrnutie výsledkov fázy 1.",
+      "Pre úspešne zapnuté funkcie použite <code>msg_ok</code>, aj keď je potrebný reštart.",
+      "Používajte <code>whiptail</code> (nie <code>dialog</code>) pre akýkoľvek postup po vykonaní, ktorý sa musí objaviť vo fáze 2.",
+      "V dialógových oknách reštartu vždy zahrňte vetvu „Nie“, ktorá varuje používateľa, aby nespúšťal dotknutý zdroj, kým nebude reštartovaný.",
+      "Logiku určenú iba pre VM chráňte kontrolou <code>[[ -f \"/etc/pve/qemu-server/$'{'vmid'}'.conf\" ]]</code>: radiče a NVMe PCIe nemožno priradiť LXC cez PCI passthrough.",
+      "Použite <code>ensure_repositories</code> z <code>utils-install-functions.sh</code> namiesto bezpodmienečného <code>apt-get update</code>.",
+      "Používajte paralelné polia vo fáze 1, ak každá položka potrebuje viac dialógov."
+    ],
+    "dontHeading": "❌ Nerobiť",
+    "dontBullets": [
+      "Zavolajte <code>dialog</code>, kým je spinner aktívny.",
+      "Preskočiť zhrnutie fázy 1 na začiatku fázy 2.",
+      "Zavolať <code>show_proxmenux_logo</code> druhýkrát; vymaže všetko, čo fáza 2 vypísala.",
+      "Použite <code>dialog</code> vo fáze 2 (použite <code>whiptail</code> pre zriedkavý nevyhnutný prípad).",
+      "Použite holý <code>clear</code>.",
+      "Obaľovať <code>msg_title</code> prázdnymi riadkami <code>echo \"\"</code> — potrebné medzery už obsahuje.",
+      "Použiť <code>msg_warn</code> pre hlásenie úspešne zapnutej funkcie, ktorá je <code>msg_ok</code>.",
+      "Spustiť bezpodmienečné <code>apt-get update</code>; namiesto toho použite <code>ensure_repositories</code>."
+    ]
+  },
+  "submitting": {
+    "heading": "Predloženie príspevku",
+    "steps": [
+      "Vytvorte fork repozitára <code>MacRimi/ProxMenux</code> na GitHube a potom svoj fork naklonujte.",
+      "Vytvorte vetvu <code>feature/*</code> z <code>develop</code> (pozrite <em>Model vetiev</em> vyššie).",
+      "Postupujte podľa tejto príručky pre akékoľvek nové alebo zmenené skripty. Napíšte hlavičku s Vaším menom; pridajte voliteľný riadok sponzora, ak chcete.",
+      "Otestujte skript na skutočnej inštancii Proxmox VE: fázu 1 so všetkými vetvami dialógov a fázu 2 so všetkými operáciami aj čistým návratom pri chybe.",
+      "Otvorte pull request <strong>do vetvy <code>develop</code></strong> s jasným opisom: čo skript robí, čo sa zmenilo a na ktorej verzii Proxmox VE bol otestovaný.",
+      "Uistite sa, že váš príspevok rešpektuje <cocLink>Kódex správania</cocLink>."
+    ],
+    "securityOutro": "Pokiaľ ide o otázky citlivé na bezpečnosť, postupujte podľa toku zverejnenia v <securityLink>SECURITY.md</securityLink> namiesto otvárania verejnej otázky."
+  },
+  "whereNext": {
+    "heading": "Kam ďalej",
+    "items": [
+      {
+        "kind": "external",
+        "url": "https://github.com/MacRimi/ProxMenux/blob/main/CONTRIBUTING.md",
+        "label": "CONTRIBUTING.md (úplný sprievodca)",
+        "tail": " — záväzný zdroj všetkých pravidiel vrátane pokročilých hardvérových postupov."
+      },
+      {
+        "kind": "internal",
+        "href": "/docs/about/contributors",
+        "label": "Prispievatelia",
+        "tail": " — ľudia, ktorých práca formovala vydania ProxMenux. Ide o inú stránku než túto."
+      },
+      {
+        "kind": "internal",
+        "href": "/docs/about/code-of-conduct",
+        "label": "Kódex správania",
+        "tail": " — Každý prispievateľ súhlasí s dodržiavaním noriem."
+      },
+      {
+        "kind": "external",
+        "url": "https://github.com/MacRimi/ProxMenux/discussions",
+        "label": "GitHub Discussions",
+        "tail": " — Ak si nie ste istí, či idea sedí, alebo nájsť spolupracovníkov na väčšiu funkciu, spýtajte sa pred stavaním."
+      }
+    ]
+  }
+}

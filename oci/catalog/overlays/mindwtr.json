@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official Mindwtr images: the web app and the self-hosted sync server in two LXCs. Browser, desktop and mobile apps sync through the web app address with the generated token."
+    },
+    "description": {
+      "en_US": "Mindwtr is a personal task management application built on the Getting Things Done methodology. It allows users to capture thoughts into an inbox, organize projects into actionable steps, track delegated tasks, and manage future ideas. The application includes calendar planning, recurring tasks, guided weekly reviews, and offline task access."
+    },
+    "screenshots": [
+      "https://mindwtr.app/assets/screenshots/showcase-board.webp",
+      "https://mindwtr.app/assets/screenshots/showcase-calendar-plan.webp",
+      "https://mindwtr.app/assets/screenshots/showcase-dark.webp",
+      "https://mindwtr.app/assets/screenshots/landing_image.png"
+    ]
+  }
+}

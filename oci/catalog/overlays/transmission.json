@@ -22,5 +22,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Transmission is designed for easy, powerful use. Transmission has the features you want from a BitTorrent client: encryption, a web interface, peer exchange, magnet links, DHT, µTP, UPnP and NAT-PMP port forwarding, webseed support, watch directories, tracker editing, global and per-torrent speed limits, and more."
+    },
+    "description": {
+      "en_US": "Transmission is a BitTorrent client designed for easy and powerful file sharing. It provides essential torrenting features including encryption, peer exchange, magnet link support, DHT, and automatic port forwarding. Users can control and monitor their downloads through a built-in web interface, manage watch directories, and set global or per-torrent speed limits."
+    },
+    "screenshots": [
+      "https://transmissionbt.com/assets/images/homepage/carousel_homepage/screenshot_apple_light.png",
+      "https://transmissionbt.com/assets/images/homepage/carousel_homepage/screenshot_windows.png",
+      "https://transmissionbt.com/assets/images/homepage/carousel_homepage/screenshot_linux.png",
+      "https://transmissionbt.com/assets/images/homepage/screenshot_apple.png"
+    ]
   }
 }

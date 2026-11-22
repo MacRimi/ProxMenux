@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useIsPbs } from "../lib/use-platform"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
 import {
@@ -18,9 +19,11 @@ import {
   FolderOpen,
   Database,
   Waves,
+  Monitor,
 } from "lucide-react"
 import { getApiUrl, getAuthToken } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 // Local fetch wrapper that *preserves* the JSON body on non-2xx
 // responses so we can surface backend validation messages
@@ -84,6 +87,7 @@ interface ThresholdsTree {
   memory: { warning: ThresholdLeaf; critical: ThresholdLeaf; swap_high: ThresholdLeaf; available_min: ThresholdLeaf }
   host_storage: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   lxc_rootfs: { warning: ThresholdLeaf; critical: ThresholdLeaf }
+  vm_disk: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   cpu_temperature: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   disk_temperature: {
     hdd: { warning: ThresholdLeaf; critical: ThresholdLeaf }
@@ -202,6 +206,17 @@ const SECTIONS: SectionDef[] = [
     ],
   },
   {
+    id: "vm_disk",
+    title: "Disk space — VMs",
+    icon: Monitor,
+    description:
+      "Filesystems of running VMs as the QEMU guest agent reports them, passthrough drives included. VMs without the guest agent are not evaluated.",
+    fields: [
+      { path: ["vm_disk", "warning"], label: "Warning" },
+      { path: ["vm_disk", "critical"], label: "Critical" },
+    ],
+  },
+  {
     id: "lxc_mount",
     title: "LXC mount points",
     icon: FolderOpen,
@@ -283,8 +298,13 @@ function computeVisualRange(
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+// Guests and PVE storages do not exist on a Proxmox Backup Server.
+const PVE_ONLY_SECTIONS = new Set(["lxc_rootfs", "vm_disk", "lxc_mount", "pve_storage"])
+
 export function HealthThresholds() {
+  const { capabilities } = useAccess()
   const t = useT()
+  const isPbs = useIsPbs()
   const tFallback = (key: string, fallback: string) => {
     const translated = t(key)
     return translated === key ? fallback : translated
@@ -718,21 +738,21 @@ export function HealthThresholds() {
                 </>
               ) : (
                 <>
-                  <button
+                  {capabilities.admin && (<button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors text-muted-foreground flex items-center gap-1.5"
                     onClick={handleResetAll}
                     title={t("settings.healthThresholds.resetAllTitle")}
                   >
                     <RotateCcw className="h-3 w-3" />
                     {t("actions.resetAll")}
-                  </button>
-                  <button
+                  </button>)}
+                  {capabilities.admin && (<button
                     className="h-7 px-3 text-xs rounded-md border border-border bg-background hover:bg-muted transition-colors flex items-center gap-1.5"
                     onClick={handleEdit}
                   >
                     <Settings2 className="h-3 w-3" />
                     {t("actions.edit")}
-                  </button>
+                  </button>)}
                 </>
               )}
             </div>
@@ -773,7 +793,7 @@ export function HealthThresholds() {
               Mobile (<md) stays single-column as today.
             */}
             <div className="columns-1 md:columns-2 2xl:columns-3 gap-4 space-y-4 [&>*]:break-inside-avoid">
-            {SECTIONS.map((section) => {
+            {SECTIONS.filter((section) => !isPbs || !PVE_ONLY_SECTIONS.has(section.id)).map((section) => {
               const Icon = section.icon
               return (
                 <div key={section.id} className="rounded-md border border-border/50 px-3 py-2">

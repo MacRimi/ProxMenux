@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import Image from "next/image"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -36,7 +36,6 @@ export default async function PostInstallBasicSettingsPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.postInstall.basicSettings" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -215,7 +214,7 @@ Acquire::Languages "none";`}
               alt={s.alt}
               width={450}
               height={280}
-              className="rounded shadow border border-gray-200 w-full h-auto"
+              className="rounded shadow-sm border border-gray-200 w-full h-auto"
             />
             <figcaption className="text-xs text-gray-600 mt-1 text-center">
               <code>{s.pkg}</code>

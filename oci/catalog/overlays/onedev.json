@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Host Git repositories, track issues, and configure CI/CD through a web interface. Uses the embedded database and persists its server data."
+    },
+    "description": {
+      "en_US": "OneDev is a self-hosted development platform that combines Git repository hosting, issue tracking, and CI/CD pipelines. It provides a graphical interface to design build workflows, manage dependencies, and debug jobs with a built-in web terminal. Teams can organize tasks using automated Kanban boards, review code with inline annotations, and publish documentation through an integrated wiki."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/theonedev/onedev/HEAD/doc/images/issue-board.png",
+      "https://raw.githubusercontent.com/theonedev/onedev/HEAD/doc/images/wiki.jpg",
+      "https://raw.githubusercontent.com/theonedev/onedev/HEAD/doc/images/package-registry.png",
+      "https://raw.githubusercontent.com/theonedev/onedev/HEAD/doc/images/service-desk.png"
+    ]
+  }
+}

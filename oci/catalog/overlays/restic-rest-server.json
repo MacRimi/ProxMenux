@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "The official rest-server image provides an authenticated HTTP REST backend for restic clients, with persistent repositories and bcrypt-protected user accounts. It exposes an API, not a browser-based application."
+    },
+    "description": {
+      "en_US": "Rest Server is a high-performance HTTP server implementing restic's REST backend API. It enables restic backup clients to transfer and store backup data remotely over HTTP or HTTPS. The server supports append-only mode to prevent modification or deletion of existing backups, as well as private repositories to isolate user data."
+    }
+  }
+}

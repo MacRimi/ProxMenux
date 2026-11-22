@@ -100,7 +100,7 @@
   "auth": {
     "heading": "Authentication",
     "items": [
-      "The WebSocket upgrade carries the JWT in the <code>Authorization</code> header. If auth is enabled and the token is missing or expired, the connection is rejected with HTTP 401 before a PTY is allocated.",
+      "The browser first requests a single-use ticket through <code>POST /api/terminal/ticket</code>, authenticated with a JWT in the <code>Authorization</code> header. It then passes that ticket when opening the WebSocket. The ticket expires after 5 seconds; with authentication enabled, a missing or invalid ticket closes the connection before a PTY is allocated.",
       "If the Monitor sits behind a reverse proxy, the proxy must forward WebSocket upgrades. See the <link>Access & Authentication</link> page for Nginx / Caddy / Traefik snippets."
     ]
   },
@@ -120,7 +120,7 @@
     "headerFix": "Fix",
     "rows": [
       {
-        "cause": "Session JWT expired (24 h window).",
+        "cause": "Session JWT expired when opening or reconnecting a terminal (24 h window).",
         "fix": "Refresh the page and log in again. The terminal isn't designed for unattended sessions, so the JWT lifetime matches the regular dashboard login."
       },
       {

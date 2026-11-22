@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Capture email sent by local applications and inspect messages in a simple browser-based inbox."
+    },
+    "description": {
+      "en_US": "Mailpit is an email testing tool and API designed for developers. It acts as an SMTP server to capture outgoing emails from local applications and provides a web interface to view and inspect them. The tool also provides a REST API for automated integration testing, along with features to check HTML compatibility, validate links, and evaluate spam scoring."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/axllent/mailpit/develop/server/ui-src/screenshot.png"
+    ]
+  }
+}

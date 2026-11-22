@@ -19,5 +19,23 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "description": {
+      "en_US": "Mullvad Browser is a privacy-focused web browser developed in collaboration between Mullvad VPN and the Tor Project. It is designed to minimize online tracking and digital fingerprinting. The application brings the protections of the Tor Browser to standard internet connections and VPNs without routing traffic through the Tor network."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

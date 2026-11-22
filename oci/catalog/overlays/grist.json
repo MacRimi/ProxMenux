@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create spreadsheet-backed databases, forms and team workspaces while keeping documents on a persistent local volume."
+    },
+    "description": {
+      "en_US": "Grist is a relational spreadsheet application that combines the flexibility of a spreadsheet with the structure of a database. Named columns store typed data that can be dynamically populated using Python formulas or standard spreadsheet functions. It allows users to build drag-and-drop dashboards with linked widgets, summary tables, and charts. Data is kept in a portable, self-contained SQLite format that supports backups and native forms."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/118367/219882277-4dd1e60f-adde-463c-9a79-71e1924db6c1.png",
+      "https://user-images.githubusercontent.com/118367/221054013-60d7bde0-c524-4185-972a-703b45141b56.png",
+      "https://user-images.githubusercontent.com/118367/221052545-a1024710-b368-4f4b-a727-9d54c0b43cb5.png",
+      "https://user-images.githubusercontent.com/118367/221203024-ac8ad72d-bb08-43dd-9447-f9a06cfbce3e.jpeg"
+    ]
+  }
+}

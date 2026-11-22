@@ -28,5 +28,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official Paperless-ngx deployment with private PostgreSQL and Valkey dependencies."
+    },
+    "description": {
+      "en_US": "Paperless-ngx is a document management system that transforms physical documents into a searchable online archive. It organizes and indexes scanned paperwork and digital records in a central repository, helping users reduce physical paper clutter."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/paperless-ngx/paperless-ngx/main/docs/assets/screenshots/documents-smallcards.png"
+    ]
   }
 }

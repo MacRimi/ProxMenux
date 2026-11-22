@@ -21,22 +21,31 @@ import shutil
 import socket
 import subprocess
 import stat
+import tarfile
 import sys
 import time
 import uuid
 from urllib.parse import unquote
 
 import oci_instances as instances
-from oci_installation_state import image_from_archive, parse_config, private_directory, sha
+import oci_native_reads as native_reads
+from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
 from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
+import oci_mount_idmap as mount_idmap
 import oci_nested_mounts as nested_mounts
+import oci_usb_passthrough as usb_passthrough
 import oci_accelerators as gpu_devices
 import oci_runtime_settings as runtime_settings
+import oci_stack_public_routes as public_routes
 import oci_image_cache as image_cache
 import oci_work_backup as work_backup
+import oci_layer_paths as layer_paths
+import oci_zfs_recovery as zfs_recovery
+from oci_runtime import creatable_archive, USER_DATABASES
 import oci_ui
 from oci_ui import translate, msg_info, msg_ok, msg_warn, msg_error, msg_info2
+import oci_mount_lock
 
 TERMINAL = {'committed', 'rolled-back'}
 BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'description',
@@ -52,7 +61,7 @@ BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'de
 # Their output is data (and may hold saved secrets); it is never logged.
 DATA_COMMANDS = {('pct', 'config'), ('pvesh', 'get'), ('pct', 'df')}
 # Kept across a modification: the watchdog and where the backups are made.
-HOST_PREFERENCES = ('watchdog', 'work_storage')
+HOST_PREFERENCES = ('watchdog', 'work_storage', 'stack_public_routes')
 LOG_DIR = Path(os.environ.get('OCI_LOG_DIR', '/var/log/proxmenux/oci'))
 ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')
 SPINNER_FRAME = re.compile('^ ?[' + ''.join(oci_ui.FRAMES) + ']')
@@ -238,6 +247,26 @@ def recover_untouched(root, journal):
         return False
 
 
+def recover_failed_update(root, journal):
+    """Attempt the guarded rollback after an update/Modify command fails.
+
+    Unlike recovery of an untouched guest, replacement failures may have
+    parked its volumes or removed its root disk. The existing recovery
+    journal validates ownership, configuration and backup before restoring.
+    Stack transactions remain the responsibility of their coordinator.
+    """
+    try:
+        with native_reads.session(log=log), instances.locked(root):
+            state = json.loads(Path(journal).read_text())
+            if state.get('coordinated') or state.get('phase') in TERMINAL:
+                return False
+            recover(root, Path(journal))
+            return True
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+        log(f'automatic update recovery failed: {error}')
+        return False
+
+
 def fit(text):
     """A step line that is rewritten in place must not wrap."""
     width = max(shutil.get_terminal_size((80, 24)).columns - 8, 30)
@@ -250,6 +279,9 @@ def run(*args):
     if private_description:
         shown[shown.index('--description') + 1] = '[notes redacted]'
     log('$ ' + shlex.join(shown))
+    fresh = native_reads.read(args)
+    if fresh is not None:
+        return fresh
     # OCI extraction enters an unprivileged user namespace; PVE's newly created
     # traversal directories must not inherit a caller's restrictive umask.
     pve_creation = (args[:2] in (('pct', 'create'), ('pct', 'restore'))
@@ -267,6 +299,22 @@ def run(*args):
     if result.returncode:
         raise RuntimeError(f"{args[0]} {translate('failed with exit code')} {result.returncode}")
     return result.stdout
+
+
+def verify_recovery_archive(path, compression='zstd'):
+    if zfs_recovery.is_fast(path):
+        zfs_recovery.verify(path)
+    else:
+        run('gzip' if compression == 'gzip' else 'zstd', '-t', str(path))
+
+
+def release_local_recovery(directory):
+    """An already healthy guest stays recovered if optional cleanup is blocked."""
+    try:
+        zfs_recovery.cleanup(directory)
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
+        log(f'cleanup: {error}')
+        msg_warn(f"{translate('The final cleanup did not complete:')} {error}")
 
 
 def verified_backup(vmid, directory, compression, unidentified, show=False):
@@ -301,7 +349,25 @@ def filehash(path):
     return value.hexdigest()
 
 
+_phase_clock_id = uuid.uuid4().hex
+
+
+def time_phase(state, phase, prefix='phase'):
+    """Accumulate active phase durations, never recovery downtime across processes."""
+    now = time.monotonic()
+    previous = state.get('phase')
+    if (previous != phase and state.get('phase_clock_id') == _phase_clock_id
+            and 'phase_started' in state):
+        elapsed = max(0.0, now - state['phase_started'])
+        timings = state.setdefault('phase_seconds', {})
+        timings[previous] = round(timings.get(previous, 0.0) + elapsed, 3)
+        log(f'{prefix} duration: {previous}: {elapsed:.3f}s')
+    if previous != phase or state.get('phase_clock_id') != _phase_clock_id:
+        state.update(phase_clock_id=_phase_clock_id, phase_started=now)
+
+
 def checkpoint(path, state, phase):
+    time_phase(state, phase)
     state['phase'] = phase
     instances.write(path, state)
     log(f'phase: {phase}')
@@ -320,16 +386,62 @@ def mounts(config):
     return result
 
 
+def unused_volumes(config):
+    return {key: value for key, value in parse_config(config).items()
+            if re.fullmatch(r'unused[0-9]+', key)}
+
+
+def move_retained_unused(state, to_stage):
+    """Unused disks are not in vzdump. Park and return them separately, using
+    PVE's volume reassignment API, never --delete (which frees an unused disk).
+    The journal's keys and both ownership markers also make retries safe."""
+    keys = set(state.get('retained_unused', {}))
+    if not keys:
+        return
+    vmid, stage = state['vmid'], state['stage']
+    guest_marker = state['record']['installation_id']
+    holder_marker = 'proxmenux-transaction=' + state['id']
+    source, target = (vmid, stage) if to_stage else (stage, vmid)
+    source_marker, target_marker = ((guest_marker, holder_marker) if to_stage
+                                    else (holder_marker, guest_marker))
+    for key in sorted(keys):
+        present = unused_volumes(owned(source, source_marker))
+        destination = unused_volumes(owned(target, target_marker))
+        if key not in present:
+            if key in destination:
+                continue  # Already reassigned before an interruption.
+            raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
+        if key in destination or (to_stage and present.keys() - keys):
+            raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
+        run('pct', 'move-volume', str(source), key, '--target-vmid', str(target), '--target-volume', key)
+
+
 def is_file_bind(mount, files=()):
     return mount['type'] == 'host-bind' and (mount['source'] in files or Path(mount['source']).is_file())
 
 
+# The host paths the installer mounts as the recipe gives them, never asking.
+SYSTEM_BIND_PREFIXES = ('/dev/', '/proc/', '/sys/', '/run/', '/var/run/')
+
+
 def declared_sources(contract):
-    """The host paths the recipe of a host monitor mounts on its own."""
-    if not contract['deployment'].get('host_monitor'):
-        return set()
-    profile = contract['template'].get('proxmox', {}).get('installer_profile', {})
-    return {item['source'] for item in profile.get('host_monitor_mounts', [])}
+    """The host paths the recipe mounts on its own: those of a host monitor,
+    and the system paths of its volumes, such as /run/dbus."""
+    template = contract.get('template') or {}
+    profile = template.get('proxmox', {}).get('installer_profile', {})
+    declared = set()
+    if contract['deployment'].get('host_monitor'):
+        declared |= {item['source'] for item in profile.get('host_monitor_mounts', [])}
+    system = {}
+    for volume in template.get('container_contract', {}).get('volumes', []):
+        source = str(volume.get('compose_source_example') or volume.get('container_path') or '')
+        if 'host-bind' in volume.get('installation_choice', []) and (
+                source.startswith(SYSTEM_BIND_PREFIXES)
+                or str(volume.get('container_path', '')).startswith(SYSTEM_BIND_PREFIXES)):
+            system[volume['container_path']] = source
+    declared |= {mount['source'] for mount in contract['deployment'].get('mounts', [])
+                 if mount['type'] == 'host-bind' and system.get(mount['container_path']) == mount['source']}
+    return declared
 
 
 def profile_keys(deployment):
@@ -352,13 +464,38 @@ def profile_keys(deployment):
     return keys
 
 
+GUESSED_ENDPOINT = 'compose-first-tcp-port-fallback'
+# curl exit codes for a port that accepted the connection and answered in a
+# protocol other than HTTP: HTTP/0.9 refused, weird reply, empty reply, reset.
+NON_HTTP_ANSWER = (1, 8, 52, 56)
+
+
+def probe_http(args):
+    """Run one curl probe and return its output and exit code."""
+    log('$ ' + shlex.join(str(arg) for arg in args))
+    try:
+        result = subprocess.run(args, capture_output=True, timeout=60, close_fds=True)
+    except subprocess.TimeoutExpired:
+        return b'', -1
+    return result.stdout, result.returncode
+
+
+def setup_then_web_port(template, check):
+    """AdGuard Home answers its setup wizard on 3000 and, once set up, its web UI
+    on 80. A check on 3000, derived or saved with an installation, takes 80 too."""
+    if (template.get('id') == 'image-adguard-home' and check.get('port') == 3000
+            and not check.get('alternative_ports')):
+        return dict(check, alternative_ports=[80])
+    return check
+
+
 def effective_healthcheck(template):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
     profile = template.get('proxmox', {}).get('installer_profile', {})
     check = profile.get('startup_healthcheck')
     if check:
-        return check
+        return setup_then_web_port(template, check)
     if profile.get('haos_healthcheck'):
         # Home Assistant OS has a check of its own: Supervisor, Core and the
         # services it runs inside. The installer runs it on the new container.
@@ -367,14 +504,38 @@ def effective_healthcheck(template):
         path = str(endpoint.get('path') or '/')
         if (endpoint.get('scheme') in ('http', 'https') and str(endpoint.get('port', '')).isdigit()
                 and path.startswith('/') and not any(c.isspace() for c in path)):
-            return {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
-                    'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
-                    'verify_tls': False, 'accept_any_status': True}
+            check = {'scheme': endpoint['scheme'], 'port': int(endpoint['port']), 'path': path,
+                     'timeout_seconds': 300, 'request_timeout_seconds': 10, 'stability_seconds': 4,
+                     'verify_tls': False, 'accept_any_status': True}
+            check = setup_then_web_port(template, check)
+            # A port taken from the compose file because the recipe names no
+            # web address may serve a database or SSH: any answer counts.
+            if endpoint.get('source') == GUESSED_ENDPOINT:
+                check['accept_non_http'] = True
+            return check
     # Without a web address, the new image must at least keep the container running.
     return {'type': 'running', 'timeout_seconds': 90, 'stability_seconds': 20}
 
 
+# The Tailscale recipe first served its web interface on 0.0.0.0:5252. Once the
+# web client of Tailscale is turned on, tailscaled takes that port on its own
+# address and the container stopped at every start; subnet routes also need
+# forwarding inside the container. A saved recipe with that exact command gets
+# the current one. A command the user set in Proxmox is kept by the record.
+TAILSCALE_PREVIOUS_ENTRYPOINT = ('/bin/sh -c "tailscaled --state=/var/lib/tailscale/tailscaled.state & sleep 10; '
+                                 'tailscale web --listen 0.0.0.0:5252"')
+TAILSCALE_ENTRYPOINT = ('/bin/sh -c \'sysctl -w net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1 >/dev/null 2>&1; tailscaled --state=/var/lib/tailscale/tailscaled.state & i=0; while [ $i -lt 60 ]; do lan=$(ip -4 addr show dev eth0 2>/dev/null | sed -n "s/.*inet \\([0-9.]*\\)\\/.*/\\1/p" | head -n 1); [ -n "$lan" ] && break; i=$((i+1)); sleep 1; done; sleep 10; exec tailscale web --listen "${lan:-0.0.0.0}:5252"\'')
+
+
+def current_recipe(template):
+    runtime = template.get('proxmox', {}).get('installer_profile', {}).get('runtime', {})
+    if (template.get('id') == 'image-tailscale'
+            and runtime.get('compose_entrypoint') == TAILSCALE_PREVIOUS_ENTRYPOINT):
+        runtime['compose_entrypoint'] = TAILSCALE_ENTRYPOINT
+
+
 def with_default_healthcheck(contract):
+    current_recipe(contract['template'])
     check = effective_healthcheck(contract['template'])
     if check and check.get('type') != 'haos':
         contract['template'].setdefault('proxmox', {}).setdefault('installer_profile', {})['startup_healthcheck'] = check
@@ -389,7 +550,7 @@ def candidate_contract(record, operation, proposal=None):
     if operation == 'update':
         if proposal is not None:
             raise ValueError(translate('An update does not accept configuration changes'))
-        return with_default_healthcheck(copy.deepcopy(record))
+        return with_usb_identity(with_default_healthcheck(copy.deepcopy(record)))
     if not isinstance(proposal, dict) or proposal.get('operation') != 'recreate':
         raise ValueError(translate('Recreating requires a confirmed proposal'))
     if (proposal.get('base_config_sha256') is not None
@@ -409,19 +570,95 @@ def candidate_contract(record, operation, proposal=None):
     # of what is being edited: it stays as the record has it now.
     for key in HOST_PREFERENCES:
         if key in record['deployment']:
-            result['deployment'][key] = record['deployment'][key]
+            result['deployment'][key] = copy.deepcopy(record['deployment'][key])
         else:
             result['deployment'].pop(key, None)
-    return with_default_healthcheck(result)
+    return with_usb_identity(with_default_healthcheck(result))
 
 
-# Resource settings edited in Proxmox that the new container keeps.
+def with_usb_identity(candidate):
+    """A container installed when USB devices were passed by their node gets
+    them by their identity when it is rebuilt, so a reboot that numbers them
+    again does not leave it unable to start."""
+    deployment = candidate['deployment']
+    if deployment.get('devices'):
+        deployment['devices'] = usb_passthrough.migrated(deployment['devices'])
+    return candidate
+
+
 # Proxmox settings the rebuilt container gets back exactly as they are: the
-# LAN leg ProxMenux adds to a suite or stack member, and the start order.
-KEPT_AS_IS = ('net1', 'startup')
+# LAN leg ProxMenux adds to a suite or stack member, the start order, the tags
+# and what the user set there. ProxMenux does not decide any of them.
+KEPT_AS_IS = ('net1', 'startup', 'tags', 'features', 'nameserver', 'searchdomain', 'timezone',
+              'cpulimit', 'cmode', 'console', 'tty', 'hookscript', 'protection')
 ADOPTABLE = {'memory': ('resources', 'memory_mb'), 'swap': ('resources', 'swap_mb'),
              'cores': ('resources', 'cores'), 'cpulimit': ('resources', 'cores'),
-             'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot')}
+             'cpuunits': ('resources', 'cpu_units'), 'onboot': (None, 'onboot'),
+             'hostname': (None, 'hostname'), 'entrypoint': (None, 'custom_entrypoint'),
+             'bridge': ('network', 'bridge'), 'ipv4': ('network', 'ipv4'),
+             'gateway': ('network', 'gateway'), 'firewall': ('network', 'firewall'),
+             'vlan_tag': ('network', 'vlan_tag')}
+
+
+def network_fields(net):
+    """What a network line says that the record of an application keeps."""
+    fields = dict(item.split('=', 1) for item in (net or '').split(',') if '=' in item)
+    tag = fields.get('tag')
+    return {'bridge': fields.get('bridge'), 'ipv4': fields.get('ip'), 'gateway': fields.get('gw'),
+            'firewall': fields.get('firewall', '0') == '1', 'vlan_tag': int(tag) if tag else None}
+
+
+# What the engine writes itself among the lxc.* lines of a container.
+ENGINE_LXC = ('lxc.environment', 'lxc.init.', 'lxc.signal.', 'lxc.console.', 'lxc.hook.', 'lxc.include',
+              'lxc.idmap', 'lxc.mount.auto')
+
+
+def without_backup_snapshot(config):
+    """The configuration without the mark of a snapshot a backup left behind:
+    it is not a setting, and a snapshot of the user is not this one."""
+    return b''.join(line for line in config.splitlines(keepends=True) if line.strip() != b'parent: vzdump')
+
+
+def drop_backup_snapshot(vmid):
+    """A disk with a snapshot cannot be moved. The one an interrupted backup
+    left goes the way Proxmox removes it before its next backup."""
+    config = run('pct', 'config', str(vmid))
+    if without_backup_snapshot(config) != config and 'lock' not in parse_config(config):
+        run('pct', 'delsnapshot', str(vmid), 'vzdump', '--force', '1')
+
+
+def settings(config):
+    """The settings of a configuration to compare with those saved: without
+    that mark, and without the lines that follow the mount points."""
+    return parse_config(usb_passthrough.without(nested_mounts.without(without_backup_snapshot(config))))
+
+
+def custom_lxc(record, config):
+    """The raw lxc.* lines the user added in Proxmox: the ones saved before that
+    are still there, and the new ones. A rebuilt container gets them back."""
+    before = record['observed']['config'].splitlines()
+    saved = record['deployment'].get('custom_lxc', [])
+    lines = config.decode().splitlines()
+    return [line for line in lines if line.startswith('lxc.') and ': ' in line
+            and not line.startswith(ENGINE_LXC) and not nested_mounts.own(line) and not usb_passthrough.own(line)
+            and (line in saved or line not in before)]
+
+
+def kept_settings(record, candidate, cfg):
+    """What a rebuilt container takes from the one it replaces. The network and
+    the features go back as they are unless Modify has just changed them.
+    Protection comes back at the end: a protected container cannot be replaced."""
+    kept = {key: cfg[key] for key in KEPT_AS_IS if key in cfg and key != 'protection'}
+    if 'cores' not in cfg:
+        kept.pop('cpulimit', None)
+    if candidate['deployment'].get('security') != record['deployment'].get('security'):
+        kept.pop('features', None)
+    if 'net0' in cfg and candidate['deployment'].get('network') == record['deployment'].get('network'):
+        kept['net0'] = cfg['net0']
+    # Only a command the user set: the one of the image changes with the image.
+    if candidate['deployment'].get('custom_entrypoint') and 'entrypoint' in cfg:
+        kept['entrypoint'] = cfg['entrypoint']
+    return kept
 
 
 def external_changes(record, config, adopt=True):
@@ -429,7 +666,7 @@ def external_changes(record, config, adopt=True):
     values. Any change the new container cannot keep is refused."""
     if sha(config) == record['observed']['config_sha256']:
         return {}
-    before, now = parse_config(record['observed']['config'].encode()), parse_config(config)
+    before, now = settings(record['observed']['config'].encode()), settings(config)
     changed = sorted(key for key in before.keys() | now.keys() if before.get(key) != now.get(key))
     if ('description' in changed
             and instances.identity(record['observed']['config'].encode()) == record['installation_id']
@@ -437,10 +674,19 @@ def external_changes(record, config, adopt=True):
         changed.remove('description')
     cores_key = 'cpulimit' if 'cpulimit' in before and 'cores' not in before else 'cores'
     values = {}
+    # The network line stays as the user left it: a stack carries it over as
+    # it is, and an application also takes it into its record.
+    if 'net0' in changed:
+        changed.remove('net0')
+        if adopt:
+            old_net, new_net = network_fields(before.get('net0')), network_fields(now.get('net0'))
+            values.update({key: value for key, value in new_net.items() if old_net[key] != value})
     for key in changed if adopt else ():
         value = now.get(key)
         if key == 'onboot':
             values[key] = value == '1'
+        elif key in ('hostname', 'entrypoint') and value:
+            values[key] = value
         elif key == 'cpuunits' and value is None:
             values[key] = None
         elif key in ('memory', 'swap', 'cpuunits', cores_key) and value and re.fullmatch(r'[0-9]+', value):
@@ -453,21 +699,66 @@ def external_changes(record, config, adopt=True):
     return values
 
 
-def preflight(record, candidate, config, coordinated=None):
+def without_public_routes(config, vmid):
+    """The managed include is validated separately from sysctl includes."""
+    return b'\n'.join(line for line in config.splitlines() if not public_routes.own(line, vmid)) + b'\n'
+
+
+def refuse_high_availability(vmid):
+    """Recreating a container that HA manages would race the HA manager, which
+    restarts or relocates it in the middle of the replacement."""
+    try:
+        answer = run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json')
+    except FileNotFoundError:
+        return  # Not a Proxmox VE node: there is no HA manager to race.
+    resources = json.loads(answer)
+    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
+        raise ValueError(translate(
+            'This container is managed by high availability. Remove ct:{vmid} from HA (Datacenter → HA, '
+            'or ha-manager remove ct:{vmid}), repeat the operation and add it back to HA with the same settings.'
+        ).replace('{vmid}', str(vmid)))
+
+
+def check_runtime(template):
+    """The installer refuses a relative entrypoint or working directory only
+    after the old container is gone; refuse them before anything is touched."""
+    runtime = (template or {}).get('proxmox', {}).get('installer_profile', {}).get('runtime', {}) or {}
+    entrypoint = runtime.get('entrypoint')
+    if entrypoint not in (None, '') and (not isinstance(entrypoint, str) or not entrypoint.startswith('/') or '\n' in entrypoint):
+        raise ValueError(translate('Invalid declarative entrypoint'))
+    directory = runtime.get('working_directory')
+    if directory not in (None, '') and (not isinstance(directory, str) or not directory.startswith('/')
+                                        or any(c.isspace() for c in directory)):
+        raise ValueError(translate('Invalid declarative working directory'))
+
+
+def preflight(record, candidate, config, coordinated=None, in_place=False, baseline=True):
+    check_runtime(candidate.get('template'))
     deployment = record['deployment']
     desired = candidate['deployment']
+    standalone = not coordinated and not any(key in record for key in ('stack', 'stack_member', 'native_stack_intent'))
+    for contract in (record, candidate):
+        mount_idmap.check_deployment(contract['deployment'], contract.get('template'), config,
+                                    standalone=standalone, require_supported=True)
     if coordinated and (record.get('native_stack_intent') or deployment.get('rootfs_adaptation_replay_required')):
         raise ValueError(translate('The dedicated adapter still requires replaying its rootfs changes'))
     if not coordinated and (any(key in record for key in ('stack', 'stack_member', 'native_stack_intent')) or deployment.get('stack_managed')):
         raise ValueError(translate('Stack members are updated together with their stack'))
     if instances.identity(config) != record['installation_id']:
         raise ValueError(translate('The container identity changed; the container is not replaced'))
-    for key, value in external_changes(record, config, adopt=not coordinated).items():
+    if not in_place and not coordinated:
+        # A stack checks its members itself; an in-place edit keeps the container.
+        refuse_high_availability(record['vmid'])
+    for key, value in (external_changes(record, config, adopt=not coordinated) if baseline else {}).items():
         section, name = ADOPTABLE[key]
         recorded = deployment.get(section, {}) if section else deployment
         target = desired.setdefault(section, {}) if section else desired
         if target.get(name) == recorded.get(name):
             target[name] = value
+    # Lines the user added are carried over and are not part of what is checked.
+    custom = deployment.get('custom_lxc', [])
+    config = b''.join(line for line in without_backup_snapshot(config).splitlines(keepends=True)
+                      if line.decode().rstrip('\n') not in custom)
     cfg = parse_config(config)
     for key in ('lxc.init.uid', 'lxc.init.gid'):
         if key in cfg and not re.fullmatch(r'[0-9]+', cfg[key]):
@@ -477,7 +768,10 @@ def preflight(record, candidate, config, coordinated=None):
     # What shows the content mounted inside a host directory follows the mount
     # points: it is checked against them and is not a setting of its own.
     nested_mounts.check(config)
-    keys = {line.split(': ', 1)[0] for line in nested_mounts.without(config).decode().splitlines() if ': ' in line}
+    # So do the lines of the USB devices passed by their identity.
+    usb_passthrough.check(config, deployment)
+    keys = {line.split(': ', 1)[0] for line in usb_passthrough.without(nested_mounts.without(config)).decode().splitlines()
+            if ': ' in line}
     runtime_keys = {'lxc.mount.entry'} if gpu_devices.nvidia.enabled(deployment) else set()
     if gpu_devices.dynamic_mode(deployment):
         runtime_keys = {'lxc.hook.mount', 'lxc.environment'}
@@ -489,9 +783,22 @@ def preflight(record, candidate, config, coordinated=None):
     files = runtime_settings.file_binds(config)
     if files:
         runtime_keys.add('lxc.mount.entry')
-    runtime_settings.check(config, deployment, record['vmid'])
+    public_routes.check(config, deployment, record['vmid'], record['installation_id'])
+    if deployment.get('stack_public_routes'):
+        runtime_keys.add('lxc.include')
+    runtime_settings.check(without_public_routes(config, record['vmid']), deployment, record['vmid'])
     coordinated_keys = {'hookscript', *KEPT_AS_IS} if coordinated else set(KEPT_AS_IS)
-    if '[' in config.decode() or keys - BASIC - runtime_keys - coordinated_keys - {k for k in keys if re.fullmatch(r'(mp|dev)[0-9]+', k)}:
+    preserved_keys = {'nameserver', 'searchdomain', 'timezone', 'protection'} if in_place else set()
+    detached = unused_volumes(config)
+    if baseline and detached != unused_volumes(record['observed'].get('config', '').encode()):
+        raise ValueError(translate('The container disks do not match the saved record'))
+    used_volumes = {value.split(',', 1)[0] for key, value in cfg.items()
+                    if key == 'rootfs' or re.fullmatch(r'mp[0-9]+', key)}
+    if (len(set(detached.values())) != len(detached)
+            or any(not re.fullmatch(r'[A-Za-z0-9_.-]+:[^\s,]+', value) or value in used_volumes
+                   for value in detached.values())):
+        raise ValueError(translate('The container disks do not match the saved record'))
+    if re.search(r'^\[[^]\r\n]+\]\s*$', config.decode(), re.MULTILINE) or keys - BASIC - runtime_keys - coordinated_keys - preserved_keys - {k for k in keys if re.fullmatch(r'(mp|dev|unused)[0-9]+', k)}:
         raise ValueError(translate('The container has advanced Proxmox settings outside the supported profile'))
     unprivileged = deployment.get('security', {}).get('unprivileged', True) is not False
     if (desired.get('security', {}).get('unprivileged', True) is not False) != unprivileged \
@@ -511,9 +818,10 @@ def preflight(record, candidate, config, coordinated=None):
             target = host_mounts.valid_path(mount['container_path'])
             if mount['type'] == 'host-bind' and mount['source'] in declared and mount.get('read_only'):
                 continue
-            if (any(target == p or target.startswith(p.rstrip('/') + '/')
-                           or p.startswith(target.rstrip('/') + '/') for p in paths)):
-                raise ValueError(translate('Mount paths must not overlap'))
+            other = next((p for p in paths if target == p or target.startswith(p.rstrip('/') + '/')
+                          or p.startswith(target.rstrip('/') + '/')), None)
+            if other:
+                raise ValueError(f"{translate('Mount paths must not overlap')}: {target} - {other}")
             if mount['type'] == 'managed-volume':
                 if mount.get('backup') is not True or not isinstance(mount.get('size_gb'), int) or mount['size_gb'] < 1:
                     raise ValueError(translate('Managed disks must have backup enabled and a valid size'))
@@ -531,8 +839,10 @@ def preflight(record, candidate, config, coordinated=None):
     if desired['rootfs'] != deployment['rootfs']:
         raise ValueError(translate('Changing the rootfs or its storage requires a separate migration'))
     actual = mounts(config)
+    gpu_devices.preserve_recorded_container_gids(record, candidate, config)
     gpu_devices.check(config, deployment)
-    gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
+    if baseline:
+        gpu_devices.verify_baseline(record['observed'].get('gpu_devices', {}), deployment)
     recorded_files = {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}
     if files != recorded_files:
         raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
@@ -544,10 +854,13 @@ def preflight(record, candidate, config, coordinated=None):
         host_bind = old[target]['type'] == 'host-bind'
         if ((host_bind and (mount['volume'] != old[target]['source'] or mount.get('backup', '0') != '0'))
                 or (not host_bind and (mount.get('backup') != '1' or not mount['volume'].startswith(old[target]['source'] + ':')))
-                or mount.get('ro', '0') != ('1' if old[target].get('read_only') else '0')):
+                or mount.get('ro', '0') != ('1' if old[target].get('read_only') else '0')
+                or not mount_idmap.same_mapping(mount, old[target])):
             raise ValueError(translate('A container mount has a source, backup or permission different from the saved record'))
     for target in old.keys() & new.keys():
-        if any(old[target].get(k) != new[target].get(k) for k in ('type', 'source', 'size_gb')):
+        directory_bind = old[target]['type'] == new[target]['type'] == 'host-bind'
+        fixed = ('type', 'size_gb') if directory_bind else ('type', 'source', 'size_gb')
+        if any(old[target].get(k) != new[target].get(k) for k in fixed):
             raise ValueError(translate('Changing the storage or size of a disk requires a migration; empty disks are not created'))
     protected = ('/bin', '/sbin', '/etc', '/usr', '/lib', '/lib64', '/proc', '/sys', '/dev', '/run')
     for target in new.keys() - old.keys():
@@ -559,8 +872,9 @@ def preflight(record, candidate, config, coordinated=None):
             raise ValueError(translate('Required persistent paths cannot be removed'))
     image_paths = set(record['observed']['image']['defaults'].get('Volumes') or {})
     image_paths -= non_persistent_image_volumes(record['template'])
-    if any(not any(p == target or p.startswith(target.rstrip('/') + '/') for target in old) for p in image_paths):
-        raise ValueError(translate('The image declares data paths that are still stored in the rootfs'))
+    in_rootfs = sorted(p for p in image_paths if not any(p == target or p.startswith(target.rstrip('/') + '/') for target in old))
+    if in_rootfs:
+        raise ValueError(f"{translate('The image declares data paths that are still stored in the rootfs')}: {', '.join(in_rootfs)}")
     check = effective_healthcheck(candidate['template'])
     if not check and not coordinated:
         raise ValueError(translate('Updates are not available yet for this application in this beta'))
@@ -600,8 +914,10 @@ def freeze_host_sources(record, candidate, acknowledge_external_data, files=()):
 
 
 def check_runtime_mounts(config, deployment):
-    runtime_settings.check(config, deployment, deployment['vmid'])
+    public_routes.check(config, deployment, deployment['vmid'])
+    runtime_settings.check(without_public_routes(config, deployment['vmid']), deployment, deployment['vmid'])
     nested_mounts.check(config)
+    usb_passthrough.check(config, deployment)
     actual = mounts(config)
     files = runtime_settings.file_binds(config)
     if files != {m['source']: bool(m.get('read_only')) for m in deployment.get('mounts', []) if is_file_bind(m, files)}:
@@ -613,7 +929,8 @@ def check_runtime_mounts(config, deployment):
         expected = declared[target]
         source_ok = value['volume'] == expected['source'] if expected['type'] == 'host-bind' else value['volume'].startswith(expected['source'] + ':')
         if (not source_ok or value.get('backup', '0') != ('1' if expected['backup'] else '0')
-                or value.get('ro', '0') != ('1' if expected.get('read_only') else '0')):
+                or value.get('ro', '0') != ('1' if expected.get('read_only') else '0')
+                or not mount_idmap.same_mapping(value, expected)):
             raise ValueError(translate('The mount source or options were not kept'))
 
 
@@ -652,9 +969,15 @@ def candidate_host_sources(journal, state):
     return pinned
 
 
-def stop(vmid):
+def stop(vmid, timeout=60):
+    if isinstance(timeout, bool) or not isinstance(timeout, int) or timeout < 1:
+        raise ValueError(translate('The shutdown timeout must be a positive number of seconds'))
     if run('pct', 'status', str(vmid)).strip() == b'status: running':
-        run('pct', 'shutdown', str(vmid), '--timeout', '60')
+        try:
+            run('pct', 'shutdown', str(vmid), '--timeout', str(timeout))
+        except RuntimeError:
+            # What `docker stop` does with a process that ignores the signal.
+            run('pct', 'stop', str(vmid))
     if run('pct', 'status', str(vmid)).strip() != b'status: stopped':
         raise ValueError(translate('The container did not stop; its disks are not touched'))
 
@@ -710,35 +1033,46 @@ def healthcheck(vmid, template):
             time.sleep(2)
         log(f'container {vmid} kept running for {stability}s')
         return None
-    scheme, port, path = check['scheme'], int(check['port']), check['path']
+    scheme, path = check['scheme'], check['path']
+    # Any of the ports answering means the application is up.
+    ports = [int(check['port']), *(int(p) for p in check.get('alternative_ports') or [])]
     timeout = int(check.get('timeout_seconds', 120))
     stability = int(check.get('stability_seconds', 0))
-    if (scheme not in ('http', 'https') or not 1 <= port <= 65535
+    if (scheme not in ('http', 'https') or not all(1 <= port <= 65535 for port in ports)
             or not path.startswith('/') or any(c.isspace() for c in path)
             or not 0 <= stability < timeout <= 3600):
         raise ValueError(translate('Invalid health check'))
     started, stable_since = time.monotonic(), None
     # A monitor of the host answers on the network of the host itself.
-    shared = parse_config(run('pct', 'config', str(vmid))).get('lxc.net.0.type') == 'none'
+    config = parse_config(run('pct', 'config', str(vmid)))
+    shared = config.get('lxc.net.0.type') == 'none'
+    managed_network = any(re.fullmatch(r'net[0-9]+', key) for key in config)
     while time.monotonic() - started < timeout:
         if run('pct', 'status', str(vmid)).strip() != b'status: running':
             raise ValueError(translate('The restored service stopped; the recovery is not confirmed'))
-        addresses = ['127.0.0.1'] if shared else run('lxc-info', '-n', str(vmid), '-iH').decode().splitlines()
+        if shared:
+            addresses = ['127.0.0.1']
+        elif managed_network:
+            addresses = own_addresses(vmid)
+        else:
+            addresses = run('lxc-info', '-n', str(vmid), '-iH').decode().splitlines()
         ip = next((a for a in addresses if re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', a)), None)
         ok = False
         if ip:
             any_status = check.get('accept_any_status', False)
-            args = ['curl', '-sS' if any_status else '-fsS', '--noproxy', '*', '-o', '/dev/null',
+            args = [*container_curl(vmid, run), '-sS' if any_status else '-fsS', '--noproxy', '*', '-o', '/dev/null',
                     '--max-time', str(check.get('request_timeout_seconds', 5))]
             if any_status:
                 args += ['-w', '%{http_code}']
             if not check.get('verify_tls', False):
                 args.append('-k')
-            try:
-                answer = run(*args, f'{scheme}://{ip}:{port}{path}')
-                ok = not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None
-            except RuntimeError:
-                pass
+            for port in ports:
+                answer, status = probe_http([*args, f'{scheme}://{ip}:{port}{path}'])
+                ok = status == 0 and (not any_status or re.fullmatch(rb'[1-4][0-9][0-9]', answer.strip()) is not None)
+                if not ok and check.get('accept_non_http') and status in NON_HTTP_ANSWER:
+                    ok = True
+                if ok:
+                    break
         if ok:
             stable_since = stable_since or time.monotonic()
             if time.monotonic() - stable_since >= stability:
@@ -844,6 +1178,8 @@ def commit(root, journal, state):
     gpu_devices.verify(state.get('desired_gpu_devices', {}))
     gpu_devices.check(config, state['candidate_contract']['deployment'])
     checkpoint(journal, state, 'committing')
+    if state.get('protected'):
+        run('pct', 'set', str(state['vmid']), '--protection', '1')
     result = copy.deepcopy(state['candidate_contract'])
     result.update(status='installed', completed_at=instances.now(),
                   last_transaction=state['id'],
@@ -881,6 +1217,29 @@ def restore_description(vmid, state):
     run('pct', 'set', str(vmid), '--description', original_description(state))
 
 
+def delete_removed_volumes(state, candidate):
+    """The volumes of the paths a modification removes stay on the data
+    holder. Once the new container is saved they are deleted, as the user
+    confirmed; any other volume left there keeps the holder."""
+    stage = state.get('stage')
+    if not stage:
+        return
+    wanted = {m['container_path'] for m in candidate['deployment'].get('mounts', [])}
+    recorded = {m['container_path'] for m in state['record']['deployment'].get('mounts', [])
+                if m['type'] == 'managed-volume'}
+    config = owned(stage, 'proxmenux-transaction=' + state['id'])
+    for target, mount in mounts(config).items():
+        if target in wanted or target not in recorded or mount['volume'].startswith('/'):
+            continue
+        run('pct', 'set', str(stage), '--delete', mount['key'])
+        detached = owned(stage, 'proxmenux-transaction=' + state['id'])
+        key = next((k for k, v in parse_config(detached).items()
+                    if re.fullmatch(r'unused[0-9]+', k) and v == mount['volume']), None)
+        if key:
+            run('pct', 'set', str(stage), '--delete', key)
+        log(f'removed path volume deleted: {target} {mount["volume"]}')
+
+
 def release_stage(state, discard=False):
     """After a commit the holder CT only keeps its own rootfs: every parked
     volume went back to the application. After a verified recovery it holds
@@ -909,7 +1268,7 @@ def discard_stage(state):
     Returns whether the holder CT was removed."""
     try:
         return release_stage(state, discard=True)
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, StopIteration, subprocess.SubprocessError) as error:
         log(f'cleanup: {error}')
         return False
 
@@ -970,9 +1329,40 @@ def check_archive(archive):
         log_output(report.getvalue())
 
 
+def create_data_holder(vmid, storage, identity, directory, architecture='amd64'):
+    """A stopped, networkless volume parking CT needs no application rootfs.
+
+    Use a tiny plain rootfs archive, not the candidate OCI image. The holder is
+    never started; its own disk is discarded only after parked volumes return.
+    Keep the same identity marker and recovery journal protocol as before.
+    """
+    archive = Path(directory) / ('data-holder-%s.tar' % uuid.uuid4().hex)
+    with archive.open('xb') as output:
+        with tarfile.open(fileobj=output, mode='w', format=tarfile.USTAR_FORMAT) as tar:
+            for name in ('etc', 'dev', 'proc', 'sys', 'tmp'):
+                entry = tarfile.TarInfo(name)
+                entry.type = tarfile.DIRTYPE
+                entry.mode = 0o1777 if name == 'tmp' else 0o755
+                tar.addfile(entry)
+            # Match current PVE's user lookup requirements without unpacking
+            # the application image into this stopped volume holder.
+            for name, body in USER_DATABASES.items():
+                entry = tarfile.TarInfo(name)
+                entry.mode = 0o644
+                entry.size = len(body)
+                tar.addfile(entry, io.BytesIO(body))
+    try:
+        run('pct', 'create', str(vmid), str(archive), '--rootfs', f'{storage}:1',
+            '--hostname', 'oci-data-holder', '--ostype', 'unmanaged', '--unprivileged', '1',
+            '--arch', architecture, '--memory', '128', '--cores', '1', '--onboot', '0',
+            '--description', 'proxmenux-transaction=' + identity)
+    finally:
+        archive.unlink(missing_ok=True)
+
+
 def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, interrupt_after=None,
           backup_compression='zstd', acknowledge_external_data=False, coordinated=None, progress=None,
-          keep_backup=None):
+          keep_backup=None, force_archive=False):
     # A coordinated member is shown by its stack; progress prefixes the installer steps.
     show = not coordinated
     update = operation == 'update'
@@ -983,14 +1373,10 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if show:
         msg_info(translate('Preparing the update...') if update else translate('Preparing the changes...'))
     record = instances.read(root, vmid)
-    if coordinated and any(coordinated.get(flag) for flag in
-                           ('nextcloud_replay', 'paperless_replay', 'tandoor_replay', 'immich_replay')):
-        import oci_stack_replay
-        project = (oci_stack_replay.immich_record if coordinated.get('immich_replay')
-                   else oci_stack_replay.tandoor_record if coordinated.get('tandoor_replay')
-                   else oci_stack_replay.paperless_record if coordinated.get('paperless_replay')
-                   else oci_stack_replay.nextcloud_record)
-        record = project(record)
+    import oci_stack_adapters
+    adapter = oci_stack_adapters.flagged(coordinated) if coordinated else None
+    if adapter:
+        record = adapter['record'](record)
         expected = coordinated['effective_record']
         if any(record.get(key) != expected.get(key) for key in
                ('vmid', 'installation_id', 'template', 'deployment')):
@@ -998,6 +1384,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         if 'stack' in expected:
             record['stack'] = copy.deepcopy(expected['stack'])
     candidate = candidate_contract(record, operation, proposal)
+    drop_backup_snapshot(vmid)
     before = run('pct', 'config', str(vmid))
     cfg, actual, mac = preflight(record, candidate, before, coordinated)
     description = original_description({'record': record, 'before_config': before.decode()})
@@ -1005,9 +1392,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                                             runtime_settings.file_binds(before))
     original_gpu = gpu_devices.planned(record['deployment'])
     desired_gpu = gpu_devices.planned(candidate['deployment'])
-    resources = json.loads(run('pvesh', 'get', '/cluster/ha/resources', '--output-format', 'json'))
-    if any(r.get('sid') == f'ct:{vmid}' for r in resources):
-        raise ValueError(translate('High availability resources are not supported by this profile'))
+    if coordinated:
+        refuse_high_availability(vmid)
     archive = archive.resolve(strict=True)
     check_archive(archive)
     image = image_from_archive(str(archive))
@@ -1041,6 +1427,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
                                   for p, m in actual.items() if p in required and not m['volume'].startswith('/')])
     state = {'schema_version': 1, 'id': directory.name, 'vmid': vmid, 'operation': operation,
              'record': record, 'candidate_contract': candidate, 'before_config': before.decode(),
+             'retained_unused': unused_volumes(before),
              'original_description': description,
              'archive': str(archive), 'archive_sha256': filehash(archive),
              'registry_digest': registry_digest or image['manifest_digest'],
@@ -1050,17 +1437,26 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
              'external_data_acknowledged': acknowledge_external_data,
              'original_gpu_devices': original_gpu, 'desired_gpu_devices': desired_gpu,
              'was_running': run('pct', 'status', str(vmid)).strip() == b'status: running'}
-    state['kept_config'] = {key: cfg[key] for key in KEPT_AS_IS if key in cfg}
+    state['kept_config'] = kept_settings(record, candidate, cfg)
+    state['protected'] = cfg.get('protection') == '1'
+    # The installer adds default tags. Preserve an explicit absence too, so
+    # deleting all tags in Proxmox does not bring them back on the next update.
+    state['kept_config']['tags'] = cfg.get('tags', '')
     if not coordinated and state['kept_config']:
         # Applied by the installer before the new container starts, so the
         # application has its LAN leg from the first second.
         state['runtime_deployment']['kept_proxmox_settings'] = state['kept_config']
     if coordinated:
         state['coordinated'] = coordinated
-        state['preserved_stack_config'] = {key: cfg[key] for key in ('net1', 'startup', 'hookscript') if key in cfg}
-        if operation == 'update':
-            state['preserved_stack_config'].update({key: cfg[key] for key in
-                ('net0', 'features', 'cmode', 'console', 'tty', 'cpuunits', 'tags') if key in cfg})
+        state['preserved_stack_config'] = dict(state['kept_config'])
+        if operation == 'update' and 'cpuunits' in cfg:
+            state['preserved_stack_config']['cpuunits'] = cfg['cpuunits']
+    if coordinated and 'import_image' in coordinated:
+        state['import_image'] = coordinated['import_image']
+        layer_paths.validate(archive, state['import_image'])
+    else:
+        # Build any import-only path adaptation while the old app still runs.
+        state['import_image'] = layer_paths.prepare(archive, directory / 'pve-import-image.tar')
     checkpoint(journal, state, 'prepared')
     pending = copy.deepcopy(record)
     pending.update(status='updating', pending_transaction=str(journal), transaction_id=state['id'])
@@ -1075,7 +1471,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     if show:
         msg_ok(translate('Update prepared') if update else translate('Changes prepared'))
         msg_info(translate('Stopping the container...'))
-    stop(vmid)
+    stop(vmid, record['deployment'].get('shutdown_timeout_seconds', 60))
     if show:
         msg_ok(translate('Container stopped'))
         msg_info(translate('Creating a backup of the container...'))
@@ -1084,13 +1480,19 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         backup = coordinated['backup']
         if filehash(backup['archive']) != backup['sha256']:
             raise ValueError(translate('The coordinated backup was modified'))
-        run('zstd', '-t', backup['archive'])
+        verify_recovery_archive(backup['archive'])
         state.update(backup=backup['archive'], backup_sha256=backup['sha256'])
     else:
         backup_dir = work / 'backup'
         private_directory(backup_dir)
-        backup = verified_backup(vmid, backup_dir, backup_compression,
-                                 translate('The backup could not be identified; the image is not replaced'), show)
+        prepared_zfs = zfs_recovery.plan({vmid: record}) if not keep_backup and not force_archive and backup_compression == 'zstd' else None
+        if prepared_zfs:
+            import oci_carried_record
+            oci_carried_record.carry_backup(root, vmid, record, before.decode())
+            backup = zfs_recovery.create({vmid: record}, directory, prepared_zfs)[vmid]
+        else:
+            backup = verified_backup(vmid, backup_dir, backup_compression,
+                                     translate('The backup could not be identified; the image is not replaced'), show)
         state.update(backup=str(backup), backup_sha256=filehash(backup))
     checkpoint(journal, state, 'backup-ready')
     if show:
@@ -1100,11 +1502,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     state['stage'] = stage
     state['runtime_deployment']['transaction_source_vmid'] = stage
     checkpoint(journal, state, 'creating-stage')
-    run('pct', 'create', str(stage), str(archive), '--rootfs',
-        f"{record['deployment']['rootfs']['storage']}:{record['deployment']['rootfs']['size_gb']}",
-        '--hostname', 'oci-data-holder', '--ostype', 'unmanaged', '--unprivileged', '1',
-        '--memory', '128', '--cores', '1', '--onboot', '0',
-        '--description', 'proxmenux-transaction=' + state['id'])
+    create_data_holder(stage, record['deployment']['rootfs']['storage'], state['id'],
+                       directory, previous['architecture'])
     checkpoint(journal, state, 'parking-data')
     for mount in actual.values():
         owned(vmid, record['installation_id'])
@@ -1114,6 +1513,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         else:
             owned(stage, 'proxmenux-transaction=' + state['id'])
             run('pct', 'move-volume', str(vmid), mount['key'], '--target-vmid', str(stage), '--target-volume', mount['key'])
+    move_retained_unused(state, to_stage=True)
     checkpoint(journal, state, 'data-parked')
     if show:
         msg_ok(translate('Data volumes protected'))
@@ -1123,8 +1523,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
         msg_info(translate('Installing the new image...') if update else translate('Recreating the container...'))
     current = owned(vmid, record['installation_id'])
     expected = b''.join(line for line in before.splitlines(keepends=True)
-                        if not re.match(rb'mp[0-9]+: ', line))
-    if mounts(current) or current != expected:
+                        if not re.match(rb'(mp|unused)[0-9]+: ', line))
+    if mounts(current) or unused_volumes(current) or current != expected:
         raise ValueError(translate('A concurrent change was detected; the container is not removed'))
     host_mounts.verify_sources(original_sources)
     gpu_devices.verify(original_gpu)
@@ -1132,6 +1532,8 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     firewall = Path(f'/etc/pve/firewall/{vmid}.fw')
     state['firewall_config'] = firewall.read_text() if firewall.exists() else None
     checkpoint(journal, state, 'replacing-root')
+    if state.get('protected'):
+        run('pct', 'set', str(vmid), '--delete', 'protection')
     run('pct', 'destroy', str(vmid))
     checkpoint(journal, state, 'installing-candidate')
     if show:
@@ -1139,9 +1541,13 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     install_candidate(root, journal, state, progress)
     restore_description(vmid, state)
     restore_firewall(vmid, state)
+    move_retained_unused(state, to_stage=False)
     if coordinated:
         for key, value in state['preserved_stack_config'].items():
-            run('pct', 'set', str(vmid), '--' + key, value)
+            if key == 'tags' and not value:
+                run('pct', 'set', str(vmid), '--delete', 'tags')
+            else:
+                run('pct', 'set', str(vmid), '--' + key, value)
         check_runtime_mounts(run('pct', 'config', str(vmid)), candidate['deployment'])
         gpu_devices.check(run('pct', 'config', str(vmid)), candidate['deployment'])
         state['staged_config_sha256'] = sha(owned(vmid, record['installation_id']))
@@ -1157,7 +1563,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     check_runtime_mounts(run('pct', 'config', str(vmid)), candidate['deployment'])
     gpu_devices.check(run('pct', 'config', str(vmid)), candidate['deployment'])
     if not state['was_running']:
-        stop(vmid)
+        stop(vmid, candidate['deployment'].get('shutdown_timeout_seconds', 60))
     run('pct', 'set', str(vmid), '--onboot', '1' if candidate['deployment']['onboot'] else '0')
     state['validated_config_sha256'] = sha(owned(vmid, record['installation_id']))
     checkpoint(journal, state, 'health-passed')
@@ -1165,6 +1571,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     cleanup_error = None
     freed = 0
     try:
+        delete_removed_volumes(state, candidate)
         release_stage(state)
         if keep_backup and state.get('backup'):
             import oci_keep_backup
@@ -1188,28 +1595,9 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
 
 
 def remove_empty_format_directories(rootfs, deployment):
-    """Remove only empty, unmapped mkfs lost+found on restored managed disks."""
-    root = Path(rootfs)
-    for mount in deployment.get('mounts', []):
-        if mount.get('type') != 'managed-volume' or not mount.get('backup'):
-            continue
-        current = root
-        for part in Path(mount['container_path']).parts[1:]:
-            if part in ('.', '..'):
-                raise ValueError(translate('Invalid restored volume path'))
-            current /= part
-            if current.is_symlink():
-                raise ValueError(translate('Symbolic link in a restored volume path'))
-        candidate = current / 'lost+found'
-        if not candidate.exists() or candidate.is_symlink():
-            continue
-        info = candidate.lstat()
-        if (stat.S_ISDIR(info.st_mode) and info.st_ino == 11
-                and info.st_uid == 0 and info.st_gid == 0
-                and stat.S_IMODE(info.st_mode) == 0o700):
-            if not any(candidate.iterdir()):
-                candidate.rmdir()
-
+    """Keep the recovery entrypoint, sharing the guarded format-dir cleanup."""
+    from oci_managed_volumes import remove_empty_format_directories as clean
+    return clean(rootfs, deployment)
 
 def cleanup_restored_format_dirs(vmid, deployment, installation_id):
     owned(vmid, installation_id)
@@ -1217,7 +1605,7 @@ def cleanup_restored_format_dirs(vmid, deployment, installation_id):
     try:
         remove_empty_format_directories(Path('/var/lib/lxc') / str(vmid) / 'rootfs', deployment)
     finally:
-        run('pct', 'unmount', str(vmid))
+        oci_mount_lock.release(vmid, run)
 
 
 def complete_recovery(root, journal, state):
@@ -1233,6 +1621,10 @@ def complete_recovery(root, journal, state):
         raise ValueError(translate('The configuration changed after the backup was restored; the recovery is not confirmed'))
     cleanup_restored_format_dirs(vmid, state['record']['deployment'], state['record']['installation_id'])
     runtime_settings.restore(state['record']['deployment'], vmid)
+    public_routes.restore(state['record']['deployment'], vmid, state['record']['installation_id'])
+    # The udev rule lives on the host: it goes back to the USB devices of the
+    # restored installation, whatever the failed one had written.
+    usb_passthrough.write_rules(vmid, state['record']['deployment'])
     check_runtime_mounts(config, state['record']['deployment'])
     gpu_devices.check(config, state['record']['deployment'])
     if show:
@@ -1247,7 +1639,7 @@ def complete_recovery(root, journal, state):
         gpu_devices.validate_runtime(vmid, state['record']['deployment'])
         msg_ok(f"{translate('Application responding:')} {url}")
     if not state['was_running']:
-        stop(vmid)
+        stop(vmid, state['record']['deployment'].get('shutdown_timeout_seconds', 60))
     restored = copy.deepcopy(state['record'])
     restored['observed'] = instances.observe(vmid, restored['installation_id'],
         restored['observed']['archive_path'], restored['observed']['resolved_registry_digest'],
@@ -1261,7 +1653,11 @@ def complete_recovery(root, journal, state):
     if show:
         # A member of a stack is released when the whole stack is back.
         if discard_stage(state):
-            msg_ok(translate('Recovery completed. The disks of the failed attempt were removed; the backup is kept.'))
+            message = translate('Recovery completed. The disks of the failed attempt were removed; the backup is kept.')
+            if zfs_recovery.is_fast(state.get('backup', '')):
+                message = translate('Previous installation restored')
+            release_local_recovery(journal.parent)
+            msg_ok(message)
         else:
             msg_ok(translate('Recovery completed; the backup is kept.'))
             if state.get('stage'):
@@ -1271,8 +1667,57 @@ def complete_recovery(root, journal, state):
             msg_info2(translate('Shared host files are kept as they are; the backup does not restore their content.'))
 
 
+def check_recovery_runtime(config, state):
+    """Validate owned route assets before excluding their include from GPU/sysctl checks."""
+    error = None
+    for key in ('record', 'candidate_contract'):
+        saved = state.get(key) or {}
+        try:
+            public_routes.check(config, saved.get('deployment', {}), state['vmid'],
+                                state['record']['installation_id'])
+            break
+        except public_routes.RouteError as failure:
+            error = failure
+    else:
+        raise error
+    gpu_devices.check_recovery_entries(without_public_routes(config, state['vmid']), state)
+
+
+def release_stale_marker(root, vmid, journal):
+    """Free a record whose pending operation can no longer be recovered: its
+    journal is missing, unreadable or already finished. Only when the
+    container is exactly as the record describes it; otherwise the normal
+    recovery runs and explains what is wrong. Returns whether it released."""
+    record = instances.read(root, vmid)
+    if record.get('pending_transaction') != str(journal):
+        return False
+    try:
+        state = json.loads(Path(journal).read_text())
+    except (OSError, ValueError):
+        state = None
+    if isinstance(state, dict):
+        if state.get('coordinated') or state.get('kind') == 'native-modify':
+            return False
+        if state.get('phase') not in TERMINAL and record.get('last_transaction') != state.get('id'):
+            return False
+    config = run('pct', 'config', str(vmid))
+    if not instances.same_config_except_notes(record, config):
+        return False
+    released = copy.deepcopy(record)
+    released.pop('pending_transaction', None)
+    released.pop('transaction_id', None)
+    released['status'] = 'installed'
+    instances.write(instances.location(root, vmid), released)
+    log(f'released the stale marker of {journal}')
+    msg_ok(translate('The interrupted operation had already ended; the container was not changed and can be updated again.'))
+    return True
+
+
 def recover(root, journal):
     state = json.loads(journal.read_text())
+    if state.get('kind') == 'native-modify':
+        import oci_native_modify
+        return oci_native_modify.recover(root, journal)
     vmid = state['vmid']
     show = not state.get('coordinated')
     if show:
@@ -1300,11 +1745,16 @@ def recover(root, journal):
     backup = state.get('backup')
     # A failure before the container was changed (while backing it up or
     # creating the temporary container) leaves it exactly as it was.
-    untouched = current_path.exists() and run('pct', 'config', str(vmid)).decode() == state['before_config']
+    # Coordinated recovery also restores unchanged members: an application
+    # migration may have changed their data without changing their config.
+    untouched = (not state.get('coordinated') and current_path.exists()
+                 and run('pct', 'config', str(vmid)).decode() == state['before_config'])
     if not backup or untouched:
         if not untouched:
             raise ValueError(translate('There is no verified backup; a modified container is not touched'))
         release_stage(state)
+        if not state.get('coordinated'):
+            release_local_recovery(journal.parent)
         if state['was_running'] and run('pct', 'status', str(vmid)).strip() == b'status: stopped':
             run('pct', 'start', str(vmid))
         instances.write(instances.location(root, vmid), state['record'])
@@ -1316,7 +1766,7 @@ def recover(root, journal):
         raise ValueError(f"{translate('The backup of this operation cannot be read. If it is on another storage, make it available and recover the operation again:')} {backup}")
     if filehash(backup) != state['backup_sha256']:
         raise ValueError(translate('The backup was altered; recovery blocked'))
-    run('gzip' if state.get('backup_compression') == 'gzip' else 'zstd', '-t', backup)
+    verify_recovery_archive(backup, state.get('backup_compression', 'zstd'))
     if show:
         msg_ok(translate('Backup of the previous installation verified'))
     if state['phase'] == 'checking-recovery' and state.get('restore_config_sha256'):
@@ -1332,11 +1782,13 @@ def recover(root, journal):
         held = None
     checkpoint(journal, state, 'recovering')
     if current_path.exists():
-        stop(vmid)
+        deployment = state.get('candidate_contract', {}).get('deployment', state['record']['deployment'])
+        stop(vmid, deployment.get('shutdown_timeout_seconds', 60))
         current = owned(vmid, record['installation_id'])
-        gpu_devices.check_recovery_entries(current, state)
-        if any(re.fullmatch(r'unused[0-9]+', k) for k in parse_config(current)):
+        check_recovery_runtime(current, state)
+        if unused_volumes(current).keys() - state.get('retained_unused', {}).keys():
             raise ValueError(translate('There are extra disks or bind mounts outside the journal; the rootfs is not replaced'))
+        move_retained_unused(state, to_stage=True)
         known_binds = {(m['source'], m['container_path'])
                        for plan in (state['record']['deployment'], state['candidate_contract']['deployment'])
                        for m in plan.get('mounts', []) if m['type'] == 'host-bind'}
@@ -1362,8 +1814,10 @@ def recover(root, journal):
             used.add(key)
     checkpoint(journal, state, 'restoring-backup')
     host_mounts.verify_sources(state.get('original_host_sources', {}))
-    run('pct', 'restore', str(vmid), backup, '--force', '1', '--storage',
-        state['record']['deployment']['rootfs']['storage'])
+    restore_archive, restore_args = zfs_recovery.restore(backup, vmid) if zfs_recovery.is_fast(backup) else (backup, [])
+    run('pct', 'restore', str(vmid), str(restore_archive), '--force', '1', '--storage',
+        state['record']['deployment']['rootfs']['storage'], *restore_args)
+    move_retained_unused(state, to_stage=False)
     state['restore_config_sha256'] = sha(owned(vmid, state['record']['installation_id']))
     checkpoint(journal, state, 'checking-recovery')
     if show:
@@ -1421,7 +1875,10 @@ def main():
     parser.add_argument('--acknowledge-external-data', action='store_true')
     parser.add_argument('--interrupt-after', choices=['data-parked', 'candidate-installed'])
     parser.add_argument('--backup-compression', choices=['zstd', 'gzip'], default='zstd')
+    parser.add_argument('--recovery-backend', choices=['backup', 'auto'])
     args = parser.parse_args()
+    if args.recovery_backend:
+        os.environ['PROXMENUX_OCI_RECOVERY'] = args.recovery_backend
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))
     # The shared installer reads the output of these two actions: their messages go to stderr.
@@ -1433,7 +1890,7 @@ def main():
         if args.action == 'pin-host-source':
             pin_host_source(args.root, args.vmid, args.journal, args.source)
             return 0
-        with instances.locked(args.root):
+        with native_reads.session(log=log), instances.locked(args.root):
             if args.action == 'apply':
                 if args.archive is None:
                     raise ValueError(translate('apply requires the OCI archive of the resolved image'))
@@ -1443,6 +1900,8 @@ def main():
                       args.acknowledge_external_data)
             else:
                 path = args.journal or Path(instances.read(args.root, args.vmid)['pending_transaction'])
+                if args.action == 'recover' and release_stale_marker(args.root, args.vmid, path):
+                    return 0
                 state = json.loads(path.read_text())
                 if state['vmid'] != args.vmid:
                     raise ValueError(translate('The journal belongs to another VMID'))

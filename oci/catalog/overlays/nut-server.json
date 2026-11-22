@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Network UPS Tools server for a UPS connected to the host by USB."
+    },
+    "description": {
+      "en_US": "NUT Server (Network UPS Tools) monitors and manages uninterruptible power supply devices connected to a host system via USB. It captures telemetry such as power events, battery state, and load levels, and shares this information across the network. Connected client systems can track power conditions and coordinate automated, safe shutdowns during outages."
+    }
+  }
+}

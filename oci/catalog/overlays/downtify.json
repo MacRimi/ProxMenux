@@ -16,5 +16,21 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "With Downtify you can download Spotify musics containing album art, track names, album title and other metadata about the songs. Just copy the Spotify link, whether it's a single song, an album, etc. As soon as your downloads are complete you will be notified!\n"
+    },
+    "description": {
+      "en_US": "Downtify is a self-hosted music downloader and player that turns links from Spotify, YouTube Music, Deezer, and SoundCloud into a tagged audio library. It resolves metadata from public web pages without needing Spotify accounts or API keys, matching audio and fetching it via YouTube. The application includes a built-in web player with synchronized lyrics, playlist management, automated playlist monitoring, and multi-user support."
+    },
+    "tips": [
+      "Sign in using the default credentials admin / downtify",
+      "Change the default password in Settings → General after logging in"
+    ],
+    "screenshots": [
+      "https://raw.githubusercontent.com/henriquesebastiao/downtify/HEAD/assets/readme-hero.png"
+    ],
+    "repository": "https://github.com/henriquesebastiao/downtify"
   }
 }

@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A simple, configurable start page that groups links to the services on your home server."
+    },
+    "description": {
+      "en_US": "Homer is a static homepage and dashboard for keeping links to your services easily accessible. It organizes bookmarks into customizable groups and supports multi-page navigation, fuzzy search, and custom themes. All dashboard contents and layouts are controlled through a central configuration file."
+    }
+  }
+}

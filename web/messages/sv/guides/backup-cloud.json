@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Säkerhetskopiera Proxmox till personlig molnlagring | ProxMenux",
+    "description": "Montera personlig molnlagring, som Google Drive, Mega, Dropbox eller OneDrive, som en katalog på Proxmox VE-värdsystemet med rclone, registrera den som säkerhetskopieringslagring för vzdump och säkerhetskopiera virtuella maskiner och containrar direkt till molnet utan extra säkerhetskopieringsskript.",
+    "ogTitle": "Säkerhetskopiera Proxmox till personlig molnlagring",
+    "ogDescription": "Montera molnlagring med rclone på Proxmox VE-värdsystemet och använd den som vzdump-mål för säkerhetskopior av virtuella maskiner och containrar."
+  },
+  "header": {
+    "title": "Säkerhetskopiera Proxmox till personlig molnlagring",
+    "description": "Montera personlig molnlagring, som Google Drive, Mega, Dropbox eller OneDrive, som en katalog på Proxmox VE-värdsystemet med rclone, registrera den som säkerhetskopieringslagring för vzdump och säkerhetskopiera virtuella maskiner och containrar direkt till molnet utan extra säkerhetskopieringsskript.",
+    "section": "Guider"
+  },
+  "intro": {
+    "pbsCalloutTitle": "Överväg Proxmox Backup Server först",
+    "pbsCalloutBody": "På en andra dator som uppfyller x86-64-kraven ger <pbsLink>Proxmox Backup Server</pbsLink> inkrementella och deduplicerade säkerhetskopior med valfri kryptering på klientsidan. Det är utformat för virtuella maskiner. Den här guiden beskriver i stället hur personlig molnlagring, som Google Drive, Mega, OneDrive eller Dropbox, monteras som mål för säkerhetskopior.",
+    "stepsTitle": "Vad du ska göra",
+    "steps": [
+      "Skapa en katalog på Proxmox-värdsystemet och registrera den som lagring för vzdump-säkerhetskopior.",
+      "Installera och konfigurera rclone för din molnleverantör.",
+      "Montera molnmappen på katalogen.",
+      "Återställa monteringen vid varje start med en systemd-enhet."
+    ],
+    "vzdumpCalloutTitle": "Om Proxmox-säkerhetskopior med vzdump",
+    "vzdumpCalloutBody": "Proxmox vzdump-arkiv är <strong>fullständiga säkerhetskopior, inte inkrementella</strong>. Den faktiska storleken beror på vilka data som ingår och komprimeringen, inte bara på den virtuella diskens kapacitet. Om ett arkiv tar 30 GB kräver fem sparade arkiv ungefär 150 GB. Ange en gallringspolicy så att molnlagringen inte fylls."
+  },
+  "createDir": {
+    "heading": "1. Skapa katalogen på värdsystemet och registrera den som säkerhetskopieringslagring",
+    "body": "Anslut till värdsystemet via SSH eller öppna Proxmox-skalet och skapa en katalog som monteringspunkt under <code>/mnt/</code>. Välj ett namn som visar vilken leverantör det gäller:",
+    "mkdirCode": "mkdir -p /mnt/gdrive",
+    "afterMkdir": "I Proxmox webb UI: <strong>Datacenter → Lagring → Lägg till → Directory</strong>.",
+    "image1Alt": "Lägga till ny lagring i Proxmox",
+    "configIntro": "Konfigurera det så här:",
+    "configItems": [
+      "<strong>ID:</strong> <code>gdrive</code> (eller vad du använde för katalogens namn)",
+      "<strong>Katalog:</strong> <code>/mnt/gdrive</code>",
+      "<strong>Innehåll:</strong> välj <strong>VZDump-säkerhetskopieringsfil</strong>."
+    ],
+    "image2Alt": "Konfigurera ny lagring i Proxmox",
+    "afterConfig": "Klicka på <strong>Lägg till</strong>:",
+    "image3Alt": "Ny lagring läggs till i Proxmox",
+    "afterAdd": "Katalogen är registrerad som Proxmox-lagring men är fortfarande tom, eftersom molnlagringen inte är monterad än."
+  },
+  "installRclone": {
+    "heading": "2. Installera och konfigurera rclone",
+    "body": "<rcloneLink>rclone</rcloneLink> ansluter till molnlagringstjänster. Installera det från Debians paketförråd:",
+    "installCode": "apt-get update\napt-get install -y rclone",
+    "newerCalloutTitle": "Om du behöver en nyare rclone",
+    "newerCalloutBody": "Om du behöver en nyare version än den som ingår i Debian använder du det officiella installationsprogrammet:",
+    "newerCode": "curl https://rclone.org/install.sh | bash",
+    "tunnelHeading": "2.1 Browser-baserad autentisering via SSH tunnel",
+    "tunnelBody": "För leverantörer med webbinloggning saknar Proxmox-värdsystemet vanligtvis en webbläsare. Följ <remoteSetupLink>rclones guide för fjärrkonfiguration</remoteSetupLink>: använd webbläsaren på din bärbara dator och vidarebefordra dess localhost-anslutning för återkopplingen via SSH till rclone på värdsystemet.",
+    "tunnelFrom": "På din <strong>bärbara dator</strong>, där du ersätter <code>ip_proxmox</code> med Proxmox IP-adress:",
+    "tunnelCode": "ssh -L localhost:53682:localhost:53682 root@ip_proxmox",
+    "tunnelAfter": "SSH-sessionen öppnar localhost-port 53682 på din bärbara dator och vidarebefordrar anslutningar till samma port på Proxmox-värdsystemet. Låt den vara öppen under rclone-konfigurationen.",
+    "runHeading": "2.2 Kör rclone config",
+    "runBody": "Kör följande i SSH-sessionen som du just öppnade:",
+    "runCode": "rclone config",
+    "runAfter": "Följ anvisningarna för att lägga till en fjärrkonfiguration, en så kallad remote. Svaren beror på leverantören; se <providerDocsLink>rclones leverantörsdokumentation</providerDocsLink> för Google Drive, Mega, Dropbox, OneDrive med flera. Det viktiga steget är autentiseringsfrågan:",
+    "authPrompt": "Use web browser to automatically authenticate rclone with remote?\n * Say Y if the machine running rclone has a web browser you can use\n * Say N if running rclone on a (remote) machine without web browser access\nIf not sure try Y. If Y failed, try N.\ny) Yes\nn) No\ny/n> y",
+    "authAfter": "Svara <strong>Y</strong>. rclone visar en lokal URL. Öppna den i <strong>webbläsaren på din bärbara dator</strong>; SSH-tunneln vidarebefordrar anslutningen. Ge rclone åtkomst hos molnleverantören för att slutföra konfigurationen.",
+    "nameRemote": "Välj ett namn på fjärrkonfigurationen som motsvarar katalogen, till exempel <code>gdrive</code>."
+  },
+  "mount": {
+    "heading": "3. Montera molnmappen",
+    "body": "Skapa en mapp i molnlagringen för säkerhetskopiorna, till exempel <code>PBC</code> för Proxmox Backup Cloud.",
+    "mountIntro": "Montera den i katalogen på värdsystemet:",
+    "mountCode": "rclone mount gdrive:/PBC /mnt/gdrive --allow-other --allow-non-empty --vfs-cache-mode writes",
+    "mountItems": [
+      "<code>gdrive:/PBC</code> - mappen i ditt moln.",
+      "<code>/mnt/gdrive</code> — katalogen på värdsystemet som du registrerade som lagring."
+    ],
+    "mountFootnote": "<strong>Kommandot körs i förgrunden.</strong> Låt det vara igång i en terminal när du testar en säkerhetskopia. Konfigurera en systemd-enhet enligt nästa avsnitt för automatisk montering vid varje start."
+  },
+  "systemd": {
+    "heading": "4. Automatisk montering vid varje start med systemd",
+    "body": "En systemd-enhet ger mer kontroll än <code>crontab @reboot</code>: den kan invänta nätverksstart, starta om vid fel och ge loggar via <code>journalctl</code>.",
+    "createIntro": "Skapa enhetsfilen:",
+    "createCode": "nano /etc/systemd/system/rclone-gdrive.service",
+    "pasteIntro": "Klistra in:",
+    "unitCode": "[Unit]\nDescription=rclone mount for Proxmox cloud backups\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=notify\nExecStart=/usr/bin/rclone mount \\\n    gdrive:/PBC /mnt/gdrive \\\n    --allow-other \\\n    --allow-non-empty \\\n    --vfs-cache-mode writes \\\n    --log-level INFO \\\n    --log-file /var/log/rclone-gdrive.log\nExecStop=/bin/fusermount -uz /mnt/gdrive\nRestart=on-failure\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target",
+    "adjust": "Anpassa <code>gdrive:/PBC</code> och <code>/mnt/gdrive</code> om du valde andra namn. Spara, avsluta redigeraren med <code>Ctrl+X</code> och aktivera och starta tjänsten:",
+    "enableCode": "systemctl daemon-reload\nsystemctl enable --now rclone-gdrive.service",
+    "verifyIntro": "Verifiera:",
+    "verifyCode": "systemctl status rclone-gdrive.service\nmount | grep /mnt/gdrive",
+    "verifyAfter": "Enheten begär en omstart efter 10 sekunder om rclone-processen avslutas med fel. Det åtgärdar inte utgångna autentiseringsuppgifter och garanterar inte återhämtning från alla nätverks- eller leverantörsfel. Kontrollera <code>/var/log/rclone-gdrive.log</code> och <code>journalctl -u rclone-gdrive.service -f</code>.",
+    "vfsCalloutTitle": "Varför använda --vfs-cache-mode writes?",
+    "vfsCalloutBody": "Med skrivcache går skrivningar som <code>fwrite</code> till en lokal diskcache. rclone laddar upp filen när den stängts och fördröjningen för återskrivning har passerat. Reservera lokalt utrymme för pågående säkerhetskopior och kontrollera att uppladdningen är klar innan molnkopian räknas som tillgänglig."
+  },
+  "configureBackup": {
+    "heading": "5. Ange molnlagringen som säkerhetskopieringsmål",
+    "body": "Välj den registrerade lagringen som <strong>mål</strong> i Proxmox när du schemalägger eller startar en säkerhetskopia manuellt:",
+    "image5Alt": "Välja mål för säkerhetskopiering i Proxmox",
+    "after": "När vzdump är klart väntar du tills rclones bakgrundsuppladdning är färdig och kontrollerar arkivet i molnleverantörens gränssnitt:",
+    "image6Alt": "Backup-fil i molnlagring"
+  },
+  "retention": {
+    "heading": "6. Gallring — håll molnkvoten under kontroll",
+    "body": "Proxmox vzdump-arkiv är <strong>fullständiga säkerhetskopior, inte inkrementella</strong>. Den faktiska storleken beror på vilka data som ingår och komprimeringen, inte bara på den virtuella diskens kapacitet. Om ett arkiv tar 30 GB kräver fem sparade arkiv ungefär 150 GB. Ange en gallringspolicy så att molnlagringen inte fylls.",
+    "uiPath": "I Proxmox-gränssnittet: <strong>Datacenter → Säkerhetskopiering → [ditt jobb] → Bevarande</strong>:",
+    "image7Alt": "Gallringsinställningar för säkerhetskopior i Proxmox",
+    "starterIntro": "Möjliga startvärden för en hemma- eller testmiljö:",
+    "starterItems": [
+      "Behåll de senaste 5 dagliga säkerhetskopiorna",
+      "Behåll de senaste 4 veckovisa säkerhetskopiorna",
+      "Behåll de senaste 6 månatliga säkerhetskopiorna"
+    ],
+    "adjust": "Anpassa värdena efter molnkvoten och hur ofta de virtuella maskinerna ändras."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "items": [
+      "<strong><code>Mount point /mnt/gdrive is itself on a fuse.rclone filesystem</code>:</strong> katalogen är redan monterad, kanske av en annan rclone-instans. Kontrollera att ingen säkerhetskopiering pågår innan du tar bort den gamla monteringen med <code>fusermount -uz /mnt/gdrive</code> och starta sedan om systemd-enheten.",
+      "<strong>Säkerhetskopieringen är mycket långsam:</strong> kontrollera <code>--vfs-cache-mode writes</code> på raden <code>ExecStart</code>, den lokala cachens prestanda, uppladdningshastigheten och leverantörens gränser. Uppladdningen kan fortsätta efter att vzdump är klart.",
+      "<strong>Säkerhetskopieringen ger No space left on device:</strong> kontrollera lokalt cacheutrymme och molnkvoten. Cachen använder vanligtvis <code>~/.cache/rclone/</code>. Välj vid behov till exempel <code>--cache-dir /var/cache/rclone</code> på ett filsystem med tillräckligt utrymme. En annan sökväg på samma fulla filsystem hjälper inte.",
+      "<strong>rclones autentiseringstoken har gått ut:</strong> anslut igen via SSH med tunneln (<code>ssh -L localhost:53682:localhost:53682 root@ip_proxmox</code>) och kör <code>rclone config reconnect gdrive:</code> för att förnya behörigheten.",
+      "<strong>Säkerhetskopiorna finns i molnet men kan inte återställas korrekt:</strong> använd inte molnlagring som <strong>enda</strong> mål. Komplettera med lokalt PBS eller vzdump på en annan disk."
+    ]
+  }
+}

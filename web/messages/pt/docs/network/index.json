@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "title": "Gestão de rede Proxmox — Bridges, bonds, diagnóstico, reparação | ProxMenux",
+    "description": "Diagnósticos só de leitura, análises seguidas de sugestões e reparações guiadas para a pilha de rede Debian / Proxmox (/etc/network/interfaces). Inspecione bridges e bonds, execute ferramentas de monitorização em tempo real, torne persistentes os nomes das interfaces, crie cópias de segurança e reinicie a rede em segurança — com cópias obrigatórias e pré-visualizações passo a passo.",
+    "ogTitle": "Gestão de rede Proxmox — Bridges, bonds, diagnóstico, reparação",
+    "ogDescription": "Diagnósticos, análise e reparos guiados para a pilha de rede Proxmox com backups obrigatórios e pré-visualizações passo a passo.",
+    "twitterTitle": "Gestão de rede Proxmox | ProxMenux",
+    "twitterDescription": "Bridges, bonds, diagnósticos e reparações guiadas para a pilha de rede Proxmox com cópias de segurança obrigatórias."
+  },
+  "header": {
+    "title": "Gerenciamento de rede",
+    "description": "Diagnósticos só de leitura, relatórios de análise com sugestões e reparações guiadas para a pilha de rede clássica Debian/Proxmox. Cada operação destrutiva cria primeiro uma cópia de segurança e mostra as alterações exatas antes de as aplicar.",
+    "section": "Rede"
+  },
+  "intro": {
+    "title": "Para que serve este menu",
+    "body": "Inspecione, diagnostique e, quando necessário, repare a configuração de rede do host Proxmox sem perder o acesso remoto. As ferramentas seguem um princípio: <strong>ler primeiro, propor e só depois aplicar com consentimento explícito e uma cópia de segurança</strong>. Não existe um botão «Corrigir tudo automaticamente»."
+  },
+  "openingMenu": {
+    "heading": "Abrir o menu",
+    "intro": "No menu principal do ProxMenux, selecione <strong>Rede</strong>. Verá o seguinte:",
+    "imageAlt": "Menu de gerenciamento de rede com diagnósticos, monitoramento, análise, reparo, nomes persistentes e opções de backup"
+  },
+  "safety": {
+    "heading": "O modelo de segurança",
+    "body": "Editar a configuração de rede de um host Proxmox remoto é uma das formas mais fáceis de perder o acesso. O ProxMenux tem isso em conta em cada ação. As ferramentas dividem-se em três níveis de comportamento — escolha o cartão que corresponde ao seu objetivo:"
+  },
+  "tiers": {
+    "readOnly": {
+      "title": "Somente leitura",
+      "body": "Inspecção pura. Não é possível modificar o sistema em nenhuma circunstância.",
+      "items": [
+        "Tabela de roteamento, testes de conectividade, estatísticas avançadas",
+        "Monitorização do tráfego ao vivo (iftop, iptraf-ng)",
+        "Teste de largura de banda (iperf3)"
+      ]
+    },
+    "analyze": {
+      "title": "Analisar, então sugerir",
+      "body": "Detecta problemas, imprime um relatório com comandos de shell propostos e pára. Você decide se deve entrar na reparação guiada depois.",
+      "items": [
+        "Análise de configuração da ponte",
+        "Análise da configuração da rede"
+      ]
+    },
+    "apply": {
+      "title": "Aplicar com backup",
+      "body": "Modifica o sistema. Cria sempre primeiro uma cópia de segurança do ficheiro afetado com data e hora e mostra uma pré-visualização antes de escrever.",
+      "items": [
+        "Nomes de interface persistentes (ficheiros .link)",
+        "Backup manual, restauração e reinício do serviço"
+      ]
+    }
+  },
+  "classicTitle": "Apenas a pilha clássica",
+  "classicBody": "Cada função de análise e reparo verifica o gerenciador de rede ativo antes de tocar em qualquer coisa. Se o host executar <strong>netplan</strong>, <strong>systemd-networkd</strong> ou <strong>NetworkManager</strong>, a ferramenta aborta imediatamente com uma mensagem clara — o menu só suporta a pilha Debian/Proxmox clássica no <code>/etc/network/interfaces</code>. Isto é intencional: editar um arquivo netplan com regras escritas para <code>ifupdown</code> iria silenciosamente corromper a configuração.",
+  "backups": {
+    "heading": "Para onde vão os backups",
+    "intro": "Cada reparação guiada, restauro ou cópia de segurança manual grava uma cópia de <code>/etc/network/interfaces</code> com data e hora em <code>/var/backups/proxmenux/</code>:",
+    "rollbackIntro": "Para repor manualmente a configuração anterior a partir de uma consola:"
+  },
+  "readOnlySection": {
+    "heading": "Inspeção somente de leitura",
+    "body": "O ponto de partida quando algo parece errado. Apenas inspeção — nunca escreve em <code>/etc/network/interfaces</code> nem executa comandos que alterem o sistema, com uma única exceção explícita que exige a sua aceitação: purgar o NetworkManager, caso seja detetado. Pode ser usado em segurança por SSH a qualquer momento.",
+    "options": [
+      {
+        "title": "Diagnósticos",
+        "description": "Três verificações pontuais só de leitura: Mostrar tabela de encaminhamento, Testar conectividade e Diagnósticos avançados. Apenas inspeção — nunca escreve no sistema."
+      },
+      {
+        "title": "Ferramentas de monitorização ao vivo",
+        "description": "Três lançadores interativos: iftop (largura de banda em tempo real por par host), iptraf-ng (monitor de tráfego multimodo) e iperf3 (teste de largura de banda, servidor / modo cliente)."
+      }
+    ]
+  },
+  "analyzeSection": {
+    "heading": "Analisar, então sugerir",
+    "body": "Usadas quando uma inspeção ou uma falha real aponta para um problema de configuração. Cada ferramenta examina a parte relevante de <code>/etc/network/interfaces</code>, apresenta um relatório detalhado com o comando exato de shell que corrigiria cada problema e <strong>para</strong>. Se aceitar depois a reparação guiada opcional, é criada uma cópia de segurança antes de cada alteração, que também é pré-visualizada antes da escrita.",
+    "options": [
+      {
+        "title": "Análise de ponte e reparo guiado",
+        "description": "Deteta bridges vmbrX com portas em falta ou inválidas, algo típico após a reenumeração PCI. Mostra primeiro um relatório e só repara quando aceita o procedimento guiado de 5 passos."
+      },
+      {
+        "title": "Análise de configuração e limpeza guiada",
+        "description": "Encontra interfaces físicas declaradas em /etc/network/interfaces que já não existem (configurações órfãs deixadas por mudanças de hardware). Comunica-os e oferece uma remoção guiada."
+      }
+    ]
+  },
+  "applySection": {
+    "heading": "Aplicar com backup",
+    "body": "Estas ferramentas escrevem no disco por natureza. Cada uma cria primeiro uma cópia de segurança do ficheiro afetado com data e hora, e as opções destrutivas, como restauro e reinício, exigem confirmação explícita sim/não. Os <em>nomes persistentes das interfaces</em> entram em vigor no próximo reinício, não de imediato, pelo que a sua configuração pode ser agendada em segurança mesmo num host remoto.",
+    "options": [
+      {
+        "title": "Nomes de interface persistentes",
+        "description": "Associa os nomes das interfaces (eno1, enp3s0, …) aos endereços MAC através de ficheiros .link do systemd. Os nomes mantêm-se após mudanças de slot PCI, atualizações do kernel e adição ou remoção de outras placas de rede."
+      },
+      {
+        "title": "Cópia de segurança e reinício das interfaces",
+        "description": "Instantâneo manual do /etc/network/interfaces, navegar e restaurar backups anteriores, visualizar a configuração ao vivo e reiniciar o serviço de rede quando necessário."
+      }
+    ]
+  },
+  "consoleTitle": "Tenha acesso à consola preparado",
+  "consoleSubTitle": "Antes de qualquer reparação em uma máquina remota",
+  "consoleBody": "Se estiver ligado por SSH e tiver apenas um caminho de acesso ao host, prepare uma alternativa antes de alterar a rede: consola física / IPMI / iKVM ou outra máquina na mesma LAN. As reparações guiadas são seguras e oferecem sempre um comando para reverter as alterações, mas um bridge mal configurado ou uma ligação interrompida pode deixá-lo sem acesso até conseguir chegar à consola."
+}

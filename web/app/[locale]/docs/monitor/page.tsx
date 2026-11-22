@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
@@ -74,7 +74,6 @@ export default async function MonitorOverviewPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
 
   const t = await getTranslations({ locale, namespace: "docs.monitor" })
 
@@ -125,7 +124,7 @@ export default async function MonitorOverviewPage({
         <img
           src="/monitor/dashboard-home.png"
           alt={t("hero.alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("hero.caption")}
@@ -206,7 +205,7 @@ https://<your-domain>/proxmenux-monitor/`}
           <img
             src="/monitor/mobile-home.png"
             alt={t("mobile.phoneAlt")}
-            className="rounded-lg border border-gray-200 shadow-sm w-full"
+            className="rounded-lg border border-gray-200 shadow-xs w-full"
           />
           <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
             {t("mobile.phoneCaption")}
@@ -237,7 +236,7 @@ https://<your-domain>/proxmenux-monitor/`}
         <img
           src="/monitor/health-monitor.png"
           alt={t("health.alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("health.caption")}

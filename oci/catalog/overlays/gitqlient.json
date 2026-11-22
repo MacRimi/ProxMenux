@@ -19,5 +19,32 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "GitQlient"
+    },
+    "tagline": {
+      "en_US": "GitQlient is a multi-platform Git client originally forked from QGit. Nowadays it goes beyond of just a fork and adds a lot of new functionality."
+    },
+    "description": {
+      "en_US": "GitQlient is a multi-platform graphical Git client designed to simplify repository management. Originally created as a fork of QGit, it provides an expanded set of features for interacting with Git projects. Users can inspect commit history, manage branches, and carry out standard Git workflows through a visual interface."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/francescmm/GitQlient/HEAD/docs/assets/GitQlient.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

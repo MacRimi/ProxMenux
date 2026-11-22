@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "title": "Commandes ZFS sur Proxmox — zpool, zfs snapshot, send/receive, scrub | ProxMenux",
+    "description": "Commandes de gestion ZFS sur Proxmox VE : zpool create / status / history, zfs list / get / set, instantanés, clone, zfs send et receive, scrub, clear, replace, zpool iostat et résumé d’ARC.",
+    "ogTitle": "Commandes ZFS sur Proxmox — zpool, zfs snapshot, send/receive, scrub",
+    "ogDescription": "Référence des commandes zpool et zfs sur Proxmox VE — pools, ensembles de données, instantanés, réplication, maintenance.",
+    "twitterTitle": "Commandes ZFS sur Proxmox | ProxMenux",
+    "twitterDescription": "commandes zpool et zfs pour Proxmox VE : pools, datasets, snapshots, réplication, maintenance."
+  },
+  "header": {
+    "title": "Gestion ZFS",
+    "description": "Sélection de commandes zpool et zfs : inspection des pools, création, lecture, modification et suppression de datasets, instantanés, clone et send/receive incrémental ou récursif, maintenance avec scrub / clear / replace, statistiques d’E/S et résumé d’ARC.",
+    "section": "Aide et informations"
+  },
+  "intro": {
+    "title": "Deux familles de commandes",
+    "body": "<code>zpool *</code> gère les pools de stockage, la couche physique : disques, vdevs et redondance. <code>zfs *</code> gère les datasets et les instantanés de ces pools, la couche logique : systèmes de fichiers, volumes, instantanés et propriétés."
+  },
+  "commandGroups": [
+    {
+      "title": "Informations sur le pool",
+      "commands": [
+        {
+          "command": "zpool list",
+          "description": "Lister tous les pools ZFS"
+        },
+        {
+          "command": "zpool status",
+          "description": "Afficher l'état et la santé du pool détaillé"
+        },
+        {
+          "command": "zpool status -v",
+          "description": "Afficher l'état du pool avec les erreurs"
+        },
+        {
+          "command": "zpool history",
+          "description": "Afficher l'historique des commandes pour tous les pools"
+        },
+        {
+          "command": "zpool history <pool>",
+          "description": "Afficher l'historique des commandes pour un pool spécifique"
+        },
+        {
+          "command": "zpool get all <pool>",
+          "description": "Afficher toutes les propriétés d'un pool"
+        }
+      ]
+    },
+    {
+      "title": "Gestion des datasets",
+      "commands": [
+        {
+          "command": "zfs list",
+          "description": "Lister tous les ensembles de données ZFS"
+        },
+        {
+          "command": "zfs list -r <pool>",
+          "description": "Lister tous les ensembles de données dans un pool récursivement"
+        },
+        {
+          "command": "zfs create <pool>/<dataset>",
+          "description": "Créer un nouvel ensemble de données"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>",
+          "description": "Détruire un ensemble de données"
+        },
+        {
+          "command": "zfs rename <pool>/<dataset> <pool>/<new-name>",
+          "description": "Renommer un ensemble de données"
+        },
+        {
+          "command": "zfs get all <pool>/<dataset>",
+          "description": "Afficher toutes les propriétés d'un ensemble de données"
+        },
+        {
+          "command": "zfs set compression=on <pool>/<dataset>",
+          "description": "Activer la compression sur un jeu de données"
+        }
+      ]
+    },
+    {
+      "title": "Gestion des instantanés",
+      "commands": [
+        {
+          "command": "zfs list -t snapshot",
+          "description": "Liste de tous les instantanés"
+        },
+        {
+          "command": "zfs list -t snapshot -r <pool>",
+          "description": "Liste tous les instantanés dans un pool"
+        },
+        {
+          "command": "zfs snapshot <pool>/<dataset>@<snapshot-name>",
+          "description": "Créer un instantané"
+        },
+        {
+          "command": "zfs destroy <pool>/<dataset>@<snapshot-name>",
+          "description": "Supprimer un instantané"
+        },
+        {
+          "command": "zfs rollback <pool>/<dataset>@<snapshot-name>",
+          "description": "Retour à un instantané"
+        },
+        {
+          "command": "zfs hold <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Protéger un instantané contre la suppression avec un hold"
+        },
+        {
+          "command": "zfs release <tag> <pool>/<dataset>@<snapshot-name>",
+          "description": "Lever la protection hold d’un instantané"
+        }
+      ]
+    },
+    {
+      "title": "Clone et envoi/réception",
+      "commands": [
+        {
+          "command": "zfs clone <pool>/<dataset>@<snapshot> <pool>/<clone-name>",
+          "description": "Créer un clone à partir d'un instantané"
+        },
+        {
+          "command": "zfs send <pool>/<dataset>@<snapshot> > backup.zfs",
+          "description": "Envoyer un instantané dans un fichier"
+        },
+        {
+          "command": "zfs receive <pool>/<dataset> < backup.zfs",
+          "description": "Recevez un instantané à partir d'un fichier"
+        },
+        {
+          "command": "zfs send -i <pool>/<dataset>@<snap1> <pool>/<dataset>@<snap2> > incr.zfs",
+          "description": "Envoyer un instantané incrémental"
+        },
+        {
+          "command": "zfs send -R <pool>/<dataset>@<snapshot> > full-recursive.zfs",
+          "description": "Envoyer un instantané récursif"
+        }
+      ]
+    },
+    {
+      "title": "Entretien et réparation",
+      "commands": [
+        {
+          "command": "zpool scrub <pool>",
+          "description": "Lancer une vérification scrub d’un pool"
+        },
+        {
+          "command": "zpool scrub -s <pool>",
+          "description": "Arrêter le scrub en cours"
+        },
+        {
+          "command": "zpool clear <pool>",
+          "description": "Réinitialiser les compteurs d’erreurs d’un pool"
+        },
+        {
+          "command": "zpool clear <pool> <device>",
+          "description": "Effacer les erreurs sur un périphérique spécifique"
+        },
+        {
+          "command": "zpool replace <pool> <old-device> <new-device>",
+          "description": "Remplacer un dispositif défectueux"
+        },
+        {
+          "command": "zpool offline <pool> <device>",
+          "description": "Prenez un appareil hors ligne"
+        },
+        {
+          "command": "zpool online <pool> <device>",
+          "description": "Apportez un appareil en ligne"
+        }
+      ]
+    },
+    {
+      "title": "Performances et surveillance",
+      "commands": [
+        {
+          "command": "zpool iostat",
+          "description": "Afficher les statistiques E/S pour les pools"
+        },
+        {
+          "command": "zpool iostat -v",
+          "description": "Afficher les statistiques détaillées des E/S"
+        },
+        {
+          "command": "zpool iostat 5",
+          "description": "Afficher les statistiques d'E/S toutes les 5 secondes"
+        },
+        {
+          "command": "arc_summary",
+          "description": "Afficher les statistiques ARC (si installé)"
+        },
+        {
+          "command": "zfs get compressratio <pool>/<dataset>",
+          "description": "Afficher le rapport de compression"
+        },
+        {
+          "command": "zfs get used,available,referenced <pool>/<dataset>",
+          "description": "Afficher l'utilisation de l'espace"
+        }
+      ]
+    }
+  ],
+  "bestPractices": {
+    "title": "Meilleures pratiques opérationnelles",
+    "bodyRich": "Planifiez régulièrement <code>zpool scrub</code> pour vérifier les sommes de contrôle et examinez le résultat. Gardez de l’espace libre : l’effet d’un pool presque plein dépend de la charge et de sa structure. Utilisez <code>zpool replace</code> pour remplacer un périphérique défaillant, en suivant la procédure de son type de vdev. Detach + add n’est pas équivalent et peut modifier la topologie ou supprimer la redondance."
+  },
+  "related": {
+    "heading": "Rubriques connexes",
+    "items": [
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Stockage et disques",
+        "tail": "— commandes génériques de block-device et LVM."
+      },
+      {
+        "href": "/docs/help-info/backup-commands",
+        "label": "Sauvegarde et restauration",
+        "tail": " — vzdump, qmrestore."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Vue d’ensemble de l’aide et des informations",
+        "tail": "."
+      }
+    ]
+  }
+}

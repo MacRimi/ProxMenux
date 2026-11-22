@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted dashboard with bookmarks, widgets, uptime monitoring and Proxmox integration."
+    },
+    "description": {
+      "en_US": "Lastboard is a self-hosted personal dashboard designed to organize bookmarks, display widgets, and track infrastructure status. It features a customizable drag-and-drop grid layout, support for multiple independent dashboards, and built-in uptime monitoring with alerting. The application also connects to server endpoints to display resource metrics, container statuses, and Proxmox virtual machine health."
+    },
+    "screenshots": [
+      "https://git.codigosh.com/CodigoSH/Lastboard/raw/branch/main/assets/mockup.png"
+    ]
+  }
+}

@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Alby Hub is an open-source, self-custodial Bitcoin Lightning wallet, with the easiest-to-use Lightning Network node for everyone.\nWhether you're an individual, creator, or developer, Alby Hub is your centre for seamless Bitcoin payments.\nEffortlessly connect to a variety of apps like the Alby Browser Extension or Alby Go mobile app, create sub-wallets for family and friends, and take full control of your funds—all within an intuitive interface and developer-ready APIs.\n\n**USEFUL LINKS**\n- [Source Repository](https://github.com/getAlby/hub)\n- [Support](https://support.getalby.com/)\n- [Marketing Site](https://albyhub.com/)\n- [Community of users and developers](https://discord.getalby.com)\n- [Feedback Board, feature requests, bug reports[(https://feedback.getalby.com)\n"
+    },
+    "description": {
+      "en_US": "Alby Hub is a self-custodial Bitcoin Lightning node and wallet service. It enables users to run an embedded Lightning node or connect an external backend such as LND, Phoenixd, or CLN. Through support for Nostr Wallet Connect, it allows external applications to interact with the wallet using granular permissions, custom budgets, and automated transaction handling."
+    },
+    "repository": "https://github.com/getalby/hub",
+    "screenshots": [
+      "https://framerusercontent.com/images/veDOkZR8hBkczGHCbPL87SgwI4.jpg?width=3415&height=2220"
+    ]
   }
 }

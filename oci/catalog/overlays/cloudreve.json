@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "File management and sharing with WebDAV, multiple users and storage on local disks, S3-compatible services or OneDrive."
+    },
+    "description": {
+      "en_US": "Cloudreve is a self-hosted file management system that supports multiple storage providers. It allows users to store files across local disks, remote nodes, OneDrive, and S3-compatible cloud services with direct client-to-storage transmission. The platform includes WebDAV support, multi-user and group management, and background downloading via Aria2 or qBittorrent. It also enables in-browser document editing and media previewing."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/cloudreve/docs/master/images/homepage.png"
+    ]
+  }
+}

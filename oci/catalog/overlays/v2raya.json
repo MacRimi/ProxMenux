@@ -10,5 +10,18 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "v2rayA is a V2Ray client supporting global transparent proxy, compatible with SS, SSR, Trojan (trojan-go), Tuic, and Juicity protocols. Designed for simplicity, it meets most user needs, ideal for scenarios requiring efficient proxy services.\n\nCore features include global transparent proxy and multi-outbound load balancing with traffic splitting. It provides proxy services for nearly all applications without requiring application-specific proxy support. Support for creating and connecting multiple outbound nodes ensures load balancing and efficient traffic splitting for optimal network performance.\n\nIt offers RoutingA, a custom routing language for V2Ray, providing powerful and convenient traffic splitting support. Multiple strategies address DNS pollution, with advanced settings enabling customized configurations. With simplicity and functionality at the core, the platform delivers a modern solution for proxy management.\n\n**Key Features:**\n- Web-based GUI for easy configuration and management\n- Support for multiple protocols: VMess, VLESS, SS, SSR, Trojan, Tuic, Juicity\n- Global transparent proxy for seamless application proxy services\n- Multi-outbound load balancing and traffic splitting\n- RoutingA custom routing for convenient traffic splitting\n- Multiple DNS pollution mitigation strategies with advanced custom settings\n\n**Learn More:**\n- [V2rayA Official Website](https://v2raya.org/)\n- [V2rayA GitHub](https://github.com/v2rayA/v2rayA)\n"
+    },
+    "description": {
+      "en_US": "V2rayA is a web-based client for V2Ray that provides network proxy management and routing configuration. It supports global transparent proxying along with protocols such as VMess, VLESS, Shadowsocks, Trojan, Tuic, and Juicity. The application facilitates multi-outbound load balancing, custom traffic splitting, and anti-DNS pollution strategies across network traffic."
+    },
+    "repository": "https://github.com/v2rayA/v2rayA",
+    "screenshots": [
+      "https://raw.githubusercontent.com/v2rayA/v2rayA/HEAD/docs/images/screenshot.png",
+      "https://raw.githubusercontent.com/v2rayA/v2rayA/HEAD/docs/images/routinga.png"
+    ]
   }
 }

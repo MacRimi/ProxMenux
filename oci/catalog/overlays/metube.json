@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Queue and manage video or audio downloads using yt-dlp and save files to a persistent folder."
+    },
+    "description": {
+      "en_US": "MeTube is a self-hosted web interface for yt-dlp that downloads media directly to your server. Users can paste links from YouTube and hundreds of other supported sites to retrieve video, audio, subtitles, and thumbnails from individual clips, playlists, or entire channels. It also supports channel subscriptions to queue new uploads automatically as they are published."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/alexta69/metube/master/screenshot.gif"
+    ]
+  }
+}

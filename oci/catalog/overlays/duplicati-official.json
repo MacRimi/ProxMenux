@@ -1,0 +1,17 @@
+{
+  "catalog_ui": {
+    "title": {
+      "en_US": "Duplicati"
+    },
+    "tagline": {
+      "en_US": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups."
+    },
+    "description": {
+      "en_US": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups. It sends backup archives to remote file servers and major cloud storage providers using AES-256 encryption or GNU Privacy Guard. The application includes a built-in scheduler for automated routines, along with customizable filters, retention rules, and bandwidth limits."
+    },
+    "screenshots": [
+      "https://asset-cdn-duplicati.sfo3.cdn.digitaloceanspaces.com/y6eojA2gKDIVl9AulMxN2pXB9Y.webp",
+      "https://framerusercontent.com/images/WRtseKDSfGww4NwDii7bri7BqTI.webp?lossless=1&width=2880&height=2048"
+    ]
+  }
+}

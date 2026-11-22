@@ -36,6 +36,9 @@ class NotificationDeliveryDedupTests(unittest.TestCase):
         self.addCleanup(self.temp_dir.cleanup)
         self.db_path = Path(self.temp_dir.name) / 'health_monitor.db'
         conn = sqlite3.connect(str(self.db_path))
+        # Production initializes WAL before dispatchers start; do not race the
+        # journal-mode migration itself in a freshly hand-built DELETE database.
+        conn.execute('PRAGMA journal_mode=WAL')
         conn.execute('''
             CREATE TABLE notification_last_sent (
                 fingerprint TEXT PRIMARY KEY,
@@ -104,6 +107,13 @@ class NotificationDeliveryDedupTests(unittest.TestCase):
             entity='ct',
             entity_id='210:same-run',
         )
+
+    def test_fixture_uses_the_production_wal_journal_mode(self):
+        connection = sqlite3.connect(str(self.db_path))
+        try:
+            self.assertEqual(connection.execute('PRAGMA journal_mode').fetchone()[0], 'wal')
+        finally:
+            connection.close()
 
     def test_concurrent_managers_deliver_same_fingerprint_once(self):
         channel = RecordingChannel()

@@ -17,13 +17,6 @@
             "title": "With no declaration, the report describes; with one, it assesses",
             "body": "An assessment sees what the host does, not what it is for. A guest without a backup whose purpose is not declared is reported as an observation. If its backup is declared required, the same absence is reported as a warning. Nothing has to be declared."
           }
-        },
-        {
-          "figure": {
-            "src": "/monitor/audit/policy-view.png",
-            "alt": "Policy view with the guests, the storage and the thresholds of the node",
-            "caption": "The Policy view."
-          }
         }
       ]
     },

@@ -1,0 +1,400 @@
+{
+  "meta": {
+    "title": "Vytvoriť VM: Synology DSM | Dokumentácia ProxMenux",
+    "description": "Vytvorte VM Synology DSM na Proxmox VE. ProxMenux stiahne zvolený zavádzač (Arc, RR, Alpine RedPill M-shell alebo vlastný obraz), importuje ho ako spúšťací disk VM a nastaví CPU, RAM a úložisko pomocou predvoleného alebo pokročilého sprievodcu.",
+    "ogTitle": "Vytvoriť VM: Synology DSM | Dokumentácia ProxMenux",
+    "ogDescription": "Vytvorte virtuálny stroj Synology DSM na Proxmox VE pomocou ProxMenux."
+  },
+  "header": {
+    "title": "Vytvoriť VM: Synology DSM",
+    "description": "Vytvorte VM Synology DSM na Proxmox VE. ProxMenux stiahne zvolený zavádzač (Arc, RR, Alpine RedPill M-shell alebo vlastný obraz), importuje ho ako spúšťací disk VM a nastaví CPU, RAM a úložisko pomocou predvoleného alebo pokročilého sprievodcu.",
+    "section": "Virtuálne stroje · NAS"
+  },
+  "loaderLabels": {
+    "arc": "Arc Loader",
+    "rr": "RR Loader",
+    "tinycore": "TinyCore Loader"
+  },
+  "whatThisDoes": {
+    "title": "Čo to robí?",
+    "bodyRich": "ProxMenux automatizuje prípravu VM pre Synology DSM: stiahne podporovaný zavádzač, importuje ho ako spúšťací disk IDE a použije zvolené nastavenia CPU, RAM, siete a úložiska. Zostavenie zavádzača, výber modelu a inštalácia DSM prebiehajú <strong>vo VM</strong> cez webové alebo terminálové rozhranie zavádzača. Tieto kroky udržiava komunita a často sa menia; stránka poskytuje východiskový postup."
+  },
+  "supportedLoaders": {
+    "heading": "Podporované zavádzače",
+    "intro": "Skript ponúka štyri zdroje zavádzača:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "name": "Alpine RedPill M-shell (projekt TinyCore)",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "customRich": "<strong>Vlastný zavádzač</strong> — uložte vlastný obraz zavádzača do <code>/var/lib/vz/template/iso</code> a skript ho nájde."
+  },
+  "config": {
+    "heading": "Štandardná vs Rozšírená konfigurácia",
+    "intro": "Pri spustení skriptu sa pýta, či použijete predvolený ProxMenux profil VM alebo otvoríte pokročilého sprievodcu. Štandardné hodnoty sú ladené pre DSM a pracujú pre väčšinu inštalácií.",
+    "defaultHeading": "Štandardná konfigurácia",
+    "headerParam": "Parameter",
+    "headerValue": "Štandardná hodnota",
+    "defaultRowsRich": [
+      {
+        "param": "Typ stroja",
+        "valueRich": "<code>q35</code>"
+      },
+      {
+        "param": "BIOS",
+        "valueRich": "OVMF (UEFI)"
+      },
+      {
+        "param": "Typ CPU",
+        "valueRich": "Host"
+      },
+      {
+        "param": "Jadrá",
+        "valueRich": "2"
+      },
+      {
+        "param": "RAM",
+        "valueRich": "4096 MB"
+      },
+      {
+        "param": "Most",
+        "valueRich": "<code>vmbr0</code>"
+      },
+      {
+        "param": "Adresa MAC",
+        "valueRich": "Automatické generovanie"
+      },
+      {
+        "param": "Spustiť po dokončení",
+        "valueRich": "Nie"
+      }
+    ],
+    "advancedHeading": "Pokročilá konfigurácia",
+    "advancedIntro": "Pokročilý sprievodca ponúkne každé nastavenie samostatne. Môžete zmeniť tieto hodnoty:",
+    "headerOptions": "Možnosti",
+    "advancedRowsRich": [
+      {
+        "param": "Typ stroja",
+        "optionsRich": "<code>q35</code> alebo <code>i440fx</code>"
+      },
+      {
+        "param": "BIOS",
+        "optionsRich": "OVMF (UEFI) alebo SeaBIOS (staršie)"
+      },
+      {
+        "param": "Typ CPU",
+        "optionsRich": "Host alebo KVM64"
+      },
+      {
+        "param": "Jadrá",
+        "optionsRich": "Počet jadier CPU"
+      },
+      {
+        "param": "RAM",
+        "optionsRich": "Pamäť pridelená VM"
+      },
+      {
+        "param": "Most",
+        "optionsRich": "Sieťový most"
+      },
+      {
+        "param": "Adresa MAC",
+        "optionsRich": "Vlastná MAC adresa"
+      },
+      {
+        "param": "VLAN",
+        "optionsRich": "Značka VLAN (voliteľné)"
+      },
+      {
+        "param": "MTU",
+        "optionsRich": "Veľkosť MTU"
+      }
+    ]
+  },
+  "storagePlan": {
+    "heading": "Plán úložiska",
+    "introRich": "Po nastavení CPU a RAM otvorí ProxMenux menu <strong>Plán úložiska</strong>. V jednej VM môžete <strong>kombinovať</strong> virtuálne disky, importované disky a zariadenia PCI passthrough. Pridávajte položky po jednej a po dokončení pokračujte.",
+    "virtualHeading": "a. Pridať virtuálny disk",
+    "virtualItemsRich": [
+      "Zobrazí úložiská Proxmox dostupné na hostiteľovi.",
+      "Vyberiete cieľové úložisko a veľkosť v GB.",
+      "Disk sa pripojí ako SATA (<code>sata0</code>, <code>sata1</code>, …). Virtuálne a fyzické dátové disky zdieľajú šesť pozícií SATA s číslami 0 až 5."
+    ],
+    "importHeading": "b. Pridať importný disk",
+    "importItemsRich": [
+      "Detekuje fyzické disky, ktoré sú bezpečné pre import (systém a chránené disky sú skryté).",
+      "Vyberte jeden alebo viac diskov prostredníctvom kontrolného zoznamu.",
+      "Importované disky sú pripojené ako SATA cez <code>qm set</code>."
+    ],
+    "pciHeading": "c. Pridať radič alebo NVMe (PCI passthrough)",
+    "pciItemsRich": [
+      "Rozpozná HBA SATA/SAS a zariadenia NVMe a umožní priradiť VM <em>celý radič</em>. IOMMU musí byť zapnuté; skript ponúkne aktiváciu a podľa potreby reštart.",
+      "Potvrdenie upozorní na riziko pre celý radič: celá karta vrátane všetkých pripojených diskov prestane byť dostupná hostiteľovi.",
+      "Zariadenia PCI sa priradia príkazmi ako <code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code>. VMID a PCI_ADDRESS nahraďte ID virtuálneho stroja a adresou PCI a pre každé zariadenie použite voľný index hostpci."
+    ],
+    "resetCalloutTitle": "Resetovať a dokončiť",
+    "resetCalloutBodyRich": "Menu ponúka <strong>r</strong> na vymazanie výberu a nový začiatok a <strong>d</strong> na dokončenie a pokračovanie. Plán nesmie byť prázdny; Synology potrebuje aspoň jeden disk na inštaláciu DSM."
+  },
+  "gpu": {
+    "heading": "Voliteľný priechod GPU",
+    "bodyRich": "Ak skript po pláne úložiska nájde kompatibilnú GPU, opýta sa na jej priradenie VM. Pozrite <link>Pridať GPU do VM (passthrough)</link>. Môže byť potrebný reštart hostiteľa."
+  },
+  "loaderInstall": {
+    "heading": "Inštalácia zavádzača",
+    "intro1Rich": "<strong>Arc</strong>, <strong>RR</strong> a <strong>Alpine RedPill M-shell</strong> sa automaticky stiahnu a rozbalia z pôvodných repozitárov GitHub. Pri chybe sťahovania sa skript zastaví s jasnou správou.",
+    "intro2Rich": "Pri možnosti <strong>Custom Loader</strong> skript prehľadá <code>/var/lib/vz/template/iso</code>. Ak nájde viac vhodných súborov, vyzve vás na výber.",
+    "uploadIntro": "Vlastné zavádzače môžete nahrať cez lokálne úložisko Proxmox.",
+    "imageAlt": "Pridať vlastný zavádzač",
+    "imageCaption": "Pridať vlastný zavádzač"
+  },
+  "vmCreation": {
+    "heading": "Vytvorenie VM – čo skript spustí",
+    "introRich": "Po potvrdení zavádzača spustí ProxMenux ekvivalent týchto príkazov <code>qm</code>:",
+    "itemsRich": [
+      "<code>qm create</code> — vytvorí VM so zvolenou CPU, RAM, BIOS a typom stroja.",
+      "<code>qm importdisk</code> importuje obraz zavádzača do úložiska Proxmox. Skript ho potom pre kompatibilitu pripojí ako disk <strong>IDE</strong> na ide0.",
+      "<code>qm set VMID --sata0 DISK_REFERENCE</code> pripojí dátový disk z plánu. VMID a DISK_REFERENCE nahraďte ID virtuálneho stroja a odkazom na disk; použite voľný index SATA od 0 do 5. Sieť nastavuje qm create.",
+      "<code>qm set VMID --hostpci0 PCI_ADDRESS,pcie=1</code> priradí zvolený radič PCI alebo zariadenie NVMe. VMID a PCI_ADDRESS nahraďte ID virtuálneho stroja a adresou PCI a pre každé zariadenie použite voľný index hostpci.",
+      "<code>qm set VMID --boot order=ide0</code> nastaví zavádzač ako spúšťacie zariadenie. VMID nahraďte ID virtuálneho stroja."
+    ]
+  },
+  "stepByStep": {
+    "heading": "Nastavenie zavádzača krok za krokom",
+    "intro": "Šesť spoločných krokov: spustiť VM, vybrať model, verziu DSM a doplnky, zostaviť a spustiť zavádzač. Menu a možnosti závisia od vydania. Snímky M-shell zobrazujú staršie rozhranie TinyCore; aktuálny skript sťahuje Alpine RedPill M-shell, preto sa riaďte jeho aktuálnymi pokynmi.",
+    "warnCalloutTitle": "Zavádzače neudržiava ProxMenux",
+    "warnCalloutBody": "Arc, RR a Alpine RedPill M-shell sú komunitné projekty s vlastným harmonogramom vydaní. Ak sa krok líši od snímok nižšie, zavádzač bol pravdepodobne aktualizovaný. Pozrite jeho dokumentáciu; odkazy sú na konci stránky."
+  },
+  "stepBadge": "Krok",
+  "step1": {
+    "title": "Spustite VM a otvorte hlavné menu",
+    "intro": "Spustite vytvorenú VM. Pri prvom spustení sa otvorí nastavenie zavádzača, kde vyberiete a zostavíte model DSM. Ďalšie spustenia tento krok preskočia, ak nevynútite nové nastavenie zo spúšťacieho menu zavádzača. Všetky tri zavádzače ponúkajú terminálové aj webové rozhranie.",
+    "arc": {
+      "webRich": "<strong>Webové rozhranie.</strong> Otvorte prehliadač a prejdite na adresu IP zobrazenú v konzole VM (v našom príklade: <code>http://192.168.0.32</code>).",
+      "webAlt": "Webové rozhranie Arc loader",
+      "webCaption": "Webové rozhranie Arc loader",
+      "termRich": "<strong>Terminálové rozhranie</strong>: otvorte ho priamo v konzole VM.",
+      "termAlt": "Terminálové rozhranie zavádzača Arc",
+      "termCaption": "Terminálové rozhranie zavádzača Arc"
+    },
+    "rr": {
+      "webRich": "<strong>Webové rozhranie.</strong> Otvorte prehliadač a zadajte IP adresu z konzoly VM s portom <strong>7681</strong> (príklad: <code>http://192.168.0.33:7681</code>).",
+      "webAlt": "Webové rozhranie RR loader",
+      "webCaption": "Webové rozhranie RR loader",
+      "termRich": "<strong>Terminálové rozhranie.</strong> Otvorte ho zadaním <code>menu.sh</code> v konzole VM.",
+      "termAlt": "Terminálové rozhranie RR Loader",
+      "termCaption": "Terminálové rozhranie RR Loader"
+    },
+    "tinycore": {
+      "webRich": "<strong>Webové rozhranie.</strong> Otvorte prehliadač a zadajte IP adresu z konzoly VM s portom <strong>7681</strong> (príklad: <code>http://192.168.0.35:7681</code>).",
+      "webAlt": "Webové rozhranie TinyCore loader",
+      "webCaption": "Webové rozhranie TinyCore loader",
+      "termRich": "<strong>Terminálové rozhranie</strong>: otvorte ho priamo v konzole VM. Sledujte obrazovku, pretože môže vyzvať na stlačenie klávesu na pokračovanie alebo na zmenu jazyka.",
+      "termAlt": "Terminálové rozhranie TinyCore Loader",
+      "termCaption": "Terminálové rozhranie TinyCore Loader"
+    }
+  },
+  "step2": {
+    "title": "Vyberte model",
+    "introRich": "Vyberte model Synology DSM, ktorý chcete nainštalovať. Podľa zavádzača možno treba rozbaliť možnosti na zobrazenie celého zoznamu. Na snímkach nižšie používame ako príklad model <strong>SA6400</strong>.",
+    "arc": {
+      "alt": "Výber modelu v Arc",
+      "caption": "Výber modelu v Arc"
+    },
+    "rr": {
+      "alt": "Výber modelu RR",
+      "caption": "Výber modelu RR"
+    },
+    "tinycore": {
+      "alt": "Výber modelu TinyCore",
+      "caption": "Výber modelu TinyCore"
+    }
+  },
+  "step3": {
+    "title": "Vyberte verziu DSM",
+    "intro": "Po vybratí modelu vyberte verziu DSM pre inštaláciu.",
+    "arc": [
+      {
+        "alt": "Výber verzie v Arc – krok 1",
+        "caption": "Výber verzie v Arc – krok 1"
+      },
+      {
+        "alt": "Výber verzie v Arc – krok 2",
+        "caption": "Výber verzie v Arc – krok 2"
+      }
+    ],
+    "rr": [
+      {
+        "alt": "Výber verzie RR - krok 1",
+        "caption": "Výber verzie RR - krok 1"
+      },
+      {
+        "alt": "Výber verzie RR - krok 2",
+        "caption": "Výber verzie RR - krok 2"
+      },
+      {
+        "alt": "Výber verzie RR - krok 3",
+        "caption": "Výber verzie RR - krok 3"
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "Výber verzie TinyCore - krok 1",
+        "caption": "Výber verzie TinyCore - krok 1"
+      },
+      {
+        "alt": "Výber verzie TinyCore - krok 2",
+        "caption": "Výber verzie TinyCore - krok 2"
+      }
+    ]
+  },
+  "step4": {
+    "title": "Vybrať doplnky",
+    "intro": "V tomto kroku môžete do zavádzača pridať ďalšie funkcie alebo vlastné nastavenia.",
+    "arc": {
+      "autoRich": "<strong>Arc</strong> ponúka odporúčaný automatický režim a ručný režim. V automatickom režime zavádzač použije vhodné predvoľby a po dokončení sa sám reštartuje.",
+      "autoAlt": "Automatické nastavenie Arc",
+      "autoCaption": "Automatické nastavenie Arc",
+      "manualRich": "V ručnom režime prejdete možnosti jednu po druhej:",
+      "manualAlt": "Ručné nastavenie Arc",
+      "manualCaption": "Ručné nastavenie Arc",
+      "snMacAlt": "Arc SN/MAC",
+      "snMacCaption": "Arc SN / MAC konfigurácia",
+      "portmapAlt": "Arc SATA portmap",
+      "portmapCaption": "Arc SATA portmap (použite odporúčanú voľbu)",
+      "addonsAlt": "Doplnky Arc",
+      "addonsCaption": "Výber doplnkov v Arc"
+    },
+    "rr": [
+      {
+        "alt": "Doplnok RR – krok 1",
+        "caption": "Doplnok RR – krok 1"
+      },
+      {
+        "alt": "Doplnok RR – krok 2",
+        "caption": "Doplnok RR – krok 2: kliknutím pridajte doplnok."
+      },
+      {
+        "alt": "Doplnok RR – krok 3",
+        "caption": "Doplnok RR – krok 3: kliknite na požadovaný doplnok. Ak chcete pridať ďalšie, zopakujte postup z predchádzajúcich dvoch snímok."
+      }
+    ],
+    "tinycore": [
+      {
+        "alt": "Konfigurácia TinyCore SN",
+        "caption": "Konfigurácia TinyCore SN"
+      },
+      {
+        "alt": "Náhodná voľba TinyCore",
+        "caption": "TinyCore náhodná voľba (odporúčaná)"
+      },
+      {
+        "alt": "Konfigurácia TinyCore MAC",
+        "caption": "Konfigurácia TinyCore MAC"
+      },
+      {
+        "alt": "TinyCore VM MAC",
+        "caption": "TinyCore – vyberte MAC adresu VM alebo náhodnú adresu."
+      }
+    ]
+  },
+  "step5": {
+    "title": "Zostavte zavádzač",
+    "introRich": "Po výbere modelu, verzie DSM a doplnkov zvoľte <strong>Build the Loader</strong>. Podľa zavádzača a zvolených možností to môže trvať niekoľko minút.",
+    "arc": {
+      "alt": "Zostavenie zavádzača v Arc",
+      "caption": "Zostavenie zavádzača v Arc"
+    },
+    "rr": {
+      "alt": "Zostavenie zavádzača v RR",
+      "caption": "Zostavenie zavádzača v RR"
+    },
+    "tinycore": {
+      "alt": "Zostavenie zavádzača v TinyCore",
+      "caption": "Zostavenie zavádzača v TinyCore"
+    }
+  },
+  "step6": {
+    "title": "Spustite zavádzač",
+    "intro": "Po zostavení zavádzača sa VM reštartuje s vytvorenou konfiguráciou a začne inštaláciu DSM.",
+    "arc": {
+      "alt": "Spustenie zavádzača v Arc",
+      "caption": "Spustenie zavádzača v Arc"
+    },
+    "rr": {
+      "alt": "Spustenie zavádzača v RR",
+      "caption": "Spustenie zavádzača v RR"
+    },
+    "tinycore": {
+      "alt": "Spustenie zavádzača v TinyCore",
+      "caption": "Spustenie zavádzača v TinyCore"
+    }
+  },
+  "dsmInstall": {
+    "heading": "Spustenie inštalácie DSM",
+    "intro": "Po spustení zavádzača môžete svoju VM DSM nájsť otvorením:",
+    "afterCode": "Dokončite inštaláciu DSM podľa pokynov na obrazovke.",
+    "setupAlt": "Nastavenie DSM",
+    "setupCaption": "Obrazovka nastavenia DSM",
+    "patience": "Buďte trpezliví; proces môže trvať niekoľko minút. Priebeh sa aktualizuje automaticky a pred dokončením inštalácie sa zobrazí odpočítavanie.",
+    "finishAlt": "Inštalácia dokončená",
+    "finishCaption": "Inštalácia dokončená"
+  },
+  "tips": {
+    "heading": "Tipy",
+    "recentTitle": "Použiť najnovšie modely DSM",
+    "recentBody": "Niektoré staršie modely DSM majú problém rozpoznať disky alebo sieťovú kartu. Na jednoduchšie prvé spustenie uprednostnite novší model, napríklad SA6400.",
+    "updateTitle": "Aktualizácia zavádzača",
+    "updateBody": "Niektoré zavádzače sa dajú aktualizovať priamo z konfiguračného menu; VM nemusíte odstrániť a znova vytvoriť.",
+    "warnTitle": "ProxMenux neposkytuje podporu pre zavádzače",
+    "warnBody": "ProxMenux automatizuje stranu VM. Problémy so zavádzačom (model sa nenašiel, doplnok sa nedarí nainštalovať, DSM odmieta spustiť systém) sú mimo rozsahu pôsobnosti – použite vlastný nástroj na sledovanie problémov a dokumentáciu každého zavádzača.",
+    "docsHeading": "Dokumentácia zavádzača",
+    "docLinks": [
+      {
+        "label": "Arc dokumentácia",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "Dokumentácia RR",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "Dokumentácia TinyCore",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ]
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "itemsRich": [
+      {
+        "href": "/docs/create-vm/system-nas",
+        "label": "Prehľad systému NAS",
+        "tail": "— porovnanie Synology vs TrueNAS / OMV / Rockstor / XigmaNAS."
+      },
+      {
+        "href": "/docs/create-vm/system-nas/system-nas-others",
+        "label": "Iné systémy NAS",
+        "tail": " — iné distribúcie NAS než Synology."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importovať disk do VM",
+        "tail": " — priradiť fyzické disky VM Synology, odporúčané pre výkon úložiska."
+      },
+      {
+        "href": "/docs/create-vm",
+        "label": "Prehľad vytvárania VM",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -42,7 +42,8 @@ from notification_channels import create_channel, CHANNEL_TYPES
 from notification_templates import (
     render_template, format_with_ai, format_with_ai_full, enrich_with_emojis, TEMPLATES,
     EVENT_GROUPS, CATEGORY_EMOJI, EVENT_EMOJI, get_event_types_by_group,
-    get_default_enabled_events, runtime_message,
+    get_default_enabled_events, runtime_message, format_backup_diagnostics_with_ai,
+    health_linked_event,
 )
 from notification_events import (
     JournalWatcher, TaskWatcher, PollingCollector, NotificationEvent,
@@ -62,12 +63,19 @@ except ImportError:
 DB_PATH = Path('/usr/local/share/proxmenux/health_monitor.db')
 SETTINGS_PREFIX = 'notification.'
 ENCRYPTION_KEY_FILE = Path('/usr/local/share/proxmenux/.notification_key')
-RUNTIME_NOTIFICATION_LANGUAGES = ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv')
+RUNTIME_NOTIFICATION_LANGUAGES = ('en', 'de', 'es', 'fr', 'it', 'pt', 'sk', 'sv', 'ru')
 ALLOWED_AI_LANGUAGES = (
     'en', 'sk', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'sv', 'no',
     'ja', 'zh', 'ko', 'pl', 'nl', 'tr', 'ar',
 )
 _AI_BYPASS_EVENTS = frozenset({'backup_complete', 'backup_fail'})
+_AI_NO_SUGGESTION_EVENTS = frozenset({
+    'update_available', 'update_summary', 'pve_update',
+    'proxmenux_update', 'post_install_update', 'apt_listchanges',
+    'lxc_updates_available', 'secure_gateway_update_available',
+    'nvidia_driver_update_available', 'coral_driver_update_available',
+    'app_update_available', 'docker_stack_update_available',
+})
 
 
 def _should_bypass_ai(event_type: str) -> bool:
@@ -86,6 +94,7 @@ SENSITIVE_KEYS = {
     'ai_api_key_anthropic',
     'ai_api_key_openai',
     'ai_api_key_openrouter',
+    'ai_api_key_ollama',
     # `telegram.bot_token` — was previously listed as `telegram.token`,
     # which never matched the real config_key (`bot_token` in
     # CHANNEL_TYPES). The mismatch silently sent Telegram bot tokens
@@ -760,34 +769,45 @@ class BurstAggregator:
     
     @staticmethod
     def _summarize_event(event: NotificationEvent) -> str:
-        """Extract a concise one-line summary from an event's data."""
+        """Extract a concise one-line summary from an event's data.
+
+        The summary names what the event is about. The burst title already
+        names the kind of event, so the line never repeats its internal type.
+        """
         d = event.data
         etype = event.event_type
-        
+
         # Service failures: show service name
         if etype in ('service_fail', 'service_fail_batch'):
             return d.get('service_name', d.get('display_name', etype))
-        
-        # System problems: first 120 chars of reason
-        if 'reason' in d:
-            reason = d['reason'].split('\n')[0][:120]
-            return reason
-        
+
+        # OCI operations: the application and its container
+        app_name = str(d.get('app_name') or '').strip()
+        vmid = str(d.get('vmid') or '').strip()
+        if app_name:
+            return f"{app_name} (CT {vmid})" if vmid and app_name != f'CT {vmid}' else app_name
+
+        # System problems and jobs: the meaningful lines of the reason,
+        # without headings such as "VM/CT:" whose values follow on the
+        # next lines. An empty reason falls through to the fields below.
+        lines = [line.strip() for line in str(d.get('reason') or '').splitlines()]
+        lines = [line for line in lines if line and not line.endswith(':')]
+        if lines:
+            return ' · '.join(lines[:3])[:120]
+
         # Auth / IP: show username or IP
-        if 'username' in d:
-            return f"{etype}: {d['username']}"
-        if 'ip' in d:
-            return f"{etype}: {d['ip']}"
-        
+        if d.get('username'):
+            return str(d['username'])
+        if d.get('ip'):
+            return str(d['ip'])
+
         # VM/CT events: show vmid + name
-        if 'vmid' in d:
+        if vmid:
             name = d.get('vmname', '')
-            return f"{etype}: {name} ({d['vmid']})" if name else f"{etype}: {d['vmid']}"
-        
-        # Fallback: event type + entity_id
-        if event.entity_id:
-            return f"{etype}: {event.entity_id}"
-        return etype
+            return f"{name} ({vmid})" if name else vmid
+
+        # Fallback: entity_id
+        return event.entity_id or ''
 
 
 # ─── AI rewrite timeout ────────────────────────────────────────────
@@ -797,6 +817,18 @@ class BurstAggregator:
 # on the rewrite at AI_REWRITE_TIMEOUT_SECONDS and ship the non-AI version.
 # Audit Tier 3.2 #2.
 AI_REWRITE_TIMEOUT_SECONDS = 25
+# A model on the user's own hardware (Ollama, or an OpenAI-compatible server
+# at their own address) is much slower than a cloud API. A notification that
+# arrives a little later but translated is worth more than one in English.
+LOCAL_AI_REWRITE_TIMEOUT_SECONDS = 60
+
+
+def _ai_rewrite_timeout(ai_config):
+    provider = str((ai_config or {}).get('ai_provider') or '')
+    base_url = str((ai_config or {}).get('ai_openai_base_url') or '').strip()
+    if provider == 'ollama' or (provider == 'openai' and base_url and 'api.openai.com' not in base_url):
+        return LOCAL_AI_REWRITE_TIMEOUT_SECONDS
+    return AI_REWRITE_TIMEOUT_SECONDS
 
 # A small dedicated pool so an in-flight AI call never starves the dispatch
 # thread itself. One worker is enough — events serialize through the dispatch
@@ -806,7 +838,7 @@ _ai_rewrite_pool = concurrent.futures.ThreadPoolExecutor(
 )
 
 
-def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS, **kwargs):
+def _format_with_ai_bounded(format_fn, *args, timeout=None, **kwargs):
     """Run an AI rewrite with a hard wall-clock timeout.
 
     Returns the rewriter's result on success, or `None` on timeout / exception.
@@ -814,6 +846,10 @@ def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS
     is not cancelled — Python can't cancel an in-flight HTTP call cleanly —
     but its result is discarded and the dispatch thread proceeds.
     """
+    if timeout is None:
+        # Both rewriters take the AI configuration as their fourth argument.
+        ai_config = args[3] if len(args) > 3 and isinstance(args[3], dict) else {}
+        timeout = _ai_rewrite_timeout(ai_config)
     future = _ai_rewrite_pool.submit(format_fn, *args, **kwargs)
     try:
         return future.result(timeout=timeout)
@@ -826,6 +862,13 @@ def _format_with_ai_bounded(format_fn, *args, timeout=AI_REWRITE_TIMEOUT_SECONDS
 
 
 # ─── Notification Manager ─────────────────────────────────────────
+
+def _format_backup_with_ai_bounded(*args, **kwargs):
+    result = _format_with_ai_bounded(format_backup_diagnostics_with_ai, *args, **kwargs)
+    if result is not None:
+        return result
+    return format_backup_diagnostics_with_ai(*args, **kwargs, fallback_only=True)
+
 
 class NotificationManager:
     """Central notification orchestrator.
@@ -1015,6 +1058,7 @@ class NotificationManager:
             'ai_openai_base_url': self._config.get('ai_openai_base_url', ''),
             'ai_prompt_mode': self._config.get('ai_prompt_mode', 'default'),
             'ai_custom_prompt': self._config.get('ai_custom_prompt', ''),
+            'ai_allow_suggestions': self._config.get('ai_allow_suggestions', 'false'),
         }
     
     def _rebuild_channels(self):
@@ -1263,6 +1307,10 @@ class NotificationManager:
     
     def _dispatch_event(self, event: NotificationEvent):
         """Shared dispatch pipeline: cooldown -> rate limit -> render -> send."""
+        # Every route, including the direct shutdown/reboot notice, stops here
+        # when the user has turned notifications off.
+        if not self._enabled:
+            return
         # Event sources may supply the local kernel hostname themselves.
         # Normalize it here so every delivery path honours the configured
         # notification display name, including newly added event producers.
@@ -1292,10 +1340,21 @@ class NotificationManager:
 
         # Check storage exclusions for storage-related events.
         # If the storage is excluded from notifications, suppress the event entirely.
+        # A remote mount of an excluded storage is silenced the same way, and
+        # so is the recovery of any of these alerts.
         _STORAGE_EVENTS = {'storage_unavailable', 'storage_low_space', 'storage_warning', 'storage_error',
-                           'pve_storage_full'}
-        if event.event_type in _STORAGE_EVENTS:
+                           'pve_storage_full', 'mount_stale', 'mount_readonly'}
+        alert_type = (event.data.get('alert_event_type') if event.event_type == 'error_resolved'
+                      else event.event_type)
+        if alert_type in _STORAGE_EVENTS:
             storage_name = event.data.get('storage_name') or event.data.get('name')
+            if not storage_name and event.data.get('mount_target'):
+                try:
+                    import mount_monitor
+                    storage_name = mount_monitor.storage_for_mount(
+                        event.data.get('mount_target', ''), event.data.get('mount_source', ''))
+                except Exception:
+                    storage_name = None
             if storage_name:
                 try:
                     from health_persistence import health_persistence
@@ -1327,6 +1386,8 @@ class NotificationManager:
             enriched_data['_body_html'] = rendered.get('body_html', '')
             enriched_data['_event_type'] = event.event_type
             enriched_data['_group'] = TEMPLATES.get(event.event_type, {}).get('group', 'other')
+            if rendered.get('backup_analysis'):
+                enriched_data['_backup_analysis'] = rendered['backup_analysis']
 
             if '_journal_context' in event.data:
                 enriched_data['_journal_context'] = event.data['_journal_context']
@@ -1340,6 +1401,70 @@ class NotificationManager:
                 event.fingerprint, claim_token, delivered=delivered,
             )
     
+    def _filter_event(self, event_type: str, data: Optional[Dict] = None) -> tuple:
+        """The event type and category whose switches decide a delivery.
+
+        A hidden burst summary stands for its originating event. A type with
+        no template (scripts, API) uses the visible ``custom`` switch.
+        """
+        template = TEMPLATES.get(event_type)
+        if template is None or event_type == 'other':
+            return 'custom', TEMPLATES['custom']['group']
+        if template.get('hidden', False):
+            source_event_type = str((data or {}).get('event_type', '') or '')
+            if source_event_type in TEMPLATES:
+                return source_event_type, TEMPLATES[source_event_type].get('group', 'other')
+        return event_type, template.get('group', 'other')
+
+    def _channel_allows(self, ch_name: str, event_type: str,
+                        data: Optional[Dict] = None, group: Optional[str] = None) -> bool:
+        """Whether this channel's category and event switches accept the event.
+
+        A recovery reaches only the channels that accept the original alert.
+        """
+        filter_event_type, event_group = self._filter_event(event_type, data)
+        for category in {event_group, group or event_group}:
+            if self._config.get(f'{ch_name}.events.{category}', 'true') == 'false':
+                return False
+        default = 'true' if TEMPLATES.get(filter_event_type, {}).get('default_enabled', True) else 'false'
+        if self._config.get(f'{ch_name}.event.{filter_event_type}', default) == 'false':
+            return False
+        alert_event_type = str((data or {}).get('alert_event_type', '') or '')
+        if event_type == 'error_resolved' and alert_event_type in TEMPLATES and alert_event_type != event_type:
+            return self._channel_allows(ch_name, alert_event_type)
+        return True
+
+    def _health_degraded_for_channel(self, ch_name: str, data: Dict):
+        """The categories of a health degradation that this channel accepts.
+
+        Returns False when none remain, None when all of them do, and the
+        title, body and severity rendered for the remaining ones otherwise.
+        """
+        payload = data.get('health_degraded')
+        categories = payload.get('categories') if isinstance(payload, dict) else None
+        if not isinstance(categories, list) or not categories:
+            return None
+        kept = []
+        for item in categories:
+            if not isinstance(item, dict):
+                continue
+            linked = health_linked_event(str(item.get('cat_key') or item.get('key') or ''),
+                                         str(item.get('reason') or ''))
+            if not linked or self._channel_allows(ch_name, linked):
+                kept.append(item)
+        if not kept:
+            return False
+        if len(kept) == len(categories):
+            return None
+        rank = {'INFO': 0, 'WARNING': 1, 'CRITICAL': 2}
+        severity = max((str(item.get('status') or 'WARNING') for item in kept),
+                       key=lambda value: rank.get(value, 1))
+        narrowed = dict(data, health_degraded=dict(payload, categories=kept), severity=severity)
+        narrowed.pop('title', None)
+        rendered = render_template('health_degraded', narrowed,
+                                   language=data.get('_notification_language') or self._notification_language())
+        return rendered['title'], rendered['body'], severity
+
     def _dispatch_to_channels(self, title: str, body: str, severity: str,
                                event_type: str, data: Dict, source: str) -> bool:
         """Send notification through configured channels, respecting per-channel filters.
@@ -1360,20 +1485,8 @@ class NotificationManager:
         with self._lock:
             channels = dict(self._channels)
         
-        template = TEMPLATES.get(event_type, {})
-        # Hidden burst templates represent their originating event; they must
-        # inherit both its category and its per-event toggle. Otherwise turning
-        # off an individual alert suppresses the first message but the hidden
-        # "+N more" summary still arrives later.
-        filter_event_type = event_type
-        if template.get('hidden', False):
-            source_event_type = str(data.get('event_type', '') or '')
-            if source_event_type in TEMPLATES:
-                filter_event_type = source_event_type
-        filter_template = TEMPLATES.get(filter_event_type, template)
-        event_group = filter_template.get('group', template.get('group', 'other'))
-        default_event_enabled = 'true' if filter_template.get('default_enabled', True) else 'false'
-        
+        _, event_group = self._filter_event(event_type, data)
+
         # Build AI config once (shared across channels, detail_level varies)
         ai_config = self._build_ai_config()
         
@@ -1386,18 +1499,18 @@ class NotificationManager:
         if event_type in ('backup_complete', 'backup_fail'):
             buffer_title, _ = enrich_with_emojis(event_type, title, '', data)
         
+        base_title, base_body, base_severity = title, body, severity
         for ch_name, channel in channels.items():
-            # ── Per-channel category check ──
-            # Default: category enabled (true) unless explicitly disabled.
-            ch_group_key = f'{ch_name}.events.{event_group}'
-            if self._config.get(ch_group_key, 'true') == 'false':
-                continue  # Channel has this category disabled
-
-            # ── Per-channel event check ──
-            # Default: from template default_enabled, unless explicitly set.
-            ch_event_key = f'{ch_name}.event.{filter_event_type}'
-            if self._config.get(ch_event_key, default_event_enabled) == 'false':
-                continue  # Channel has this specific event disabled
+            title, body, severity = base_title, base_body, base_severity
+            if not self._channel_allows(ch_name, event_type, data):
+                continue
+            if event_type == 'health_degraded':
+                narrowed = self._health_degraded_for_channel(ch_name, data)
+                if narrowed is False:
+                    continue
+                if narrowed:
+                    title, body, severity = narrowed
+            channel_buffer_title = buffer_title if title == base_title else title
 
             # ── Per-channel quiet hours ──
             # The user marks a window (e.g. 22:00 → 06:00) during which only
@@ -1414,7 +1527,7 @@ class NotificationManager:
             # delivered after Quiet Hours + Daily Digest were merged.
             if severity != 'CRITICAL' and self._in_quiet_hours(ch_name):
                 self._buffer_quiet_event(ch_name, event_type, event_group,
-                                          severity, buffer_title, body)
+                                          severity, channel_buffer_title, body)
                 continue
 
             # ── Per-channel daily digest ──
@@ -1427,7 +1540,7 @@ class NotificationManager:
             # excluded from the digest by `_DIGEST_EXEMPT_EVENTS`.
             if self._should_buffer_for_digest(ch_name, severity, event_type):
                 self._buffer_digest_event(ch_name, event_type, event_group,
-                                          severity, buffer_title, body)
+                                          severity, channel_buffer_title, body)
                 continue
             
             try:
@@ -1453,14 +1566,7 @@ class NotificationManager:
                 # diagnostic alerts, update announcements must only translate
                 # and format the versions/actions already supplied by the
                 # deterministic template.
-                if event_type in {
-                    'update_available', 'update_summary', 'pve_update',
-                    'proxmenux_update', 'post_install_update', 'apt_listchanges',
-                    'lxc_updates_available', 'secure_gateway_update_available',
-                    'nvidia_driver_update_available',
-                    'coral_driver_update_available', 'app_update_available',
-                    'docker_stack_update_available',
-                }:
+                if event_type in _AI_NO_SUGGESTION_EVENTS:
                     channel_ai_config['ai_allow_suggestions'] = False
 
                 # Isolate the AI/enrich block in its own try so a failure
@@ -1470,11 +1576,16 @@ class NotificationManager:
                 # raw template-formatted notification. Audit Tier 6 —
                 # `_dispatch_to_channels`: AI failure dropped the notification.
                 try:
-                    # Backup reports are authoritative inventories. A model can
-                    # neither be trusted to avoid repeating all guest rows nor to
-                    # preserve every value, so these two events bypass AI entirely.
+                    # Keep backup inventories deterministic. Suggestions may
+                    # explain their diagnostic section without rewriting rows.
                     ai_result = None
-                    if not _should_bypass_ai(event_type):
+                    if _should_bypass_ai(event_type):
+                        ai_result = _format_backup_with_ai_bounded(
+                            ch_title, ch_body, severity, channel_ai_config,
+                            event_type=event_type, data=data,
+                            detail_level=detail_level, use_emojis=use_rich_format,
+                        )
+                    else:
                         enriched_context = enrich_context_for_ai(
                             title=ch_title,
                             body=ch_body,
@@ -1782,6 +1893,8 @@ class NotificationManager:
             self._stats['total_errors'] += 1
             return
 
+        rows = self._drop_unwanted_rows('digest_pending', ch_name, rows)
+
         # Mark `last_at` even if there's nothing to send — otherwise an
         # empty buffer keeps re-triggering the 5-minute window for hours.
         self._save_setting(f'{ch_name}.digest_last_at', now.isoformat())
@@ -1842,6 +1955,25 @@ class NotificationManager:
         except Exception as e:
             print(f"[NotificationManager] digest cleanup failed for "
                   f"{ch_name}: {e}")
+
+    def _drop_unwanted_rows(self, table: str, ch_name: str, rows: list) -> list:
+        """Buffered rows whose category or event this channel has turned off
+        since they were stored are deleted instead of sent."""
+        kept = [row for row in rows if self._channel_allows(ch_name, row[1], group=row[2])]
+        dropped = [row[0] for row in rows if row not in kept]
+        if dropped:
+            try:
+                conn = sqlite3.connect(str(DB_PATH), timeout=10)
+                conn.execute('PRAGMA journal_mode=WAL')
+                conn.execute(
+                    f'DELETE FROM {table} WHERE id IN ({",".join("?" * len(dropped))})',
+                    dropped,
+                )
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"[NotificationManager] {table} cleanup failed for {ch_name}: {e}")
+        return kept
 
     def _compose_digest_body(self, rows: list, use_icons: bool = False,
                              quiet_release: bool = False) -> str:
@@ -2019,6 +2151,7 @@ class NotificationManager:
             print(f"[NotificationManager] quiet read failed for {ch_name}: {e}")
             return
 
+        rows = self._drop_unwanted_rows('quiet_pending', ch_name, rows)
         if not rows:
             return
 
@@ -2461,7 +2594,11 @@ class NotificationManager:
             entity_id: Entity identifier
         """
         from notification_events import NotificationEvent
-        
+
+        if not self._enabled:
+            return {'success': False, 'event_type': event_type, 'skipped': True,
+                    'error': 'Notifications are disabled'}
+
         event = NotificationEvent(
             event_type=event_type,
             severity=severity,
@@ -2511,9 +2648,17 @@ class NotificationManager:
                 'channels_sent': [],
             }
         
-        # Check if this event type is enabled (unless explicitly skipped)
-        # 'custom' and 'other' events always send (used for manual/script notifications)
-        if not skip_toggle_check and event_type not in ('custom', 'other'):
+        if not self._enabled:
+            return {
+                'success': False,
+                'error': 'Notifications are disabled',
+                'channels_sent': [],
+                'skipped': True,
+            }
+
+        # Scripts and the API obey the same per-channel switches as events;
+        # a type without a template uses the "Script and API notifications" one.
+        if not skip_toggle_check:
             if not self.is_event_enabled(event_type):
                 return {
                     'success': False,
@@ -2542,6 +2687,8 @@ class NotificationManager:
             title = title or rendered['title']
             message = rendered['body']
             severity = severity or rendered['severity']
+            if rendered.get('backup_analysis'):
+                runtime_data['_backup_analysis'] = rendered['backup_analysis']
 
         data = runtime_data
         
@@ -2556,6 +2703,8 @@ class NotificationManager:
             channels = dict(self._channels)
         
         for ch_name, channel in channels.items():
+            if not skip_toggle_check and not self._channel_allows(ch_name, event_type, data):
+                continue
             try:
                 # Apply AI enhancement per channel with its detail level and emoji setting
                 detail_level_key = f'{ch_name}.ai_detail_level'
@@ -2566,8 +2715,16 @@ class NotificationManager:
                 
                 # Pass channel_type so AI knows whether to append original (email only)
                 channel_ai_config = {**ai_config, 'channel_type': ch_name}
+                if event_type in _AI_NO_SUGGESTION_EVENTS:
+                    channel_ai_config['ai_allow_suggestions'] = False
                 if _should_bypass_ai(event_type):
-                    ch_title, ch_message = title, message
+                    ai_result = _format_backup_with_ai_bounded(
+                        title, message, severity, channel_ai_config,
+                        event_type=event_type, data=data,
+                        detail_level=detail_level, use_emojis=use_rich_format,
+                    )
+                    ch_title = title
+                    ch_message = ai_result.get('body', message) if ai_result else message
                 else:
                     ai_result = format_with_ai_full(
                         title, message, severity, channel_ai_config,
@@ -2821,10 +2978,6 @@ class NotificationManager:
         if not self._config:
             self._load_config()
         
-        # Get template info for default state
-        tmpl = TEMPLATES.get(event_type, {})
-        default_enabled = 'true' if tmpl.get('default_enabled', True) else 'false'
-        event_group = tmpl.get('group', 'other')
         
         # Check each configured channel. The list MUST come from CHANNEL_TYPES
         # (the canonical registry of channel implementations) — a hardcoded
@@ -2843,20 +2996,7 @@ class NotificationManager:
         if not active_channels:
             return False
         
-        # Check if ANY active channel has this event enabled
-        for ch_name in active_channels:
-            # First check category toggle for this channel
-            ch_group_key = f'{ch_name}.events.{event_group}'
-            if self._config.get(ch_group_key, 'true') == 'false':
-                continue  # Category disabled for this channel
-            
-            # Then check event-specific toggle
-            ch_event_key = f'{ch_name}.event.{event_type}'
-            if self._config.get(ch_event_key, default_enabled) == 'true':
-                return True  # At least one channel has it enabled
-        
-        # All active channels have this event disabled
-        return False
+        return any(self._channel_allows(ch_name, event_type) for ch_name in active_channels)
     
     def list_channels(self) -> Dict[str, Any]:
         """List all channel types with their configuration status."""
@@ -3019,6 +3159,7 @@ class NotificationManager:
         current_provider = self._config.get('ai_provider', 'groq')
         _raw_keys = {
             'groq': self._config.get('ai_api_key_groq', ''),
+            'ollama': self._config.get('ai_api_key_ollama', ''),
             'gemini': self._config.get('ai_api_key_gemini', ''),
             'anthropic': self._config.get('ai_api_key_anthropic', ''),
             'openai': self._config.get('ai_api_key_openai', ''),
@@ -3026,7 +3167,7 @@ class NotificationManager:
         }
         ai_api_keys = {
             'groq': _mask_if_set(_raw_keys['groq']),
-            'ollama': '',  # Ollama doesn't need API key
+            'ollama': _mask_if_set(_raw_keys['ollama']),
             'gemini': _mask_if_set(_raw_keys['gemini']),
             'anthropic': _mask_if_set(_raw_keys['anthropic']),
             'openai': _mask_if_set(_raw_keys['openai']),
@@ -3136,7 +3277,10 @@ class NotificationManager:
                     if not ok:
                         raise ValueError(f"Invalid ai_ollama_url: {err}")
                 if short_key == 'ai_openai_base_url' and str(value):
-                    ok, err = validate_external_url(str(value), allow_loopback=False)
+                    # Custom OpenAI-compatible servers can run on the LAN or
+                    # localhost, just like Ollama. Match test-ai/provider-models;
+                    # unsafe schemes, metadata hosts and link-local stay blocked.
+                    ok, err = validate_external_url(str(value), allow_loopback=True)
                     if not ok:
                         raise ValueError(f"Invalid ai_openai_base_url: {err}")
 

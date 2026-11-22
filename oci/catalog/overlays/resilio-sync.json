@@ -22,5 +22,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Resilio-sync (formerly BitTorrent Sync) uses the BitTorrent protocol to sync files and folders between all of your devices. There are both free and paid versions, this container supports both. There is an official sync image but we created this one as it supports user mapping to simplify permissions for volumes."
+    },
+    "description": {
+      "en_US": "Resilio Sync, formerly known as BitTorrent Sync, uses the BitTorrent protocol to synchronize files and folders across multiple devices. It enables peer-to-peer data distribution directly between clients without relying on central cloud storage. The application is available in both free and paid versions."
+    },
+    "tips": [
+      "Initial account creation and configuration take place in the web interface on first access."
+    ]
   }
 }

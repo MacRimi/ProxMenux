@@ -34,5 +34,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "The open Home Automation Bus (openHAB, pronounced ˈəʊpənˈhæb) is an open source, technology agnostic home automation platform which runs as the center of your smart home! Its ability to integrate a multitude of other devices and systems. openHAB includes other home automation systems, (smart) devices and other technologies into a single solution. To provide a uniform user interface and a common approach to automation rules across the entire system, regardless of the number of manufacturers and sub-systems involved. Giving you the most flexible tool available to make almost any home automation wish come true; if you can think it, odds are that you can implement it with openHAB."
+    },
+    "description": {
+      "en_US": "OpenHAB is an open-source, technology-agnostic home automation platform designed to serve as the center of a smart home. It integrates a wide variety of smart devices, home automation systems, and technologies into a single unified system. Users can monitor and control connected hardware through a uniform interface and create automated rules regardless of manufacturer differences."
+    },
+    "tips": [
+      "The default password for the login is: habopen"
+    ]
   }
 }

@@ -1,0 +1,490 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-krusader",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Krusader",
+      "es_ES": "Krusader"
+    },
+    "tagline": {
+      "en_US": "KDE's twin-panel file manager in a browser-based desktop.",
+      "es_ES": "El gestor de archivos de dos paneles de KDE, disponible desde el navegador."
+    },
+    "description": {
+      "en_US": "Open Krusader in a browser and manage files from a directory you explicitly mount at /storage. The maintained jlesage image provides the graphical desktop; ProxMenux runs it as one native OCI LXC.",
+      "es_ES": "Abre Krusader en el navegador y gestiona los archivos de una carpeta que montes expresamente en /storage. La imagen mantenida por jlesage incluye el escritorio gráfico; ProxMenux la ejecuta como un LXC OCI nativo."
+    },
+    "category": "desktop",
+    "category_label": "Browsers & Web Desktops",
+    "author": "jlesage",
+    "developer": "jlesage",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/krusader.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "https",
+      "port": 5800,
+      "path": "/"
+    },
+    "website": "https://krusader.org/",
+    "documentation": "https://github.com/jlesage/docker-krusader",
+    "repository": "https://github.com/jlesage/docker-krusader",
+    "tips": [
+      "The web login uses HTTPS with an automatically generated self-signed certificate and password. Accept the certificate warning on the first visit or configure a trusted certificate.",
+      "Krusader can read, change and delete files in the directory mounted at /storage. Mount only the directory you intend to manage; the rest of the Proxmox host is not exposed.",
+      "The VNC port is not published. Use the browser interface on port 5800."
+    ],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "jlesage",
+    "repository": "https://github.com/jlesage/docker-krusader",
+    "revision": "855c8140e1bb65b2a2526d82db44c808f23eb49f",
+    "image_repository_url": "https://hub.docker.com/r/jlesage/krusader",
+    "readme_pushed_at": "2026-09-22T15:18:17Z",
+    "compose_sha256": "9dd16cc30aa19afe7e148598c9cfb0c65c31606d67f3f22254c33a4d05212c7f",
+    "generated_at": "2026-11-02T20:05:40+00:00",
+    "default_branch": "master",
+    "readme_raw_url": "https://raw.githubusercontent.com/jlesage/docker-krusader/855c8140e1bb65b2a2526d82db44c808f23eb49f/README.md"
+  },
+  "container_contract": {
+    "service_name": "krusader",
+    "container_name": "krusader",
+    "image": {
+      "reference": "jlesage/krusader:latest",
+      "registry": "docker.io",
+      "repository": "jlesage/krusader",
+      "tag": "latest",
+      "digest": null,
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "USER_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-image-default"
+      },
+      {
+        "name": "GROUP_ID",
+        "example": "1000",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-image-default"
+      },
+      {
+        "name": "TZ",
+        "example": "Europe/Madrid",
+        "required": true,
+        "sensitive": false,
+        "source": "ProxMenux-local-timezone"
+      },
+      {
+        "name": "VNC_LOCALHOST_ONLY",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-image-security-setting"
+      },
+      {
+        "name": "WEB_AUTHENTICATION",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-image-security-setting"
+      },
+      {
+        "name": "WEB_AUTHENTICATION_USERNAME",
+        "example": "admin",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-image-security-setting"
+      },
+      {
+        "name": "WEB_AUTHENTICATION_PASSWORD",
+        "example": "${GENERATED_WEB_PASSWORD}",
+        "required": true,
+        "sensitive": true,
+        "source": "ProxMenux-generated-credential"
+      },
+      {
+        "name": "SECURE_CONNECTION",
+        "example": "1",
+        "required": true,
+        "sensitive": false,
+        "source": "upstream-image-security-setting"
+      }
+    ],
+    "volumes": [
+      {
+        "id": "krusader-config",
+        "container_path": "/config",
+        "compose_source_example": "krusader-config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "krusader-storage",
+        "container_path": "/storage",
+        "compose_source_example": "/mnt/oci-shared/krusader/storage",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 5800,
+        "published_example": 5800,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "name: krusader\nservices:\n  krusader:\n    image: jlesage/krusader:latest\n    container_name: krusader\n    restart: unless-stopped\n    environment:\n      USER_ID: '1000'\n      GROUP_ID: '1000'\n      TZ: Europe/Madrid\n      VNC_LOCALHOST_ONLY: '1'\n      WEB_AUTHENTICATION: '1'\n      WEB_AUTHENTICATION_USERNAME: admin\n      WEB_AUTHENTICATION_PASSWORD: ${GENERATED_WEB_PASSWORD}\n      SECURE_CONNECTION: '1'\n    ports:\n    - 5800:5800/tcp\n    volumes:\n    - krusader-config:/config\n    - /mnt/oci-shared/krusader/storage:/storage\nvolumes:\n  krusader-config: {}\n"
+  },
+  "compose_stack": {
+    "project_name": "krusader",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "krusader",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "krusader",
+        "image": "jlesage/krusader:latest",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "environment": {
+            "GROUP_ID": "1000",
+            "SECURE_CONNECTION": "1",
+            "TZ": "Europe/Madrid",
+            "USER_ID": "1000",
+            "VNC_LOCALHOST_ONLY": "1",
+            "WEB_AUTHENTICATION": "1",
+            "WEB_AUTHENTICATION_PASSWORD": "${GENERATED_GENERATED_WEB_PASSWORD}",
+            "WEB_AUTHENTICATION_USERNAME": "admin"
+          },
+          "image": "jlesage/krusader:latest",
+          "ports": [
+            "5800:5800"
+          ],
+          "volumes": [
+            "./config:/config",
+            "./storage:/storage"
+          ]
+        }
+      }
+    ],
+    "top_level": {
+      "name": "krusader"
+    },
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [
+      {
+        "id": "krusader-volume-0",
+        "service": "krusader",
+        "container_path": "/config",
+        "mode": "managed-volume",
+        "user_selectable": false,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": null
+      },
+      {
+        "id": "krusader-volume-1",
+        "service": "krusader",
+        "container_path": "/storage",
+        "mode": "user-selectable",
+        "user_selectable": true,
+        "backup": true,
+        "shared_with_other_lxc": false,
+        "source_path": null,
+        "source_path_prompt": "Host directory for Krusader:/storage",
+        "default": "host-bind",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ]
+      }
+    ],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "krusader"
+      ],
+      "stop_order": [
+        "krusader"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "generated-web-password",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "krusader",
+              "environment_variable": "WEB_AUTHENTICATION_PASSWORD"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Krusader Web UI",
+        "scheme": "https",
+        "port": 5800,
+        "path": "/",
+        "source": "upstream-jlesage-secure-connection-and-web-authentication"
+      }
+    ],
+    "credentials": [
+      {
+        "label": "Krusader Web UI",
+        "type": "configured-or-installer-generated",
+        "username": "admin",
+        "password": null,
+        "username_environment": "WEB_AUTHENTICATION_USERNAME",
+        "password_environment": "WEB_AUTHENTICATION_PASSWORD",
+        "change_required": false,
+        "source": "ProxMenux generated password and upstream image environment",
+        "retrieval": null
+      }
+    ]
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 2048,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": false,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "adaptations": [
+      {
+        "id": "web-authentication-https",
+        "upstream_behavior": "The jlesage image can protect its browser GUI with WEB_AUTHENTICATION and requires SECURE_CONNECTION for authenticated web access.",
+        "native_lxc_behavior": "Enable authenticated HTTPS on port 5800, generate a unique password at install and keep VNC bound to localhost.",
+        "reason": "Krusader can modify files exposed under /storage, so the browser endpoint must not be unauthenticated.",
+        "behavioral_impact": "The image generates a self-signed TLS certificate; a browser may ask to trust it on first access.",
+        "validation": "pending"
+      },
+      {
+        "id": "scoped-storage-mount",
+        "upstream_behavior": "Docker Compose mounts the selected host directory at /storage.",
+        "native_lxc_behavior": "The same selected directory is mounted in the dedicated OCI LXC; no other host paths are exposed.",
+        "reason": "The file manager must only see data explicitly selected by the user.",
+        "behavioral_impact": "Write access permits changing or deleting files in that one directory.",
+        "validation": "pending"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes web port 5800 on the Docker host.",
+        "native_lxc_behavior": "The native LXC listens on its own IP at port 5800 without Docker NAT.",
+        "reason": "The LXC has a dedicated network namespace and address.",
+        "behavioral_impact": "The port is reached at the LXC address rather than through a host-published port.",
+        "validation": "pending"
+      }
+    ],
+    "installer_profile": {
+      "volume_preparations": [
+        {
+          "container_path": "/config",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "uid": 1000,
+          "gid": 1000,
+          "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/storage",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "uid": 1000,
+          "gid": 1000,
+          "only_when_mount_type": "managed-volume"
+        }
+      ],
+      "startup_healthcheck": {
+        "scheme": "https",
+        "port": 5800,
+        "path": "/",
+        "timeout_seconds": 240,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 4,
+        "verify_tls": false
+      },
+      "generated_sensitive_environment": {
+        "WEB_AUTHENTICATION_PASSWORD": {
+          "strategy": "token-hex",
+          "bytes": 16,
+          "prompt": false
+        }
+      },
+      "volume_owner": {
+        "uid": 1000,
+        "gid": 1000
+      }
+    }
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "validated": false,
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "stop_signal",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available."
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "passed-first-start",
+    "service_health": "passed-login-page-and-authenticated-session-http-200",
+    "restart_persistence": "passed-container-restart-and-host-bind-write-check",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending",
+    "image_resolution": "passed-skopeo-327mb-11-layers-integrity",
+    "credentials": "passed-generated-password-login-and-session-cookie",
+    "advanced_install": "pending-custom-install-summary-validation",
+    "managed_volume": "passed-managed-config-volume",
+    "host_bind": "passed-storage-bind-owner-and-app-user-write",
+    "browser_visual": "pending-self-signed-certificate-review",
+    "modification": "pending",
+    "removal": "passed-manager-remove-ct-disks-record-and-empty-test-path-cleaned",
+    "web_authentication": "passed-generated-credential-post-and-session-cookie"
+  },
+  "lifecycle": {
+    "update_strategy": "resolve-latest-image-then-apply-reviewed-native-lxc-update",
+    "registry_state": {
+      "resolved_architecture": "amd64",
+      "resolved_digest": "sha256:ecb77bb73b1d3c66720eefb07805f70289349b449d1ddaa15d120c399bd89cc4",
+      "image_version_label": "26.09.1",
+      "image_created": "2026-09-22T15:22:56.230858151Z"
+    },
+    "change_detection": "compare-compose-sha256-and-resolved-latest-image-digest",
+    "automatic_unattended_updates": false
+  }
+}

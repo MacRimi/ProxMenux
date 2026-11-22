@@ -48,7 +48,8 @@ DEV_SCRIPTS_CATALOG = os.path.join(os.path.dirname(__file__), "..", "..", "oci",
 # Encryption key file
 ENCRYPTION_KEY_FILE = os.path.join(OCI_BASE_DIR, ".encryption_key")
 
-# Default storage for templates
+# Preferred storage for templates; another active one is used when it is
+# disabled, as `local` is on a BTRFS installation.
 DEFAULT_STORAGE = "local"
 
 # Default storage for rootfs (will be auto-detected)
@@ -389,7 +390,22 @@ def _host_arch() -> str:
     }.get(machine, 'amd64')
 
 
-def _download_alpine_template(storage: str = DEFAULT_STORAGE) -> bool:
+def _template_storage() -> str:
+    """An active storage that holds container templates: `local` when it
+    can, otherwise the first other one, such as `local-btrfs`."""
+    rc, out, _ = _run_pve_cmd(["pvesm", "status", "--content", "vztmpl"])
+    active = []
+    if rc == 0:
+        for line in out.strip().split("\n")[1:]:
+            parts = line.split()
+            if len(parts) >= 3 and parts[2] == "active":
+                active.append(parts[0])
+    if not active or DEFAULT_STORAGE in active:
+        return DEFAULT_STORAGE
+    return active[0]
+
+
+def _download_alpine_template(storage: Optional[str] = None) -> bool:
     """Download the latest Alpine LXC template using pveam.
 
     Filters by the host's architecture so an x86_64 host does not end up
@@ -397,6 +413,7 @@ def _download_alpine_template(storage: str = DEFAULT_STORAGE) -> bool:
     kept the last match and could pick any arch that `pveam available`
     happened to list (issue #324).
     """
+    storage = storage or _template_storage()
     print("[*] Downloading Alpine Linux template...")
     logger.info("Downloading Alpine template via pveam")
 
@@ -443,8 +460,9 @@ def _download_alpine_template(storage: str = DEFAULT_STORAGE) -> bool:
     return True
 
 
-def _find_alpine_template(storage: str = DEFAULT_STORAGE, auto_download: bool = True) -> Optional[str]:
+def _find_alpine_template(storage: Optional[str] = None, auto_download: bool = True) -> Optional[str]:
     """Find an available Alpine LXC template, optionally downloading if not found."""
+    storage = storage or _template_storage()
     template_dir = "/var/lib/vz/template/cache"
     
     # Try to get correct path from storage config
@@ -577,7 +595,7 @@ def _configure_tailscale(vmid: int, config: Dict[str, Any]) -> bool:
 # =================================================================
 # OCI Image Management
 # =================================================================
-def pull_oci_image(image: str, tag: str = "latest", storage: str = DEFAULT_STORAGE) -> Dict[str, Any]:
+def pull_oci_image(image: str, tag: str = "latest", storage: Optional[str] = None) -> Dict[str, Any]:
     """
     Pull an OCI image from a registry and store as LXC template.
     Uses Proxmox's pvesh API to download OCI images (same as GUI).
@@ -590,6 +608,7 @@ def pull_oci_image(image: str, tag: str = "latest", storage: str = DEFAULT_STORA
     Returns:
         Dict with success status and template path
     """
+    storage = storage or _template_storage()
     result = {
         "success": False,
         "message": "",

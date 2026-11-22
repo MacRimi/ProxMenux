@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted live streaming server with a web interface, FFmpeg processing, RTMP, SRT and HLS."
+    },
+    "description": {
+      "en_US": "Restreamer is a self-hosted live streaming solution that enables broadcasting directly to a website as well as publishing simultaneously to platforms like YouTube, Twitch, and Vimeo. It supports multiple audio and video inputs, protocols such as RTMP, SRT, and HLS, and native FFmpeg video processing with hardware acceleration. The platform includes a built-in video player, customizable publication pages, and viewer and resource monitoring without collecting audience data."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/datarhei/restreamer/2.x/readme-promo.gif"
+    ]
+  }
+}

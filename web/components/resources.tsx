@@ -1,6 +1,7 @@
 "use client"
 
-import { Book, GitBranch, FileText, Github } from "lucide-react"
+import { Book, GitBranch, FileText } from "lucide-react"
+import { Github } from "@/components/ui/brand-icons"
 import { Link } from "@/i18n/navigation"
 import NextLink from "next/link"
 import { useTranslations } from "next-intl"

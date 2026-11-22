@@ -19,5 +19,26 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Altus is an Electron-based WhatsApp client with themes and multiple account support."
+    },
+    "description": {
+      "en_US": "Altus is an Electron-based WhatsApp client designed for managing multiple accounts within a single interface. It enables users to run and switch between separate WhatsApp sessions conveniently. In addition, the application offers custom theme support to personalize the messaging interface."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

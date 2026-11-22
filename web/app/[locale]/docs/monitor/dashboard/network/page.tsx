@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { Download } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -28,7 +28,6 @@ export default async function NetworkTabPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.dashboard.network" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -108,7 +107,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-flow-overview.png"
           alt={t("flow.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("flow.imageCaption")}
@@ -210,7 +209,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-latency-historical.png"
           alt={t("latency.mode1Alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("latency.mode1Caption")}
@@ -230,7 +229,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-latency-realtime.png"
           alt={t("latency.mode2Alt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("latency.mode2Caption", { em })}
@@ -275,7 +274,7 @@ export default async function NetworkTabPage({
         <img
           src="/monitor/network-latency-report-preview.png"
           alt={t("latency.reportPreviewAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("latency.reportPreviewCaption")}

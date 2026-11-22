@@ -43,6 +43,7 @@ while true; do
             ""  "" \
             ""  "\Z4───────────────────── $(translate "Utilities") ────────────────────────\Zn" \
             "7"         "$(translate "Manual CLI Guide (GPU/TPU)")" \
+            "8"         "$(translate "USB/IP over SSH")" \
             "0"         "$(translate "Return to Main Menu")" \
             2>&1 >/dev/tty
     ) || { exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"; }
@@ -68,6 +69,9 @@ while true; do
             ;;
         7)
             bash "$LOCAL_SCRIPTS/gpu_tpu/gpu-tpu-manual-guide.sh"
+            ;;
+        8)
+            bash "$LOCAL_SCRIPTS/devices/usbip_menu.sh"
             ;;
         0)
             exec bash "$LOCAL_SCRIPTS/menus/main_menu.sh"

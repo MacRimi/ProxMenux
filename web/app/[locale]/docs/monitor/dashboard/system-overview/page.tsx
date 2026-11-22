@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
@@ -25,7 +25,6 @@ export default async function SystemOverviewTabPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.dashboard.systemOverview" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -87,7 +86,7 @@ export default async function SystemOverviewTabPage({
         <img
           src="/monitor/dashboard-home.png"
           alt={t("captureAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("captureCaption")}
@@ -154,7 +153,7 @@ export default async function SystemOverviewTabPage({
         <img
           src="/monitor/system-overview-top-processes.png"
           alt={t("processes.captureListAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("processes.captureListCaption")}
@@ -178,7 +177,7 @@ export default async function SystemOverviewTabPage({
         <img
           src="/monitor/system-overview-process-detail.png"
           alt={t("processes.captureDetailAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("processes.captureDetailCaption")}

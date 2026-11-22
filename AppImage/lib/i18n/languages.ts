@@ -1,7 +1,7 @@
 export const LANGUAGE_STORAGE_KEY = "proxmenux-ui-language"
 export const DEFAULT_LANGUAGE = "en"
 
-export type LanguageCode = "en" | "es" | "fr" | "de" | "it" | "pt" | "sk" | "sv"
+export type LanguageCode = "en" | "es" | "fr" | "de" | "it" | "pt" | "sk" | "sv" | "ru"
 
 export type LanguageStatus = "complete" | "partial" | "needs-translation"
 
@@ -21,6 +21,7 @@ export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   { code: "pt", englishName: "Portuguese", nativeName: "Português", status: "complete" },
   { code: "sk", englishName: "Slovak", nativeName: "Slovenčina", status: "complete" },
   { code: "sv", englishName: "Swedish", nativeName: "Svenska", status: "complete" },
+  { code: "ru", englishName: "Russian", nativeName: "Русский", status: "complete" },
 ]
 
 export function isSupportedLanguage(value: string | null | undefined): value is LanguageCode {

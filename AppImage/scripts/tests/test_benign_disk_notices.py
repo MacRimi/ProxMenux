@@ -2,12 +2,19 @@ import sys
 from pathlib import Path
 import subprocess
 import unittest
+import tempfile
 from unittest.mock import MagicMock, patch
+from health_fixture_modules import load_health_modules
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-import health_monitor
-import notification_events
+
+
+def setUpModule():
+    global health_monitor, notification_events
+    temporary = tempfile.TemporaryDirectory(prefix='benign-notices-')
+    unittest.addModuleCleanup(temporary.cleanup)
+    health_monitor, notification_events, _ = load_health_modules(temporary.name)
 
 NO_POWER_STATUS = ('Sep 27 09:08:50 proxmox smartd[893]: Device: /dev/sdc [SAT], '
                    'no ATA CHECK POWER STATUS support, ignoring -n Directive')

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +8,7 @@ from unittest import mock
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "auth_manager.py"
+sys.path.insert(0, str(MODULE_PATH.parent))
 SPEC = importlib.util.spec_from_file_location("auth_manager_under_test", MODULE_PATH)
 auth_manager = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(auth_manager)
@@ -141,14 +143,14 @@ class ChangePasswordTests(unittest.TestCase):
     def test_missing_current_password_is_rejected_without_exception(self):
         self.assertFalse(auth_manager.verify_password(None, self.read_config()["password_hash"]))
 
-        success, message = auth_manager.change_password(None, self.new_password)
+        success, message = auth_manager.change_password("admin", None, self.new_password)
 
         self.assertFalse(success)
         self.assertEqual(message, "Current password is incorrect")
 
     def test_password_change_without_2fa(self):
         success, message = auth_manager.change_password(
-            self.current_password, self.new_password
+            "admin", self.current_password, self.new_password
         )
 
         self.assertTrue(success, message)
@@ -162,7 +164,7 @@ class ChangePasswordTests(unittest.TestCase):
         auth_manager.AUTH_CONFIG_FILE.write_text(json.dumps(config))
 
         success, message = auth_manager.change_password(
-            self.current_password, self.new_password
+            "admin", self.current_password, self.new_password
         )
 
         self.assertFalse(success)
@@ -180,7 +182,7 @@ class ChangePasswordTests(unittest.TestCase):
             auth_manager, "verify_totp", return_value=(True, "accepted")
         ) as verify_totp:
             success, message = auth_manager.change_password(
-                self.current_password, self.new_password, "123456"
+                "admin", self.current_password, self.new_password, "123456"
             )
 
         self.assertTrue(success, message)
@@ -198,7 +200,7 @@ class ChangePasswordTests(unittest.TestCase):
             auth_manager, "verify_totp", return_value=(False, "rejected")
         ) as verify_totp:
             success, message = auth_manager.change_password(
-                self.current_password, self.new_password, "000000"
+                "admin", self.current_password, self.new_password, "000000"
             )
 
         self.assertFalse(success)

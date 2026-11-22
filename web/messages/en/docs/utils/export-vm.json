@@ -46,7 +46,7 @@
       {
         "format": "OVF",
         "output": "name-vmid-ts-ovf/",
-        "pros": "~120% disk overhead. Easier to inspect (descriptor is plain XML). Can edit before importing.",
+        "pros": "~120% of virtual disk size. Easier to inspect (descriptor is plain XML). Can edit before importing.",
         "cons": "Multiple files — must transfer all of them together."
       }
     ]
@@ -55,12 +55,12 @@
     "heading": "Destination directory",
     "body": "Pick from presets (<code>/var/lib/vz/dump</code>, <code>/var/lib/vz/template/iso</code>) or enter a manual path. The script validates the directory is writeable and warns if free space looks tight before starting.",
     "calloutTitle": "Free space rule of thumb",
-    "calloutBody": "For an OVF export of a VM with disks totalling 100 GB virtual: budget ~120 GB free. For an OVA: budget ~220 GB. Sparse / mostly-empty disks may use less, but the conversion writes them out fully before the OVA TAR step compresses anything. If you run out of space mid-export, the temp directory is cleaned up by the EXIT trap and you start over."
+    "calloutBody": "For an OVF export of a VM with disks totalling 100 GB virtual: budget ~120 GB free. For an OVA: budget ~220 GB. Actual usage may be lower for mostly-empty disks. The OVA archive is created with uncompressed TAR while the temporary VMDK files still exist, so allow space for both. If you run out of space mid-export, the temp directory is cleaned up by the EXIT trap and you start over."
   },
   "package": {
     "heading": "What ends up in the package",
-    "intro": "For an OVA / OVF named <code>myvm-100-2026-04-26_18-30-15</code>:",
-    "code": "# OVA mode (single .ova file is a TAR of):\nmyvm-100-2026-04-26_18-30-15.ovf      # XML descriptor (DMTF OVF 1.0 + RASD + VSSD)\nmyvm-100-2026-04-26_18-30-15.mf       # SHA1 manifest\nmyvm-100-2026-04-26_18-30-15-disk0.vmdk\nmyvm-100-2026-04-26_18-30-15-disk1.vmdk\n...\n\n# OVF mode (a directory):\nmyvm-100-2026-04-26_18-30-15-ovf/\n├── myvm-100-2026-04-26_18-30-15.ovf\n├── myvm-100-2026-04-26_18-30-15.mf\n├── myvm-100-2026-04-26_18-30-15-disk0.vmdk\n└── myvm-100-2026-04-26_18-30-15-disk1.vmdk"
+    "intro": "For an OVA / OVF named <code>myvm-100-20260426_183015</code>:",
+    "code": "# OVA mode (single .ova file is a TAR of):\nmyvm-100-20260426_183015.ovf      # XML descriptor (DMTF OVF 1.0 + RASD + VSSD)\nmyvm-100-20260426_183015.mf       # SHA1 manifest\nmyvm-100-20260426_183015-disk1.vmdk\nmyvm-100-20260426_183015-disk2.vmdk\n...\n\n# OVF mode (a directory):\nmyvm-100-20260426_183015-ovf/\n├── myvm-100-20260426_183015.ovf\n├── myvm-100-20260426_183015.mf\n├── myvm-100-20260426_183015-disk1.vmdk\n└── myvm-100-20260426_183015-disk2.vmdk"
   },
   "exported": {
     "heading": "What gets exported",
@@ -90,7 +90,7 @@
   "manifest": {
     "heading": "SHA1 manifest",
     "intro": "Every package includes a <code>.mf</code> file with SHA1 hashes of the OVF descriptor and each VMDK:",
-    "code": "SHA1(myvm-100-2026-04-26_18-30-15.ovf)= 3a7bd3e2360a3d29eea436fcfb7e44c735d117c9\nSHA1(myvm-100-2026-04-26_18-30-15-disk0.vmdk)= b7e23ec29af22b0b4e41da31e868d57226121c84\nSHA1(myvm-100-2026-04-26_18-30-15-disk1.vmdk)= a87ff679a2f3e71d9181a67b7542122c",
+    "code": "SHA1(myvm-100-20260426_183015.ovf)= 3a7bd3e2360a3d29eea436fcfb7e44c735d117c9\nSHA1(myvm-100-20260426_183015-disk1.vmdk)= b7e23ec29af22b0b4e41da31e868d57226121c84\nSHA1(myvm-100-20260426_183015-disk2.vmdk)= a87ff679a2f3e71d9181a67b7542122c",
     "outro": "Optional in the OVF spec — many readers ignore it — but useful for verifying the package made it across intact. Verify manually with <code>sha1sum -c file.mf</code>."
   },
   "import": {
@@ -120,8 +120,8 @@
     "noSpaceBody": "Destination ran out of space. The temp directory is auto-cleaned by the EXIT trap. Pick a destination with more headroom (rule of thumb above) and re-run.",
     "unsupportedHwTitle": "Export completes but VMware refuses to import: \"Unsupported hardware family\"",
     "unsupportedHwBody": "Some ESXi versions reject OVF descriptors that declare a hardware family they don't recognise. Open the .ovf in a text editor (or extract the .ova first), find <code>&lt;vssd:VirtualSystemType&gt;</code> and edit it to a value ESXi accepts (e.g. <code>vmx-13</code> for ESXi 6.5+). For a quick workaround, try VirtualBox — it's more permissive.",
-    "nicTitle": "Imported VM in VMware has e1000 NIC but I want VirtIO",
-    "nicBody": "Expected — the OVF only stores the NIC count, not the model. Edit the imported VM's NIC settings in VMware after import. Same applies for SCSI controller (export uses lsilogic for VMware compatibility; change to <code>VirtIO SCSI</code> if your guest supports it).",
+    "nicTitle": "Imported VM uses a different NIC or SCSI controller",
+    "nicBody": "The OVF preserves the NIC count, not the original model. Review the imported VM’s network settings in the destination hypervisor. The export declares an lsilogic SCSI controller for VMware compatibility. When importing back into Proxmox with ProxMenux, the VM is created with an LSI controller and e1000 NICs; switch to <code>VirtIO SCSI</code> and VirtIO afterwards if the guest has suitable drivers.",
     "runningTitle": "VM was running and I declined to stop it — export aborted",
     "runningBody": "The script can't produce a consistent image while disks are being written. Either accept the shutdown prompt next time, or stop the VM manually first (<code>qm shutdown $VMID</code>) and re-run.",
     "slowTitle": "Disk conversion is slow",

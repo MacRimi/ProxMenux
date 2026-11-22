@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add or remove the extra paths and devices of one member of an installed
+"""Add, change or remove the paths and devices of one member of an installed
 multi-container application, without rebuilding any of its containers."""
 from __future__ import annotations
 
@@ -15,15 +15,19 @@ import time
 import oci_gpu_devices as gpu_devices
 import oci_host_mounts as host_mounts
 import oci_instance_reconcile as reconcile
+import oci_instance_transaction as transaction
 import oci_instances as instances
+import oci_native_modify as native_modify
 import oci_nested_mounts
+import oci_stack_adapters as adapters
 import oci_stack_replay as replay
+import oci_usb_passthrough as usb_passthrough
 from oci_ui import msg_error, msg_info, msg_ok, translate
 
-CONVERTERS = {'install_nextcloud_stack.sh': replay.nextcloud_record,
-              'install_paperless_stack.sh': replay.paperless_record,
-              'install_tandoor_stack.sh': replay.tandoor_record,
-              'install_immich_stack.sh': replay.immich_record}
+CONVERTERS = adapters.converters()
+
+
+VARIABLE_NAME = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 
 
 def run(*command):
@@ -58,16 +62,90 @@ def device_path(value):
     return fields.get('path') or value.split(',', 1)[0]
 
 
-def validate(vmid, changes):
+def settings_of(changes):
+    """The resources and variables of a change, empty when it asks for none."""
+    environment = {'set': {}, 'unset': [], **(changes.get('environment') or {})}
+    return changes.get('resources') or {}, environment
+
+
+def validate_settings(changes):
+    """The resources and variables asked for, refused before anything changes."""
+    resources, environment = settings_of(changes)
+    for key, value in resources.items():
+        minimum = {'cores': 1, 'memory_mb': 64, 'swap_mb': 0}.get(key)
+        if minimum is None or isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            raise ValueError(f"{translate('Invalid resource value:')} {key}")
+    for name, value in environment['set'].items():
+        if not VARIABLE_NAME.fullmatch(name) or not isinstance(value, str) \
+                or any(ord(c) < 32 or ord(c) == 127 for c in value):
+            raise ValueError(translate('The value contains an unsupported character'))
+    for name in environment['unset']:
+        if not VARIABLE_NAME.fullmatch(name) or name in environment['set']:
+            raise ValueError(translate('The value contains an unsupported character'))
+
+
+def settings_values(record, config, changes):
+    """The Proxmox settings that carry the requested resources and variables,
+    with the values an adapter derives from them."""
+    values = {}
+    cfg = transaction.settings(config)
+    resources, environment = settings_of(changes)
+    if 'cores' in resources:
+        # A container limited by CPU time keeps that kind of limit.
+        values['cpulimit' if 'cpulimit' in cfg and 'cores' not in cfg else 'cores'] = resources['cores']
+    if 'memory_mb' in resources:
+        values['memory'] = resources['memory_mb']
+    if 'swap_mb' in resources:
+        values['swap'] = resources['swap_mb']
+    wanted = dict(environment['set'])
+    profile = record['deployment'].get('replay_profile') or {}
+    for name, source in adapters.derived(profile.get('adapter'), profile.get('role')).items():
+        if source in resources:
+            wanted.setdefault(name, str(resources[source]))
+    if wanted or environment['unset']:
+        env = native_modify.environment(config)
+        defaults = dict(item.split('=', 1) for item in
+                        (record['observed'].get('image') or {}).get('defaults', {}).get('Env', []) if '=' in item)
+        for name in environment['unset']:
+            # A variable the image defines comes back with its value, as in Docker.
+            if name in defaults:
+                env[name] = defaults[name]
+            else:
+                env.pop(name, None)
+        env.update(wanted)
+        values['env'] = '\0'.join(f'{name}={value}' for name, value in env.items())
+    return values
+
+
+def recorded_usb(record):
+    return [device for device in (record or {}).get('deployment', {}).get('devices', [])
+            if usb_passthrough.recorded(device)]
+
+
+def validate(vmid, changes, record=None):
     """Everything that can be refused is refused before the container stops."""
+    validate_settings(changes)
+    usb = {device.get('id'): device for device in recorded_usb(record)}
     mounts = {options(value).get('mp'): (key, value) for key, value in entries(vmid, 'mp').items()}
     devices = {device_path(value): key for key, value in entries(vmid, 'dev').items()}
     for path in changes['remove_mounts']:
         if path not in mounts:
             raise ValueError(f"{translate('The path to remove is not mounted:')} {path}")
     for path in changes['remove_devices']:
+        # A USB device passed by its identity is named by its id.
+        if path.startswith('usb:') and path[4:] in usb:
+            continue
         if path not in devices:
             raise ValueError(f"{translate('The device to remove is not attached:')} {path}")
+    for path, change in changes.get('change_mounts', {}).items():
+        if path not in mounts or path in changes['remove_mounts']:
+            raise ValueError(f"{translate('The path to change is not mounted:')} {path}")
+        if set(change) - {'source', 'read_only'}:
+            raise ValueError(f"{translate('Unsupported change of a path:')} {path}")
+        if 'source' in change:
+            if not mounts[path][1].split(',', 1)[0].startswith('/'):
+                raise ValueError(f"{translate('Only a path mounted from the host can change its directory:')} {path}")
+            host_mounts.validate_source(host_mounts.valid_path(change['source']), allow_missing=True)
     kept = [path for path in mounts if path not in changes['remove_mounts']]
     for mount in changes['add_mounts']:
         target = host_mounts.valid_path(mount['container_path'])
@@ -83,7 +161,17 @@ def validate(vmid, changes):
             host_mounts.validate_source(mount['source'], allow_missing=True)
         else:
             raise ValueError(f"{translate('Unsupported mount type:')} {mount['type']}")
+    usb_kept = [device for device in usb.values() if f"usb:{device.get('id')}" not in changes['remove_devices']]
     for device in changes['add_devices']:
+        if usb_passthrough.recorded(device):
+            identity = (device.get('usb'), device.get('serial_link'), bool(device.get('tree')))
+            if any((other.get('usb'), other.get('serial_link'), bool(other.get('tree'))) == identity
+                   for other in usb_kept):
+                raise ValueError(f"{translate('This device is already attached')}: {device.get('container_path')}")
+            usb_kept.append(device)
+            # Its record must be one the container lines can come from.
+            usb_passthrough.lines({'devices': usb_kept})
+            continue
         path = device.get('host_path')
         if device.get('kind') != 'character-device' or not (
                 gpu_devices.gpu_path(path) or gpu_devices.peripheral_path(path)):
@@ -93,26 +181,47 @@ def validate(vmid, changes):
         gpu_devices.snapshot(path)
 
 
+def host_directory(path):
+    """A host directory for a path, created for the container user when missing."""
+    source = Path(path)
+    if not source.exists():
+        source.mkdir(parents=True, mode=0o775)
+        os.chown(source, 100000, 100000)
+    return source
+
+
 def apply(vmid, changes):
+    for path, change in changes.get('change_mounts', {}).items():
+        key, value = next((key, value) for key, value in entries(vmid, 'mp').items()
+                          if options(value).get('mp') == path)
+        source, *fields = value.split(',')
+        if 'source' in change:
+            source = str(host_directory(change['source']))
+        if 'read_only' in change:
+            fields = [field for field in fields if not field.startswith('ro=')]
+            if change['read_only']:
+                fields.append('ro=1')
+        run('pct', 'set', str(vmid), '--' + key, ','.join([source, *fields]))
+        msg_ok(f"{translate('Path changed:')} {path}")
     for mount in changes['add_mounts']:
         target = mount['container_path']
         if mount['type'] == 'managed-volume':
             value = f"{mount['source']}:{mount['size_gb']},mp={target},backup=1"
         else:
-            source = Path(mount['source'])
-            if not source.exists():
-                source.mkdir(parents=True, mode=0o775)
-                os.chown(source, 100000, 100000)
-            value = f"{source},mp={target},backup=0"
+            value = f"{host_directory(mount['source'])},mp={target},backup=0"
         if mount.get('read_only'):
             value += ',ro=1'
         run('pct', 'set', str(vmid), '--' + free_key(vmid, 'mp'), value)
         msg_ok(f"{translate('Path added:')} {target}")
     for path in changes['remove_devices']:
+        if path.startswith('usb:'):
+            continue
         key = next(key for key, value in entries(vmid, 'dev').items() if device_path(value) == path)
         run('pct', 'set', str(vmid), '--delete', key)
         msg_ok(f"{translate('Device removed:')} {path}")
     for device in changes['add_devices']:
+        if usb_passthrough.recorded(device):
+            continue
         path = device['host_path']
         value = (f"path={path},mode={device.get('mode', '0660')},"
                  f"deny-write={'1' if device.get('deny_write') else '0'},gid={os.stat(path).st_gid}")
@@ -130,8 +239,41 @@ def apply(vmid, changes):
             if unused:
                 run('pct', 'set', str(vmid), '--delete', unused)
         msg_ok(f"{translate('Path removed:')} {path}")
-    if changes['add_mounts'] or changes['remove_mounts']:
+    if changes['add_mounts'] or changes['remove_mounts'] or changes.get('change_mounts'):
         oci_nested_mounts.follow(vmid)
+
+
+def usb_name(device):
+    if device.get('serial_link'):
+        return device['serial_link']
+    usb = device.get('usb') or {}
+    return f"USB {usb.get('vendor', '')}:{usb.get('product', '')}" if usb else 'USB'
+
+
+def apply_usb(root, vmid, changes):
+    """The USB devices passed by their identity: their record is where they
+    live, and from it come the lines of the container and its udev rule."""
+    removed = {path[4:] for path in changes['remove_devices'] if path.startswith('usb:')}
+    added = [device for device in changes['add_devices'] if usb_passthrough.recorded(device)]
+    if not removed and not added:
+        return
+    record = instances.read(root, vmid)
+    plan = record['deployment']
+    kept = [device for device in plan.get('devices', [])
+            if not (usb_passthrough.recorded(device) and device.get('id') in removed)]
+    taken = {device.get('id') for device in kept}
+    for device in added:
+        base, number = device['id'], 2
+        while device['id'] in taken:
+            device['id'], number = f'{base}-{number}', number + 1
+        taken.add(device['id'])
+    plan['devices'] = kept + added
+    usb_passthrough.apply(vmid, plan)
+    instances.write(instances.location(root, vmid), record)
+    for device in added:
+        msg_ok(f"{translate('Device added:')} {usb_name(device)}")
+    for device_id in sorted(removed):
+        msg_ok(f"{translate('Device removed:')} {device_id}")
 
 
 def recorded_mounts(vmid):
@@ -183,14 +325,54 @@ def register(root, vmid):
                                   if path not in listed and (gpu_devices.gpu_path(path)
                                                              or gpu_devices.peripheral_path(path))]
     instances.write(instances.location(root, vmid), record)
+    snapshot(root, vmid)
+
+
+def adopt(root, vmid):
+    """Take into the record what was changed in Proxmox on a member, so an
+    operation on the stack keeps it. The caller holds the registry lock."""
+    record = instances.read(root, vmid)
+    config = instances.command('pct', 'config', str(vmid))
+    if instances.same_config_except_notes(record, config, ignore_tags=True):
+        return
+    if (record['deployment'].get('replay_profile') or {}).get('adapter') in CONVERTERS:
+        record_member(root, vmid)
+        return
+    proposal = reconcile.propose(record, config, member=True)
+    if proposal:
+        reconcile.commit_locked(root, vmid, proposal, member=True)
+        snapshot(root, vmid)
+
+
+def record_member(root, vmid):
+    """Take the member as it is now into its record: its settings through the
+    common adoption every container uses, then what its adapter reads itself."""
+    record = instances.read(root, vmid)
+    plan = record['deployment']
+    # A member an adapter installed and no stack update has rebuilt yet is
+    # read from its native configuration by the adapter itself. Any other is
+    # rebuilt from its record, so what changed goes into it first.
+    if not ((plan.get('replay_profile') or {}).get('adapter') in CONVERTERS and 'native_config' in plan):
+        config = instances.command('pct', 'config', str(vmid))
+        keys = (transaction.settings(record['observed']['config'].encode()).keys()
+                | transaction.settings(config).keys())
+        reconcile.adopt_settings(record, config, plan,
+                                 owned=[key for key in keys if reconcile.MOUNT_OR_DEVICE.fullmatch(key)])
+        instances.write(instances.location(root, vmid), record)
+    register(root, vmid)
+
+
+def snapshot(root, vmid):
+    """Refresh the copy of a member its main container keeps."""
+    record = instances.read(root, vmid)
     primary_id = (record.get('stack_member') or {}).get('primary_vmid', vmid)
     primary = instances.read(root, primary_id)
-    snapshot = instances.read(root, vmid)
-    snapshot.pop('stack', None)
+    copied = instances.read(root, vmid)
+    copied.pop('stack', None)
     members = primary.get('stack', {}).get('members', [])
     for index, member in enumerate(members):
         if member.get('vmid') == vmid:
-            members[index] = snapshot
+            members[index] = copied
     instances.write(instances.location(root, primary_id), primary)
 
 
@@ -207,7 +389,7 @@ def modify(root, vmid, changes):
         raise ValueError(translate('This container is not a member of a multi-container application'))
     if instances.identity(instances.command('pct', 'config', str(vmid))) != record['installation_id']:
         raise ValueError(translate('The container identity does not match'))
-    validate(vmid, changes)
+    validate(vmid, changes, record)
     backup = instances.location(root, vmid).parent / f"config-before-recreate-{time.strftime('%Y%m%d-%H%M%S')}.conf"
     backup.write_text(run('pct', 'config', str(vmid)))
     backup.chmod(0o600)
@@ -220,7 +402,14 @@ def modify(root, vmid, changes):
 
 
 def _modify(root, vmid, changes):
-    running = is_running(vmid)
+    record = instances.read(root, vmid)
+    config = instances.command('pct', 'config', str(vmid))
+    values = settings_values(record, config, changes)
+    # Resources apply to a running container; paths, devices and variables
+    # take effect on its next start.
+    restart = 'env' in values or any(changes.get(key) for key in
+                                     ('add_mounts', 'remove_mounts', 'change_mounts', 'add_devices', 'remove_devices'))
+    running = is_running(vmid) and restart
     if running:
         msg_info(translate('Stopping the container...'))
         try:
@@ -229,9 +418,14 @@ def _modify(root, vmid, changes):
             run('pct', 'stop', str(vmid))
         msg_ok(translate('Container stopped'))
     try:
+        if values:
+            native_modify.set_config(vmid, record['installation_id'],
+                                     instances.command('pct', 'config', str(vmid)), values)
+            msg_ok(translate('Resources and variables applied'))
         apply(vmid, changes)
+        apply_usb(root, vmid, changes)
         msg_info(translate('Saving the new configuration of the application...'))
-        register(root, vmid)
+        record_member(root, vmid)
         msg_ok(translate('Configuration saved'))
     finally:
         if running:
@@ -248,8 +442,9 @@ def main():
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error(translate('Root privileges are required'))
-    changes = {'remove_mounts': [], 'add_mounts': [], 'remove_devices': [], 'add_devices': [],
-               **json.loads(args.changes.read_text())}
+    changes = {'remove_mounts': [], 'add_mounts': [], 'change_mounts': {}, 'remove_devices': [], 'add_devices': [],
+               'resources': {}, **json.loads(args.changes.read_text())}
+    changes['environment'] = {'set': {}, 'unset': [], **changes.get('environment', {})}
     try:
         with instances.locked(args.root):
             modify(args.root, args.vmid, changes)

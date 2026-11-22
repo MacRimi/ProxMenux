@@ -23,5 +23,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "aMule is a multi-platform client for the ED2K file sharing network and based on the windows client eMule. aMule started in August 2003, as a fork of xMule, which is a fork of lMule."
+    },
+    "description": {
+      "en_US": "aMule is an open-source, multi-platform client for the ED2K file-sharing network, based on the eMule client. It allows users to search for, download, and share files across peer-to-peer ED2K and Kademlia networks. The application features a modern web interface and REST API, enabling complete remote management of transfers, shared directories, and client preferences."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/ngosang/docker-amule/HEAD/doc/screenshot.png"
+    ]
   }
 }

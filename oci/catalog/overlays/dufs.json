@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Serve a selected directory through a browser interface with optional upload, search and WebDAV features. This profile keeps the default read-only access mode."
+    },
+    "description": {
+      "en_US": "Dufs is a lightweight file server that provides static file serving, directory listings, and WebDAV access through a web interface. It allows users to browse files, search directory contents, download folders as ZIP archives, and optionally upload or edit files."
+    },
+    "screenshots": [
+      "https://user-images.githubusercontent.com/4012553/220513063-ff0f186b-ac54-4682-9af4-47a9781dee0d.png"
+    ]
+  }
+}

@@ -20,6 +20,28 @@ The authentic-capture test verifies both plan/apply preserve paths without any
 subscription lookup or API write. The attachment is stored byte-for-byte; tests
 parse separate in-memory copies, never rewrite this evidence.
 
+## Authentic PXVIRT capture (unchanged)
+
+`pxvirt-9.0-arm64-raspberry-pi.json` is the complete
+`pvesh get /nodes/localhost/apt/repositories --output-format json` output of a
+PXVIRT host (the Lierfang port of Proxmox VE for arm64), captured on a Raspberry Pi 5.
+
+- Reported host versions: pve-manager 9.0.10-2, proxmox-kernel-helper 9.0.4+pxvirt1,
+  Debian 13 trixie; `pvesubscription get` answers `status: active` on this build.
+- Size: 5072 bytes.
+- SHA-256: `5ddae49d3617d9f7eb1e5719ac636a807f57a2c31cfba93e400c8d6eb3accc9b`.
+
+The port publishes its packages in a plain `main` component from two Lierfang
+mirrors (`.list` files with `arch`/`signed-by` options) that the API labels with
+`infos[].kind == "origin"`, `message == "Lierfang"`; a disabled upstream
+`pve-enterprise` entry remains from the ISO. There is no `pve-*` channel at all,
+so without the downstream check the policy would either fail on the "active"
+subscription or, on an unpatched build, offer the switch to `pve-no-subscription`
+— which, now that Proxmox VE 9.2 publishes arm64 packages, replaces the port with
+upstream packages. `tests/test_repository_downstream.py` verifies that plan and
+apply answer `downstream` for this capture without any subscription lookup or write.
+The file is stored byte-for-byte; tests parse in-memory copies.
+
 ## Generated scenarios (not captured host state)
 
 `RepositoryPolicyTest.simulated_enterprise_capture()` in

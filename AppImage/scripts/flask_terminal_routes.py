@@ -4,7 +4,7 @@ ProxMenux Terminal WebSocket Routes
 Provides a WebSocket endpoint for interactive terminal sessions
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 from flask_sock import Sock
 import subprocess
 import os
@@ -22,7 +22,8 @@ import json
 import tempfile
 import base64
 
-from jwt_middleware import require_admin_scope
+import permissions
+from jwt_middleware import require_admin_scope, require_auth
 
 # Allowed shape for interaction_id used as a file path component when writing
 # the response file. Bounded length, no separators, no path traversal. See
@@ -43,21 +44,22 @@ _SAFE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 # short (5 s) — the client should issue and use the ticket immediately.
 # See audit Tier 1 #2 + #17d.
 
-_TERMINAL_TICKETS = {}     # ticket (str) -> created_at_ts (float)
+_TERMINAL_TICKETS = {}     # ticket (str) -> (created_at_ts, permissions of its issuer)
 _TICKETS_LOCK = threading.Lock()
 _TICKET_TTL = 5            # seconds
 _TICKET_MAX_INFLIGHT = 256 # sanity cap to keep memory bounded
 
 
-def _issue_terminal_ticket():
-    """Issue a fresh ticket and prune expired entries while holding the lock."""
+def _issue_terminal_ticket(granted=frozenset(permissions.PERMISSIONS)):
+    """Issue a fresh ticket carrying the permissions of whoever asked for it,
+    and prune expired entries while holding the lock."""
     now = time.time()
     cutoff = now - _TICKET_TTL
     ticket = secrets.token_urlsafe(32)
     with _TICKETS_LOCK:
         # Prune expired tickets first.
         if _TERMINAL_TICKETS:
-            for k in [k for k, v in _TERMINAL_TICKETS.items() if v < cutoff]:
+            for k in [k for k, v in _TERMINAL_TICKETS.items() if v[0] < cutoff]:
                 _TERMINAL_TICKETS.pop(k, None)
         # Hard cap as a defense against accidental leaks.
         if len(_TERMINAL_TICKETS) >= _TICKET_MAX_INFLIGHT:
@@ -67,40 +69,44 @@ def _issue_terminal_ticket():
                 _TERMINAL_TICKETS.pop(oldest, None)
             except StopIteration:
                 pass
-        _TERMINAL_TICKETS[ticket] = now
+        _TERMINAL_TICKETS[ticket] = (now, frozenset(granted))
     return ticket
 
 
-def _consume_terminal_ticket(ticket):
-    """Validate and atomically consume a ticket. Returns True iff valid + fresh."""
+def _consume_terminal_ticket(ticket, need):
+    """Validate and atomically consume a ticket. Returns True iff valid, fresh
+    and issued to someone with the permission `need`."""
     if not ticket or not isinstance(ticket, str):
         return False
     now = time.time()
     with _TICKETS_LOCK:
-        ts = _TERMINAL_TICKETS.pop(ticket, None)
-    if ts is None:
+        entry = _TERMINAL_TICKETS.pop(ticket, None)
+    if entry is None:
         return False
-    return (now - ts) <= _TICKET_TTL
+    issued_at, granted = entry
+    return (now - issued_at) <= _TICKET_TTL and need in granted
 
 
-def _ws_auth_check():
+def _ws_auth_check(need):
     """Return True iff the current WebSocket handshake is authorized to proceed.
 
-    When auth is enabled and not declined, require a single-use ticket in the
-    `ticket` query parameter. When auth is disabled (fresh install or user
-    explicitly skipped setup), allow the handshake to proceed unauthenticated
-    — same semantics as the @require_auth decorator on REST routes.
+    Every WebSocket runs something: a root terminal, a script or an update.
+    An open Monitor lets it through, as its owner chose; with an account a
+    single-use ticket in the `ticket` query parameter is required, and a
+    Monitor that is read-only or not yet set up refuses it.
     """
     try:
-        from auth_manager import load_auth_config
-        config = load_auth_config()
-        if not config.get("enabled", False) or config.get("declined", False):
-            return True
+        from auth_manager import access_mode
+        mode = access_mode()
     except Exception:
         # If auth status can't be loaded (DB error / missing module), fail
         # closed — better to refuse a terminal than to grant root unauth.
         return False
-    return _consume_terminal_ticket(request.args.get('ticket', ''))
+    if mode == 'open':
+        return True
+    if mode not in ('password', 'proxmox'):
+        return False
+    return _consume_terminal_ticket(request.args.get('ticket', ''), need)
 
 terminal_bp = Blueprint('terminal', __name__)
 sock = Sock()
@@ -134,7 +140,158 @@ def _run_script_completion_hook(script_path, params, exit_code, duration_seconds
     except Exception as exc:
         print(f"[ProxMenux] script completion hook failed: {exc}", flush=True)
 
+
+@terminal_bp.route('/api/lxc-update-jobs', methods=['GET'])
+@require_admin_scope
+def lxc_update_jobs_status():
+    """Read-only recovery after login. This never creates or restarts a job."""
+    from lxc_update_jobs import list_jobs
+    return jsonify({'jobs': list_jobs()})
+
+
+@sock.route('/ws/lxc-update/<run_id>')
+def lxc_update_viewer(ws, run_id):
+    """An authenticated viewer, deliberately not the owner of the update."""
+    if not _ws_auth_check("update"):
+        ws.close(reason=1008, message="Authentication required")
+        return
+    from lxc_update_jobs import get, start
+    try:
+        init = json.loads(ws.receive(timeout=10))
+        if not isinstance(init, dict) or type(init.get('resume')) is not bool:
+            raise ValueError("Invalid update job request")
+        offset = init.get('offset', 0)
+        if type(offset) is not int or offset < 0:
+            raise ValueError("Invalid update output cursor")
+        if init['resume']:
+            job = get(run_id, init.get('vmid'))
+        else:
+            job = start(run_id, init.get('script_path'), init.get('params'),
+                        _run_script_completion_hook)
+        revision = -1
+        while True:
+            view = job.read(offset)
+            if view['text'] or view['offset'] != offset:
+                ws.send(json.dumps({'type': 'job_output', 'text': view['text'],
+                                    'offset': view['offset'], 'truncated': view['truncated']}))
+                offset = view['offset']
+            if view['revision'] != revision:
+                revision = view['revision']
+                # A second viewer must also dismiss a question already
+                # answered elsewhere, or cleared when the job ends.
+                ws.send(json.dumps({'type': 'web_interaction',
+                                    'interaction': view['interaction']}))
+            if view['state'] == 'complete':
+                ws.send(json.dumps({'type': 'script_complete', 'exit_code': view['exit_code']}))
+                break
+            data = ws.receive(timeout=0.2)
+            if data is None:
+                continue
+            try:
+                message = json.loads(data)
+            except (TypeError, ValueError):
+                message = data
+            if isinstance(message, dict) and message.get('type') == 'ping':
+                ws.send('{"type":"pong"}')
+            else:
+                job.input(message if isinstance(message, dict) else data)
+    except (ValueError, KeyError, OSError, TypeError) as exc:
+        try:
+            ws.send(json.dumps({'type': 'job_unavailable', 'message': str(exc)}))
+        except Exception:
+            pass
+    except Exception:
+        # Viewer loss, including auth expiry/reload, has no job side effects.
+        pass
+    # No process termination, PTY close or completion callback here. The job's
+    # worker alone owns those, even while no viewer is authenticated/connected.
+
+def _host_update_completed(script_path, params, exit_code, duration_seconds):
+    """Invalidate health even when no viewer is left to close its modal."""
+    from health_monitor import health_monitor
+    for key in ('updates_check', 'overall_health', '_bg_overall', '_bg_detailed'):
+        health_monitor.last_check_times.pop(key, None)
+        health_monitor.cached_results.pop(key, None)
+
+
+@terminal_bp.route('/api/host-update-jobs', methods=['GET'])
+@require_admin_scope
+def host_update_jobs_status():
+    from host_update_jobs import list_jobs
+    return jsonify({'jobs': list_jobs()})
+
+
+@terminal_bp.route('/api/host-update-jobs/<run_id>/result', methods=['GET'])
+@require_admin_scope
+def host_update_result(run_id):
+    """Read a completed owner's retained output; never create or resume a job."""
+    from host_update_jobs import get
+    try:
+        view = get(run_id).read(0)
+    except (ValueError, KeyError):
+        return jsonify({'error': 'Host update result is unavailable'}), 404
+    if view['state'] != 'complete' or type(view['exit_code']) is not int:
+        return jsonify({'error': 'Host update has not completed'}), 409
+    response = jsonify({key: view[key] for key in ('state', 'exit_code', 'text', 'truncated')})
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@sock.route('/ws/host-update/<run_id>')
+def host_update_viewer(ws, run_id):
+    """New fixed-script contract; existing script/LXC routes stay intact."""
+    if not _ws_auth_check("update"):
+        ws.close(reason=1008, message="Authentication required")
+        return
+    from host_update_jobs import get, start
+    try:
+        init = json.loads(ws.receive(timeout=10))
+        if (not isinstance(init, dict) or set(init) - {'resume', 'offset'}
+                or type(init.get('resume')) is not bool):
+            raise ValueError("Invalid host update request")
+        offset = init.get('offset', 0)
+        if type(offset) is not int or offset < 0:
+            raise ValueError("Invalid host update cursor")
+        job = get(run_id) if init['resume'] else start(run_id, _host_update_completed)
+        revision = -1
+        while True:
+            view = job.read(offset)
+            if view['text'] or view['offset'] != offset:
+                ws.send(json.dumps({'type': 'job_output', 'text': view['text'],
+                                    'offset': view['offset'], 'truncated': view['truncated']}))
+                offset = view['offset']
+            if view['revision'] != revision:
+                revision = view['revision']
+                ws.send(json.dumps({'type': 'web_interaction', 'interaction': view['interaction']}))
+                ws.send(json.dumps({'type': 'host_update_state', 'state': view['state'],
+                                    'attention_reason': view['attention_reason']}))
+            if view['state'] == 'complete':
+                ws.send(json.dumps({'type': 'script_complete', 'exit_code': view['exit_code']}))
+                break
+            data = ws.receive(timeout=.2)
+            if data is None:
+                if getattr(ws, 'connected', True) is False or getattr(ws, 'closed', False) is True:
+                    break
+                continue
+            try:
+                message = json.loads(data)
+            except (TypeError, ValueError):
+                message = data
+            if isinstance(message, dict) and message.get('type') == 'ping':
+                ws.send('{"type":"pong"}')
+            else:
+                job.input(message)
+    except (ValueError, KeyError, OSError, TypeError) as exc:
+        try:
+            ws.send(json.dumps({'type': 'job_unavailable', 'message': str(exc)}))
+        except Exception:
+            pass
+    except Exception:
+        pass  # An observer disconnect never signals the owner or its PTY.
+
+
 @terminal_bp.route('/api/terminal/health', methods=['GET'])
+@require_auth
 def terminal_health():
     """Health check for terminal service"""
     return {'success': True, 'active_sessions': len(active_sessions)}
@@ -151,13 +308,15 @@ def issue_terminal_ticket_route():
     and immediately opens the WS appending `?ticket=<value>`. See audit
     Tier 1 #17d.
     """
+    granted = g.identity["permissions"] if hasattr(g, "identity") else permissions.PERMISSIONS
     return jsonify({
         'success': True,
-        'ticket': _issue_terminal_ticket(),
+        'ticket': _issue_terminal_ticket(granted),
         'ttl_seconds': _TICKET_TTL,
     })
 
 @terminal_bp.route('/api/terminal/search-command', methods=['GET'])
+@require_admin_scope
 def search_command():
     """Proxy endpoint for cheat.sh API to avoid CORS issues"""
     query = request.args.get('q', '')
@@ -258,7 +417,7 @@ def terminal_websocket(ws):
     # If the ticket is missing or invalid (and auth is enabled), refuse the
     # handshake — otherwise this endpoint is a root shell available to anyone
     # who can reach the port. See audit Tier 1 #2.
-    if not _ws_auth_check():
+    if not _ws_auth_check("terminal"):
         try:
             ws.send(json.dumps({"type": "error", "message": "Unauthorized"}))
         except Exception:
@@ -420,7 +579,7 @@ def script_websocket(ws, session_id):
     # Auth gate first — see /ws/terminal for the rationale. Without this an
     # unauth attacker who can craft an `init_data` payload pointing at any
     # bash script gets remote code execution as root. See audit Tier 1 #2.
-    if not _ws_auth_check():
+    if not _ws_auth_check("execute"):
         try:
             ws.send('{"type": "error", "message": "Unauthorized"}\r\n')
         except Exception:

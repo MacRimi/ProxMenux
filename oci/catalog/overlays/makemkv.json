@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "The maintained jlesage MakeMKV image with persistent settings, shared input/output storage and optional native optical-drive passthrough."
+    },
+    "description": {
+      "en_US": "MakeMKV is a video format converter that extracts video clips from proprietary and encrypted discs into MKV files. It preserves original video and audio tracks, chapters, and metadata without re-encoding or compressing the content. The tool is designed to digitize DVD and Blu-ray media while maintaining the exact original quality of the source disc."
+    }
+  }
+}

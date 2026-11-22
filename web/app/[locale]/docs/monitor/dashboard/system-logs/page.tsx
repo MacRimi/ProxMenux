@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
+import { icuQuotesToHtml } from "@/i18n/loadMessages"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
@@ -24,7 +25,6 @@ export default async function SystemLogsTabPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.dashboard.systemLogs" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -93,7 +93,7 @@ export default async function SystemLogsTabPage({
         <img
           src="/monitor/log-details-modal.png"
           alt={t("subtabs.logDetailsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-sm w-full"
+          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("subtabs.logDetailsImageCaption")}
@@ -135,7 +135,7 @@ export default async function SystemLogsTabPage({
                 className={idx < dataRows.length - 1 ? "border-b border-gray-100" : ""}
               >
                 <td className="px-3 py-2 align-top">{row.subtab}</td>
-                <td className="px-3 py-2 align-top font-mono text-xs" dangerouslySetInnerHTML={{ __html: row.endpoint }} />
+                <td className="px-3 py-2 align-top font-mono text-xs" dangerouslySetInnerHTML={{ __html: icuQuotesToHtml(row.endpoint) }} />
                 <td className="px-3 py-2 align-top">
                   {t.rich(`dataCollected.rows.${idx}.source`, { code })}
                 </td>

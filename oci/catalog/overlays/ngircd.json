@@ -2,6 +2,15 @@
   "catalog_ui": {
     "launch": {
       "port": null
+    },
+    "title": {
+      "en_US": "ngIRCd"
+    },
+    "tagline": {
+      "en_US": "Ngircd is a free, portable and lightweight Internet Relay Chat server for small or private networks, developed under the GNU General Public License (GPL). It is easy to configure, can cope with dynamic IP addresses, and supports IPv6, SSL-protected connections as well as PAM for authentication. It is written from scratch and not based on the original IRCd."
+    },
+    "description": {
+      "en_US": "Ngircd is a lightweight and portable Internet Relay Chat server designed for small or private networks. It is written from scratch rather than based on the original IRC daemon. The server handles dynamic IP addresses and provides support for IPv6, SSL-protected connections, and PAM authentication."
     }
   },
   "first_run": {

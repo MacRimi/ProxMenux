@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Runs Proxmox Backup Server as a native LXC, with deduplicated and encrypted backups of VMs, containers and hosts. Community packaging by Dockur, not an official Proxmox image."
+    },
+    "description": {
+      "en_US": "Proxmox Backup Server is an enterprise backup solution designed to secure and restore virtual machines, containers, and physical hosts. It features deduplication and encryption to reduce storage usage and secure data. Users can manage backup datastores, configure automated backup jobs, and perform pruning directly through its web interface."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/dockur/proxmox-backup/master/.github/screenshot.png"
+    ]
+  }
+}

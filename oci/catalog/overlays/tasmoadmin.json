@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "TasmoAdmin manages the devices on a network that run Tasmota firmware, from one web interface: it finds them by scanning an address range or through an MQTT broker, shows their sensor readings and configuration, sends commands and backs them up, and updates the firmware of several devices at once, downloading the release from the Tasmota OTA site."
+    },
+    "description": {
+      "en_US": "TasmoAdmin is an administrative management platform for devices running Tasmota firmware. It discovers devices across a network range or through an MQTT broker, monitors sensor data, and allows devices to be configured from a central interface. The platform also supports batch actions to restart devices, send commands, create backups, and update firmware simultaneously across multiple devices."
+    }
+  }
+}

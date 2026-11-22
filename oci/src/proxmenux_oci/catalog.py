@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import weakref
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
@@ -55,10 +56,24 @@ def is_multi_container(template: dict[str, Any]) -> bool:
     return template.get("id") in MULTI_CONTAINER_TEMPLATES or driver in ("generic-multi-lxc-stack", "arr-suite")
 
 
+def _pillow_available() -> bool:
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 class Catalog:
-    def __init__(self, root: Path, source: GitHubSource | None = None) -> None:
+    def __init__(self, root: Path, source: GitHubSource | None = None, *,
+                 catalog_dir: Path | None = None) -> None:
         self.root = root
-        self.catalog_dir = root / "catalog"
+        from .catalog_refresh import pin_catalog
+        self.catalog_dir, lease = pin_catalog(root, catalog_dir)
+        if lease is not None:
+            self._snapshot_lease = weakref.finalize(self, lease.close)
+        self._include_local = catalog_dir is None and self.catalog_dir != root / "catalog"
+        self.local_app_ids: set[str] = set()
         self.apps_dir = self.catalog_dir / "apps"
         self.curated_dir = self.catalog_dir / "curated"
         self.overlays_dir = self.catalog_dir / "overlays"
@@ -132,7 +147,41 @@ class Catalog:
                 item["template_id"] = template_id
         index_path.write_text(json.dumps(index, ensure_ascii=True, indent=2) + "\n",
                               encoding="utf-8")
+        report.update(self.apply_dark_icons(resolver))
         return report
+
+    def apply_dark_icons(self, resolver: Any = None, fetch: Any = None) -> dict[str, int]:
+        """Give every black icon of the index its version for the dark theme.
+
+        A black mark on a transparent background disappears on the dark theme
+        of the Monitor, so its index entry carries `icon_dark`: the light
+        version its icon set publishes, or "invert" when there is none. The
+        Monitor reads it for any place that shows that icon. The templates are
+        not touched, so the template schema stays the same.
+        """
+        from .icons import IconResolver, fetch_icon
+
+        if not _pillow_available():
+            # Without Pillow the icons cannot be read; what the index already
+            # says is kept rather than cleared.
+            return {"dark": -1}
+        resolver = resolver or IconResolver()
+        fetch = fetch or fetch_icon
+        index = json.loads(self.index_path.read_text(encoding="utf-8"))
+        cache: dict[str, str | None] = {}
+        dark = 0
+        for item in index.get("applications", []):
+            url = item.get("icon")
+            if url not in cache:
+                cache[url] = resolver.dark_theme_icon(url, fetch(url)) if url else None
+            if cache[url]:
+                item["icon_dark"] = cache[url]
+                dark += 1
+            else:
+                item.pop("icon_dark", None)
+        self.index_path.write_text(json.dumps(index, ensure_ascii=True, indent=2) + "\n",
+                                   encoding="utf-8")
+        return {"dark": dark}
 
     def sync_index(self) -> dict[str, Any]:
         repos = self.source.list_linuxserver_repositories()
@@ -345,6 +394,18 @@ class Catalog:
         payload = json.loads(self.index_path.read_text(encoding="utf-8"))
         self._enrich_index_from_templates(payload)
         self._apply_verification_to_index(payload)
+        if self._include_local:
+            from .catalog_refresh import source_settings
+            requested = source_settings(self.root).get("local_apps", [])
+            self.local_app_ids = set()
+            if isinstance(requested, list) and requested:
+                present = {item["id"] for item in payload["applications"]}
+                missing = {app_id for app_id in requested if isinstance(app_id, str)} - present
+                if missing:
+                    bundled = Catalog(self.root, catalog_dir=self.root / "catalog").load_index()
+                    local = [item for item in bundled["applications"] if item["id"] in missing]
+                    self.local_app_ids = {item["id"] for item in local}
+                    payload["applications"].extend(local)
         return payload
 
     def categories(self) -> dict[str, Any]:
@@ -436,8 +497,13 @@ class Catalog:
             item["hidden"] = overlay_ui.get("hidden", False)
             # The index is rebuilt from upstream README summaries; preserve a
             # locally curated English description from the existing overlay.
-            item["description"] = overlay_ui.get("description", {}).get(
+            # The short line of the overlay comes first: its description is
+            # then the longer text of the application's sheet.
+            item["description"] = (overlay_ui.get("tagline") or overlay_ui.get("description") or {}).get(
                 "en_US", item.get("description"))
+            # The name of the project, spelt as it spells it, for every image
+            # of it: who publishes the image is shown apart.
+            item["title"] = overlay_ui.get("title", {}).get("en_US", item.get("title"))
             path = self.apps_dir / f"{item['id']}.json"
             if not path.exists():
                 item["architectures"] = supported_architectures(
@@ -588,7 +654,7 @@ class Catalog:
                 item["id"],
             )
         elif item.get("template_family") == "curated-profile":
-            template = json.loads((self.root / item["curated_path"]).read_text(encoding="utf-8"))
+            template = json.loads((self._curated_path(item)).read_text(encoding="utf-8"))
         else:
             raise ConversionError(f"Proveedor no soportado: {provider}")
         catalog_id = item["id"]
@@ -641,7 +707,7 @@ class Catalog:
                 )
             elif item.get("template_family") == "curated-profile":
                 template = json.loads(
-                    (self.root / item["curated_path"]).read_text(encoding="utf-8")
+                    (self._curated_path(item)).read_text(encoding="utf-8")
                 )
             else:
                 raise ConversionError(f"Proveedor no soportado: {item_provider}")
@@ -785,18 +851,35 @@ class Catalog:
         if errors:
             raise ConversionError(f"La plantilla generada no cumple el esquema: {'; '.join(errors)}")
 
+    def _curated_path(self, item: dict[str, Any]) -> Path:
+        path = Path(item["curated_path"])
+        if path.parts and path.parts[0] == "catalog":
+            return self.catalog_dir / path.relative_to("catalog")
+        # Older local profiles may use an engine-relative path. Downloaded
+        # catalogs are checked separately and must use catalog/curated paths.
+        return self.root / path
+
     def compose(self, app_id: str) -> dict[str, Any]:
         """The installable template, built only from the files shipped with
         ProxMenux: the curated profile or the pre-generated template, with its
         overlay applied. Nothing is downloaded and nothing is written."""
-        item = self.find_item(app_id)
+        return self._compose_item(self.find_item(app_id))
+
+    def _compose_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Compose an already loaded item when validating a complete snapshot."""
+        app_id = item["id"]
+        if app_id in self.local_app_ids:
+            return Catalog(self.root, catalog_dir=self.root / "catalog").compose(app_id)
         if item.get("template_family") == "curated-profile":
-            path = self.root / item["curated_path"]
+            path = self._curated_path(item)
         else:
             path = self.apps_dir / f"{item['id']}.json"
         if not path.exists():
             raise ConversionError(f"No template is available for '{app_id}'")
         template = json.loads(path.read_text(encoding="utf-8"))
+        if item.get("_retained_recipe"):
+            self.validate(template, required=False)
+            return template
         self._apply_overlay(item["id"], template)
         self._apply_category(item["id"], template["catalog_ui"])
         self._apply_volume_policy(item["id"], template["container_contract"],
@@ -879,6 +962,7 @@ class Catalog:
                     .get("catalog", {})
                     .get("replaces_discovered_ids", []),
                     "curated_path": str(path.relative_to(self.root)),
+                    "template_id": template["id"],
                     "template": f"apps/{app_id}.json" if app_id in existing else None,
                     "template_status": existing.get(app_id),
                 }
@@ -890,7 +974,17 @@ class Catalog:
         if path.exists():
             overlay = json.loads(path.read_text(encoding="utf-8"))
             environment_overrides = overlay.pop("environment_overrides", {})
+            environment_additions = overlay.pop("environment_additions", [])
             self._deep_merge(template, overlay)
+            # Settings the image reads but its Compose file does not list,
+            # added once; a variable the template already has is kept.
+            environment = template.setdefault("container_contract", {}).setdefault("environment", [])
+            present = {item.get("name") for item in environment}
+            for addition in environment_additions:
+                if addition.get("name") not in present:
+                    environment.append({"required": True, "sensitive": False, "source": "proxmenux-overlay",
+                                        **addition})
+                    present.add(addition.get("name"))
             for item in template.get("container_contract", {}).get("environment", []):
                 if item.get("name") in environment_overrides:
                     item.update(environment_overrides[item["name"]])

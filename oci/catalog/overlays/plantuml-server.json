@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Render PlantUML diagrams through a browser interface or HTTP API using the official Jetty image."
+    },
+    "description": {
+      "en_US": "PlantUML Server is a web application designed to generate UML diagrams on the fly. It provides a browser interface to edit PlantUML source text and view the rendered diagram dynamically. It allows users to quickly draft, visualize, and share diagrams without needing local command-line tools."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/plantuml/plantuml-server/master/docs/screenshot.png"
+    ]
+  }
+}

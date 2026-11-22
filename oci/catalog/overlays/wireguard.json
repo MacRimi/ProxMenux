@@ -104,5 +104,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "WireGuard"
+    },
+    "tagline": {
+      "en_US": "WireGuard® is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. It aims to be faster, simpler, leaner, and more useful than IPsec, while avoiding the massive headache. It intends to be considerably more performant than OpenVPN. WireGuard is designed as a general purpose VPN for running on embedded interfaces and super computers alike, fit for many different circumstances. Initially released for the Linux kernel, it is now cross-platform (Windows, macOS, BSD, iOS, Android) and widely deployable. It is currently under heavy development, but already it might be regarded as the most secure, easiest to use, and simplest VPN solution in the industry."
+    },
+    "description": {
+      "en_US": "WireGuard is a virtual private network protocol and tool that establishes secure point-to-point connections. It provides encrypted tunneling across local networks and the internet with low resource overhead. The application can run in either server or client mode to securely link remote devices and route traffic."
+    }
   }
 }

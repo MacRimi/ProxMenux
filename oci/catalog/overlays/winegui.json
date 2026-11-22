@@ -10,5 +10,32 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "WineGUI"
+    },
+    "tagline": {
+      "en_US": "WineGUI is a user-interface friendly Wine manager that provides a graphical frontend for creating and managing Wine bottles."
+    },
+    "description": {
+      "en_US": "WineGUI is a graphical Wine manager designed to simplify running Windows software. It provides an intuitive interface for creating, configuring, and managing Wine bottles. Users can organize their applications and handle prefix configurations without relying on command-line tools."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/winegui/winegui/HEAD/misc/winegui_screenshots.gif"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

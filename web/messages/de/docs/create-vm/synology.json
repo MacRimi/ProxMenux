@@ -1,0 +1,453 @@
+{
+  "title": "Skript zum Erstellen einer Synology-VM",
+  "stepLabel": "Schritt",
+  "intro": {
+    "heading": "Einleitung",
+    "intro": "ProxMenux bietet ein automatisiertes Skript, das eine virtuelle Maschine (VM) erstellt und konfiguriert, um Synology DSM (DiskStation Manager) auf Proxmox VE zu installieren. Dieses Skript vereinfacht den Prozess, indem es einen der verfügbaren Loader zum VM-Boot herunterlädt und hinzufügt und Ihnen die Option zwischen vier verschiedenen Optionen bietet:",
+    "loaders": [
+      {
+        "name": "AuxXxilium Arc",
+        "url": "https://github.com/AuxXxilium/arc",
+        "extra": ""
+      },
+      {
+        "name": "RedPill RR",
+        "url": "https://github.com/RROrg/rr",
+        "extra": ""
+      },
+      {
+        "name": "Alpine RedPill M-shell (TinyCore-Projekt)",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill",
+        "extra": ""
+      }
+    ],
+    "customLoader": "Benutzerdefinierter Loader - Option zur Verwendung eines benutzerdefinierten Loaders, wenn Sie es vorziehen, Ihre eigene Konfiguration zu ändern oder zu erstellen",
+    "simplifiesIntro": "Das Skript vereinfacht den VM-Erstellungsprozess durch die folgenden Optionen:",
+    "simplifies": [
+      "Auswahl der Standard- oder erweiterten Konfiguration",
+      "Konfiguration von CPU, RAM, BIOS und Maschinentyp",
+      "Virtuelles Laufwerk oder Passthrough eines physischen Laufwerks"
+    ]
+  },
+  "config": {
+    "heading": "Standard- und erweiterte Konfiguration",
+    "intro": "Das Skript bietet zwei Konfigurationsmodi:",
+    "defaultHeading": "Standardkonfiguration",
+    "defaultIntro": "Wenn Sie die Standardkonfiguration auswählen, wendet das Skript automatisch die folgenden Werte an:",
+    "headerParam": "Parameter",
+    "headerValue": "Standardwert",
+    "defaultRows": [
+      {
+        "param": "Maschinentyp",
+        "value": "q35"
+      },
+      {
+        "param": "BIOS-Typ",
+        "value": "OVMF (UEFI)"
+      },
+      {
+        "param": "CPU-Typ",
+        "value": "Host"
+      },
+      {
+        "param": "Anzahl der Kerne",
+        "value": "2"
+      },
+      {
+        "param": "RAM-Größe",
+        "value": "4096 MB"
+      },
+      {
+        "param": "Brücke",
+        "value": "vmbr0"
+      },
+      {
+        "param": "MAC-Adresse",
+        "value": "Automatisch generiert"
+      },
+      {
+        "param": "VM nach Abschluss starten",
+        "value": "Nein"
+      }
+    ],
+    "defaultOutro": "Wenn Sie die Konfiguration anpassen möchten, wählen Sie die Option Erweiterte Einstellungen im Menü aus.",
+    "advancedHeading": "Erweiterte Konfiguration",
+    "advancedIntro": "Wenn Sie die erweiterte Konfiguration auswählen, können Sie mit dem Skript jeden Parameter anpassen:",
+    "headerOptions": "Optionen",
+    "advancedRows": [
+      {
+        "param": "Maschinentyp",
+        "options": "q35 oder i440fx"
+      },
+      {
+        "param": "BIOS-Typ",
+        "options": "OVMF (UEFI) oder SeaBIOS (Legacy)"
+      },
+      {
+        "param": "CPU-Typ",
+        "options": "Host oder KVM64"
+      },
+      {
+        "param": "Anzahl der Kerne",
+        "options": "Anzahl CPU-Kerne"
+      },
+      {
+        "param": "RAM-Größe",
+        "options": "Der VM zugewiesene Speichermenge"
+      },
+      {
+        "param": "Brücke",
+        "options": "Netzwerkbrücke für die Verbindung"
+      },
+      {
+        "param": "MAC-Adresse",
+        "options": "Eigene MAC-Adresse"
+      },
+      {
+        "param": "VLAN",
+        "options": "VLAN-Tag (falls verwendet)"
+      },
+      {
+        "param": "MTU",
+        "options": "Maximale Übertragungseinheit"
+      }
+    ]
+  },
+  "diskSelection": {
+    "heading": "Auswahl der Datenträger",
+    "intro": "Im Speicherplan können Sie virtuelle und physische Laufwerke sowie PCI-Controller oder NVMe-Geräte hinzufügen. Die Laufwerksoptionen werden unten erläutert.",
+    "virtualHeading": "Virtuelle Festplatte",
+    "virtualItems": [
+      "Das Skript listet die in Proxmox verfügbaren Speicheroptionen auf",
+      "Der Benutzer wählt die Festplatte und Größe in GB",
+      "Virtuelle Laufwerke werden als <strong>SATA</strong> zugewiesen (sata0, sata1 usw.). Virtuelle und physische Datenlaufwerke teilen die sechs SATA-Anschlüsse 0–5; der Loader nutzt einen eigenen IDE-Anschluss."
+    ],
+    "physicalHeading": "Passthrough eines physischen Laufwerks",
+    "physicalItems": [
+      "Das Skript erkennt alle verfügbaren physischen Festplatten",
+      "Der Benutzer wählt die physische Festplatte oder die Festplatten aus, die er verwenden möchte.",
+      "Physische Laufwerke werden als <strong>SATA</strong>-Geräte zugewiesen. Sie teilen die sechs SATA-Anschlüsse 0–5 mit virtuellen Datenlaufwerken; es gibt kein zusätzliches Kontingent von sechs physischen Laufwerken."
+    ]
+  },
+  "loaderInstall": {
+    "heading": "Loader installieren",
+    "intro1": "Das Skript lädt und extrahiert den Loader automatisch aus dem Repository des Entwicklers. Wenn der Download fehlschlägt, zeigt das Skript eine Fehlermeldung an.",
+    "intro2Rich": "<strong>AuxXxilium Arc</strong>, <strong>RedPill RR</strong> und <strong>Alpine RedPill M-shell</strong> werden automatisch heruntergeladen und entpackt.",
+    "customRich": "Für <strong>Custom Loader</strong> sucht das Skript nach Dateien in <code>/var/lib/vz/template/iso</code>. Wenn mehrere Dateien gefunden werden, werden Sie aufgefordert, die gewünschte Datei auszuwählen.",
+    "uploadIntro": "Sie können benutzerdefinierte Loader über die lokalen Speicheroptionen hochladen:",
+    "imageAlt": "Custom Loader hinzufügen",
+    "imageCaption": "Custom Loader hinzufügen"
+  },
+  "vmCreation": {
+    "heading": "VM erstellen",
+    "intro": "Sobald der Loader heruntergeladen wurde, erstellt das Skript den VM mit den folgenden Befehlen:",
+    "items": [
+      "<code>qm create</code> – Erstellt die virtuelle Maschine mit den konfigurierten Parametern",
+      "<code>qm importdisk</code> importiert das Loader-Abbild in den Proxmox-Speicher. Danach weist das Skript es der VM aus Kompatibilitätsgründen als ide0 zu.",
+      "<code>qm set</code> – Zuweisung von Konfigurationswerten wie CPU, RAM und Speicher",
+      "<code>qm set VMID --boot order=ide0</code> legt den Loader als Bootgerät fest. Ersetzen Sie VMID durch die VM-ID."
+    ]
+  },
+  "stepGuide": {
+    "heading": "Schrittweise Anleitung zur Loader-Konfiguration",
+    "intro": "Jeder Loader hat eigene Menüs und Konfigurationsmethoden. Die sechs Schritte unten erklären den gemeinsamen Ablauf; bei Abweichungen folgen Sie den aktuellen Loader-Anweisungen. Die M-shell-Bilder zeigen eine ältere TinyCore-Oberfläche, während das aktuelle Skript Alpine RedPill M-shell herunterlädt.",
+    "selectorHeading": "Wählen Sie Ihren Loadertyp:",
+    "loaderButtons": {
+      "arc": "Arc Loader",
+      "rr": "RR Loader",
+      "tinycore": "TinyCore Loader"
+    }
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "title": "Starten Sie die VM und öffnen Sie das Hauptmenü",
+      "intro": "Sobald der VM erstellt wurde, starten Sie ihn. Beim ersten Booten des VM greifen Sie auf das Hauptmenü des Loaders zu, um das DSM-Modell auszuwählen und zu konfigurieren, das Sie erstellen möchten. Sobald der Loader erstellt wurde, wird dieser Schritt übersprungen, es sei denn, Sie erzwingen manuell eine Rekonfiguration vom Bootmonitor. Alle Loader haben auch die Möglichkeit, den Loader über ein Webinterface zu konfigurieren.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Web-Schnittstelle</strong>, Um auf die Web-Schnittstelle zuzugreifen, öffnen Sie einfach einen Webbrowser und geben Sie die IP-Adresse ein, die in der Konsolenausgabe des VM angezeigt wird. Zum Beispiel in unserem Fall: http://192.169.0.32.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_0_1.png",
+            "alt": "Arc-Loader-Weboberfläche",
+            "caption": "Arc-Loader-Weboberfläche"
+          },
+          {
+            "htmlBefore": "<strong>Terminaloberfläche</strong>: Öffnen Sie sie direkt in der VM-Konsole.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_1_1.png",
+            "alt": "Arc-Loader-Terminaloberfläche",
+            "caption": "Arc-Loader-Terminaloberfläche"
+          }
+        ],
+        "rr": [
+          {
+            "htmlBefore": "<strong>Web-Schnittstelle</strong>, um auf die Web-Schnittstelle zuzugreifen, öffnen Sie einfach einen Webbrowser und geben Sie die IP-Adresse ein, die in der Konsolenausgabe des VM angezeigt wird, gefolgt von Port <strong>7681</strong>. Zum Beispiel in unserem Fall: <code>http://192.169.0.33:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_0_2.png",
+            "alt": "RR Befehlsbeispiel",
+            "caption": "RR-Loader-Weboberfläche"
+          },
+          {
+            "htmlBefore": "<strong>Terminaloberfläche</strong>: Geben Sie in der VM-Konsole <strong>menu.sh</strong> ein, um sie zu öffnen.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_1_1.png",
+            "alt": "Oberfläche von RR Loader",
+            "caption": "RR-Loader-Terminaloberfläche"
+          }
+        ],
+        "tinycore": [
+          {
+            "htmlBefore": "<strong>Web-Schnittstelle</strong>, um auf die Web-Schnittstelle zuzugreifen, öffnen Sie einfach einen Webbrowser und geben Sie die IP-Adresse ein, die in der Konsolenausgabe des VM angezeigt wird, gefolgt von Port <strong>7681</strong>. Zum Beispiel in unserem Fall: <code>http://192.169.0.35:7681</code>.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_0_1.png",
+            "alt": "TinyCore-Loader-Oberfläche",
+            "caption": "TinyCore-Loader-Weboberfläche"
+          },
+          {
+            "htmlBefore": "<strong>Terminaloberfläche</strong>: Öffnen Sie sie direkt in der VM-Konsole. Achten Sie auf Aufforderungen, eine Taste zum Fortfahren zu drücken oder die Sprache zu ändern.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_1_1.png",
+            "alt": "TinyCore-Loader-Oberfläche",
+            "caption": "Terminaloberfläche von TinyCore Loader"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "title": "Modell auswählen",
+      "intro": "Wählen Sie nach dem Laden des Menüs das Synology DSM-Modell aus, das Sie installieren möchten. Abhängig vom Loader müssen Sie manchmal die Optionen erweitern, um mehr Modelle zu sehen.",
+      "outro": "In unserem Beispiel wählen wir das SA6400-Modell.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_2_1.png",
+            "alt": "Arc Model Auswahl",
+            "caption": "Arc Model Auswahl"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_2_1.png",
+            "alt": "RR Modellauswahl",
+            "caption": "RR Modellauswahl"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_2_1.png",
+            "alt": "TinyCore Modellauswahl",
+            "caption": "TinyCore Modellauswahl"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "title": "Wählen Sie DSM-Version",
+      "intro": "Nachdem Sie das Modell ausgewählt haben, müssen Sie die DSM-Version auswählen, die Sie installieren möchten.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_1.png",
+            "alt": "Versionsauswahl in Arc – Schritt 1",
+            "caption": "Versionsauswahl in Arc – Schritt 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_3_2.png",
+            "alt": "Versionsauswahl in Arc – Schritt 2",
+            "caption": "Versionsauswahl in Arc – Schritt 2"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_1.png",
+            "alt": "RR Versionsauswahl - Schritt 1",
+            "caption": "RR Versionsauswahl - Schritt 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_2.png",
+            "alt": "RR Versionsauswahl - Schritt 2",
+            "caption": "RR Versionsauswahl - Schritt 2"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_3_3.png",
+            "alt": "RR Versionsauswahl - Schritt 3",
+            "caption": "RR Versionsauswahl - Schritt 3"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_1.png",
+            "alt": "TinyCore Versionsauswahl - Schritt 1",
+            "caption": "TinyCore Versionsauswahl - Schritt 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_3_2.png",
+            "alt": "TinyCore Versionsauswahl - Schritt 2",
+            "caption": "TinyCore Versionsauswahl - Schritt 2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step4",
+      "title": "Addons auswählen",
+      "intro": "Mit diesem Schritt können Sie dem Loader zusätzliche Funktionen oder benutzerdefinierte Konfigurationen hinzufügen.",
+      "loaders": {
+        "arc": [
+          {
+            "htmlBefore": "<strong>Arc</strong> bietet Ihnen die Möglichkeit, die Einstellungen automatisch zu konfigurieren oder manuell anzupassen. Wenn die automatische Konfiguration ausgewählt ist, beginnt der Loader mit der Anwendung der erforderlichen Einstellungen und startet automatisch neu, sobald der Prozess abgeschlossen ist.",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_1.png",
+            "alt": "Arc Auto Konfiguration",
+            "caption": "Arc Auto Konfiguration"
+          },
+          {
+            "htmlBefore": "Wenn wir uns dafür entscheiden, den automatischen Modus nicht zu verwenden, betreten wir das Menü, um verschiedene Optionen zu konfigurieren, die für den Loader erforderlich sind:",
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_2.png",
+            "alt": "Arc Manual Konfiguration",
+            "caption": "Arc Manual Konfiguration"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_3.png",
+            "alt": "Arc SN/Mac Konfiguration",
+            "caption": "Arc SN/Mac Konfiguration"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_4.png",
+            "alt": "Arc Sata Portmap",
+            "caption": "Arc Sata Portmap (verwenden Sie die empfohlene Option)"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_4_5.png",
+            "alt": "Arc Addons Auswahl",
+            "caption": "Arc Addons Auswahl"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_1.png",
+            "alt": "RR Addon Schritt 1",
+            "caption": "RR Addon Schritt 1"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_2.png",
+            "alt": "RR Addon Schritt 2",
+            "caption": "RR-Addon – Schritt 2: Zum Hinzufügen von Addons klicken."
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_4_3.png",
+            "alt": "RR Addon Schritt 3",
+            "caption": "RR Addon Schritt 3 - Wählen Sie das gewünschte aus, indem Sie darauf klicken. Wenn Sie mehr hinzufügen möchten, wiederholen Sie den Vorgang aus den Bildern 2.4.2 und 2.4.3."
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_1.png",
+            "alt": "TinyCore SN Konfiguration",
+            "caption": "TinyCore SN Konfiguration"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_2.png",
+            "alt": "TinyCore Zufallsoption",
+            "caption": "TinyCore-Zufallsoption – die zufällige Auswahl wird empfohlen."
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_3.png",
+            "alt": "TinyCore MAC Konfiguration",
+            "caption": "TinyCore MAC Konfiguration"
+          },
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_4_4.png",
+            "alt": "TinyCore VM MAC",
+            "caption": "TinyCore VM MAC - Wählen Sie den MAC Ihres VM oder einen zufälligen MAC"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step5",
+      "title": "Bauen Sie den Loader",
+      "intro": "Sobald Sie das Modell, die DSM-Version und die Addons ausgewählt haben, erstellen Sie den Loader. Dieser Vorgang kann je nach Loader und ausgewählter Konfiguration einige Minuten dauern. Um zu starten, wählen Sie die Option \"Build the Loader\".",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_5_1.png",
+            "alt": "Loader in Arc erstellen",
+            "caption": "Loader in Arc erstellen"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_5_1.png",
+            "alt": "Loader in RR erstellen",
+            "caption": "Loader in RR erstellen"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_5_1.png",
+            "alt": "Loader in TinyCore erstellen",
+            "caption": "Loader in TinyCore erstellen"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step6",
+      "title": "Loader starten",
+      "intro": "Sobald der Loader gebaut wurde, werden Sie zum Booten aufgefordert. Der VM wird mit der von Ihnen erstellten Konfiguration neu gestartet und die DSM-Installation gestartet.",
+      "loaders": {
+        "arc": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/arc/arc_1_6_1.png",
+            "alt": "Loader in Arc starten",
+            "caption": "Loader in Arc starten"
+          }
+        ],
+        "rr": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/rr/rr_2_6_1.png",
+            "alt": "Loader in RR starten",
+            "caption": "Loader in RR starten"
+          }
+        ],
+        "tinycore": [
+          {
+            "src": "https://macrimi.github.io/ProxMenux/vm/synology/tinycore/tinycore_3_6_1.png",
+            "alt": "Loader in TinyCore starten",
+            "caption": "Loader in TinyCore starten"
+          }
+        ]
+      }
+    }
+  ],
+  "dsmInstall": {
+    "heading": "Starten der DSM Installation",
+    "intro": "Sobald der Loader gebootet ist, können Sie Ihr Synology-Gerät finden, indem Sie:",
+    "afterCode": "Folgen Sie den Anweisungen auf dem Bildschirm, um die DSM-Installation abzuschließen.",
+    "setupAlt": "DSM-Einrichtung",
+    "setupCaption": "DSM-Einrichtungsbildschirm",
+    "patience": "Bitte haben Sie Geduld - der Prozess kann einige Minuten dauern. Der prozentuale Fortschritt wird automatisch aktualisiert, wenn das Setup fortschreitet. Ein Countdown beginnt, sobald die Installation kurz vor dem Abschluss steht.",
+    "finishAlt": "Installation abgeschlossen",
+    "finishCaption": "Installation abgeschlossen"
+  },
+  "tips": {
+    "heading": "Tipps",
+    "introItem": "Beachten Sie, dass sich die verfügbaren Optionen je nach Loaderversion und Entwicklerupdates ändern können. Wenn während des Loader-Erstellungsprozesses Probleme auftreten, lesen Sie die Loader-Dokumentation:",
+    "docLinks": [
+      {
+        "label": "Arc-Dokumentation",
+        "url": "https://github.com/AuxXxilium/arc"
+      },
+      {
+        "label": "RR Dokumentation",
+        "url": "https://github.com/RROrg/rr"
+      },
+      {
+        "label": "TinyCore Dokumentation",
+        "url": "https://github.com/PeterSuh-Q3/tinycore-redpill"
+      }
+    ],
+    "olderModels": "Einige ältere DSM-Modelle können Probleme beim Erkennen von Festplatten oder der Netzwerkkarte haben. Es wird empfohlen, neuere Modelle zu verwenden.",
+    "updateLabel": "Aktualisieren:",
+    "updateBody": "Einige Loader bieten die Möglichkeit, den Loader direkt aus dem Menü zu aktualisieren.",
+    "importantLabel": "Wichtig:",
+    "importantBody": "ProxMenux bietet keine Unterstützung für die verschiedenen Loader."
+  }
+}

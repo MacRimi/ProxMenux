@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "WebGrab+Plus"
+    },
+    "tagline": {
+      "en_US": "Webgrabplus is a multi-site incremental xmltv epg grabber. It collects tv-program guide data from selected tvguide sites for your favourite channels."
+    },
+    "description": {
+      "en_US": "Webgrabplus is a multi-site incremental XMLTV electronic program guide grabber. It collects TV program guide data from selected online guide websites for configured channels. The gathered schedule data is exported into XMLTV format to supply TV listings for television viewers, recorders, and media center systems."
+    }
   }
 }

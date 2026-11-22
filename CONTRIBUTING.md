@@ -776,6 +776,9 @@ The Monitor is the web dashboard shipped as a self-contained AppImage. It has a 
 
 - **All user-visible strings go through the i18n hook** — never hard-code labels. Use `useT()` when the component only needs the translation function (`const t = useT()`), or `useI18n()` when it also needs the current language / setter (`const { language, setLanguage, t } = useI18n()`). Both are exported from `lib/i18n/provider.tsx`. Missing keys fall back to English at runtime.
 - **shadcn components** are the baseline (Card, Badge, Select, Switch, Dialog, etc.). Do not roll custom equivalents when a shadcn one exists.
+- **Dropdowns** use `OptionSelect` from `components/option-select.tsx`, the shared wrapper around the shadcn Select. It gives every page the same look and keyboard behaviour, and accepts an empty value for choices such as "any" or "none". Do not use a native `<select>`.
+- **Everything clickable shows it on hover** — cards, list rows and section headers that open or close. Clickable cards keep the card surface and the shared highlight: `bg-card` with `hover:bg-black/5 dark:hover:bg-white/5` and `border-border` (on phones, `bg-white/5` with `border-white/10`). A page does not add its own hover or selection colour.
+- **Edit mode uses three levels of contrast**, so a user can tell what to fill in, what to choose and what to read. The card or dialog being edited takes `bg-accent`; the fields to fill in (inputs, text areas and selects) sit sunken with `bg-background`; buttons to choose from and read-only panels keep a solid surface such as `bg-card`, never `bg-background` or `bg-accent`. The selected option uses `bg-blue-500/10` with `border-blue-500`.
 - **Design tokens** live in Tailwind config; use them (`bg-blue-600`, `border-border`) rather than raw hex values.
 - **Dark + light theme** must both work. Use tokens that respond to `data-theme` and `prefers-color-scheme`; don't hard-code palette values.
 
@@ -876,8 +879,8 @@ and traceback before changing catalogs or translation-provider settings.
 #### Qualified offline `tests/` CI lanes
 
 `.github/workflows/test-offline-qualified.yml` runs **only** the explicitly listed
-nine Python files (including the inert active-notification payload fixture and
-the focused health recurrence tests) and eleven
+ten Python files (including the native discovery fixtures, the inert active-notification payload fixture and
+the focused health recurrence tests) and twelve
 Node files in `.github/scripts/run_offline_qualified.py`.
 The Python runner gives each test file a private temporary directory through
 `TMPDIR`. It removes that directory after the test file finishes.
@@ -900,7 +903,7 @@ dangling symlink) rather than overwrite or reuse it. In Bash:
 )
 ```
 
-Requires Python 3.11, Node 22.14, npm and Bash/coreutils for the bounded shell
+Requires Python 3.11, Flask 3.x for the native route fixtures, Node 22.14, npm and Bash/coreutils for the bounded shell
 fixtures. The separate lockfile installs only TypeScript, React, React DOM,
 Lucide icons and the locked scheduler dependency; it does not build the Monitor
 or run npm lifecycle scripts. `--legacy-peer-deps` admits the existing Lucide

@@ -16,5 +16,20 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Navidrome is an open source web-based music collection server and streamer. It gives you freedom to listen to your music collection from any browser or mobile device. It's like your personal Spotify!"
+    },
+    "description": {
+      "en_US": "Navidrome is a web-based music collection server and streamer that lets you listen to your audio library from any browser or mobile device. It supports virtually all audio formats, reads curated metadata tags, and monitors your storage for new files automatically. The platform provides a multi-user environment where each user maintains their own playlists, play counts, and favorites. It also features on-the-fly audio transcoding and compatibility with Subsonic clients."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/navidrome/navidrome/master/.github/screenshots/ss-desktop-player.png",
+      "https://raw.githubusercontent.com/navidrome/navidrome/master/.github/screenshots/ss-mobile-album-view.png",
+      "https://raw.githubusercontent.com/navidrome/navidrome/master/.github/screenshots/ss-mobile-player.png",
+      "https://raw.githubusercontent.com/navidrome/navidrome/master/.github/screenshots/ss-mobile-login.png"
+    ],
+    "repository": "https://github.com/navidrome/navidrome"
   }
 }

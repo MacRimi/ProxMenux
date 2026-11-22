@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A monitoring and alerting platform with a web console and agentless collection. The official one-image quick start includes its default H2 metadata store; persist /opt/hertzbeat/data and /opt/hertzbeat/logs."
+    },
+    "description": {
+      "en_US": "Apache HertzBeat is an open-source real-time observability and monitoring platform. It integrates metrics and logs collection, analysis, alerting, and notifications into a single system without requiring host agents. The platform supports monitoring services, databases, operating systems, and networks through configurable protocols, and includes built-in tools for creating service status pages."
+    },
+    "screenshots": [
+      "https://hertzbeat.apache.org/img/home/1.png",
+      "https://hertzbeat.apache.org/img/home/9.png",
+      "https://hertzbeat.apache.org/img/home/status.png"
+    ]
+  }
+}

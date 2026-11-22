@@ -31,14 +31,14 @@ class RuntimeHomeResolutionTests(unittest.TestCase):
         )
         self.assertEqual(oci_runtime.home_directory(passwd, 1001), "/srv/app")
 
-    def test_unknown_or_unsafe_home_is_not_invented(self):
+    def test_unsafe_record_is_rejected_but_unknown_uid_defaults_to_root(self):
         passwd = self.passwd(
             "root:x:0:0:root:relative-home:/bin/sh\n"
             "app:x:1001:1001:App user::/sbin/nologin\n"
         )
         self.assertIsNone(oci_runtime.home_directory(passwd, 0))
         self.assertIsNone(oci_runtime.home_directory(passwd, 1001))
-        self.assertIsNone(oci_runtime.home_directory(passwd, 1234))
+        self.assertEqual(oci_runtime.home_directory(passwd, 1234), "/")
 
 
 class RuntimeHomeInstallerContractTests(unittest.TestCase):
@@ -53,10 +53,13 @@ class RuntimeHomeInstallerContractTests(unittest.TestCase):
         self.assertIn('set_runtime_environment HOME "$home"', self.source)
 
     def test_home_fallback_runs_after_runtime_user_is_applied(self):
-        self.assertIn(
-            "apply_extra_hosts\napply_installer_profile\nensure_runtime_home\napply_rlimits",
-            self.source,
-        )
+        profile = self.source.index("apply_installer_profile\n", self.source.index("apply_extra_hosts\n"))
+        tmpfs = self.source.index("--render-tmpfs \"$DEPLOYMENT_FILE\" \"$CONF\"", profile)
+        home = self.source.index("ensure_runtime_home\n", tmpfs)
+        limits = self.source.index("apply_rlimits\n", home)
+        self.assertLess(profile, tmpfs)
+        self.assertLess(tmpfs, home)
+        self.assertLess(home, limits)
 
 
 if __name__ == "__main__":

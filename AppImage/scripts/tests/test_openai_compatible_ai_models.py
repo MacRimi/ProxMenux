@@ -20,8 +20,9 @@ class CapturingOpenAIProvider(OpenAIProvider):
         super().__init__(*args, **kwargs)
         self.captured_payload = None
 
-    def _make_request(self, url, payload, headers):
+    def _make_request(self, url, payload, headers, timeout=15):
         self.captured_payload = payload
+        self.captured_timeout = timeout
         return {"choices": [{"message": {"content": "ok"}}]}
 
 
@@ -69,6 +70,41 @@ class OpenAICompatibleModelTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
         return db_path
 
+    def test_local_compatible_endpoint_can_be_saved_and_reloaded(self):
+        db_path = self._temp_db_patch()
+        # Synthetic addresses cover each RFC1918 range; no network is used.
+        for url in ('http://10.0.0.10:8080/v1', 'http://172.16.0.10:8080/v1',
+                    'http://192.168.1.10:8080/v1', 'http://localhost:8080/v1',
+                    'http://127.0.0.1:8080/v1'):
+            with self.subTest(url=url):
+                manager = self._manager({})
+                result = manager.save_settings({'ai_openai_base_url': url})
+                self.assertTrue(result['success'], result)
+                with sqlite3.connect(db_path) as conn:
+                    saved = conn.execute(
+                        'SELECT setting_value FROM user_settings WHERE setting_key=?',
+                        ('notification.ai_openai_base_url',),
+                    ).fetchone()
+                self.assertEqual(saved, (url,))
+                reloaded = self._manager({})
+                reloaded._load_config()
+                self.assertEqual(reloaded._config['ai_openai_base_url'], url)
+
+    def test_local_compatible_endpoint_keeps_unsafe_urls_blocked(self):
+        db_path = self._temp_db_patch()
+        for url in ('file:///etc/shadow', 'http://169.254.169.254/latest/meta-data/',
+                    'http://metadata.google.internal/', 'http://[fe80::1]/',
+                    'http://0.0.0.0:8080/v1', 'http://224.0.0.1/v1'):
+            with self.subTest(url=url):
+                result = self._manager({}).save_settings({'ai_openai_base_url': url})
+                self.assertFalse(result['success'], result)
+                with sqlite3.connect(db_path) as conn:
+                    saved = conn.execute(
+                        'SELECT setting_value FROM user_settings WHERE setting_key=?',
+                        ('notification.ai_openai_base_url',),
+                    ).fetchone()
+                self.assertIsNone(saved)
+
     def test_custom_openai_endpoint_omits_temperature_for_opaque_alias(self):
         provider = CapturingOpenAIProvider(
             api_key="token",
@@ -84,6 +120,32 @@ class OpenAICompatibleModelTests(unittest.TestCase):
         self.assertNotIn("reasoning_effort", provider.captured_payload)
         self.assertNotIn("max_completion_tokens", provider.captured_payload)
 
+    def test_a_local_request_waits_longer_but_ends_before_the_monitor_limit(self):
+        # A local model behind an OpenAI-compatible endpoint is slow: its request
+        # gets more than a cloud one and still ends before the rewrite limit.
+        provider = CapturingOpenAIProvider(api_key="token", model="gemma-3-1b-it-Q4_K_M",
+                                           base_url="http://192.0.2.22:8080/v1")
+        provider.generate("system", "user", max_tokens=100)
+        self.assertGreater(provider.captured_timeout, notification_manager.AI_REWRITE_TIMEOUT_SECONDS)
+        self.assertLess(provider.captured_timeout, notification_manager.LOCAL_AI_REWRITE_TIMEOUT_SECONDS)
+
+    def test_a_cloud_request_keeps_the_short_limit(self):
+        provider = CapturingOpenAIProvider(api_key="token", model="gpt-5-mini")
+        provider.generate("system", "user", max_tokens=100)
+        self.assertLess(provider.captured_timeout, notification_manager.LOCAL_AI_REWRITE_TIMEOUT_SECONDS)
+        self.assertLessEqual(provider.captured_timeout, notification_manager.AI_REWRITE_TIMEOUT_SECONDS)
+
+    def test_the_rewrite_limit_follows_where_the_model_runs(self):
+        limit = notification_manager._ai_rewrite_timeout
+        local = notification_manager.LOCAL_AI_REWRITE_TIMEOUT_SECONDS
+        cloud = notification_manager.AI_REWRITE_TIMEOUT_SECONDS
+        self.assertEqual(limit({'ai_provider': 'ollama', 'ai_ollama_url': 'http://localhost:11434'}), local)
+        self.assertEqual(limit({'ai_provider': 'openai', 'ai_openai_base_url': 'http://192.0.2.22:8080/v1'}), local)
+        self.assertEqual(limit({'ai_provider': 'openai', 'ai_openai_base_url': ''}), cloud)
+        self.assertEqual(limit({'ai_provider': 'openai', 'ai_openai_base_url': 'https://api.openai.com/v1'}), cloud)
+        for provider in ('groq', 'gemini', 'anthropic', 'openrouter'):
+            self.assertEqual(limit({'ai_provider': provider}), cloud)
+
     def test_official_openai_reasoning_model_still_uses_reasoning_contract(self):
         provider = CapturingOpenAIProvider(
             api_key="token",
@@ -97,6 +159,31 @@ class OpenAICompatibleModelTests(unittest.TestCase):
         self.assertEqual(provider.captured_payload["reasoning_effort"], "minimal")
         self.assertNotIn("temperature", provider.captured_payload)
         self.assertNotIn("max_tokens", provider.captured_payload)
+
+    def test_newer_reasoning_models_use_low_effort(self):
+        # gpt-5.1+ reject 'minimal'; gpt-6* were sent chat parameters before.
+        for model in ("gpt-5.6-luna", "gpt-6-luna", "gpt-6.1-sol"):
+            with self.subTest(model=model):
+                provider = CapturingOpenAIProvider(api_key="token", model=model)
+
+                self.assertEqual(provider.generate("system", "user", max_tokens=123), "ok")
+
+                self.assertEqual(provider.captured_payload["max_completion_tokens"], 123)
+                self.assertEqual(provider.captured_payload["reasoning_effort"], "low")
+                self.assertNotIn("temperature", provider.captured_payload)
+                self.assertNotIn("max_tokens", provider.captured_payload)
+
+    def test_classic_chat_models_keep_chat_contract(self):
+        for model in ("gpt-4.1", "gpt-4o-mini"):
+            with self.subTest(model=model):
+                provider = CapturingOpenAIProvider(api_key="token", model=model)
+
+                self.assertEqual(provider.generate("system", "user", max_tokens=123), "ok")
+
+                self.assertEqual(provider.captured_payload["max_tokens"], 123)
+                self.assertEqual(provider.captured_payload["temperature"], 0.3)
+                self.assertNotIn("reasoning_effort", provider.captured_payload)
+                self.assertNotIn("max_completion_tokens", provider.captured_payload)
 
     def test_runtime_ai_config_prefers_provider_specific_model(self):
         manager = self._manager({

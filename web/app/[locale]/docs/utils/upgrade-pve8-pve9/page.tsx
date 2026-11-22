@@ -1,8 +1,9 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
-import { Zap, MessageSquare, BookOpen, ExternalLink, Youtube } from "lucide-react"
+import { Zap, MessageSquare, BookOpen, ExternalLink } from "lucide-react"
+import { Youtube } from "@/components/ui/brand-icons"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { YouTubeEmbed } from "@/components/ui/youtube-embed"
@@ -40,7 +41,6 @@ export default async function UpgradePve8Pve9Page({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.utils.upgradePve8Pve9" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -110,7 +110,7 @@ export default async function UpgradePve8Pve9Page({
   )
   const cephlink = (chunks: React.ReactNode) => (
     <a
-      href="https://pve.proxmox.com/wiki/Ceph_Squid"
+      href="https://pve.proxmox.com/wiki/Ceph_Reef_to_Squid"
       target="_blank"
       rel="noopener noreferrer"
       className="text-blue-700 hover:underline inline-flex items-center gap-1"

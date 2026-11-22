@@ -62,6 +62,7 @@ show_menu() {
         (( rows < 3 )) && rows=3
 
         dialog --clear \
+            --ok-label "$(translate "OK")" --cancel-label "$(translate "Cancel")" \
             --backtitle "ProxMenux" \
             --title "$menu_title" \
             --menu "$(translate "Select an option:")" "$height" 75 "$rows" \
@@ -72,7 +73,7 @@ show_menu() {
             3 "$(translate "Create VM from template or script")" \
             4 "$(translate "Disk Manager")" \
             5 "$(translate "Storage & Share Manager")" \
-            6 "$(translate "Proxmox VE Helper Scripts")" \
+            6 "$(translate "Community Scripts")" \
             o "$(translate "OCI manager Apps (Technology Preview)")" \
             7 "$(translate "Network Management")" \
             8 "$(translate "Security")" \
@@ -111,7 +112,7 @@ show_menu() {
             "") ;;
             1) exec bash "$LOCAL_SCRIPTS/menus/menu_post_install.sh" ;;
             2) exec bash "$LOCAL_SCRIPTS/menus/hw_grafics_menu.sh" ;;
-            3) exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;
+            3) rm -f "$TEMP_FILE"; exec bash "$LOCAL_SCRIPTS/menus/create_vm_menu.sh" ;;
             4) exec bash "$LOCAL_SCRIPTS/menus/storage_menu.sh" ;;
             5) exec bash "$LOCAL_SCRIPTS/menus/share_menu.sh" ;;
             6) exec bash "$LOCAL_SCRIPTS/menus/menu_Helper_Scripts.sh" ;;
@@ -128,4 +129,8 @@ show_menu() {
     done
 }
 
+source "$LOCAL_SCRIPTS/global/platform-functions.sh"
+if pmx_is_pbs; then
+    exec bash "$LOCAL_SCRIPTS/menus/pbs_menu.sh"
+fi
 show_menu

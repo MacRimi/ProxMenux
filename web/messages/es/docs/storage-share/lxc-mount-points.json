@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "Puntos de montaje LXC (host ↔ contenedor) | ProxMenux Documentation",
+    "title": "Puntos de montaje LXC (host ↔ contenedor) | Documentación de ProxMenux",
     "description": "El LXC Mount Manager — bind mount de cualquier directorio del host en uno o más contenedores LXC vía pct set -mpN. Gestiona las particularidades de permisos de los contenedores unprivileged, repara montajes CIFS / NFS existentes en el lado del host y nunca modifica nada dentro del contenedor.",
-    "ogTitle": "Puntos de montaje LXC (host ↔ contenedor) | ProxMenux Documentation",
+    "ogTitle": "Puntos de montaje LXC (host ↔ contenedor) | Documentación de ProxMenux",
     "ogDescription": "Bind mount de directorios del host en contenedores LXC. Gestiona el mapeo de UIDs unprivileged de forma pragmática, repara el acceso CIFS / NFS en el lado del host."
   },
   "header": {
@@ -24,7 +24,7 @@
     "arrowLabel": "bind mount",
     "outro": "La ruta del host a la izquierda y la ruta del contenedor a la derecha pueden ser diferentes — por ejemplo, <code>/mnt/nas-films</code> en el host puede convertirse en <code>/media/films</code> dentro del contenedor. El script añade la entrada a la config del contenedor (<code>/etc/pve/lxc/&lt;ctid&gt;.conf</code>) usando el siguiente índice <code>mpN</code> libre, con dos valores por defecto seguros incorporados:",
     "items": [
-      "<code>shared=1</code> — le dice a Proxmox que los datos son almacenamiento compartido, así que no intenta migrar el disco al migrar el contenedor.",
+      "<code>shared=1</code> — indica a Proxmox que el montaje usa datos compartidos, por lo que no los migra con el CT. Esta opción no replica datos: la misma ruta y los mismos datos deben estar disponibles en el nodo destino.",
       "<code>backup=0</code> — excluye el bind mount de los backups <code>vzdump</code> (los datos viven en el host, los respaldas por separado)."
     ]
   },
@@ -64,12 +64,12 @@
     "idmapChangesRich": "Mapeo personalizado de UID/GID en <code>/etc/pve/lxc/&lt;CTID&gt;.conf</code> más entradas correspondientes en <code>/etc/subuid</code> + <code>/etc/subgid</code> en el host. El CT debe reiniciarse en cada cambio.",
     "idmapWhenRich": "Necesitas que un UID <em>específico</em> dentro del CT mapee a un UID <em>específico</em> en el host (p. ej. <code>media:1000</code> en el CT debe poseer archivos como <code>media:1000</code> en el host para que NFS no aplique squash). Un setup más rígido, normalmente solo merece la pena para ese escenario exacto.",
     "idmapTipTitle": "Cuándo necesitas lxc.idmap de verdad",
-    "idmapTipBody": "Si el LXC Mount Manager no cubre tu caso — típicamente porque necesitas que los archivos escritos desde dentro del CT aterricen en el host como un UID/GID específico (exports NFS con <code>all_squash</code>, shares Samba con propiedad estricta, compartir un directorio con un usuario del host que tiene el mismo nombre que alguien dentro del CT) — ese es el momento de añadir entradas <code>lxc.idmap</code> a mano. El Mount Manager no te peleará: la línea de bind mount que escribió es independiente de cualquier configuración idmap que añadas después."
+    "idmapTipBody": "Usa mapeo manual de ID cuando los archivos escritos en el CT deban aparecer en el host con un UID/GID numérico concreto, por ejemplo para compartir propietario con un usuario del host. No anula <code>all_squash</code> de NFS: el servidor sigue decidiendo la identidad anónima y sus permisos. Añade entradas <code>lxc.idmap</code> a mano si hace falta. La línea de bind mount es independiente de esas entradas."
   },
   "opening": {
     "heading": "Abrir la herramienta",
     "body": "Desde el menú principal de ProxMenux, abre <strong>Storage &amp; Share Manager → Configure LXC Mount Points (Host ↔ Container)</strong>. Verás este submenú con tres opciones:",
-    "imageAlt": "Menú LXC Mount Manager — Add / View / Remove"
+    "imageAlt": "Menú LXC Mount Manager — Añadir / Ver / Eliminar"
   },
   "addFlow": {
     "heading": "Añadir un montaje — flujo completo",
@@ -123,17 +123,17 @@
   },
   "remove": {
     "heading": "Eliminar un punto de montaje",
-    "body": "Elige el contenedor, elige la entrada <code>mpN</code>, confirma. El script ejecuta <code>pct set --delete mpN</code> para quitar la entrada de la config del CT y ofrece reiniciar el contenedor si está corriendo. El directorio del host y su contenido <strong>no se tocan</strong> — puedes volver a añadir el montaje después (o adjuntar el mismo directorio a un CT distinto).",
+    "body": "Elige el contenedor, elige la entrada <code>mpN</code>, confirma. El script ejecuta <code>pct set --delete mpN</code> para eliminar la entrada de la config del CT y ofrece reiniciar el contenedor si está corriendo. El directorio del host y su contenido <strong>no se tocan</strong> — puedes volver a añadir el montaje después (o adjuntar el mismo directorio a un CT distinto).",
     "warnTitle": "Los contenedores en ejecución necesitan un reinicio para que los cambios surtan efecto",
     "warnBody": "Tanto añadir como eliminar puntos de montaje solo se hacen visibles dentro del contenedor tras un reinicio. El script ofrece un <code>pct reboot</code> de un clic al final de cada operación; puedes declinar y reiniciar manualmente después."
   },
   "troubleshoot": {
     "heading": "Solución de problemas",
-    "noMountTitle": "El montaje aparece en la config del pct pero no dentro del contenedor",
+    "noMountTitle": "El montaje aparece en pct config, pero no dentro del contenedor",
     "noMountBody": "Los bind mounts solo se adjuntan cuando el contenedor arranca. Si añadiste el montaje mientras el CT estaba corriendo, reinícialo (<code>pct reboot &lt;ctid&gt;</code>). Si ya está reiniciado y sigue faltando, comprueba <code>pct config &lt;ctid&gt;</code> para confirmar que la entrada existe y que la ruta del host realmente contiene un directorio.",
     "noWriteTitle": "El contenedor puede ver el directorio pero no puede escribir",
     "noWriteBody": "Casi siempre un problema de permisos. Para contenedores unprivileged, ejecuta de nuevo el fix de permisos del script — las ACLs del directorio del host pueden haber sido reseteadas por otra herramienta (rsync, restore desde backup, <code>chmod</code> manual). Para CIFS, revisa las opciones de montaje en el host: <code>findmnt /mnt/pve/cifs-…</code>, busca valores <code>uid=</code> / <code>gid=</code> / <code>file_mode=</code>.",
-    "alreadyTitle": "\"This path is already used as a mount point in this container\"",
+    "alreadyTitle": "\"Esta ruta ya se utiliza como punto de montaje en este contenedor\"",
     "alreadyBody": "Elegiste la misma ruta del contenedor que ya está cableada a un directorio del host distinto. O elige una ruta del contenedor diferente, o elimina el punto de montaje existente primero.",
     "nfsTitle": "El acceso NFS sigue bloqueado tras aplicar el fix del host",
     "nfsIntro": "Tu servidor NFS está aplicando squash a root o a todas las conexiones. El script puede detectar esto (intenta escribir un archivo de prueba desde el host) y muestra guía del lado del servidor. Dos arreglos comunes del lado del servidor para el export:",

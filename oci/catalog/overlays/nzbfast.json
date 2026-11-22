@@ -22,5 +22,19 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "nzbfast is a speed-focused Usenet (NZB) downloader written in Rust. It is one small binary with a low memory footprint, and it saturates a fast line with a handful of connections.\n\nArticles are verified while they arrive, so most jobs finish with no separate verify pass. Repair and unpack run only when they are actually needed, and extraction starts before the last article lands.\n\nThe web dashboard on port 6790 also serves a SABnzbd-compatible API, so Sonarr, Radarr, Prowlarr and friends work with no extra glue. Add an .nzb from the dashboard, or drop one into the watch folder.\n\nFirst run: open the dashboard, add your Usenet provider under Settings, and copy the API key it shows you into your *arr apps. If you would rather pin the key yourself so it survives a reinstall, set NZBFAST_APIKEY before the first start. Leave it empty and nzbfast generates one for you."
+    },
+    "description": {
+      "en_US": "nzbfast is a fast Usenet (NZB) downloader provided as a single self-contained daemon with a web dashboard and a built-in indexer. It features native PAR2 repair and RAR extraction without relying on external tools. It also provides a SABnzbd- and NZBGet-compatible API, allowing direct integration with media management tools."
+    },
+    "tips": [
+      "Add your Usenet provider in the dashboard Welcome panel on first launch"
+    ],
+    "screenshots": [
+      "https://nzbfast.github.io/nzbfast/assets/dash-hero.png"
+    ]
   }
 }

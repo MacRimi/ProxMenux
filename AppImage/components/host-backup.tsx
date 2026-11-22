@@ -48,10 +48,12 @@ import {
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { RestoreProgressCard } from "./restore-progress-card"
 import { fetchApi, getApiUrl } from "../lib/api-config"
+import { hostBackupErrorText } from "../lib/host-backup-messages"
 import { fetchTerminalTicket } from "../lib/terminal-ws"
 import { formatStorage, formatBytes, cancelButtonClass } from "../lib/utils"
 import { getStorageUsageColor } from "../lib/storage-usage-color"
 import { useI18n, useT } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
 
 type TFunction = (key: string, params?: Record<string, string | number>) => string
 
@@ -442,6 +444,20 @@ const formatRunAt = (iso: string | null) => {
 // belong to matches "the key is a PBS thing" without dragging in
 // the fuller management surface.
 // ──────────────────────────────────────────────────────────────
+// The keyfile is downloaded through an <a download> link, which cannot send
+// the Authorization header: a single-use ticket on the URL signs it in.
+async function downloadPbsKeyfile() {
+  const ticket = await fetchTerminalTicket()
+  let url = getApiUrl("/api/host-backups/pbs-encryption/download-keyfile")
+  if (ticket) url += `?ticket=${encodeURIComponent(ticket)}`
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "pbs-key.conf"
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
 function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
   const t = useT()
   const { data: info, mutate: mutateInfo } = useSWR<{
@@ -487,16 +503,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
     setErr(null)
   }
 
-  const download = () => {
-    // Same plain-<a>-download trick used elsewhere: bypasses fetch so
-    // an ad-blocker or a stale SWR cache can't intervene.
-    const a = document.createElement("a")
-    a.href = "/api/host-backups/pbs-encryption/download-keyfile"
-    a.download = "pbs-key.conf"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
+  const download = downloadPbsKeyfile
 
   const runUpload = async () => {
     if (!importFile && !importPath.trim()) {
@@ -525,7 +532,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
       await mutateInfo()
       closeUpload()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
       setBusy(false)
     }
   }
@@ -542,7 +549,7 @@ function PbsKeyfileActions({ pbsRepository }: { pbsRepository?: string }) {
       await mutateInfo()
       closeDelete()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
       setBusy(false)
     }
   }
@@ -765,7 +772,7 @@ function KeyfileActionsBar({
       setPass1("")
       setPass2("")
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(hostBackupErrorText(e, t))
     } finally {
       setBusy(false)
     }
@@ -790,14 +797,7 @@ function KeyfileActionsBar({
     (pendingMode === "full" && !!pass1 && pass1 === pass2)        // passphrase update
   )
 
-  const download = () => {
-    const a = document.createElement("a")
-    a.href = "/api/host-backups/pbs-encryption/download-keyfile"
-    a.download = "pbs-key.conf"
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
+  const download = downloadPbsKeyfile
 
   return (
     <div className="space-y-3">
@@ -921,6 +921,7 @@ function KeyfileActionsBar({
 }
 
 export function HostBackup() {
+  const { capabilities } = useAccess()
   const t = useT()
   const { data: jobsResp, error: jobsErr, mutate: mutateJobs } = useSWR<{ jobs: BackupJob[] }>(
     "/api/host-backups/jobs",
@@ -956,7 +957,7 @@ export function HostBackup() {
       mutateJobs()
       setJobToDelete(null)
     } catch (e) {
-      setActionError(t("backup.errors.deleteFailed", { error: `"${id}": ${e instanceof Error ? e.message : String(e)}` }))
+      setActionError(t("backup.errors.deleteFailed", { error: `"${id}": ${hostBackupErrorText(e, t)}` }))
     } finally {
       setBusyJobId(null)
     }
@@ -1062,14 +1063,14 @@ export function HostBackup() {
               {jobsResp?.jobs?.filter((j) => !j.manual).length ?? 0}
             </Badge>
           </div>
-          <Button
+          {capabilities.backup && (<Button
             size="sm"
             className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white"
             onClick={() => setCreatingJob(true)}
           >
             <Plus className="h-4 w-4 mr-1" />
             {t("backup.jobs.createJob")}
-          </Button>
+          </Button>)}
         </CardHeader>
         <CardContent>
           {jobsErr ? (
@@ -1259,13 +1260,13 @@ export function HostBackup() {
           <p className="text-xs text-muted-foreground">
             {t("backup.manual.description")}
           </p>
-          <Button
+          {capabilities.backup && (<Button
             className="w-full sm:w-auto bg-purple-500 hover:bg-purple-600 text-white"
             onClick={() => setRunningManual(true)}
           >
             <PlayCircle className="h-4 w-4 mr-2" />
             {t("backup.manual.run")}
-          </Button>
+          </Button>)}
           {/* In-progress manual jobs. If the operator closed the
               ManualBackupDialog before the runner finished, this
               banner is the way back into the live log — clicking
@@ -1334,7 +1335,7 @@ export function HostBackup() {
               <div className="font-medium">{t("backup.archives.remoteQueryWarning")}</div>
               {remoteArchivesResp.errors.map((e, i) => (
                 <div key={i} className="font-mono break-all">
-                  {e.backend}/{e.repo_name}: {e.error}
+                  {e.backend}/{e.repo_name}: {hostBackupErrorText(e.error, t)}
                 </div>
               ))}
             </div>
@@ -1613,6 +1614,7 @@ function InspectModal({
   onClose: () => void
   onDeleted?: () => void
 }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const open = archive !== null
   // Aliases to the source-specific payloads — saves on `.local!` /
@@ -1761,7 +1763,7 @@ function InspectModal({
       setImportFile(null)
       setImportPath("")
     } catch (e) {
-      setImportError(e instanceof Error ? e.message : String(e))
+      setImportError(hostBackupErrorText(e, t))
     } finally {
       setImporting(false)
     }
@@ -1812,7 +1814,7 @@ function InspectModal({
           : undefined,
       })
     } catch (e) {
-      setRestoreError(e instanceof Error ? e.message : String(e))
+      setRestoreError(hostBackupErrorText(e, t))
     } finally {
       setRestorePreparing(false)
     }
@@ -1841,7 +1843,7 @@ function InspectModal({
       a.click()
       document.body.removeChild(a)
     } catch (e) {
-      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.downloadFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       // The download itself runs in the browser's network stack;
       // we just initiated it. Clear the spinner immediately.
@@ -1914,7 +1916,7 @@ function InspectModal({
       document.body.removeChild(a)
       setExportTask(null)
     } catch (e) {
-      setError(t("backup.errors.downloadFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.downloadFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setDownloading(false)
     }
@@ -1962,7 +1964,7 @@ function InspectModal({
       setShowDeleteArchiveConfirm(false)
       if (onDeleted) onDeleted(); else onClose()
     } catch (e) {
-      setError(t("backup.errors.deleteFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setError(t("backup.errors.deleteFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setDeletingArchive(false)
     }
@@ -1989,7 +1991,7 @@ function InspectModal({
       ) as NonNullable<typeof instructions>
       setInstructions(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setFetchingInstructions(false)
     }
@@ -2021,7 +2023,7 @@ function InspectModal({
       )
       setReport(res)
     } catch (e: any) {
-      setError(e?.message || t("backup.errors.preflightFailed"))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setRunning(false)
     }
@@ -2164,7 +2166,7 @@ function InspectModal({
                   <span className="text-muted-foreground">— {exportTask.message}</span>
                 </div>
                 {exportTask.state === "failed" && exportTask.error && (
-                  <div className="text-red-500 mt-1">{exportTask.error}</div>
+                  <div className="text-red-500 mt-1">{hostBackupErrorText(exportTask.error, t)}</div>
                 )}
                 {exportTask.state === "completed" && exportTask.size_bytes > 0 && (
                   <div className="text-emerald-400">{t("backup.archives.packedSizeLabel")} {formatBytes(exportTask.size_bytes)}</div>
@@ -2288,7 +2290,7 @@ function InspectModal({
             Restore keeps its label — the others are icon-only to fit
             the narrower viewport without wrapping. */}
         <div className="px-4 sm:px-6 py-3 border-t border-border shrink-0 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
+          {capabilities.backup && (<div className="flex items-center gap-2 flex-wrap">
             <Button
               onClick={beginRestore}
               disabled={restorePreparing || needsKeyfile}
@@ -2326,8 +2328,8 @@ function InspectModal({
               <Eye className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t("backup.actions.viewContents")}</span>
             </Button>
-          </div>
-          <Button
+          </div>)}
+          {capabilities.backup && (<Button
             onClick={() => setShowDeleteArchiveConfirm(true)}
             disabled={deletingArchive}
             className="bg-red-500/10 border border-red-500/40 text-red-400 hover:bg-red-500/20 hover:text-red-300"
@@ -2346,7 +2348,7 @@ function InspectModal({
               <Trash2 className="h-4 w-4 sm:mr-2" />
             )}
             <span className="hidden sm:inline">{t("backup.actions.delete")}</span>
-          </Button>
+          </Button>)}
         </div>
       </DialogContent>
     </Dialog>
@@ -2706,7 +2708,7 @@ function PreflightReportView({ report }: { report: PreflightReport }) {
               <Icon className={`h-3.5 w-3.5 ${color} flex-shrink-0 mt-0.5`} />
               <div className="flex-1 min-w-0">
                 <span className={`font-mono ${color}`}>{c.id}</span>
-                <span className="text-muted-foreground ml-2">{c.message}</span>
+                <span className="text-muted-foreground ml-2">{hostBackupErrorText(c.message, t)}</span>
               </div>
             </div>
           )
@@ -3326,9 +3328,9 @@ function CreateJobDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
-          : err.message
-        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
+          ? `${hostBackupErrorText(err, t)}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
+          : hostBackupErrorText(err, t)
+        setError(t("backup.errors.encryptionSetupFailed", { error: detail || hostBackupErrorText(e, t) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -3391,7 +3393,7 @@ function CreateJobDialog({
       })
       onCreated()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -3764,7 +3766,7 @@ function CreateJobDialog({
                     </>
                   ) : (
                     <div className="text-red-500">
-                      <span className="font-medium">{t("backup.validation.invalidLabel")}</span> {calendarPreview.error}
+                      <span className="font-medium">{t("backup.validation.invalidLabel")}</span> {hostBackupErrorText(calendarPreview.error, t)}
                     </div>
                   )
                 ) : (
@@ -4696,9 +4698,9 @@ function ManualBackupDialog({
       } catch (e) {
         const err = e as Error & { body?: { tool_output?: string; tool_exit_code?: number } }
         const detail = err.body?.tool_output
-          ? `${err.message}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
-          : err.message
-        setError(t("backup.errors.encryptionSetupFailed", { detail: detail || String(e) }))
+          ? `${hostBackupErrorText(err, t)}\n\n${t("backup.errors.proxmoxBackupClientOutput")}:\n${err.body.tool_output}`
+          : hostBackupErrorText(err, t)
+        setError(t("backup.errors.encryptionSetupFailed", { error: detail || hostBackupErrorText(e, t) }))
         setPbsImportBusy(false)
         setSubmitting(false)
         return
@@ -4738,7 +4740,7 @@ function ManualBackupDialog({
       )
       onLaunched(resp.job_id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -5404,6 +5406,7 @@ function DestinationsSection({
   destinations?: DestinationsResp
   onChanged: () => void
 }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const [configuring, setConfiguring] = useState<boolean>(false)
   const [editingDest, setEditingDest] = useState<EditingDest | null>(null)
@@ -5542,7 +5545,7 @@ function DestinationsSection({
       await fetchApi(`/api/host-backups/destinations/pbs/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5554,7 +5557,7 @@ function DestinationsSection({
       await fetchApi(`/api/host-backups/destinations/borg/${encodeURIComponent(name)}${force ? "?force=true" : ""}`, { method: "DELETE" })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5571,7 +5574,7 @@ function DestinationsSection({
       )
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5599,7 +5602,7 @@ function DestinationsSection({
       })
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -5608,14 +5611,14 @@ function DestinationsSection({
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button
+        {capabilities.backup && (<Button
           size="sm"
           className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white"
           onClick={() => setConfiguring(true)}
         >
           <Plus className="h-4 w-4 mr-1" />
           {t("backup.destinations.configureDestination")}
-        </Button>
+        </Button>)}
       </div>
       {error && (
         <div className="text-xs text-red-500 px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 whitespace-pre-wrap break-words">
@@ -5629,7 +5632,7 @@ function DestinationsSection({
           shell — what runs after a fresh PVE install when the
           operator points the new host at the same PBS. */}
       {hasPbs && pbsRecoveryStatus && !pbsRecoveryStatus.has_keyfile && (pbsRecoveryAvailable?.snapshots?.length ?? 0) > 0 && (
-        <button
+        capabilities.backup && (<button
           type="button"
           onClick={() => setRecoveringKeyfile(true)}
           className="w-full flex items-start gap-2 px-3 py-2.5 rounded-md border border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors text-left"
@@ -5645,7 +5648,7 @@ function DestinationsSection({
             </div>
           </div>
           <span className="text-xs text-emerald-300 shrink-0 self-center">{t("backup.recovery.recoverArrow")}</span>
-        </button>
+        </button>)
       )}
 
       <div className="space-y-2">
@@ -5839,6 +5842,7 @@ function DestinationRow({
   onUnmount?: () => void
   onEdit?: () => void
 }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const accent =
     item.kind === "pbs" ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
@@ -5945,7 +5949,7 @@ function DestinationRow({
               long headline keeps these two buttons in place. Chip
               style (square border + tinted bg) makes them read as
               actionable rather than decorative icons. */}
-          <div className="shrink-0 flex items-start gap-1.5">
+          {capabilities.backup && (<div className="shrink-0 flex items-start gap-1.5">
             {onEdit && (
               <button
                 type="button"
@@ -5983,7 +5987,7 @@ function DestinationRow({
                 {item.kind === "local" ? t("backup.destinations.builtIn") : t("backup.destinations.managedByPve")}
               </span>
             )}
-          </div>
+          </div>)}
         </div>
         {subline && (
           <p className="text-xs font-mono text-muted-foreground break-all pl-7" title={subline}>
@@ -6042,7 +6046,7 @@ function DestinationRow({
 
       {capacity?.error && (
         <p className="mt-3 text-[11px] text-muted-foreground italic">
-          {t("backup.destinations.capacityUnavailable", { error: capacity.error })}
+          {t("backup.destinations.capacityUnavailable", { error: hostBackupErrorText(capacity.error, t) })}
         </p>
       )}
       {!capacity && (
@@ -6054,7 +6058,7 @@ function DestinationRow({
           is host-wide but conceptually belongs to PBS usage, so the
           Download / Upload / Delete controls sit next to the
           destination(s) they support. */}
-      {item.kind === "pbs" && <PbsKeyfileActions pbsRepository={item.repository} />}
+      {item.kind === "pbs" && capabilities.backup && <PbsKeyfileActions pbsRepository={item.repository} />}
     </div>
   )
 }
@@ -6341,7 +6345,7 @@ function AddDestinationDialog({
       )
       setGeneratedKey(resp)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setGeneratingKey(false)
     }
@@ -6405,7 +6409,7 @@ function AddDestinationDialog({
       }
       onSaved(savedRepo)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -6756,7 +6760,7 @@ function UsbPicker({
       mutate()
       if (resp?.mountpoint) onPick(resp.mountpoint)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -6784,7 +6788,7 @@ function UsbPicker({
       setFormatTyped("")
       if (resp?.mountpoint) onPick(resp.mountpoint)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -6974,6 +6978,7 @@ interface ExtraPathEntry {
 }
 
 function ExtraPathsSection() {
+  const { capabilities } = useAccess()
   const t = useT()
   const { data, mutate } = useSWR<{ paths: ExtraPathEntry[] }>(
     "/api/host-backups/extra-paths",
@@ -7001,7 +7006,7 @@ function ExtraPathsSection() {
       setNewPath("")
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setSubmitting(false)
     }
@@ -7014,7 +7019,7 @@ function ExtraPathsSection() {
       await fetchApi(`/api/host-backups/extra-paths?path=${encodeURIComponent(p)}`, { method: "DELETE" })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyPath(null)
     }
@@ -7026,7 +7031,7 @@ function ExtraPathsSection() {
         {t("backup.extraPaths.descriptionBefore")} <span className="font-medium text-foreground">{t("backup.extraPaths.everyBackup")}</span> {t("backup.extraPaths.descriptionAfter", { count: paths.length })}
       </p>
 
-        <div className="flex flex-col sm:flex-row gap-2">
+        {capabilities.backup && (<div className="flex flex-col sm:flex-row gap-2">
           <Input
             value={newPath}
             onChange={(e) => setNewPath(e.target.value)}
@@ -7042,7 +7047,7 @@ function ExtraPathsSection() {
             {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
             {t("backup.actions.addPath")}
           </Button>
-        </div>
+        </div>)}
         <p className="text-[11px] text-muted-foreground">
           {t("backup.extraPaths.absolutePathHintBefore")} <code className="font-mono">/hola</code> {t("backup.extraPaths.absolutePathHintMiddle")} <code className="font-mono">/root/hola</code> {t("backup.extraPaths.absolutePathHintAfter")}
         </p>
@@ -7072,7 +7077,7 @@ function ExtraPathsSection() {
                     </Badge>
                   )}
                 </div>
-                <button
+                {capabilities.backup && (<button
                   type="button"
                   disabled={busyPath === p.path}
                   onClick={() => removePath(p.path)}
@@ -7080,7 +7085,7 @@ function ExtraPathsSection() {
                   className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busyPath === p.path ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                </button>
+                </button>)}
               </div>
             ))}
           </div>
@@ -7153,6 +7158,7 @@ interface UsbDrive {
 }
 
 function UsbDrivesSection() {
+  const { capabilities } = useAccess()
   const t = useT()
   const { data, mutate, isLoading } = useSWR<{ drives: UsbDrive[] }>(
     "/api/host-backups/usb-drives",
@@ -7180,7 +7186,7 @@ function UsbDrivesSection() {
       })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7198,7 +7204,7 @@ function UsbDrivesSection() {
       })
       mutate()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7222,7 +7228,7 @@ function UsbDrivesSection() {
       setFormatTarget(null)
       setFormatTyped("")
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusyKey(null)
     }
@@ -7280,7 +7286,7 @@ function UsbDrivesSection() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {d.state === "mounted" && (
-                    <Button
+                    capabilities.backup && (<Button
                       size="sm"
                       variant="ghost"
                       className="h-8 px-2"
@@ -7289,10 +7295,10 @@ function UsbDrivesSection() {
                     >
                       {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                       <span className="ml-1 text-xs">{t("backup.actions.unmount")}</span>
-                    </Button>
+                    </Button>)
                   )}
                   {d.state === "unmounted" && (
-                    <Button
+                    capabilities.backup && (<Button
                       size="sm"
                       variant="ghost"
                       className="h-8 px-2"
@@ -7301,10 +7307,10 @@ function UsbDrivesSection() {
                     >
                       {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                       <span className="ml-1 text-xs">{t("backup.actions.mount")}</span>
-                    </Button>
+                    </Button>)
                   )}
                   {d.state === "empty" && (
-                    <Button
+                    capabilities.backup && (<Button
                       size="sm"
                       variant="ghost"
                       className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
@@ -7314,7 +7320,7 @@ function UsbDrivesSection() {
                     >
                       <AlertTriangle className="h-3.5 w-3.5" />
                       <span className="ml-1 text-xs">{t("backup.actions.format")}</span>
-                    </Button>
+                    </Button>)
                   )}
                 </div>
               </div>
@@ -7402,6 +7408,7 @@ function JobDetailModal({
   onRequestDelete: (id: string) => void
   onChanged: () => void
 }) {
+  const { capabilities } = useAccess()
   const t = useT()
   const open = jobId !== null
   const [running, setRunning] = useState(false)
@@ -7508,7 +7515,7 @@ function JobDetailModal({
       setRunning(false)
       setRunBaseline(null)
       setRunBaselineLogPath(null)
-      setActionError(t("backup.errors.runFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setActionError(t("backup.errors.runFailed", { error: hostBackupErrorText(e, t) }))
     }
   }
 
@@ -7522,7 +7529,7 @@ function JobDetailModal({
       await refetch()
       onChanged()
     } catch (e) {
-      setActionError(t("backup.errors.toggleFailed", { error: e instanceof Error ? e.message : String(e) }))
+      setActionError(t("backup.errors.toggleFailed", { error: hostBackupErrorText(e, t) }))
     } finally {
       setBusy("")
     }
@@ -7771,7 +7778,7 @@ function JobDetailModal({
             // Edit next to it in blue outline, then state-changers on
             // the right (Disable / Delete) — both outlined to read as
             // less prominent than Run.
-            <div className="border-t border-border pt-3 flex items-center justify-between gap-2 flex-wrap">
+            capabilities.backup && (<div className="border-t border-border pt-3 flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   size="sm"
@@ -7833,7 +7840,7 @@ function JobDetailModal({
                   {t("backup.actions.delete")}
                 </Button>
               </div>
-            </div>
+            </div>)
           )}
         </DialogContent>
       </Dialog>
@@ -8155,7 +8162,7 @@ function PbsKeyfileRecoveryDialog({
       })
       onRecovered()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(hostBackupErrorText(e, t))
     } finally {
       setBusy(false)
     }
@@ -8342,7 +8349,7 @@ function ArchiveContentsModal({
       body: JSON.stringify(body),
     })
       .then((r: any) => setData(r))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => setError(hostBackupErrorText(e, t)))
       .finally(() => setLoading(false))
   }, [open, source, repo_name, snapshot, path])
 
@@ -8571,7 +8578,7 @@ function PlanSummary({ plan }: { plan: any }) {
           <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">{t("backup.plan.blockers")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {blockers.map((b, i) => (
-              <li key={i} className="text-red-400">{typeof b === "string" ? b : (b.message || JSON.stringify(b))}</li>
+              <li key={i} className="text-red-400">{hostBackupErrorText(typeof b === "string" ? b : (b.message || JSON.stringify(b)), t)}</li>
             ))}
           </ul>
         </div>
@@ -8581,7 +8588,7 @@ function PlanSummary({ plan }: { plan: any }) {
           <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-1">{t("backup.plan.warnings")}</div>
           <ul className="space-y-0.5 ml-4 list-disc">
             {warnings.map((w, i) => (
-              <li key={i} className="text-amber-400">{typeof w === "string" ? w : (w.message || JSON.stringify(w))}</li>
+              <li key={i} className="text-amber-400">{hostBackupErrorText(typeof w === "string" ? w : (w.message || JSON.stringify(w)), t)}</li>
             ))}
           </ul>
         </div>
@@ -8611,7 +8618,7 @@ function StorageSection({ storage }: { storage: any }) {
             <div className="min-w-0 flex-1">
               <code className="font-mono">{e.name || e.storage || `entry ${i}`}</code>
               {e.type && <span className="text-muted-foreground ml-2">{e.type}</span>}
-              {e.message && <div className="text-muted-foreground text-[11px]">{e.message}</div>}
+              {e.message && <div className="text-muted-foreground text-[11px]">{hostBackupErrorText(e.message, t)}</div>}
             </div>
           </li>
         )

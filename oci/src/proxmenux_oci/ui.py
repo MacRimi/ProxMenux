@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+import time
 from dataclasses import dataclass
 
 from .i18n import translate
@@ -14,6 +15,10 @@ from .i18n import translate
 
 class UserCancelled(RuntimeError):
     pass
+
+
+class MenuRefresh(RuntimeError):
+    """The background status changed; redraw the same menu."""
 
 
 class BackRequested(RuntimeError):
@@ -168,7 +173,7 @@ class TerminalUI:
             return options[int(selected) - 1][0]
         return None
 
-    def checklist(self, text, options, defaults):
+    def checklist(self, text, options, defaults, title: str | None = None, ok_label=None, size=None):
         return [tag for tag, label in options if self.confirm(label, tag in defaults)]
 
     def detail_menu(self, text: str, options: list[tuple[str, str]], default: str | None = None,
@@ -185,6 +190,15 @@ class TerminalUI:
 
     def info(self, text: str) -> None:
         print(text)
+
+    def gauge(self, poll, title: str | None = None) -> None:
+        """Print each new step while ``poll()`` returns (percent, text)."""
+        shown = None
+        while (state := poll()) is not None:
+            if state != shown:
+                print(f"[{state[0]:3}%] {state[1]}", flush=True)
+                shown = state
+            time.sleep(0.2)
 
 
 # Width of the windows of the installer: questions, choices and notices. The
@@ -214,24 +228,54 @@ class DialogUI:
     title: str = APP_TITLE
     backtitle: str = "ProxMenux"
     back_enabled: bool = False
+    live_refresh = True
 
     @staticmethod
     def available() -> bool:
         return bool(shutil.which("dialog") and sys.stdin.isatty() and sys.stdout.isatty())
 
-    def _run(self, widget: list[str], title: str | None = None) -> subprocess.CompletedProcess[str]:
+    @staticmethod
+    def _environment() -> dict[str, str]:
         environment = os.environ.copy()
+        # ncurses otherwise waits a full second to distinguish Escape from
+        # the prefix of a cursor/function key. Keep a short sequence window,
+        # while respecting an explicit terminal-specific setting.
+        environment.setdefault("ESCDELAY", "150")
         if environment.get("TERM", "").casefold() in {"", "dumb", "unknown"}:
             environment["TERM"] = "xterm-256color"
+        return environment
+
+    def _run(self, widget: list[str], title: str | None = None, refresh=None) -> subprocess.CompletedProcess[str]:
+        environment = self._environment()
         # dialog draws on the terminal and writes the selection to stderr.
         back_widget = ['--extra-button', '--extra-label', translate('Back')] if self.back_enabled and any(
             flag in widget for flag in ('--inputbox', '--passwordbox', '--yesno', '--menu', '--checklist')) else []
         confirmation_labels = ['--yes-label', translate('Yes'), '--no-label', translate('No')] if '--yesno' in widget else []
-        result = subprocess.run(
-            ["dialog", "--no-collapse", "--cancel-label", translate('Cancel'), "--backtitle", self.backtitle, "--title", title or self.title,
-             *confirmation_labels, *back_widget, *widget],
-            stdout=None, stderr=subprocess.PIPE, text=True, check=False, env=environment,
-        )
+        command = ["dialog", "--no-collapse", "--cancel-label", translate('Cancel'), "--backtitle", self.backtitle,
+                   "--title", title or self.title, *confirmation_labels, *back_widget, *widget]
+        if refresh is None:
+            result = subprocess.run(command, stdout=None, stderr=subprocess.PIPE, text=True,
+                                    check=False, env=environment)
+        else:
+            with subprocess.Popen(command, stdout=None, stderr=subprocess.PIPE, text=True,
+                                  env=environment) as process:
+                try:
+                    while True:
+                        try:
+                            _, output = process.communicate(timeout=0.1)
+                            result = subprocess.CompletedProcess(command, process.returncode, stderr=output)
+                            break
+                        except subprocess.TimeoutExpired:
+                            if refresh() and process.poll() is None:
+                                raise MenuRefresh()
+                finally:
+                    if process.poll() is None:
+                        process.terminate()
+                        try:
+                            process.communicate(timeout=2)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                            process.communicate()
         if result.returncode == 3 and back_widget:
             raise BackRequested()
         return result
@@ -283,7 +327,7 @@ class DialogUI:
 
     def choose(self, text: str, options: list[tuple[str, str]], default: str | None = None,
                title: str | None = None, show_tags: bool = True,
-               size: tuple[int, int, int] | None = None, colors: bool = False) -> str | None:
+               size: tuple[int, int, int] | None = None, colors: bool = False, refresh=None) -> str | None:
         # A word is an internal value: the menu numbers the options, as the
         # rest of ProxMenux does, and returns the value of the chosen one.
         values: dict[str, str] = {}
@@ -303,7 +347,7 @@ class DialogUI:
             widget += ["--menu", text, *map(str, size)]
             for tag, label in options:
                 widget += [tag, label]
-            result = self._run(widget, title)
+            result = self._run(widget, title, refresh=refresh) if refresh else self._run(widget, title)
             selected = result.stderr.strip() if result.returncode == 0 else None
             return values.get(selected, selected) if values and selected else selected
         terminal = shutil.get_terminal_size((100, 30))
@@ -320,7 +364,7 @@ class DialogUI:
         widget += ["--menu", f"\n{text}", str(height), str(width), str(menu_height)]
         for tag, label in options:
             widget += [tag, label]
-        result = self._run(widget, title)
+        result = self._run(widget, title, refresh=refresh) if refresh else self._run(widget, title)
         selected = result.stderr.strip() if result.returncode == 0 else None
         return values.get(selected, selected) if values and selected else selected
 
@@ -345,11 +389,14 @@ class DialogUI:
         result = self._run(widget, title)
         return result.stderr.strip() if result.returncode == 0 else None
 
-    def checklist(self, text, options, defaults, title: str | None = None):
+    def checklist(self, text, options, defaults, title: str | None = None, ok_label=None, size=None):
         terminal = shutil.get_terminal_size((100, 30))
         height = min(max(len(options) + 9, 14), terminal.lines - 2)
-        widget = ["--separate-output", "--checklist", f"\n{text}", str(height), str(MENU_WIDTH),
-                  str(max(4, min(len(options), height - 8)))]
+        width, rows = MENU_WIDTH, max(4, min(len(options), height - 8))
+        if size:
+            height, width, rows = size
+        widget = ['--ok-label', ok_label] if ok_label else []
+        widget += ["--separate-output", "--checklist", f"\n{text}", str(height), str(width), str(rows)]
         for tag, label in options:
             widget += [tag, label, "on" if tag in defaults else "off"]
         result = self._run(widget, title)
@@ -373,6 +420,32 @@ class DialogUI:
     def info(self, text: str, title: str | None = None) -> None:
         height, width = self._size(text, 6, MENU_WIDTH, 5)
         self._run(["--infobox", f"\n{text}", height, width], title)
+
+    def gauge(self, poll, title: str | None = None) -> None:
+        """A dialog progress bar fed by ``poll()``, which returns (percent, text)
+        while the work runs and None once it has finished."""
+        first = poll()
+        if first is None:
+            return
+        _, width = self._size(first[1], 8, MENU_WIDTH, 5)
+        command = ["dialog", "--no-collapse", "--backtitle", self.backtitle, "--title", title or self.title,
+                   "--gauge", first[1], "8", width, str(first[0])]
+        with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=None, stderr=subprocess.DEVNULL,
+                              text=True, env=self._environment()) as process:
+            state = first
+            try:
+                while state is not None:
+                    process.stdin.write(f"XXX\n{state[0]}\n{state[1]}\nXXX\n")
+                    process.stdin.flush()
+                    time.sleep(0.2)
+                    state = poll()
+            except BrokenPipeError:
+                pass
+            finally:
+                try:
+                    process.stdin.close()
+                except BrokenPipeError:
+                    pass
 
 
 def interactive_ui() -> TerminalUI | DialogUI:

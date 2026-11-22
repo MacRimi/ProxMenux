@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { ExternalLink } from "lucide-react"
@@ -59,7 +59,6 @@ export default async function NotificationsPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.notifications" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -187,7 +186,7 @@ export default async function NotificationsPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/notifications-disabled.png" alt={t("enabling.disabledAlt")} width={2000} height={552} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/notifications-disabled.png" alt={t("enabling.disabledAlt")} width={2000} height={552} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("enabling.disabledCaption")}</figcaption>
       </figure>
 
@@ -199,7 +198,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/notifications-active.png" alt={t("enabling.activeAlt")} width={2000} height={1142} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/notifications-active.png" alt={t("enabling.activeAlt")} width={2000} height={1142} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("enabling.activeCaption", { em })}</figcaption>
       </figure>
 
@@ -255,7 +254,7 @@ export default async function NotificationsPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/telegram-setup-guide.png" alt={t("telegram.guideAlt")} width={1923} height={2000} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/telegram-setup-guide.png" alt={t("telegram.guideAlt")} width={1923} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("telegram.guideCaption", { em })}</figcaption>
       </figure>
 
@@ -290,7 +289,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/telegram-private-chat.png" alt={t("telegram.privateAlt")} width={2000} height={768} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/telegram-private-chat.png" alt={t("telegram.privateAlt")} width={2000} height={768} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("telegram.privateCaption")}</figcaption>
       </figure>
 
@@ -304,7 +303,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/telegram-group-chat.png" alt={t("telegram.groupAlt")} width={2000} height={768} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/telegram-group-chat.png" alt={t("telegram.groupAlt")} width={2000} height={768} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("telegram.groupCaption", { code, em })}</figcaption>
       </figure>
 
@@ -327,7 +326,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/discord-channel.png" alt={t("discord.imageAlt")} width={2000} height={435} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/discord-channel.png" alt={t("discord.imageAlt")} width={2000} height={435} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("discord.imageCaption", { em })}</figcaption>
       </figure>
 
@@ -344,7 +343,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/gotify-channel.png" alt={t("gotify.imageAlt")} width={2000} height={573} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/gotify-channel.png" alt={t("gotify.imageAlt")} width={2000} height={573} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("gotify.imageCaption")}</figcaption>
       </figure>
 
@@ -353,7 +352,7 @@ export default async function NotificationsPage({
       <p className="mb-4 text-gray-800 leading-relaxed">{t("email.intro")}</p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/email-channel.png" alt={t("email.imageAlt")} width={2000} height={1248} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/email-channel.png" alt={t("email.imageAlt")} width={2000} height={1248} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("email.imageCaption")}</figcaption>
       </figure>
 
@@ -465,7 +464,7 @@ export default async function NotificationsPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/notification-categories.png" alt={t("rich.imageAlt")} width={2000} height={1668} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/notification-categories.png" alt={t("rich.imageAlt")} width={2000} height={1668} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("rich.imageCaption", { em })}</figcaption>
       </figure>
 
@@ -523,7 +522,7 @@ running on node pve-01
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/quiet-hours-and-digest-config.png" alt={t("quiet.imageAlt")} width={1600} height={1200} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/quiet-hours-and-digest-config.png" alt={t("quiet.imageAlt")} width={1600} height={1200} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("quiet.imageCaption")}</figcaption>
       </figure>
 
@@ -589,7 +588,7 @@ running on node pve-01
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/display-name.png" alt={t("displayName.imageAlt")} width={2000} height={256} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto" />
+        <Image src="/monitor/settings/display-name.png" alt={t("displayName.imageAlt")} width={2000} height={256} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("displayName.imageCaption")}</figcaption>
       </figure>
 
@@ -615,7 +614,7 @@ running on node pve-01
               <tr key={row.stage} className={idx < dispatchRows.length - 1 ? "border-b border-gray-100" : ""}>
                 <td className="px-3 py-2 align-top whitespace-nowrap"><strong>{row.stage}</strong></td>
                 <td className="px-3 py-2 align-top">{t.rich(`dispatch.rows.${idx}.what`, { code })}</td>
-                <td className="px-3 py-2 align-top">{row.tunable}</td>
+                <td className="px-3 py-2 align-top">{t.rich(`dispatch.rows.${idx}.tunable`, { code })}</td>
               </tr>
             ))}
           </tbody>
@@ -649,7 +648,7 @@ running on node pve-01
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/pve-webhook-target.png" alt={t("pveWebhook.imageAlt")} width={1452} height={1360} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto" />
+        <Image src="/monitor/settings/pve-webhook-target.png" alt={t("pveWebhook.imageAlt")} width={1452} height={1360} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("pveWebhook.imageCaption")}</figcaption>
       </figure>
 
@@ -814,7 +813,7 @@ curl -H "Authorization: Bearer <api-token>" \\
 curl -X POST http://<host>:8008/api/notifications/test-ai \\
   -H "Authorization: Bearer <api-token>" \\
   -H "Content-Type: application/json" \\
-  -d '{"provider":"openai","api_key":"sk-...","model":"gpt-4o-mini"}'`}
+  -d '{"provider":"openai","api_key":"sk-...","model":"gpt-6-luna"}'`}
         className="my-4"
       />
 

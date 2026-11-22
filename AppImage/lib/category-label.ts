@@ -17,6 +17,9 @@ const CATEGORY_KEY_BY_VALUE: Record<string, string> = {
   "Databases": "databases",
   "Documents & Notes": "documentsNotes",
   "Files & Downloads": "filesDownloads",
+  // The OCI catalog files only the download clients here; Community Scripts
+  // still calls its category "Files & Downloads".
+  "Downloads": "downloads",
   "Finance & Budgeting": "financeBudgeting",
   "Gaming & Leisure": "gamingLeisure",
   "Host Management": "hostManagement",
@@ -32,6 +35,12 @@ const CATEGORY_KEY_BY_VALUE: Record<string, string> = {
   "Remote Access & VPN": "remoteAccessVpn",
   "Webservers & Proxies": "webserversProxies",
   "ZigBee, Z-Wave & Matter": "zigbeeZwaveMatter",
+  // Categories only the OCI catalog uses.
+  "Creative & Design": "creativeDesign",
+  "Files & Sharing": "filesSharing",
+  "Browsers & Web Desktops": "browsersWebDesktops",
+  "Tools": "tools",
+  "Messaging & Queues": "messagingQueues",
 }
 
 export function getCategoryLabel(t: Translate, value: string): string {

@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "title": "Proxmox-kommandon för GPU-passthrough — lspci, VFIO, IOMMU, qm set hostpci | ProxMenux",
+    "description": "Referens för GPU-passthrough på Proxmox VE: identifiering med lspci, VFIO-moduler, IOMMU-grupper (intel_iommu / amd_iommu), GRUB- och initramfs-uppdateringar, qm set hostpci0 och inställningar för NVIDIA / AMD / Intel.",
+    "ogTitle": "Proxmox-kommandon för GPU-passthrough — lspci, VFIO, IOMMU, qm set hostpci",
+    "ogDescription": "Referens för inspektering och konfigurering av GPU passthrough på Proxmox VE - PCI-enheter, VFIO-moduler, IOMMU-grupper, kärnstartsparam, qm set hostpci.",
+    "twitterTitle": "Proxmox-kommandon för GPU-passthrough | ProxMenux",
+    "twitterDescription": "Kontrollera PCI-enheter, konfigurera VFIO och IOMMU och tilldela GPU:er till VM:ar på Proxmox VE."
+  },
+  "header": {
+    "title": "GPU-genomföring",
+    "description": "Referens för kontroll och konfigurering av GPU-/TPU-passthrough på Proxmox: enhetsidentifiering (lspci), VFIO-moduler, IOMMU-kontroll, initramfs-/GRUB-uppdateringar och inställningar per VM (qm set hostpci, machine q35, bios ovmf).",
+    "section": "Hjälp och info"
+  },
+  "intro": {
+    "title": "IOMMU måste aktiveras i BIOS / UEFI",
+    "body": "Aktivera först IOMMU i firmware: leta efter <em>VT-d</em>, <em>AMD-Vi</em> eller <em>IOMMU</em> i BIOS/UEFI. I Linux är det aktiverat som standard på AMD och på Intel med Proxmox-kärnor från 6.8. Äldre Intel-kärnor kan behöva <code>intel_iommu=on</code>. Det valfria <code>iommu=pt</code> styr IOMMU:s passthrough-läge och är inget skäl att generellt stänga av värdens framebuffer."
+  },
+  "commandGroups": [
+    {
+      "title": "Enhetsidentifiering",
+      "commands": [
+        {
+          "command": "lspci -nn | grep -i nvidia",
+          "description": "Lista NVIDIA PCI-enheter"
+        },
+        {
+          "command": "lspci -nn | grep -i vga",
+          "description": "Lista alla VGA kompatibla enheter"
+        },
+        {
+          "command": "lspci -nn | grep -i amd",
+          "description": "Lista AMD PCI-enheter"
+        },
+        {
+          "command": "lspci -nnk | grep -A3 VGA",
+          "description": "Lista VGA-enheter med kärndrivrutiner"
+        },
+        {
+          "command": "lspci -v -s <PCI_ID>",
+          "description": "Visa detaljerad information för specifik PCI-enhet"
+        }
+      ]
+    },
+    {
+      "title": "VFIO-konfiguration",
+      "commands": [
+        {
+          "command": "dmesg | grep -i vfio",
+          "description": "Kontrollera VFIO-modulmeddelanden"
+        },
+        {
+          "command": "cat /etc/modprobe.d/vfio.conf",
+          "description": "Granska konfigurationen för VFIO-passthrough"
+        },
+        {
+          "command": "ls -la /etc/modprobe.d/",
+          "description": "Lista alla modprobe konfigurationsfiler"
+        },
+        {
+          "command": "cat /etc/modules",
+          "description": "Visa moduler laddade vid starttid"
+        },
+        {
+          "command": "lsmod | grep vfio",
+          "description": "Kontrollera om VFIO-moduler laddas"
+        }
+      ]
+    },
+    {
+      "title": "IOMMU Konfiguration",
+      "commands": [
+        {
+          "command": "cat /etc/default/grub",
+          "description": "Granska GRUB alternativ för IOMMU"
+        },
+        {
+          "command": "update-grub",
+          "description": "Applicera GRUB ändringar"
+        },
+        {
+          "command": "dmesg | grep -i iommu",
+          "description": "Kontrollera IOMMU-meddelanden i kärnlogg"
+        },
+        {
+          "command": "dmesg | grep -e DMAR -e IOMMU",
+          "description": "Kontrollera DMAR och IOMMU-meddelanden"
+        },
+        {
+          "command": "find /sys/kernel/iommu_groups/ -type l | sort -V",
+          "description": "Lista IOMMU-grupper"
+        }
+      ]
+    },
+    {
+      "title": "Systemuppdateringar",
+      "commands": [
+        {
+          "command": "update-initramfs -u",
+          "description": "Applicera initramfs förändringar (VFIO)"
+        },
+        {
+          "command": "update-initramfs -u -k all",
+          "description": "Uppdatera initramfs för alla kärnor"
+        },
+        {
+          "command": "cat /proc/cmdline",
+          "description": "Visa nuvarande kärnstartsparametrar"
+        }
+      ]
+    },
+    {
+      "title": "VM Konfiguration",
+      "commands": [
+        {
+          "command": "qm config <vmid> | grep hostpci",
+          "description": "Visa PCI-passthrough-inställningar för en VM"
+        },
+        {
+          "command": "qm set <vmid> -hostpci0 <PCI_ID>,pcie=1,x-vga=1",
+          "description": "Lägg till GPU-passthrough till en VM"
+        },
+        {
+          "command": "cat /etc/pve/qemu-server/<vmid>.conf",
+          "description": "Visa VM konfigurationsfil"
+        },
+        {
+          "command": "qm set <vmid> -machine q35",
+          "description": "Ställ in VM för att använda Q35-chipset (rekommenderas för genomgång)"
+        },
+        {
+          "command": "qm set <vmid> -bios ovmf",
+          "description": "Ställ in VM:n på UEFI/OVMF, rekommenderat om GPU:ns ROM stöder UEFI"
+        }
+      ]
+    }
+  ],
+  "afterChangesTip": {
+    "title": "Efter att ha ändrat GRUB eller modprobe configs",
+    "bodyRich": "På värdar med GRUB tillämpar du startparametrar med <code>update-grub</code>. Uppdatera moduländringar med <code>update-initramfs -u -k all</code> och starta sedan om. Andra starthanterare har egna rutiner. Kontrollera med <code>cat /proc/cmdline</code> (kärnparametrar), <code>dmesg | grep -i iommu</code> (IOMMU aktiverad) och <code>find /sys/kernel/iommu_groups/ -type l | sort -V</code> (grupper finns)."
+  },
+  "related": {
+    "heading": "Relaterat",
+    "items": [
+      {
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "label": "Lägg till GPU till VM (Passthrough)",
+        "tail": " — interaktivt ProxMenux-flöde."
+      },
+      {
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "label": "Lägg till GPU till LXC",
+        "tail": " — dela åtkomst till värdens GPU-enheter med en LXC-container."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Översikt över Hjälp och info",
+        "tail": "."
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted personal task manager with a Todoist-compatible workflow, search, and automatic account-registration lock."
+    },
+    "description": {
+      "en_US": "OpenTask is a self-hosted, single-user task manager designed with a keyboard-first workflow and Todoist compatibility. It allows users to capture and organize tasks using natural language quick add, recurring schedules, projects, sections, and customizable filters. The interface provides inbox, today, and upcoming views alongside kanban boards, reminders, and productivity tracking."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/pranav-karra-3301/opentask/HEAD/docs/screenshots/hero.png",
+      "https://raw.githubusercontent.com/pranav-karra-3301/opentask/HEAD/docs/screenshots/quick-add.png"
+    ]
+  }
+}

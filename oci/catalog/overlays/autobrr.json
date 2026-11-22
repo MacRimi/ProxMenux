@@ -10,5 +10,24 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Autobrr is the modern download automation tool for torrents and usenet. With inspiration and ideas from tools like trackarr, autodl-irssi and flexget we built one tool that can do it all, and then some."
+    },
+    "description": {
+      "en_US": "Autobrr is an automated download tool for torrents and Usenet. It monitors indexer IRC announce channels and RSS feeds in real time, capturing releases the moment they are uploaded. Based on user-configured filters, it delivers matching torrents and NZBs directly to download clients or applications in the Arr suite."
+    },
+    "tips": [
+      "If authentication was disabled on initial setup and no user was created, re-enabling authentication exposes first-user onboarding to whoever visits the login page first",
+      "Users can be created up front via the command line using autobrrctl create-user"
+    ],
+    "repository": "https://github.com/autobrr/autobrr",
+    "screenshots": [
+      "https://autobrr.com/img/webui/dashboard-light-2000.webp",
+      "https://autobrr.com/img/webui/dashboard-dark-2000.webp",
+      "https://autobrr.com/img/webui/filters-light-2000.webp",
+      "https://autobrr.com/img/webui/filters-dark-2000.webp"
+    ]
   }
 }

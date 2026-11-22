@@ -7,10 +7,11 @@ import { useState } from "react"
 import { DatabaseBackup } from "lucide-react"
 import { HostBackup } from "./host-backup"
 import { VmBackupJobs } from "./vm-backup-jobs"
+import { PBSPanel } from "./pbs-panel"
 import { BackupStorageRetention } from "./backup-storage-retention"
 import { useT } from "../lib/i18n/provider"
 
-type BackupView = "host" | "guests"
+type BackupView = "host" | "guests" | "pbs"
 
 export function BackupTab() {
   const t = useT()
@@ -30,7 +31,7 @@ export function BackupTab() {
             className="flex w-full rounded-lg border border-border bg-muted/40 p-1 gap-1
                        sm:inline-flex sm:w-auto"
           >
-            {(["host", "guests"] as const).map((key) => (
+            {(["host", "guests", "pbs"] as const).map((key) => (
               <button
                 key={key}
                 type="button"
@@ -42,7 +43,7 @@ export function BackupTab() {
                     : "text-muted-foreground hover:text-foreground hover:bg-background/60"
                 }`}
               >
-                {t(`backup.viewSwitch.${key}`)}
+                {key === "pbs" ? t("pbs.title") : t(`backup.viewSwitch.${key}`)}
               </button>
             ))}
           </div>
@@ -53,6 +54,7 @@ export function BackupTab() {
         <HostBackup />
       </div>
       {view === "guests" && <><VmBackupJobs /><BackupStorageRetention /></>}
+      {view === "pbs" && <PBSPanel />}
     </div>
   )
 }

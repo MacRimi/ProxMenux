@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 
 from oci_installation_state import command, image_from_archive, private_directory, sha
@@ -42,8 +43,22 @@ def location(root, vmid):
     return path / 'oci-compose.json'
 
 
+def _acquire_lock(fd, timeout):
+    """Wait only for acquisition; a failure inside the operation is never replayed."""
+    deadline = time.monotonic() + max(0, float(timeout))
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except BlockingIOError:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise
+            time.sleep(min(0.2, remaining))
+
+
 @contextmanager
-def locked(root):
+def locked(root, timeout=0):
     private_directory(root)
     path = root / '.lock'
     if path.is_symlink():
@@ -53,12 +68,12 @@ def locked(root):
         fd = int(inherited)
         if os.fstat(fd).st_ino != path.stat().st_ino or os.fstat(fd).st_dev != path.stat().st_dev:
             raise ValueError(translate('Wrong inherited registry lock'))
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _acquire_lock(fd, timeout)
         yield
     else:
         with path.open('a') as lock:
             os.chmod(path, 0o600)
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            _acquire_lock(lock, timeout)
             yield
 
 
@@ -230,22 +245,52 @@ def identity(config):
     return match.group(1) if match else None
 
 
-def same_config_except_notes(record, config):
-    """Accept a presentation-only note edit, never a changed OCI identity or LXC setting."""
+def same_config_except_notes(record, config, ignore_tags=False):
+    """Accept a presentation-only note edit, never a changed OCI identity or LXC setting.
+    With `ignore_tags`, Proxmox tags may differ too: the operation keeps them as they are."""
     previous = record['observed']['config'].encode()
     expected = record['installation_id']
     if identity(previous) != expected or identity(config) != expected:
         return False
 
-    def without_notes(value):
+    def without_notes(value, recorded=False):
         lines = value.splitlines(keepends=True)
         notes = [line for line in lines if line.startswith(b'description: ')]
         if len(notes) != 1:
             return None
-        return b''.join(line for line in lines if not line.startswith(b'description: '))
+        dropped = (b'description: ', b'tags: ') if ignore_tags else (b'description: ',)
+        # A lock is never part of the configuration: one recorded while the
+        # container was locked for a moment (`pct mount`) is not compared. A
+        # lock on the live container still is: something is under way.
+        if recorded:
+            dropped += (b'lock: ',)
+        return b''.join(line for line in lines if not line.startswith(dropped))
 
-    original = without_notes(previous)
+    original = without_notes(previous, recorded=True)
     return original is not None and original == without_notes(config)
+
+
+def changed_settings(record, config, ignore_tags=False):
+    """The names of the settings that differ between the saved and the current
+    configuration, for an error to say what changed; never their values."""
+    def settings(value):
+        value = value.decode() if isinstance(value, bytes) else value
+        result, section = {}, ''
+        for line in value.splitlines():
+            if line.startswith('['):
+                section = line.strip()
+                continue
+            key, separator, rest = line.partition(':')
+            if not separator or key.startswith('#'):
+                continue
+            if key in ('description', 'digest') or (ignore_tags and key == 'tags'):
+                continue
+            name = f'{section} {key}' if section else key
+            result.setdefault(name, []).append(rest.strip())
+        return result
+    before, after = settings(record['observed']['config']), settings(config)
+    before.pop('lock', None)  # As in same_config_except_notes.
+    return sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
 
 
 def save_assembly(root, primary_id, template, deployment, members):

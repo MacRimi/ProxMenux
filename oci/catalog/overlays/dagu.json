@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Define and run scheduled workflows from YAML files, scripts, SSH commands and local tasks. Dagu stores definitions and run state in its data directory and does not require a separate database."
+    },
+    "description": {
+      "en_US": "Dagu is a workflow engine for operations and internal automation that functions without an external database or message broker. It allows users to define directed acyclic graphs in a declarative YAML format to orchestrate scripts, remote commands, and recurring tasks. The system provides built-in scheduling, retries, dependency tracking, run history, and an interactive interface for viewing logs and execution states."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/dagucloud/dagu/HEAD/assets/images/readme-run-details-dark.png",
+      "https://raw.githubusercontent.com/dagucloud/dagu/HEAD/assets/images/readme-logs-dark.png",
+      "https://raw.githubusercontent.com/dagucloud/dagu/HEAD/assets/images/ui-params.png",
+      "https://raw.githubusercontent.com/dagucloud/dagu/HEAD/assets/images/readme-artifacts-dark.png"
+    ]
+  }
+}

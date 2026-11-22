@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Beaver Habit Tracker is a self-hosted habit tracking tool designed for users who want to effortlessly monitor daily behaviors without the stress of goal-setting. Its intuitive Web interface offers a pressure-free tracking experience, ideal for those focused on behavior observation and personal growth.\n\nThe tool's core features include goal-free habit tracking and a minimalist interface. It allows users to log multiple habits easily, without focusing on streaks or targets, and provides simple visualizations to understand behavior patterns. Users can add daily notes to record specific activities or reflections, with a smooth, low-effort interface.\n\nIt uses a self-hosted approach, ensuring data privacy and full control, with a lightweight, efficient design requiring minimal server resources. Users can manually reorder habits for an optimized experience. The tool's stress-free observation and intuitive operation help users gradually improve habits, delivering a modern habit management solution.\n\n**Key Features:**\n- Goal-free habit tracking focused on awareness, not achievement\n- Clean, minimalist interface for effortless daily logging\n- Lightweight and efficient, requiring minimal server resources\n- Simple visualizations to understand behavior patterns\n- Daily notes for recording activities or reflections\n\n**Learn More:**\n- [Beaver Habit Tracker Official Website](https://beaverhabits.com/)\n- [Beaver Habit Tracker GitHub](https://github.com/daya0576/beaverhabits)\n"
+    },
+    "description": {
+      "en_US": "Beaver Habit Tracker is a habit tracking application designed for monitoring daily behaviors without the pressure of goals or streaks. It allows users to log multiple habits effortlessly and observe their routines over time. The application provides simple visualizations and daily notes to help understand personal behavior patterns."
+    },
+    "repository": "https://github.com/daya0576/beaverhabits",
+    "screenshots": [
+      "https://github.com/daya0576/beaverhabits/assets/6239652/0418fa41-8985-46ef-b623-333b62b2f92e",
+      "https://github.com/daya0576/beaverhabits/assets/6239652/c0ce98cf-5a44-4bbc-8cd3-c7afb20af671",
+      "https://github.com/daya0576/beaverhabits/assets/6239652/516c19ca-9f55-4c21-9e6d-c8f0361a5eb2"
+    ]
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "title": "Po inštalácii: Virtualizácia | Dokumentácia ProxMenux",
+    "description": "Možnosti virtualizácie v prispôsobiteľnom skripte ProxMenux po inštalácii: automaticky nainštaluje správneho hosťovského agenta, ak Proxmox beží vo VM, a povolí IOMMU / VFIO na priame priradenie zariadení PCI (GPU, NIC, HBA) vašim VM."
+  },
+  "header": {
+    "title": "Po inštalácii: Virtualizácia",
+    "section": "Nastavenie Proxmoxu po inštalácii"
+  },
+  "intro": {
+    "title": "Čo táto kategória zahŕňa",
+    "body": "Dve nezávislé možnosti. <strong>Nainštalovať vhodného hosťovského agenta</strong> pomáha, keď samotný Proxmox beží vnorený v inom hypervízore. <strong>Zapnúť podporu VFIO/IOMMU</strong> zaujíma väčšinu používateľov: povolí funkcie jadra na priame priradenie GPU, HBA alebo sieťovej karty do VM s takmer natívnym výkonom."
+  },
+  "guestAgent": {
+    "heading": "Nainštalovať vhodného hosťovského agenta",
+    "intro": "Zistí virtualizačné prostredie hostiteľa Proxmox pomocou <code>systemd-detect-virt</code> a <code>dmidecode</code> a nainštaluje príslušný balík hosťovských nástrojov na správnu komunikáciu s vonkajším hypervízorom: riadne vypnutie, synchronizácia času, hlásenie IP adresy atď.",
+    "headerDetected": "Detekovaný hostiteľ",
+    "headerPackage": "Inštalovaný balík",
+    "rows": [
+      {
+        "detected": "QEMU / KVM",
+        "package": "qemu-guest-agent"
+      },
+      {
+        "detected": "VMware (ESXi, Workstation)",
+        "package": "open-vm-tools"
+      },
+      {
+        "detected": "VirtualBox",
+        "package": "virtualbox-guest-utils"
+      },
+      {
+        "detected": "Bare metal (žiadne)",
+        "package": " — bez zmien, nič sa nenainštaluje"
+      }
+    ],
+    "skipTitle": "Vynechajte pri Proxmox bežiacom priamo na hardvéri",
+    "skipBody": "Ak Proxmox beží priamo na hardvéri, čo je bežný prípad, zaškrtnutie nič nezmení: detektor vráti <code>none</code> a skript sa ukončí bez zmien. Možnosť má význam iba pre menšinu zostáv, kde Proxmox beží <em>ako hosť</em> na testovanie alebo v laboratóriu."
+  },
+  "vfio": {
+    "heading": "Zapnúť podporu VFIO/IOMMU",
+    "intro": "Zapne IOMMU na hostiteľovi a načíta moduly jadra na priame priradenie PCI (<code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code>). Fyzické zariadenie potom môžete priradiť do VM, ktorej hosť získa priamy prístup s takmer natívnym výkonom.",
+    "whoTitle": "Kto to potrebuje?",
+    "whoItems": [
+      "Chcete priamo priradiť GPU hernej VM s Windows alebo VM s macOS.",
+      "Máte vyhradenú 10G NIC pre firewall / router VM (OPNsense, pfSense).",
+      "Chcete priamo priradiť HBA do VM s TrueNAS/Unraid pre ZFS na fyzických diskoch.",
+      "Plánujete použiť <em>Coral TPU</em>, zachytávaciu kartu alebo SDR adaptér vo VM."
+    ],
+    "whoOutro": "Ak nič z toho neplatí, môžete možnosť vynechať. Na sprístupnenie zariadenia kontajneru <strong>LXC</strong> namiesto VM sa IOMMU <em>nevyžaduje</em>.",
+    "doesTitle": "Čo robí ProxMenux",
+    "doesIntro": "Funkcia zohľadňuje zavádzač: zistí ZFS (systemd-boot) alebo LVM/ext4 (GRUB) a zapíše do správneho súboru. Je idempotentná — existujúce parametre nepridáva znovu.",
+    "headerBoot": "Typ zavádzania",
+    "headerFile": "Upravený súbor",
+    "headerPost": "Krok po aktualizácii",
+    "bootRows": [
+      {
+        "boot": "systemd-boot (ZFS)",
+        "file": "/etc/kernel/cmdline",
+        "post": "proxmox-boot-tool refresh"
+      },
+      {
+        "boot": "GRUB (LVM/ext4)",
+        "file": "/etc/default/grub",
+        "post": "update-grub"
+      }
+    ],
+    "kernelIntro": "Pridané parametre jadra:",
+    "modulesIntro": "Moduly jadra pridané do <code>/etc/modules</code>:",
+    "blacklistIntro": "Konfliktné ovládače zakázané v <code>/etc/modprobe.d/blacklist.conf</code>:",
+    "blacklistTitle": "Zákaz ovládačov GPU je v konflikte s používaním GPU na hostiteľovi",
+    "blacklistBody": "Zoznam zakázaných ovládačov zabraňuje jadru hostiteľa priradiť <em>akýkoľvek</em> ovládač GPU, aby ju mohol prevziať VFIO. To chcete pri priamom priradení do VM, ale je to <strong>opak</strong> toho, čo treba na <link>inštaláciu ovládačov NVIDIA na hostiteľovi</link>, napríklad pre transkódovanie LXC. Pre každú GPU vyberte jednu cestu:",
+    "pathItems": [
+      "<strong>GPU → VM:</strong> povoľte tu VFIO/IOMMU a ponechajte ovládače GPU zakázané.",
+      "<strong>GPU → LXC (alebo hostiteľ):</strong> túto možnosť vynechajte, použite inštaláciu NVIDIA na hostiteľovi a nezakazujte nvidia/nouveau.",
+      "<strong>Dve GPU:</strong> jedna môže ísť do VM a druhá do LXC, ale treba presnejšiu konfiguráciu: priradiť iba jednu kartu k <code>vfio-pci</code> podľa PCI ID. Predvolený zoznam zákazov je príliš široký — potom upravte <code>blacklist.conf</code>."
+    ],
+    "acsTitle": "O pcie_acs_override — vedzte, čo povoľujete",
+    "acsBody": "<code>pcie_acs_override=downstream,multifunction</code> uvoľňuje kontrolu PCIe Access Control Services. Umožňuje jadru rozdeliť skupiny IOMMU, ktoré firmvér označuje za nedeliteľné, čo je niekedy jediná cesta na priradenie jedného zariadenia bez ostatných. Nevýhodou je <strong>znížená izolácia medzi zariadeniami</strong>: škodlivá alebo kompromitovaná VM s priamym priradením má väčšiu útočnú plochu cez DMA. Pre domáce laboratórium prijateľné; pri nedôveryhodných záťažiach to dôkladne zvážte. Ak parameter nepotrebujete, po skripte ho odstráňte z <code>/etc/kernel/cmdline</code> alebo <code>/etc/default/grub</code> a znovu aktualizujte zavádzač.",
+    "rebootTitle": "Vyžaduje sa reštart",
+    "rebootBody": "IOMMU, moduly VFIO a zoznam zákazov sa prejavia po obnovení initramfs a reštarte. Skript spustí <code>update-initramfs -u -k all</code>, aktualizuje zavádzač a nastaví príznak „vyžaduje sa reštart“, aby sa Prispôsobiteľné na konci opýtalo.",
+    "verifyTitle": "Overenie po reštarte",
+    "revertTitle": "Reverzibilné z menu Odinštalovať",
+    "revertBody": "<link>Odinštalujte optimalizácie</link> vráti všetky zmeny: odoberie tokeny IOMMU <code>/etc/kernel/cmdline</code> alebo GRUB, odstráni moduly VFIO z <code>/etc/modules</code>, odstráni položky čiernej listiny ovládačov a prebuduje initramfs. Na skutočné použitie reverzie je potrebný reštart."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "label": "Pridať GPU do VM (passthrough)",
+        "href": "/docs/hardware/gpu-vm-passthrough",
+        "tail": " — prirodzený ďalší krok po povolení IOMMU + VFIO."
+      },
+      {
+        "label": "Pridať radič alebo NVMe do VM",
+        "href": "/docs/disk-manager/add-controller-nvme-vm",
+        "tail": " — rovnaká infraštruktúra priameho priradenia pre radiče úložísk."
+      },
+      {
+        "label": "Príkazy na priame priradenie GPU",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — Referencia na overenie IOMMU."
+      },
+      {
+        "label": "Odinštalovať optimalizácie",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — čisto vrátiť nastavenia IOMMU / VFIO."
+      },
+      {
+        "label": "Prispôsobiteľné nastavenia po inštalácii",
+        "href": "/docs/post-install/customizable",
+        "tail": " — späť do nadradeného menu."
+      }
+    ]
+  }
+}

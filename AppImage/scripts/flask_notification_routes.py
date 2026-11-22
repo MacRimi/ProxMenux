@@ -280,7 +280,7 @@ notification_bp = Blueprint('notifications', __name__)
 
 
 @notification_bp.route('/api/notifications/settings', methods=['GET'])
-@require_auth
+@require_admin_scope
 def get_notification_settings():
     """Get all notification settings for the UI."""
     try:
@@ -446,7 +446,7 @@ def get_provider_models():
     Request body:
         {
             "provider": "gemini|groq|openai|openrouter|ollama|anthropic",
-            "api_key": "your-api-key",  // Not needed for ollama
+            "api_key": "your-api-key",  // Optional for protected Ollama gateways
             "ollama_url": "http://localhost:11434",  // Only for ollama
             "openai_base_url": "https://custom.endpoint/v1"  // Optional for openai
         }
@@ -498,9 +498,10 @@ def get_provider_models():
         if provider == 'ollama':
             import urllib.request
             import urllib.error
+            from ai_providers.ollama_provider import ollama_headers
             
             url = f"{ollama_url.rstrip('/')}/api/tags"
-            req = urllib.request.Request(url, method='GET')
+            req = urllib.request.Request(url, method='GET', headers=ollama_headers(api_key))
             req.add_header('User-Agent', 'ProxMenux-Monitor/1.1')
             
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -514,13 +515,10 @@ def get_provider_models():
                     'message': f'Found {len(models)} local models'
                 })
         
-        # Handle Anthropic - no models list API, return verified models directly
+        # Handle Anthropic - return verified models directly
         if provider == 'anthropic':
-            models = list(verified_models) if verified_models else [
-                'claude-3-5-haiku-latest',
-                'claude-3-5-sonnet-latest',
-                'claude-3-opus-latest',
-            ]
+            from ai_providers.anthropic_provider import AnthropicProvider
+            models = list(verified_models) if verified_models else list(AnthropicProvider.KNOWN_MODELS)
             return jsonify({
                 'success': True,
                 'models': sorted(models),
@@ -1156,6 +1154,14 @@ def setup_pve_webhook_core() -> dict:
         'fallback_commands': [],
         'error': None,
     }
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        result['not_applicable'] = True
+        return result
     
     try:
         if not _pve_cluster_fs_mounted():
@@ -1339,6 +1345,13 @@ def cleanup_pve_webhook_core() -> dict:
     Only removes blocks named 'proxmenux-webhook' / 'proxmenux-default'.
     """
     result = {'cleaned': False, 'error': None}
+    try:  # Proxmox Backup Server has no /etc/pve notification configuration
+        from pbs_manager import is_pbs_host
+        on_pbs = is_pbs_host()
+    except Exception:
+        on_pbs = False
+    if on_pbs:
+        return {'cleaned': True, 'error': None, 'not_applicable': True}
     
     try:
         if not _pve_cluster_fs_mounted():
@@ -1413,7 +1426,7 @@ def cleanup_proxmox_webhook():
 
 
 @notification_bp.route('/api/notifications/proxmox/read-cfg', methods=['GET'])
-@require_auth
+@require_admin_scope
 def read_pve_notification_cfg():
     """Diagnostic: return raw content of PVE notification config files.
     
@@ -1664,9 +1677,18 @@ def internal_shutdown_event():
     
     Only accepts requests from localhost (127.0.0.1) for security.
     """
-    # Security: Only allow localhost
-    remote_addr = request.remote_addr
-    if remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+    # Security: Only allow localhost. The Monitor listens on IPv6, so a
+    # request from 127.0.0.1 arrives as ::ffff:127.0.0.1.
+    remote_addr = request.remote_addr or ''
+    try:
+        import ipaddress
+        addr = ipaddress.ip_address(remote_addr.split('%')[0])
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+        is_loopback = addr.is_loopback
+    except (ValueError, TypeError):
+        is_loopback = remote_addr in ('127.0.0.1', '::1', 'localhost')
+    if not is_loopback:
         return jsonify({'error': 'forbidden', 'detail': 'localhost only'}), 403
     
     try:

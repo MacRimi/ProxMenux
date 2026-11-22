@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -33,7 +33,7 @@ function QA({ q, children }: QAProps) {
   return (
     <div className="mb-8">
       <h2 className="text-xl font-semibold mb-3 text-gray-900">{q}</h2>
-      <div className="text-gray-800 leading-relaxed space-y-3">{children}</div>
+      <div className="text-gray-800 leading-relaxed stack-y-3">{children}</div>
     </div>
   )
 }
@@ -44,7 +44,6 @@ export default async function FaqPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.about.faq" })
 
   const messages = (await getMessages({ locale })) as unknown as {

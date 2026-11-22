@@ -264,7 +264,7 @@ export function NetworkTrafficChart({
 
   if (loading && isInitialLoad) {
     return (
-      <div className="flex items-center justify-center h-[300px]">
+      <div className="flex items-center justify-center h-[220px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -272,7 +272,7 @@ export function NetworkTrafficChart({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] gap-2">
+      <div className="flex flex-col items-center justify-center h-[220px] gap-2">
         <p className="text-muted-foreground text-sm">{t("overview.networkMetricsUnavailable")}</p>
         <p className="text-xs text-red-500">{error}</p>
       </div>
@@ -281,7 +281,7 @@ export function NetworkTrafficChart({
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[300px]">
+      <div className="flex items-center justify-center h-[220px]">
         <p className="text-muted-foreground text-sm">{t("overview.noNetworkMetrics")}</p>
       </div>
     )
@@ -290,8 +290,8 @@ export function NetworkTrafficChart({
   return (
     <>
     <MetricsCacheNotice lastChecked={staleAt} />
-    <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={data} margin={{ bottom: 80 }}>
+    <ResponsiveContainer width="100%" height={220}>
+      <AreaChart data={data} margin={{ bottom: 0, left: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
         <XAxis
           dataKey="time"

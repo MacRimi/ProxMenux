@@ -7,7 +7,15 @@ import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-from health_monitor import HealthMonitor
+from health_fixture_modules import load_health_modules
+
+
+def setUpModule():
+    global HealthMonitor
+    temporary = tempfile.TemporaryDirectory(prefix='idle-bridge-')
+    unittest.addModuleCleanup(temporary.cleanup)
+    monitor, _, _ = load_health_modules(temporary.name)
+    HealthMonitor = monitor.HealthMonitor
 
 
 class IdleBridgeTests(unittest.TestCase):

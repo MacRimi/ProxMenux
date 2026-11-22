@@ -45,7 +45,8 @@
         "container_path": "/backups"
       },
       {
-        "container_path": "/source"
+        "container_path": "/source",
+        "default": "host-bind"
       }
     ],
     "restart": "unless-stopped"

@@ -15,6 +15,56 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 8192
     }
+  },
+  "environment_additions": [
+    {
+      "name": "OLLAMA_CONTEXT_LENGTH",
+      "example": "32768",
+      "prompt": "Context window in tokens (more context needs more RAM)",
+      "default_by_memory_mb": [
+        [
+          0,
+          "8192"
+        ],
+        [
+          4096,
+          "16384"
+        ],
+        [
+          6144,
+          "32768"
+        ],
+        [
+          10240,
+          "65536"
+        ],
+        [
+          24576,
+          "131072"
+        ]
+      ]
+    },
+    {
+      "name": "OLLAMA_KV_CACHE_TYPE",
+      "example": "q8_0",
+      "prompt": "Context cache type (q8_0 halves its memory; f16 keeps it uncompressed)"
+    }
+  ],
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Open WebUI with Ollama in the same container, to download and run models right away."
+    },
+    "description": {
+      "en_US": "Open WebUI is an extensible, self-hosted user interface designed to run entirely offline. It connects to local large language models through Ollama and supports OpenAI-compatible APIs for both local and cloud models. The platform provides a unified environment to chat with models, manage AI interactions, and run private AI workflows. This version includes Ollama in the same container, so models can be downloaded and run without another server. The models run on the CPU, so larger models need more memory and cores."
+    },
+    "screenshots": [
+      "https://cdn.openwebui.com/open-webui-demo.gif"
+    ],
+    "repository": "https://github.com/open-webui/open-webui"
   }
 }

@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted email archival and search server that downloads mailboxes over IMAP into encrypted local storage."
+    },
+    "description": {
+      "en_US": "Bichon is a self-hosted email archiving server. It downloads messages from IMAP accounts, builds a full-text search index, and provides an embedded web interface for unified cross-account search. The system is designed for long-term email preservation and programmatic access. It functions strictly as an archive and does not send, compose, forward, or reply to emails."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/06dc3b67-7d55-4a93-a3de-8b90951c575b"
+    ]
+  }
+}

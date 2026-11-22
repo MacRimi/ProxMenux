@@ -10,5 +10,29 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "xemu"
+    },
+    "tagline": {
+      "en_US": "xemu is a free and open-source application that emulates the original Microsoft Xbox game console, enabling people to play their original Xbox games on Windows, macOS, and Linux systems."
+    },
+    "description": {
+      "en_US": "Xemu is a free and open-source emulator designed for the original Microsoft Xbox game console. It allows users to run and play original Xbox video games on modern personal computer systems. The software accurately emulates the console's architecture to preserve and enjoy classic console games."
+    },
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

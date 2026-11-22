@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Run the official PowerDNS Recursor image as a recursive DNS service for private networks."
+    },
+    "description": {
+      "en_US": "PowerDNS Recursor is a dedicated resolving DNS server that resolves and caches domain name queries for client systems. It handles recursive queries by contacting root and authoritative nameservers on behalf of requesting clients. The server is designed to provide high-performance DNS resolution and caching across private and enterprise networks."
+    }
+  }
+}

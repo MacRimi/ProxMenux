@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
+import { icuQuotesToHtml } from "@/i18n/loadMessages"
 import { DocHeader } from "@/components/ui/doc-header"
 
 export async function generateMetadata({
@@ -45,7 +46,6 @@ export default async function GlossaryPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.backupRestore.glossary" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -113,8 +113,8 @@ export default async function GlossaryPage({
                   ) : null}
                 </dt>
                 <dd
-                  className="text-gray-800 leading-relaxed [&_a]:text-blue-600 [&_a]:hover:underline [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm"
-                  dangerouslySetInnerHTML={{ __html: entry.def }}
+                  className="text-gray-800 leading-relaxed [&_a]:text-blue-600 hover:[&_a]:underline [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm"
+                  dangerouslySetInnerHTML={{ __html: icuQuotesToHtml(entry.def) }}
                 />
               </div>
             ))}

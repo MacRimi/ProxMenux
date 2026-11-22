@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official uniextra image with a web dashboard for Movistar/O2 Cloud account linking. Persistent OAuth credentials, authenticated WebDAV and disk-backed temporary uploads."
+    },
+    "description": {
+      "en_US": "Movistar / O2 Cloud WebDAV Proxy is a protocol translation bridge for Movistar Cloud and O2 Cloud storage services. It translates standard WebDAV requests into direct API calls, enabling external clients and operating systems to interact with cloud accounts. The proxy allows users to mount cloud storage as network drives and use it as a remote storage target for backup utilities."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/uniextra/MovistarWebDAVProxy/HEAD/screenshot.png"
+    ]
+  }
+}

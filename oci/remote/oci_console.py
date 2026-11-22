@@ -23,6 +23,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import oci_mount_lock
 
 NO_LOGIN = ('nologin', 'false')
 LOG_DIR = Path('/var/log/proxmenux/oci')
@@ -94,7 +95,7 @@ def _rootfs(vmid: int):
     try:
         yield Path(f'/var/lib/lxc/{vmid}/rootfs')
     finally:
-        _run('pct', 'unmount', str(vmid))
+        oci_mount_lock.unmount(vmid, _run)
 
 
 def _executable(root: Path, path: str) -> bool:

@@ -19,7 +19,9 @@
     "developer": "MacRimi",
     "icon": "https://raw.githubusercontent.com/MacRimi/ShareCoveX/refs/heads/main/assets/sharecovex-icon.svg",
     "thumbnail": null,
-    "screenshots": [],
+    "screenshots": [
+      "https://raw.githubusercontent.com/MacRimi/ShareCoveX/main/assets/sharecovex.png"
+    ],
     "architectures": [
       "amd64",
       "arm64"

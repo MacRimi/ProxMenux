@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted feature-flag and experimentation service with a web interface and SQLite defaults."
+    },
+    "description": {
+      "en_US": "Flagr is an open-source service for feature flagging, A/B testing, and dynamic configuration. Applications send evaluation requests with entity details, and Flagr returns matched variants and optional JSON attachments. It allows teams to ship features dark, roll them out per audience, run experiments with sticky assignment, and alter runtime configuration without redeploying code."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/openflagr/flagr/HEAD/docs/public/images/demo_readme.png"
+    ]
+  }
+}

@@ -115,9 +115,106 @@
     ],
     "unpackerr": [
       "/data"
+    ],
+    "airdcpp-webclient": [
+      "/Downloads",
+      "/Share"
+    ],
+    "spoolman": [
+      "/home/app/.local/share/spoolman"
+    ],
+    "cadcraft": [
+      "/storage"
+    ],
+    "deckcraft": [
+      "/storage"
+    ],
+    "designcraft": [
+      "/storage"
+    ],
+    "effectcraft": [
+      "/storage"
+    ],
+    "figcraft": [
+      "/storage"
+    ],
+    "filmcraft": [
+      "/storage"
+    ],
+    "gridcraft": [
+      "/storage"
+    ],
+    "lightcraft": [
+      "/storage"
+    ],
+    "pdfcraft": [
+      "/storage"
+    ],
+    "photocraft": [
+      "/storage"
+    ],
+    "soundcraft": [
+      "/storage"
+    ],
+    "vectorcraft": [
+      "/storage"
+    ],
+    "wordcraft": [
+      "/storage"
+    ],
+    "nextcloud-mariadb": [
+      "/data"
+    ],
+    "restreamer": [
+      "/core/data"
+    ],
+    "unmanic": [
+      "/library"
+    ],
+    "listmonk": [
+      "/listmonk/uploads"
+    ],
+    "proxmox-backup": [
+      "/var/lib/proxmox-backup"
+    ],
+    "windows": [
+      "/storage"
+    ],
+    "windows-arm": [
+      "/storage"
+    ],
+    "chromeos": [
+      "/storage"
+    ],
+    "macos": [
+      "/storage"
+    ],
+    "baserow": [
+      "/baserow/data"
+    ],
+    "netbootxyz": [
+      "/assets"
+    ],
+    "openproject": [
+      "/var/openproject/assets"
+    ],
+    "jellystat": [
+      "/app/backend/backup-data"
+    ],
+    "plik": [
+      "/data"
+    ],
+    "kutt": [
+      "/kutt/custom"
     ]
   },
   "sizes": {
+    "krusader": {
+      "/config": 4
+    },
+    "netbootxyz": {
+      "/config": 1
+    },
     "sharecovex": {
       "/config": 1
     }

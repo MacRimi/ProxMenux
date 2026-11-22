@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import { ExternalLink } from "lucide-react"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 
@@ -40,7 +40,6 @@ export default async function SslLetsEncryptPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.security.sslLetsencrypt" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -120,7 +119,7 @@ export default async function SslLetsEncryptPage({
           alt={t("wheresetting.imageAlt")}
           width={2000}
           height={1124}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("wheresetting.caption")}

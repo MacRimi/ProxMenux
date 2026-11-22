@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted recipe manager for collecting, organizing, and sharing recipes."
+    },
+    "description": {
+      "en_US": "CookTrace is a self-hosted recipe, pantry, and cooking management tool. It lets you organize recipes with custom collections, live ingredient scaling, and nutrition facts, while keeping inventory in a pantry tracker with expiration dates and barcode scanning. It also includes meal planning, automatic shopping list generation, and a cook mode with timers."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/traceapps/cooktrace/HEAD/docs/screenshots/01-recipes.png"
+    ]
+  }
+}

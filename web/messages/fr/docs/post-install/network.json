@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Post-installation : Réseau | Documentation ProxMenux",
+    "description": "Options réseau du script de post-installation personnalisable ProxMenux : forcer APT sur IPv4, appliquer un profil sysctl sélectionné, installer Open vSwitch, activer TCP BBR + Fast Open et associer les noms d’interfaces aux adresses MAC."
+  },
+  "header": {
+    "title": "Post-Installation: Réseau",
+    "section": "Paramètres post-installation de Proxmox"
+  },
+  "intro": {
+    "title": "Ce que cette catégorie couvre",
+    "body": "Cinq options réseau indépendantes. Deux sont simples (<strong>APT sur IPv4</strong>, <strong>installation d’Open vSwitch</strong>), deux règlent le comportement TCP (<strong>profil sysctl réseau</strong>, <strong>BBR + Fast Open</strong>) et une résout un problème courant : <strong>fixer les noms d’interfaces</strong> pour qu’une nouvelle carte réseau ou une mise à jour du BIOS ne renomme pas <code>enp3s0</code> en <code>enp4s0</code> et ne casse pas vos ponts."
+  },
+  "ipv4": {
+    "heading": "Forcer APT à utiliser IPv4",
+    "intro": "Écrit <code>Acquire::ForceIPv4 \"true\";</code> à <code>/etc/apt/apt.conf.d/99-force-ipv4</code>. APT refuse alors d'utiliser IPv6 pour les téléchargements de paquets, même si l'hôte a une connectivité IPv6.",
+    "tipTitle": "Bénéficiaires",
+    "tipBody": "Utile si la connexion IPv6 est instable, plus lente qu’IPv4 ou si le miroir Debian/Proxmox échoue parfois en IPv6. Sans effet indésirable sur les hôtes sans IPv6. Sur un réseau double pile sain, le comportement devient prévisible : apt ne vous surprendra pas avec un délai d’attente IPv6 dépassé."
+  },
+  "sysctl": {
+    "heading": "Appliquer les optimisations réseau",
+    "intro": "Écrit un profil sysctl sélectionné dans <code>/etc/sysctl.d/99-network.conf</code> : tampons de sockets du noyau, durcissement ICMP, protection de base contre l’usurpation d’adresse et tailles de tampons TCP adaptées à un hyperviseur avec de nombreux flux simultanés.",
+    "tunedTitle": "Paramètres ajustés",
+    "headerArea": "Domaine",
+    "headerSettings": "Paramètres clés",
+    "rows": [
+      {
+        "area": "Tampons de sockets du noyau",
+        "settings": "<code>netdev_max_backlog=8192</code>, <code>rmem_max=16M</code>, <code>wmem_max=16M</code>, <code>somaxconn=8192</code>"
+      },
+      {
+        "area": "durcissement ICMP",
+        "settings": "<code>icmp_echo_ignore_broadcasts=1</code>, <code>icmp_ignore_bogus_error_responses=1</code>"
+      },
+      {
+        "area": "Sécurité du routage",
+        "settings": "<code>accept_redirects=0</code>, <code>accept_source_route=0</code>, <code>secure_redirects=0</code>, <code>send_redirects=0</code>, <code>log_martians=0</code>"
+      },
+      {
+        "area": "Filtre de chemin inversé",
+        "settings": "<code>rp_filter=2</code> (mode souple, voir la note ci-dessous)"
+      },
+      {
+        "area": "TCP",
+        "settings": "<code>tcp_mtu_probing=1</code>, <code>tcp_rfc1337=1</code>, <code>tcp_sack=1</code>, <code>tcp_rmem=8K/87K/16M</code>, <code>tcp_wmem=8K/64K/16M</code>"
+      },
+      {
+        "area": "Ports",
+        "settings": "<code>ip_local_port_range=1024 65535</code> (plage de ports éphémères)"
+      },
+      {
+        "area": "Sockets Unix",
+        "settings": "<code>net.unix.max_dgram_qlen=4096</code>"
+      }
+    ],
+    "sourceOutro": "Il ajoute également <code>source /etc/network/interfaces.d/*</code> à <code>/etc/network/interfaces</code> si ce n'est déjà présent — pratique standard pour que vous puissiez déposer des extraits d'interface modulaires sans modifier le fichier principal.",
+    "fwbrTitle": "Réglage automatique des ponts pare-feu virtuels",
+    "fwbrBody": "En plus du profil sysctl, ProxMenux installe le script auxiliaire <code>/usr/local/sbin/proxmenux-fwbr-tune</code>, qui applique <code>rp_filter=0</code> et <code>log_martians=0</code> aux interfaces <code>fwbr*</code> / <code>fwln*</code> / <code>fwpr*</code> / <code>tap*</code> créées par Proxmox pour les VM et conteneurs. L’unité à exécution unique <code>proxmenux-fwbr-tune.service</code> le lance au démarrage, et la règle <code>/etc/udev/rules.d/99-zz-proxmenux-fwbr-tune.rules</code> à chaque événement <code>net add</code> correspondant à ces préfixes. Cela couvre les interfaces recréées au démarrage ou à l’arrêt des VM, au redémarrage et à la migration à chaud. Le script traite aussi les interfaces existantes immédiatement après l’installation.",
+    "rpFilterTitle": "Pourquoi rp_filter=2 (souple) plutôt que 1 (strict)",
+    "rpFilterBody": "Le filtrage strict du chemin inverse rejette les paquets dont l’adresse source serait accessible par une interface <em>différente</em>. C’est une valeur par défaut adaptée aux clients, mais problématique sur un hôte Proxmox où le trafic VM arrive souvent par un pont et repart par une liaison montante avec des routes asymétriques. <code>rp_filter=2</code> (souple) ne rejette que les paquets dont la source est réellement injoignable par routage. Le compromis réduit légèrement la détection de l’usurpation d’IP locale pour préserver le réseau des VM."
+  },
+  "ovs": {
+    "heading": "Installer Open vSwitch",
+    "intro": "Installe <code>openvswitch-switch</code> + <code>openvswitch-common</code>. Ces paquets ajoutent OVS comme alternative aux ponts Linux utilisés par défaut par Proxmox. L’installation seule ne modifie pas le réseau : les ponts <code>vmbrX</code> existants continuent de fonctionner. Lorsque vous <em>créez</em> un nouveau pont dans Proxmox, OVS devient disponible dans la liste des types.",
+    "tipTitle": "Quand OVS a du sens",
+    "tipBody": "Envisagez OVS pour <strong>des trunks VLAN avec des ID non contigus</strong>, <strong>LACP avec LLDP dans certains modes</strong>, <strong>la programmation fine des flux</strong> (OpenFlow) ou l’interopérabilité avec les contrôleurs SDN. Pour un laboratoire domestique avec quelques VLAN et une seule liaison montante LACP, les ponts Linux + <code>vmbrX.VID</code> sont plus simples et tout à fait adaptés.",
+    "revertTitle": "Réversible depuis le menu Désinstaller",
+    "revertBody": "OVS est enregistré. <link>Désinstaller les optimisations</link> lance <code>apt purge</code> pour <code>openvswitch-switch</code> et <code>openvswitch-common</code>. Migrez les ponts OVS vers des ponts Linux <em>avant</em> la désinstallation, sinon leurs VM perdront le réseau au prochain démarrage. Équivalent manuel :"
+  },
+  "bbr": {
+    "heading": "Activer TCP BBR + TCP Fast Open",
+    "intro": "Écrit deux fichiers sysctl et les recharge. BBR remplace CUBIC par l’algorithme de congestion de Google fondé sur la bande passante, qui gère mieux les liaisons à forte capacité et latence ou avec pertes. TCP Fast Open (TFO) économise un aller-retour sur les connexions TCP répétées en envoyant des données dans le SYN.",
+    "verifyTitle": "Vérification",
+    "impactTitle": "L'impact dépend de la charge de travail",
+    "impactBody": "BBR brille sur des liaisons à haute latence ou à perte (réplication transcontinentale, tunnels VPN, clients mobiles). Sur un LAN entre deux machines sur le même commutateur, la différence est souvent dans le bruit. TFO aide les connexions courtes et répétées HTTP le plus.",
+    "revertTitle": "Réversible depuis le menu Désinstaller",
+    "revertBody": "BBR/TFO sont enregistrés. <link>Désinstaller les optimisations</link> supprime les deux fichiers sysctl (<code>/etc/sysctl.d/99-kernel-bbr.conf</code> et <code>99-tcp-fastopen.conf</code>) et recharge la configuration restante. Supprimer un fichier ne réinitialise pas ses valeurs actives dans le noyau. Les valeurs par défaut comme <code>cubic</code> et <code>tcp_fastopen=1</code> reviennent après un redémarrage, sauf si une autre configuration les remplace. Équivalent manuel :"
+  },
+  "names": {
+    "heading": "Noms d’interfaces persistants",
+    "intro": "Parcourt les cartes réseau physiques de l’hôte, en excluant loopback, les veth Docker, les ponts, les périphériques TAP, les bonds, Cilium, ZeroTier et WireGuard. Écrit un fichier systemd <code>.link</code> associant le nom actuel à l’adresse MAC actuelle. Cette association prend alors le pas sur le nommage automatique du noyau.",
+    "whyTitle": "Pourquoi cela est important",
+    "whyItems": [
+      "L'ajout ou la suppression de périphériques PCIe peut déplacer la numérotation du bus, transformer <code>enp3s0</code> en <code>enp4s0</code>. Si votre <code>/etc/network/interfaces</code> fait référence à l'ancien nom, le pont disparaît sur le redémarrage.",
+      "Les mises à jour du BIOS ou du firmware changent parfois l’énumération des périphériques, avec le même effet.",
+      "Le script écrit des fichiers <code>.link</code> pour les cartes physiques, y compris les ports des bonds, avec la MAC indiquée par sysfs à ce moment ; pour les ports d’un bond, il peut s’agir de la MAC partagée du bond, vérifiez donc leurs noms après un redémarrage. Il ignore les interfaces virtuelles, comme les veth LXC et les bonds eux-mêmes ; il ne corrige pas les courses au nommage des cartes virtuelles <code>hotplug</code>."
+    ],
+    "writtenTitle": "Ce qui est écrit",
+    "writtenIntro": "Un fichier par NIC physique, au <code>/etc/systemd/network/10-proxmenux-&lt;iface&gt;.link</code>. Chaque fichier commence par l'en-tête <code># Managed by ProxMenux — do not edit</code> de sorte que ProxMenux puisse distinguer ses propres fichiers des fichiers <code>.link</code> fournis par l'utilisateur ou le paquet.",
+    "writtenOutro": "Les fichiers <code>.link</code> d’autres paquets ou écrits par l’utilisateur sont conservés ; seuls ceux portant l’en-tête ProxMenux sont gérés. À chaque nouvelle exécution, la fonction vérifie ses fichiers : elle relit <code>MACAddress=</code> dans chaque <code>10-proxmenux-*.link</code> et supprime ceux dont la MAC n’apparaît plus sous <code>/sys/class/net/</code>. Les fichiers d’anciennes versions ProxMenux au format <code>10-&lt;iface&gt;.link</code> sont migrés automatiquement la première fois.",
+    "pveTitle": "PVE 9 vs PVE 8",
+    "pveBody": "Le script utilise des fichiers systemd <code>.link</code> pour les noms persistants. Sur Proxmox VE 9, il recharge aussi les règles udev après écriture afin qu’une carte déjà fixée qui est rebranchée ou redétectée applique sa règle sans redémarrage. Vérifiez les interfaces existantes après un redémarrage sur PVE 8 comme sur PVE 9. Cela ne remplace pas <code>ifupdown2</code> sur l’hôte. Le script demande un redémarrage dans les deux cas via la post-installation personnalisable.",
+    "reviewTitle": "Examiner d'abord les /etc/network/interfaces existants",
+    "reviewBody": "Si l’ancienne configuration dans <code>/etc/network/interfaces</code> utilise des noms de cartes générés par le noyau, fixer les noms <em>actuels</em> est le résultat souhaité. Si vous avez déjà adapté la configuration à des noms précis, vérifiez soigneusement que les noms fixés correspondent au fichier interfaces avant de redémarrer.",
+    "revertTitle": "Réversible depuis le menu Désinstaller",
+    "revertBody": "<link>Désinstaller les optimisations</link> supprime uniquement les fichiers <code>10-proxmenux-*.link</code> portant l’en-tête ProxMenux dans <code>/etc/systemd/network/</code>. Les fichiers <code>.link</code> de l’utilisateur ou d’autres paquets sont conservés. Le nommage par défaut de systemd revient au prochain redémarrage."
+  },
+  "related": {
+    "heading": "Voir aussi",
+    "items": [
+      {
+        "label": "Gestion du réseau",
+        "href": "/docs/network",
+        "tail": "— diagnostic, analyse des ponts, réparations guidées."
+      },
+      {
+        "label": "Noms d'interface persistants",
+        "href": "/docs/network/persistent-names",
+        "tail": " — la même fonction dans un menu distinct pour plus tard ; utilisez l’une ou l’autre option, pas les deux."
+      },
+      {
+        "label": "Référence des commandes réseau",
+        "href": "/docs/help-info/network-commands",
+        "tail": " — ip, ss, ethtool, sysctl."
+      },
+      {
+        "label": "Désinstaller les optimisations",
+        "href": "/docs/post-install/uninstall",
+        "tail": " — annuler ces changements réseau."
+      },
+      {
+        "label": "Post-installation personnalisable",
+        "href": "/docs/post-install/customizable",
+        "tail": "— retour au menu parent."
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Read and organize RSS feeds with a lightweight web-based feed reader."
+    },
+    "description": {
+      "en_US": "Miniflux is a minimalist, lightweight feed reader that supports RSS, Atom, and JSON Feed formats. It organizes articles using categories and bookmarks, and offers full-text search across content. The application prioritizes privacy by removing tracking parameters, blocking external scripts, and sanitizing article content. It provides a clean, responsive interface optimized for readability and keyboard navigation."
+    },
+    "screenshots": [
+      "https://miniflux.app/images/overview.png",
+      "https://miniflux.app/images/item-selection-black-theme.png"
+    ]
+  }
+}

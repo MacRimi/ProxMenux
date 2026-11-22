@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Organize tasks, projects, notes and time tracking in a private productivity app."
+    },
+    "description": {
+      "en_US": "Super Productivity is an offline-first to-do list, time tracker, and daily planner designed for personal task management. It allows users to structure work with sub-tasks, projects, and tags, and organize them visually using timeline schedules or Kanban and Eisenhower boards. The application provides built-in time tracking with Pomodoro and Flowtime focus sessions, break reminders, and work summary exports. It also integrates with external issue trackers and supports syncing across multiple devices."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/super-productivity/super-productivity/HEAD/docs/screens/reel.gif"
+    ]
+  }
+}

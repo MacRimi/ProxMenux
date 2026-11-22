@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { ArrowRight } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -46,7 +46,6 @@ export default async function CustomizablePage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.postInstall.customizable" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -105,7 +104,7 @@ export default async function CustomizablePage({
             className="group flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 transition-colors hover:border-blue-400 hover:bg-blue-50"
           >
             <ArrowRight
-              className="h-4 w-4 mt-0.5 text-gray-400 group-hover:text-blue-600 flex-shrink-0"
+              className="h-4 w-4 mt-0.5 text-gray-400 group-hover:text-blue-600 shrink-0"
               aria-hidden="true"
             />
             <div className="min-w-0 flex-1">

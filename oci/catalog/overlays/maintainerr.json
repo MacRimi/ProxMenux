@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted media-library cleanup and maintenance dashboard for Plex, Jellyfin, or Emby."
+    },
+    "description": {
+      "en_US": "Maintainerr is an automated cleanup and maintenance tool for Plex, Jellyfin, and Emby media libraries. It identifies unwatched or inactive content using custom rules and conditions across media servers and companion applications. Matched items are gathered into collections with a configurable grace period before being removed, unmonitored, or cleaned from disk."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/Maintainerr/maintainerr_site/main/src/assets/screenshots/Collections.png",
+      "https://raw.githubusercontent.com/Maintainerr/maintainerr_site/main/src/assets/screenshots/Rules.png",
+      "https://raw.githubusercontent.com/Maintainerr/maintainerr_site/main/src/assets/screenshots/Ruleconfig.png",
+      "https://raw.githubusercontent.com/Maintainerr/maintainerr_site/main/src/assets/screenshots/Overlays.png"
+    ]
+  }
+}

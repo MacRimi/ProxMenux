@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
@@ -34,7 +34,6 @@ export default async function ImportDiskImageVMPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.diskManager.importDiskImageVm" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -112,12 +111,12 @@ export default async function ImportDiskImageVMPage({
       └─ Bootable? (adds to boot order in Phase 2)
                    │
                    ▼
-      Summary of everything Phase 2 will do
+   (Esc at any dialog above exits;
+    nothing was changed)
                    │
-   ┌──────── Cancel   OR   Confirm ────┐
-   ▼                                   ▼
-Exit, nothing        ┌─────────────────┴─────────────────┐
-was changed          │  PHASE 2 — Import and attach       │
+                   ▼
+                     ┌───────────────────────────────────┐
+                     │  PHASE 2 — Import and attach       │
                      └─────────────────┬─────────────────┘
                                        ▼
                        For each selected image:
@@ -138,8 +137,8 @@ was changed          │  PHASE 2 — Import and attach       │
                                        ▼
                        If any image was marked bootable:
                        └─ qm set <VMID> --boot order={bus}N
-                          (first bootable wins; others can be
-                           reordered later in the Proxmox UI)
+                          (set per image, so the last one marked
+                           bootable wins; reorder in the Proxmox UI)
                                        │
                                        ▼
                        Verify: qm config <VMID> shows the

@@ -60,6 +60,18 @@ def smartctl_command(device: str, options: Iterable[str], probe: Optional[str]) 
     return ["smartctl", *options, *smartctl_type_args(probe), path]
 
 
+def ata_endurance_used(command: list[str]) -> int | None:
+    """Read standardized ATA wear using the device type that read SMART."""
+    probe = command[command.index("-d") + 1] if "-d" in command else None
+    args = smartctl_command(command[-1], ("-n", "standby", "-l", "devstat,7", "-j"), probe)
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=5)
+        used = json.loads(result.stdout)["endurance_used"]["current_percent"]
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
+        return None
+    return used if type(used) is int and 0 <= used <= 255 else None
+
+
 def smartctl_result_is_standby(returncode: int, stdout: str = "", stderr: str = "") -> bool:
     """Distinguish a real low-power response from another exit-code-2 error."""
     if returncode != 2:

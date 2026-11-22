@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Save, tag and search bookmarks with a lightweight self-hosted web app."
+    },
+    "description": {
+      "en_US": "linkding is a minimal bookmark manager designed to be fast and clean. It allows you to save, organize, and search web links using tags and Markdown notes. It also supports sharing bookmarks with guests, reading list workflows, and automatically archiving web pages locally or to the Internet Archive."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/sissbruecker/linkding/HEAD/docs/public/linkding-screenshot.png?raw=true"
+    ]
+  }
+}

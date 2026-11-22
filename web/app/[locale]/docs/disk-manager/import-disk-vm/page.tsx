@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -43,7 +43,6 @@ export default async function ImportDiskVMPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.diskManager.importDiskVm" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -63,7 +62,7 @@ export default async function ImportDiskVMPage({
   const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>
   const em = (chunks: React.ReactNode) => <em>{chunks}</em>
   const winLink = (chunks: React.ReactNode) => (
-    <a href="/docs/create-vm/system-windows" className="text-blue-600 hover:underline">{chunks}</a>
+    <Link href="/docs/create-vm/system-windows" className="text-blue-600 hover:underline">{chunks}</Link>
   )
 
   return (
@@ -101,11 +100,12 @@ export default async function ImportDiskVMPage({
                    │
                    ▼
       Visibility filter
-      ├─ Hidden: root / swap / system-mounted
-      ├─ Hidden: active ZFS / LVM / RAID members
+      ├─ Hidden: mounted (root included), host
+      │          LVM, ZFS members, active RAID
       ├─ Hidden: already in this VM's config
-      ├─ Shown: free disks
-      └─ Shown with ⚠ label: stale ZFS/LVM/RAID
+      ├─ Shown with ⚠ In use: referenced by
+      │          another VM / CT
+      └─ Shown with ⚠ label: stale LVM/RAID
                              signatures (not active)
                    │
                    ▼
@@ -123,21 +123,21 @@ export default async function ImportDiskVMPage({
           (user can still add as disk)
                    │
                    ▼
-      Summary of disks to process
+   (Esc at any dialog above exits;
+    nothing was changed)
                    │
-   ┌──────── Cancel   OR   Confirm ────┐
-   ▼                                   ▼
-Exit, nothing        ┌─────────────────┴─────────────────┐
-was changed          │  PHASE 2 — Attach                  │
+                   ▼
+                     ┌───────────────────────────────────┐
+                     │  PHASE 2 — Attach                  │
                      └─────────────────┬─────────────────┘
                                        ▼
                        For each selected disk:
                        ├─ Resolve best persistent path
                        │   preferred order:
-                       │   1. /dev/disk/by-id/ata-*
-                       │   2. /dev/disk/by-id/nvme-*
-                       │   3. /dev/disk/by-id/scsi-*
-                       │   4. /dev/disk/by-id/wwn-*
+                       │   1. by-id/ata-*, scsi-*, nvme-*
+                       │      (shortest name wins)
+                       │   2. /dev/disk/by-id/wwn-*
+                       │   3. other by-id links
                        │   fallback: raw /dev/sdX
                        ├─ Find next free {bus}N slot
                        │   (scans qm config output)

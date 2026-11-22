@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Redis’s official visual tool for browsing Redis data, running commands and using diagnostics. It starts as a standalone service; connect it to Redis servers after opening the interface."
+    },
+    "description": {
+      "en_US": "Redis Insight is a visual management tool and graphical user interface for Redis databases. It allows you to browse, filter, and edit key-value data structures including strings, hashes, lists, sets, streams, and JSON. The application also includes tools for diagnostics, command profiling, slow log analysis, and query visualization."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/redis/RedisInsight/HEAD/.github/screenshots/Redis-Insight-Browser.png",
+      "https://raw.githubusercontent.com/redis/RedisInsight/HEAD/.github/screenshots/Redis-Insight-Workbench.png",
+      "https://raw.githubusercontent.com/redis/RedisInsight/HEAD/.github/screenshots/Redis-Insight-Analysis.png",
+      "https://raw.githubusercontent.com/redis/RedisInsight/HEAD/.github/screenshots/Redis-Insight-SlowLog.png"
+    ]
+  }
+}

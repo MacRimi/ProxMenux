@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web toolkit for encoding, decoding, parsing, encrypting and analyzing data."
+    },
+    "description": {
+      "en_US": "CyberChef is a web application for carrying out a wide range of data operations directly within a browser. It enables both technical and non-technical users to manipulate data using functions such as encoding, encryption, hashing, compression, and parsing. Users build custom processing recipes by arranging operations in sequence, with all processing occurring entirely client-side."
+    }
+  }
+}

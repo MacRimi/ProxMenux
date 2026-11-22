@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -58,7 +58,6 @@ export default async function HealthMonitorPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.healthMonitor" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -148,7 +147,7 @@ export default async function HealthMonitorPage({
           alt={t("categories.imageAlt")}
           width={1608}
           height={1752}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("categories.imageCaption")}
@@ -257,7 +256,7 @@ export default async function HealthMonitorPage({
           alt={t("dismiss.dropdownImageAlt")}
           width={1540}
           height={1072}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("dismiss.dropdownImageCaption", { em })}
@@ -270,7 +269,7 @@ export default async function HealthMonitorPage({
           alt={t("dismiss.imageAlt")}
           width={2010}
           height={1816}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("dismiss.imageCaption")}

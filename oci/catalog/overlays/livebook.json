@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create and run collaborative Elixir notebooks in a browser. The official image includes the runtime; notebook files can be persisted in the mounted /data directory."
+    },
+    "description": {
+      "en_US": "Livebook is a web application for writing interactive and collaborative code notebooks. It executes Elixir code on demand alongside rich text formatting, interactive data visualizations, and automated smart cells. Notebooks run in a predictable sequence and are stored as versionable files that integrate easily with source control. Multiple users can also work within the same notebook simultaneously without additional setup."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/livebook-dev/livebook/main/.github/imgs/welcome.png"
+    ]
+  }
+}

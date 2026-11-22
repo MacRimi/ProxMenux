@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted backup server for UrBackup clients, with a web interface and persistent storage for server state and backup data. The official image needs no external database; snapshot integration for Btrfs or ZFS is optional and is not enabled by this profile."
+    },
+    "description": {
+      "en_US": "UrBackup Server is a centralized backup system that collects and manages backups from connected client systems. It provides a web interface for monitoring and administering client backup tasks and stored data. The server coordinates file and image backups and supports integration with filesystems like Btrfs and ZFS for efficient storage."
+    }
+  }
+}

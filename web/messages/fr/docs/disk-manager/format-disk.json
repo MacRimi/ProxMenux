@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "Formater ou effacer un disque physique | Documentation ProxMenux",
+    "description": "Effacez et formatez les disques physiques sur Proxmox VE avec ProxMenux. Quatre modes, disques système masqués, disques utilisés par des invités en cours d’exécution bloqués, et double confirmation avec saisie du chemin complet.",
+    "ogTitle": "Formater ou effacer un disque physique | Documentation ProxMenux",
+    "ogDescription": "Effacez ou formatez un disque physique sur Proxmox. Filtres de sécurité, quatre modes et double confirmation."
+  },
+  "header": {
+    "title": "Formater ou effacer un disque physique",
+    "description": "Effacez ou formatez un disque physique sur l’hôte Proxmox. ProxMenux masque les disques système, avertit de tout autre usage avant la confirmation, bloque les disques utilisés par une VM ou un CT en cours d’exécution et impose une double confirmation (oui/non puis saisie du chemin complet du disque) avant toute destruction de données.",
+    "section": "Gestionnaire de disques · Utilitaires"
+  },
+  "danger": {
+    "title": "Outil destructif",
+    "body": "Chaque opération ici écrit sur le disque. Il n'y a pas d'annulation. ProxMenux applique des filtres de sécurité stricts et des confirmations, mais la responsabilité de choisir le bon disque est à vous. Lisez le chemin du disque deux fois avant de le taper."
+  },
+  "howRuns": {
+    "heading": "Comment fonctionne le script",
+    "body": "Le processus comporte deux phases séparées par un filtre de sécurité à trois contrôles. La première recueille le choix du disque, le mode et les détails du système de fichiers. Aucune écriture n’a lieu avant la validation finale de la seconde phase, juste avant l’exécution."
+  },
+  "visibility": {
+    "heading": "Règles de visibilité",
+    "intro": "Avant que le menu apparaisse, ProxMenux filtre la liste des disques. Seuls les disques système sont masqués ; tout autre usage est affiché pour que vous puissiez décider :",
+    "items": [
+      "<strong>Masqués</strong> : les disques avec un montage système (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), une partition swap active ou membres du pool ZFS racine, ainsi que les périphériques en lecture seule.",
+      "<strong>Affichés, bloqués à la confirmation</strong> : les disques référencés par une VM ou un CT <strong>en cours d’exécution</strong>.",
+      "<strong>Affichés avec un avertissement</strong> : les disques référencés dans la configuration d’une VM ou d’un LXC arrêté, les disques avec des partitions de données montées, et les membres actifs ZFS / LVM / RAID."
+    ],
+    "safetyTitle": "Sécurité lors de la confirmation et de l'exécution",
+    "safetyItems": [
+      "Les disques contenant des métadonnées anciennes ou actives déclenchent des avertissements détaillés <em>avant</em> la confirmation.",
+      "Les disques utilisés par une VM <strong>en cours d’exécution</strong> sont <strong>strictement bloqués</strong> à la confirmation.",
+      "Les partitions de données montées sont démontées automatiquement à l’exécution et tout pool ZFS actif sur le disque est exporté. Si une partition ne peut pas être démontée, l’exécution s’arrête (une nouvelle validation a lieu juste avant toute écriture).",
+      "Deux confirmations sont toujours nécessaires : un dialogue <em>oui/non</em> et la saisie exacte du chemin complet du disque."
+    ]
+  },
+  "modes": {
+    "heading": "Modes de fonctionnement",
+    "intro": "Après avoir choisi un disque, vous choisissez l'un des quatre modes. Ils diffèrent dans ce qu'ils détruisent et ce qu'ils laissent derrière eux:",
+    "headerMode": "Mode",
+    "headerPart": "Table de partitions",
+    "headerData": "Données",
+    "headerUseCase": "Cas d'utilisation",
+    "rows": [
+      {
+        "mode": "1. Tout effacer",
+        "part": "Détruite",
+        "data": "Signatures effacées",
+        "useCase": "Supprime la table de partitions et les métadonnées de système de fichiers et RAID, met à zéro les 16 premiers et derniers Mio et, sur les disques qui prennent en charge discard, applique un TRIM à tout le disque. Le reste des données n’est pas écrasé et peut encore être récupérable sur un HDD ; ce n’est pas un effacement sécurisé."
+      },
+      {
+        "mode": "2. Supprimer les étiquettes FS",
+        "part": "Préservé",
+        "data": "Préservé",
+        "useCase": "Supprime les anciennes signatures ZFS / LVM / RAID pour empêcher la prise en charge automatique du disque. Les données utilisateur ne sont pas écrasées en bloc, mais la suppression des signatures peut les rendre inaccessibles."
+      },
+      {
+        "mode": "3. Écraser les données avec des zéros",
+        "part": "Préservé",
+        "data": "Détruites (écrasées par des zéros)",
+        "useCase": "Écraser les partitions existantes avec des zéros en conservant la table de partitions. Les espaces non alloués et les zones de réserve des SSD ne sont pas couverts ; cela ne garantit pas un assainissement complet du périphérique."
+      },
+      {
+        "mode": "4. Format complet",
+        "part": "Nouvelle GPT",
+        "data": "Détruite",
+        "useCase": "Disque prêt à utiliser avec une seule nouvelle partition et un nouveau système de fichiers ou pool ZFS."
+      }
+    ],
+    "fullFormatOutro": "<strong>Format complet</strong> pose une question de plus après la confirmation :",
+    "fullFormatItems": [
+      "<strong>Système de fichiers</strong> : <code>ext4</code>, <code>xfs</code>, <code>exfat</code> (portable), <code>btrfs</code> ou <code>zfs</code>. Si <code>mkfs.exfat</code> est absent, ProxMenux installe <code>exfatprogs</code> ; si <code>mkfs.btrfs</code> est absent, l’opération s’arrête avec une indication.",
+      "<strong>Nom du pool ZFS</strong> (ZFS uniquement) : suggéré sous la forme <code>pool_&lt;disk&gt;</code>. Le pool est créé avec <code>ashift=12</code> et la compression <code>lz4</code>."
+    ]
+  },
+  "steps": {
+    "heading": "Étape par étape",
+    "stepLabel": "Étape",
+    "list": [
+      {
+        "title": "Choisir un disque libre",
+        "body": "ProxMenux liste tous les disques qui passent le filtre de visibilité ci-dessus, avec leur modèle et leur taille. Toute métadonnée trouvée sur le disque (signatures ZFS / LVM / RAID, partitions montées, références d’invités) est affichée dans le résumé de confirmation pour vous indiquer ce que vous allez écraser."
+      },
+      {
+        "title": "Choisir un mode d'opération",
+        "bodyRich": "Choisissez <strong>Tout effacer</strong>, <strong>Supprimer les étiquettes FS</strong>, <strong>Écraser les données avec des zéros</strong> ou <strong>Format complet</strong> selon le tableau ci-dessus."
+      },
+      {
+        "title": "Confirmer deux fois",
+        "bodyRich": "ProxMenux présente un résumé de ce qui va se passer. Vous acceptez avec une boîte de dialogue oui/non et <strong> tapez le chemin complet du disque</strong> exactement comme indiqué (par exemple <code>/dev/sdc</code>). Tout le reste avorte."
+      },
+      {
+        "title": "(Format complet uniquement) Choisir le système de fichiers",
+        "body": "ext4 / xfs / exfat / btrfs / zfs. Pour ZFS, indiquez aussi le nom du pool."
+      },
+      {
+        "title": "Revalidation et exécution",
+        "body": "Juste avant d’écrire, le script revérifie l’état du disque. Il s’arrête si le disque contient désormais un montage système, une partition swap active ou un membre du pool ZFS racine, ou si une VM ou un CT en cours d’exécution l’utilise. Les partitions de données montées sont démontées et les pools ZFS actifs sur le disque sont exportés. Ensuite, l’opération choisie s’exécute."
+      }
+    ]
+  },
+  "manual": {
+    "heading": "Équivalents manuels",
+    "body": "Si vous préférez exécuter les commandes équivalentes à la main :"
+  },
+  "troubleshoot": {
+    "notListedTitle": "Disque non listé dans le menu",
+    "notListedBody": "Il a été filtré pour la sécurité. Seuls les disques système sont masqués : un disque avec un montage système (<code>/</code>, <code>/boot</code>, <code>/usr</code>, <code>/var</code>…), une partition swap active ou un membre du pool ZFS racine, ou un périphérique en lecture seule. Les montages de données, les références d’invités et l’appartenance à ZFS / LVM / RAID ne masquent pas un disque. Exécutez <code>lsblk -f</code>, <code>swapon --show</code> et <code>zpool status</code> sur l’hôte pour comprendre pourquoi.",
+    "busyTitle": "\"Disk may be busy\" / échec du démontage",
+    "busyBody": "Quelque chose tient toujours un fichier ouvert sur une partition de ce disque — le plus souvent un conteneur ou un shell dont cwd est à l'intérieur d'un point de montage. Identifiez-le avec <code>lsof | grep /dev/sdX</code> ou <code>fuser -vm /dev/sdX1</code>, arrêtez-le, puis lancez l'outil."
+  },
+  "related": {
+    "heading": "Voir aussi",
+    "items": [
+      {
+        "href": "/docs/disk-manager/smart-disk-test",
+        "label": "Santé et test du disque SMART",
+        "tail": "— vérifier un disque avant / après l'essuyage pour confirmer qu'il est sain."
+      },
+      {
+        "href": "/docs/disk-manager/import-disk-vm",
+        "label": "Importer le disque vers la VM",
+        "tail": "— passer un disque fraîchement formaté à un VM."
+      },
+      {
+        "href": "/docs/storage-share/host-local-disk",
+        "label": "Ajouter le disque local comme stockage Proxmox",
+        "tail": " — enregistrer un disque essuyé comme stockage Proxmox pool."
+      },
+      {
+        "href": "/docs/help-info/storage-commands",
+        "label": "Commandes de stockage et de disques",
+        "tail": " — référence de lsblk, blkid et parted."
+      },
+      {
+        "href": "/docs/disk-manager",
+        "label": "Aperçu du gestionnaire de disque",
+        "tail": "."
+      }
+    ]
+  }
+}

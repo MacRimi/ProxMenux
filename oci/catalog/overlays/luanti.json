@@ -10,5 +10,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Luanti (formerly Minetest) is an open source voxel game-creation platform with easy modding and game creation"
+    },
+    "description": {
+      "en_US": "Luanti, formerly known as Minetest, is an open source voxel game-creation platform. It provides an extensible engine that allows users to play, create, and host voxel sandbox games. The platform supports deep customization through community mods, custom game modes, and user-generated content."
+    },
+    "tips": [
+      "Client and server must be the same version.",
+      "minetest_game is no longer included and must be installed via ContentDB if required."
+    ]
   }
 }

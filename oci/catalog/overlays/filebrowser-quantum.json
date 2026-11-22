@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Official image with managed persistent configuration and selectable content storage. Validated on amd64: clean install, authenticated login, same-digest recreation and interrupted-candidate recovery. Cross-release migration and arm64 runtime not tested."
+    },
+    "description": {
+      "en_US": "FileBrowser Quantum is a self-hosted web-based file manager. It provides an interface to access, upload, preview, and edit files across multiple storage sources. The application features user and permission management, real-time search, and customizable file sharing options."
+    },
+    "screenshots": [
+      "https://filebrowserquantum.com/images/generated/listing/view-mode-normal-dark.jpg",
+      "https://github.com/user-attachments/assets/fd1c1747-f30f-4e21-b991-f45744416d7e"
+    ]
+  }
+}

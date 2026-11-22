@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "COPS"
+    },
+    "tagline": {
+      "en_US": "Cops by Sébastien Lucas, now maintained by MikesPub, stands for Calibre OPDS (and HTML) Php Server."
+    },
+    "description": {
+      "en_US": "Cops (Calibre OPDS and HTML Php Server) is a lightweight alternative to Calibre's content server. It connects to an existing Calibre library database and provides an HTML web interface alongside an OPDS feed for mobile devices and e-readers. Users can search, view, download, and email e-books with minimal CPU and memory overhead. Any updates made to the underlying Calibre library are reflected immediately."
+    }
   }
 }

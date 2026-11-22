@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "The maintained jlesage MKVToolNix image with browser GUI, persistent settings and user-selectable shared storage."
+    },
+    "description": {
+      "en_US": "MKVToolNix is a suite of tools designed to create, alter, and inspect Matroska files. It enables users to multiplex, edit, and organize video, audio, and subtitle streams into MKV containers without re-encoding. The software provides an intuitive graphical interface alongside command-line utilities to inspect track headers, split files, and adjust container metadata."
+    }
+  }
+}

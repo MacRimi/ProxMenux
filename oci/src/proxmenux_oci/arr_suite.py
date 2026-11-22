@@ -85,6 +85,7 @@ def build_suite(template, ui, mode='advanced'):
         from .custom_mounts import ask_stack_custom_mounts
         ask_stack_custom_mounts(ui, drafts, storage)
     bridge = ask_bridge(ui, translate('Access bridge'), 'vmbr0', mode)
+    vlan_tag = access.ask_vlan_tag(quiet)
     reachable = [app for app in selected if app != 'unpackerr']
     labels, gateway = access.ask_addresses(ui, bridge, [app.capitalize() for app in reachable])
     addresses = dict(zip(reachable, labels.values()))
@@ -133,10 +134,12 @@ def build_suite(template, ui, mode='advanced'):
     if mode != DEFAULT_MODE:
         from .extra_devices import ask_stack_extra_devices
         ask_stack_extra_devices(ui, services)
+    from .stack_vmids import ask_service_vmids
+    selection = ask_service_vmids(ui, template, int(base) if base else None, mode, services)
     onboot = ui.confirm(translate('Start each LXC with Proxmox (no coordinated startup)'), False)
     for service in services:
         service['deployment']['onboot'] = onboot
-    return {'deployment_kind':'generic-multi-lxc-stack','suite_arr':True,'lifecycle_mode':'independent','stack_name':name,
+    return {**selection,'deployment_kind':'generic-multi-lxc-stack','suite_arr':True,'lifecycle_mode':'independent','stack_name':name,
             'base_vmid':int(base) if base else None,'services':services,'shared_media':shared,'media_player':player,
             'completion_notes':[
                 translate('Independent LXCs: no main container or hookscript. Each one keeps its own Start with Proxmox setting.'),
@@ -148,5 +151,5 @@ def build_suite(template, ui, mode='advanced'):
                 translate('Gluetun/VPN not yet available: this suite does not route downloads through a VPN.')
             ],
             'rootfs_storage':storage,'template_storage':cache,'onboot':onboot,'start_after_create':True,
-            'network':{'frontend_bridge':bridge,'frontend_gateway':gateway,'private_allocation':'automatic','private_bridge':'vmbr10',
+            'network':{'frontend_bridge':bridge,'frontend_gateway':gateway,**({'frontend_vlan_tag':vlan_tag} if vlan_tag else {}),'private_allocation':'automatic','private_bridge':'vmbr10',
                        'private_subnet':'10.77.0.0/24','private_host_address':'10.77.0.1/24'}}

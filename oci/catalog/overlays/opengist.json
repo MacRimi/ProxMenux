@@ -1,0 +1,14 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Self-hosted Git-powered pastebin for snippets with syntax highlighting, history, and optional Git-over-SSH access."
+    },
+    "description": {
+      "en_US": "Opengist is a self-hosted pastebin powered by Git. All snippets are stored in a Git repository and can be read and modified using standard Git commands or through the web interface. It provides syntax highlighting, markdown and CSV support, revision history, and code search capabilities. Users can create public, unlisted, or private snippets, as well as like, fork, and embed them."
+    },
+    "screenshots": [
+      "https://opengist.io/opengist-demo.png",
+      "https://opengist.io/opengist-demo-dark.png"
+    ]
+  }
+}

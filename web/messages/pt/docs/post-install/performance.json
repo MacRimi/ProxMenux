@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "title": "Pós-instalação: Desempenho | Documentação ProxMenux",
+    "description": "Opções de desempenho no script pós-instalação personalizável do ProxMenux. Substitui o gzip de uma só thread pelo pigz (gzip paralelo) para acelerar cópias de segurança e compressão em hosts com vários núcleos."
+  },
+  "header": {
+    "title": "Após a instalação: desempenho",
+    "description": "Opções de desempenho do script pós-instalação Personalizável. Esta categoria contém uma só otimização: substituir gzip por pigz para que as cópias de segurança e a compressão usem todos os núcleos da CPU em vez de um.",
+    "section": "Configurações pós-instalação do Proxmox"
+  },
+  "intro": {
+    "title": "O que esta categoria abrange",
+    "body": "A única opção de desempenho aqui redireciona o gzip para uma implementação paralela. Os outros ajustes de desempenho (memória, escalonamento de E/S, tamanho do ARC ZFS, limites do kernel) ficam nas respetivas categorias (<em>Sistema</em>, <em>Armazenamento</em>), pois afetam subsistemas diferentes."
+  },
+  "pigz": {
+    "heading": "Use pigz para compactação gzip mais rápida",
+    "intro": "O <code>gzip</code> normal comprime usando <strong>um só núcleo da CPU</strong>. Nos hosts Proxmox modernos com 8, 16 ou 32 núcleos, isto limita muito as cópias VM/CT com <code>vzdump</code>, a rotação de registos e tudo o que passa pelo <code>gzip</code>. O <a>pigz</a> é um substituto paralelo diretamente compatível: produz o mesmo formato gzip, mas distribui o trabalho por todos os núcleos.",
+    "doesTitle": "O que o ProxMenux faz",
+    "doesIntro": "Cinco passos, todos idempotentes:",
+    "doesItems": [
+      "Define <code>pigz: 1</code> em <code>/etc/vzdump.conf</code> para que a ferramenta de backup do Proxmox use pigz nativamente.",
+      "Instala o pacote apt <code>pigz</code> se ainda não estiver presente.",
+      "Cria um script wrapper em <code>/bin/pigzwrapper</code> que encaminha todos os argumentos para <code>/usr/bin/pigz</code>.",
+      "Registra um desvio de dpkg para o binário <code>gzip</code> do sistema (<code>/usr/bin/gzip</code> em Proxmox VE 9, <code>/bin/gzip</code> em Proxmox VE 8): o binário real é mantido ao lado dele como <code>gzip.distrib</code> e o invólucro toma o seu lugar. A partir de agora, <em> qualquer coisa</em> que chama <code>gzip</code> — logrotate, <code>tar czf</code>, scripts, vzdump — usa pigz de forma transparente.",
+      "Verifica que o arquivo mantido como <code>gzip.distrib</code> é um gzip funcional antes da embalagem ser colocada no lugar, e reinstala o pacote <code>gzip</code> primeiro quando não estiver. Uma máquina que ainda tenha o swap <code>/bin/gzip.original</code> anterior é movida para o desvio quando a opção é aplicada novamente."
+    ],
+    "replacesTitle": "Substitui um binário do sistema",
+    "replacesBody": "Colocar um wrapper no lugar do <code>gzip</code> é invulgar. É seguro porque produz saída compatível com gzip, mas scripts com caminhos fixos, executados em chroots restritivos ou que verificam hashes dos binários podem comportar-se de forma diferente. O binário original fica em <code>gzip.distrib</code>. Graças ao desvio dpkg, uma atualização do pacote <code>gzip</code> ou a passagem do Proxmox VE 8 para 9 atualiza esse ficheiro e mantém o wrapper.",
+    "revertTitle": "Reversível do menu Desinstalar",
+    "revertBody": "Esta otimização é registada. <link>Desinstalar otimizações</link> copia o binário original de <code>gzip.distrib</code> para o lugar do wrapper, remove o desvio e <code>pigzwrapper</code>, comenta a linha <code>pigz</code> em <code>/etc/vzdump.conf</code> e executa <code>apt purge pigz</code> após confirmar que o gzip funciona. Equivalente manual no Proxmox VE 9:",
+    "verifyTitle": "Verificação",
+    "verifyBody": "Após a aplicação, <code>gzip --version</code> deve mencionar pigz. Um benchmark rápido também mostra a diferença de velocidade em um host multi-core:",
+    "whenTitle": "Quando isto é mais importante",
+    "whenBody": "O benefício aumenta com o <strong>número de núcleos do host</strong> e a <strong>frequência das cópias de segurança</strong>. Num servidor doméstico de 2 núcleos com um vzdump diário, o ganho é marginal. Num host de produção com 16 núcleos que guarda uma dúzia de VMs todas as noites, o pigz pode reduzir a janela de cópia a uma fração do tempo do gzip de uma thread."
+  },
+  "related": {
+    "heading": "Relacionado",
+    "items": [
+      {
+        "label": "Comandos de backup e restauração",
+        "href": "/docs/help-info/backup-commands",
+        "tailRich": " — vzdump CLI, incluindo a opção de threads <code>--pigz</code>."
+      },
+      {
+        "label": "Armazenamento",
+        "href": "/docs/post-install/storage",
+        "tail": " — limites de velocidade vzdump e afinação ZFS ARC."
+      },
+      {
+        "label": "Sistema",
+        "href": "/docs/post-install/system",
+        "tail": " — ajuste de descritores de ficheiros e memória."
+      },
+      {
+        "label": "Pós-instalação personalizável",
+        "href": "/docs/post-install/customizable",
+        "tail": " — voltar ao menu superior."
+      }
+    ]
+  }
+}

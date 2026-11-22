@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web-based administration and development tool for PostgreSQL. It can run as a standalone service with its own configuration database; connect it to PostgreSQL servers when you are ready to manage them."
+    },
+    "description": {
+      "en_US": "pgAdmin 4 is an administration and development platform for PostgreSQL databases. It provides an interface to manage database objects, execute queries, and monitor server operations. It can be deployed as a web application accessible via a browser or run locally as a desktop program."
+    },
+    "screenshots": [
+      "https://www.pgadmin.org/static/COMPILED/assets/img/screenshot-light.png?e13d016a",
+      "https://www.pgadmin.org/static/COMPILED/assets/img/screenshot-dark.png?e13d016a",
+      "https://www.pgadmin.org/static/COMPILED/assets/img/screenshot-light.webp?e13d016a",
+      "https://www.pgadmin.org/static/COMPILED/assets/img/screenshot-dark.webp?e13d016a"
+    ]
+  }
+}

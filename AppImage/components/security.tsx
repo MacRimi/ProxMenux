@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
+import { OptionSelect } from "./option-select"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import {
@@ -14,9 +15,15 @@ import {
 } from "lucide-react"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
+import { OIDCSettings } from "./oidc-settings"
+import { PveAccountsSettings } from "./pve-accounts-settings"
+import { UsersSettings } from "./users-settings"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { SecureGatewaySetup } from "./secure-gateway-setup"
 import { useI18n } from "../lib/i18n/provider"
+import { useAccess } from "../lib/access"
+import { EDIT_CONTENT_CLASS, EditControls, EditableArea } from "./edit-controls"
+import { AccessLog } from "./access-log"
 
 interface ApiTokenEntry {
   id: string
@@ -66,7 +73,11 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
   return null
 }
 
-export function Security() {
+export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}) {
+  // Everyone keeps their own account here; the rest follows the profile.
+  const { capabilities } = useAccess()
+  // The access card is used only after Edit, as every settings card.
+  const [authEditing, setAuthEditing] = useState(false)
   const { language, t } = useI18n()
   const st = (key: string, params?: Record<string, string | number>) => t(`securityPage.${key}`, params)
   const interfaceTypeLabel = (type: string) =>
@@ -76,6 +87,8 @@ export function Security() {
   const authErrorText = (message: unknown, fallbackKey: string) => {
     const raw = typeof message === "string" ? message : ""
     const normalized = raw.toLowerCase()
+    if (raw === "setup_code_invalid") return t("authSetup.codeInvalid")
+    if (raw === "setup_code_rate_limited") return t("authSetup.codeRateLimited")
     if (normalized.includes("authentication is already configured")) {
       return st("errors.authAlreadyConfigured")
     }
@@ -94,6 +107,12 @@ export function Security() {
     return raw || st(fallbackKey)
   }
   const [authEnabled, setAuthEnabled] = useState(false)
+  // How the Monitor is reached without a password: read-only or open.
+  const [accessMode, setAccessMode] = useState<string>("password")
+  const [setupCodeRequired, setSetupCodeRequired] = useState(false)
+  const [setupCode, setSetupCode] = useState("")
+  const [choosingMode, setChoosingMode] = useState(false)
+  const [openingFromReadOnly, setOpeningFromReadOnly] = useState(false)
   const [totpEnabled, setTotpEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -177,7 +196,7 @@ export function Security() {
     installed: boolean; active: boolean; version: string; jails: string[]; banned_ips_count: number
   } | null>(null)
   const [lynisInfo, setLynisInfo] = useState<{
-    installed: boolean; version: string; last_scan: string | null; hardening_index: number | null
+    installed: boolean; managed?: boolean; version: string; last_scan: string | null; hardening_index: number | null
   } | null>(null)
   const [showFail2banInstaller, setShowFail2banInstaller] = useState(false)
   const [showLynisInstaller, setShowLynisInstaller] = useState(false)
@@ -292,9 +311,11 @@ export function Security() {
     checkAuthStatus()
     loadApiTokens()
     loadSslStatus()
-    loadFirewallStatus()
-    loadNetworkInterfaces()
-    loadSecurityTools()
+    if (hostType === "pve") {
+      loadFirewallStatus()
+      loadNetworkInterfaces()
+      loadSecurityTools()
+    }
   }, [])
 
   const loadFirewallStatus = async () => {
@@ -390,7 +411,9 @@ export function Security() {
         loadSecurityTools()
         setLynisReport(null)
       } else {
-        setError(data.outcome === "no_files" ? st("errors.lynisUninstallNoFiles") : data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
+        setError(data.outcome === "no_files" ? st("errors.lynisUninstallNoFiles")
+          : data.outcome === "not_managed" ? st("lynis.installedOutside")
+          : data.partial ? st("errors.lynisRemovalPartial") : st("errors.lynisRemovalUnconfirmed"))
       }
     } catch (err) {
       const body = err instanceof Error && "body" in err ? err.body as { partial?: boolean } | undefined : undefined
@@ -869,10 +892,62 @@ export function Security() {
       if (!contentType || !contentType.includes("application/json")) return
       
       const data = await response.json()
-      setAuthEnabled(data.auth_enabled || false)
+      setAuthEnabled(data.local_account ?? data.auth_enabled ?? false)
+      setAccessMode(data.access_mode || (data.auth_enabled ? "password" : "open"))
+      setSetupCodeRequired(!!data.setup_code_required)
       setTotpEnabled(data.totp_enabled || false)
     } catch {
       // API not available (preview environment)
+    }
+  }
+
+  // An open Monitor can become read-only at any time; leaving read-only
+  // goes through a password, which asks for the setup code.
+  const handleUseReadOnly = async () => {
+    setLoading(true)
+    setError("")
+    setSuccess("")
+    try {
+      const sessionToken = localStorage.getItem("proxmenux-auth-token")
+      const response = await fetch(getApiUrl("/api/auth/mode"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}) },
+        body: JSON.stringify({ mode: "read_only" }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(authErrorText(data.error || data.message, "errors.disableAuthRetry"))
+      }
+      setSuccess(st("messages.readOnlyReloading"))
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : st("errors.disableAuthRetry"))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Leaving read-only for open asks for the setup code, as a password does.
+  const handleOpenFromReadOnly = async () => {
+    setLoading(true)
+    setError("")
+    setSuccess("")
+    try {
+      const response = await fetch(getApiUrl("/api/auth/mode"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "open", setup_code: setupCode }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(authErrorText(data.error || data.message, "errors.disableAuthRetry"))
+      }
+      setSuccess(st("messages.authDisabledReloading"))
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : st("errors.disableAuthRetry"))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -899,13 +974,15 @@ export function Security() {
     setLoading(true)
 
     try {
+      const sessionToken = localStorage.getItem("proxmenux-auth-token")
       const response = await fetch(getApiUrl("/api/auth/setup"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}) },
         body: JSON.stringify({
           username,
           password,
           enable_auth: true,
+          setup_code: setupCode,
         }),
       })
 
@@ -924,6 +1001,9 @@ export function Security() {
       setUsername("")
       setPassword("")
       setConfirmPassword("")
+      setSetupCode("")
+      // What this session can do changes with the account: load it again.
+      setTimeout(() => window.location.reload(), 1000)
     } catch (err) {
       setError(err instanceof Error ? err.message : st("errors.enableAuthFailed"))
     } finally {
@@ -931,15 +1011,7 @@ export function Security() {
     }
   }
 
-  const handleDisableAuth = async () => {
-    if (
-      !confirm(
-        st("confirm.disableAuth"),
-      )
-    ) {
-      return
-    }
-
+  const handleDisableAuth = async (mode: "read_only" | "open") => {
     setLoading(true)
     setError("")
     setSuccess("")
@@ -952,6 +1024,7 @@ export function Security() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({ mode }),
       })
 
       const data = await response.json()
@@ -1855,13 +1928,25 @@ ${(report.sections && report.sections.length > 0) ? `
       {/* Authentication Settings */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-500" />
-            <CardTitle>{st("auth.title")}</CardTitle>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-blue-500" />
+              <CardTitle>{st("auth.title")}</CardTitle>
+            </div>
+            {/* Every action here confirms on its own: nothing waits for Save. */}
+            <EditControls editing={authEditing} showSave={false} onEdit={() => setAuthEditing(true)}
+              onCancel={() => {
+                setAuthEditing(false)
+                setShowChangePassword(false)
+                setChoosingMode(false)
+                setShowSetupForm(false)
+                setError("")
+              }} />
           </div>
           <CardDescription>{st("auth.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={authEditing ? EDIT_CONTENT_CLASS : undefined}>
+          <EditableArea editing={authEditing} className="space-y-4">
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -1886,14 +1971,16 @@ ${(report.sections && report.sections.length > 0) ? `
               <div>
                 <p className="font-medium">{st("auth.statusTitle")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {authEnabled ? st("auth.passwordEnabled") : st("auth.noPasswordProtection")}
+                  {authEnabled ? st("auth.passwordEnabled")
+                    : accessMode === "read_only" ? st("auth.readOnlyMode")
+                    : accessMode === "proxmox" ? st("auth.pveMode") : st("auth.noPasswordProtection")}
                 </p>
               </div>
             </div>
             <div
               className={`px-3 py-1 rounded-full text-sm font-medium ${authEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}
             >
-              {authEnabled ? st("values.enabled") : st("values.disabled")}
+              {authEnabled ? st("values.enabled") : accessMode === "read_only" ? st("values.readOnly") : st("values.disabled")}
             </div>
           </div>
 
@@ -1905,16 +1992,80 @@ ${(report.sections && report.sections.length > 0) ? `
                   {st("auth.enableHint")}
                 </p>
               </div>
-              <Button onClick={() => setShowSetupForm(true)} className="bg-blue-500 hover:bg-blue-600">
-                <Shield className="h-4 w-4 mr-2" />
-                {st("auth.enable")}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setShowSetupForm(true)} className="bg-blue-500 hover:bg-blue-600">
+                  <Shield className="h-4 w-4 mr-2" />
+                  {st("auth.enable")}
+                </Button>
+                {(accessMode === "open" || accessMode === "proxmox") && (
+                  <Button onClick={handleUseReadOnly} variant="outline" disabled={loading}>
+                    {st("auth.useReadOnly")}
+                  </Button>
+                )}
+                {accessMode === "proxmox" && (
+                  <Button onClick={() => handleDisableAuth("open")} variant="outline" disabled={loading}
+                    className="border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-500">
+                    {t("authSetup.chooseOpen")}
+                  </Button>
+                )}
+                {accessMode === "read_only" && !openingFromReadOnly && (
+                  <Button onClick={() => setOpeningFromReadOnly(true)} variant="outline" disabled={loading}>
+                    {t("authSetup.chooseOpen")}
+                  </Button>
+                )}
+              </div>
+              {accessMode === "read_only" && openingFromReadOnly && (
+                <div className="space-y-3 border border-red-500/30 bg-red-500/5 rounded-lg p-4">
+                  <p className="text-sm">{t("authSetup.openDescription")}</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="open-setup-code">{t("authSetup.setupCode")}</Label>
+                    <Input
+                      id="open-setup-code"
+                      type="text"
+                      placeholder="XXXX-XXXX-XXXX"
+                      value={setupCode}
+                      onChange={(e) => setSetupCode(e.target.value)}
+                      className="font-mono uppercase tracking-wider"
+                      disabled={loading}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <p className="text-xs text-muted-foreground">{t("authSetup.setupCodeHint")}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={handleOpenFromReadOnly} variant="destructive" disabled={loading}>
+                      {t("authSetup.chooseOpen")}
+                    </Button>
+                    <Button onClick={() => setOpeningFromReadOnly(false)} variant="outline" disabled={loading}>
+                      {t("actions.cancel")}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {!authEnabled && showSetupForm && (
             <div className="space-y-4 border border-border rounded-lg p-4">
               <h3 className="font-semibold">{st("auth.setupTitle")}</h3>
+
+              {setupCodeRequired && (
+                <div className="space-y-2">
+                  <Label htmlFor="setup-code">{t("authSetup.setupCode")}</Label>
+                  <Input
+                    id="setup-code"
+                    type="text"
+                    placeholder="XXXX-XXXX-XXXX"
+                    value={setupCode}
+                    onChange={(e) => setSetupCode(e.target.value)}
+                    className="font-mono uppercase tracking-wider"
+                    disabled={loading}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <p className="text-xs text-muted-foreground">{t("authSetup.setupCodeHint")}</p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="setup-username">{st("auth.username")}</Label>
@@ -2177,13 +2328,41 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
               )}
 
-              <Button onClick={handleDisableAuth} variant="destructive" disabled={loading}>
-                {st("auth.disable")}
-              </Button>
+              {capabilities.admin && (!choosingMode ? (
+                <Button onClick={() => setChoosingMode(true)} variant="destructive" disabled={loading}>
+                  {st("auth.disable")}
+                </Button>
+              ) : (
+                <div className="space-y-3 border border-border rounded-lg p-4">
+                  <p className="text-sm">{st("auth.disableChoose")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => handleDisableAuth("read_only")} className="bg-blue-500 hover:bg-blue-600" disabled={loading}>
+                      {t("authSetup.chooseReadOnly")}
+                    </Button>
+                    <Button onClick={() => handleDisableAuth("open")} variant="destructive" disabled={loading}>
+                      {t("authSetup.chooseOpen")}
+                    </Button>
+                    <Button onClick={() => setChoosingMode(false)} variant="outline" disabled={loading}>
+                      {t("actions.cancel")}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("authSetup.openDescription")}</p>
+                </div>
+              ))}
             </div>
           )}
+          </EditableArea>
         </CardContent>
       </Card>
+
+      <UsersSettings />
+
+      {/* Read-only access can still switch to Proxmox VE accounts with the setup code. */}
+      {(capabilities.admin || accessMode === "read_only") && <PveAccountsSettings />}
+
+      {capabilities.admin && <OIDCSettings />}
+
+      <AccessLog />
 
       {/* SSL/HTTPS Configuration */}
       <Card>
@@ -2237,7 +2416,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <p><span className="font-medium text-foreground">{st("ssl.key")}:</span> <code className="text-xs">{sslKeyPath}</code></p>
                   </div>
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <Button
+                    {capabilities.admin && (<Button
                       onClick={handleReloadSsl}
                       variant="outline"
                       size="sm"
@@ -2245,8 +2424,8 @@ ${(report.sections && report.sections.length > 0) ? `
                     >
                       <RefreshCw className={`h-4 w-4 mr-2 ${reloadingSsl ? "animate-spin" : ""}`} />
                       {reloadingSsl ? st("ssl.updatingCertificate") : st("ssl.updateCertificate")}
-                    </Button>
-                    <Button
+                    </Button>)}
+                    {capabilities.admin && (<Button
                       onClick={handleDisableSsl}
                       variant="outline"
                       size="sm"
@@ -2254,7 +2433,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       className="text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
                     >
                       {configuringSsl ? st("ssl.disabling") : sslRestarting ? st("ssl.restarting") : st("ssl.disableHttps")}
-                    </Button>
+                    </Button>)}
                   </div>
                 </div>
               )}
@@ -2287,7 +2466,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     </div>
                   )}
 
-                  <Button
+                  {capabilities.admin && (<Button
                     onClick={() => handleEnableSsl("proxmox")}
                     className="bg-green-600 hover:bg-green-700 text-white"
                     disabled={configuringSsl || sslRestarting}
@@ -2303,7 +2482,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         {st("ssl.useProxmoxCertificate")}
                       </>
                     )}
-                  </Button>
+                  </Button>)}
                 </div>
               )}
 
@@ -2320,13 +2499,13 @@ ${(report.sections && report.sections.length > 0) ? `
               {!sslEnabled && (
                 <div className="space-y-3">
                   {!showCustomCertForm ? (
-                    <Button
+                    capabilities.admin && (<Button
                       onClick={() => setShowCustomCertForm(true)}
                       variant="outline"
                     >
                       <FileKey className="h-4 w-4 mr-2" />
                       {st("ssl.useCustomCertificate")}
-                    </Button>
+                    </Button>)
                   ) : (
                     <div className="space-y-4 border border-border rounded-lg p-4">
                       <h3 className="font-semibold text-sm">{st("ssl.customPaths")}</h3>
@@ -2449,7 +2628,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <li>
                       {st("apiTokens.seeGuideBefore")}{" "}
                       <a
-                        href="https://proxmenux.com/docs/monitor/integrations"
+                        href={`https://proxmenux.com/${language}/docs/monitor/integrations/`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-blue-200 hover:text-blue-100 underline underline-offset-2"
@@ -2778,6 +2957,7 @@ ${(report.sections && report.sections.length > 0) ? `
       )}
 
       {/* ── Proxmox VE Security Group ── */}
+      {hostType === "pve" && <>
       <div className="flex items-center gap-3 mt-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-orange-500">Proxmox VE</h2>
         <div className="flex-1 h-px bg-orange-500/20" />
@@ -2839,7 +3019,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       </p>
                     </div>
                   </div>
-                  <Button
+                  {capabilities.admin && (<Button
                     variant="outline"
                     size="sm"
                     disabled={firewallAction}
@@ -2854,7 +3034,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     ) : (
                       <><Power className="h-3.5 w-3.5 mr-1" /> {st("values.enable")}</>
                     )}
-                  </Button>
+                  </Button>)}
                 </div>
 
                 {/* Host Firewall */}
@@ -2870,7 +3050,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       </p>
                     </div>
                   </div>
-                  <Button
+                  {capabilities.admin && (<Button
                     variant="outline"
                     size="sm"
                     disabled={firewallAction}
@@ -2885,7 +3065,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     ) : (
                       <><Power className="h-3.5 w-3.5 mr-1" /> {st("values.enable")}</>
                     )}
-                  </Button>
+                  </Button>)}
                 </div>
               </div>
 
@@ -2911,7 +3091,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         <p className="text-xs text-muted-foreground">{st("firewall.port8008")}</p>
                       </div>
                     </div>
-                    <Button
+                    {capabilities.admin && (<Button
                       variant="outline"
                       size="sm"
                       disabled={firewallAction}
@@ -2922,7 +3102,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       }`}
                     >
                       {firewallData.monitor_port_open ? st("values.remove") : st("values.allow")}
-                    </Button>
+                    </Button>)}
                   </div>
 
                   {/* Proxmox Web UI hint */}
@@ -3038,7 +3218,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   <h3 className="text-sm font-semibold text-muted-foreground">
                     {st("firewall.rules", { count: firewallData.rules_count })}
                   </h3>
-                  <Button
+                  {capabilities.admin && (<Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowAddRule(!showAddRule)}
@@ -3046,7 +3226,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     {st("firewall.addRule")}
-                  </Button>
+                  </Button>)}
                 </div>
 
                 {/* Add Rule Form */}
@@ -3096,38 +3276,24 @@ ${(report.sections && report.sections.length > 0) ? `
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.direction")}</Label>
-                        <select
-                          value={newRule.direction}
-                          onChange={(e) => setNewRule({...newRule, direction: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="IN">IN ({st("firewall.incomingLower")})</option>
-                          <option value="OUT">OUT ({st("firewall.outgoingLower")})</option>
-                        </select>
+                        <OptionSelect value={newRule.direction} onChange={direction => setNewRule({...newRule, direction})}
+                          ariaLabel={st("firewall.fields.direction")} className="bg-card"
+                          options={[{ value: "IN", label: `IN (${st("firewall.incomingLower")})` },
+                                    { value: "OUT", label: `OUT (${st("firewall.outgoingLower")})` }]} />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.action")}</Label>
-                        <select
-                          value={newRule.action}
-                          onChange={(e) => setNewRule({...newRule, action: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="ACCEPT">ACCEPT ({st("firewall.allowLower")})</option>
-                          <option value="DROP">DROP ({st("firewall.blockSilentlyLower")})</option>
-                          <option value="REJECT">REJECT ({st("firewall.blockWithResponseLower")})</option>
-                        </select>
+                        <OptionSelect value={newRule.action} onChange={action => setNewRule({...newRule, action})}
+                          ariaLabel={st("firewall.fields.action")} className="bg-card"
+                          options={[{ value: "ACCEPT", label: `ACCEPT (${st("firewall.allowLower")})` },
+                                    { value: "DROP", label: `DROP (${st("firewall.blockSilentlyLower")})` },
+                                    { value: "REJECT", label: `REJECT (${st("firewall.blockWithResponseLower")})` }]} />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.protocol")}</Label>
-                        <select
-                          value={newRule.protocol}
-                          onChange={(e) => setNewRule({...newRule, protocol: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="tcp">TCP</option>
-                          <option value="udp">UDP</option>
-                          <option value="icmp">ICMP (ping)</option>
-                        </select>
+                        <OptionSelect value={newRule.protocol} onChange={protocol => setNewRule({...newRule, protocol})}
+                          ariaLabel={st("firewall.fields.protocol")} className="bg-card"
+                          options={[{ value: "tcp", label: "TCP" }, { value: "udp", label: "UDP" }, { value: "icmp", label: "ICMP (ping)" }]} />
                       </div>
                     </div>
 
@@ -3157,29 +3323,18 @@ ${(report.sections && report.sections.length > 0) ? `
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.interfaceOptional")}</Label>
-                        <select
-                          value={newRule.iface}
-                          onChange={(e) => setNewRule({...newRule, iface: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="">{st("firewall.anyInterface")}</option>
-                          {networkInterfaces.map((iface) => (
-                            <option key={iface.name} value={iface.name}>
-                              {iface.name} ({interfaceTypeLabel(iface.type)}{iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})
-                            </option>
-                          ))}
-                        </select>
+                        <OptionSelect value={newRule.iface} onChange={iface => setNewRule({...newRule, iface})}
+                          ariaLabel={st("firewall.fields.interfaceOptional")} className="bg-card"
+                          options={[{ value: "", label: st("firewall.anyInterface") },
+                                    ...networkInterfaces.map(iface => ({ value: iface.name,
+                                      label: `${iface.name} (${interfaceTypeLabel(iface.type)}${iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})` }))]} />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">{st("firewall.fields.applyTo")}</Label>
-                        <select
-                          value={newRule.level}
-                          onChange={(e) => setNewRule({...newRule, level: e.target.value})}
-                          className="w-full h-9 rounded-md border border-border bg-card px-3 text-sm"
-                        >
-                          <option value="host">{st("firewall.hostFirewallThisNode")}</option>
-                          <option value="cluster">{st("firewall.clusterFirewallAllNodes")}</option>
-                        </select>
+                        <OptionSelect value={newRule.level} onChange={level => setNewRule({...newRule, level})}
+                          ariaLabel={st("firewall.fields.applyTo")} className="bg-card"
+                          options={[{ value: "host", label: st("firewall.hostFirewallThisNode") },
+                                    { value: "cluster", label: st("firewall.clusterFirewallAllNodes") }]} />
                       </div>
                     </div>
 
@@ -3308,29 +3463,21 @@ ${(report.sections && report.sections.length > 0) ? `
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.direction")}</Label>
-                                        <select value={editRule.direction} onChange={(e) => setEditRule({ ...editRule, direction: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="IN">IN</option>
-                                          <option value="OUT">OUT</option>
-                                        </select>
+                                        <OptionSelect value={editRule.direction} onChange={direction => setEditRule({ ...editRule, direction })}
+                                          ariaLabel={st("firewall.fields.direction")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "IN", label: "IN" }, { value: "OUT", label: "OUT" }]} />
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.action")}</Label>
-                                        <select value={editRule.action} onChange={(e) => setEditRule({ ...editRule, action: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="ACCEPT">ACCEPT</option>
-                                          <option value="DROP">DROP</option>
-                                          <option value="REJECT">REJECT</option>
-                                        </select>
+                                        <OptionSelect value={editRule.action} onChange={action => setEditRule({ ...editRule, action })}
+                                          ariaLabel={st("firewall.fields.action")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "ACCEPT", label: "ACCEPT" }, { value: "DROP", label: "DROP" }, { value: "REJECT", label: "REJECT" }]} />
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.protocol")}</Label>
-                                        <select value={editRule.protocol} onChange={(e) => setEditRule({ ...editRule, protocol: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="tcp">TCP</option>
-                                          <option value="udp">UDP</option>
-                                          <option value="icmp">ICMP</option>
-                                        </select>
+                                        <OptionSelect value={editRule.protocol} onChange={protocol => setEditRule({ ...editRule, protocol })}
+                                          ariaLabel={st("firewall.fields.protocol")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "tcp", label: "TCP" }, { value: "udp", label: "UDP" }, { value: "icmp", label: "ICMP" }]} />
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.port")}</Label>
@@ -3346,15 +3493,10 @@ ${(report.sections && report.sections.length > 0) ? `
                                       </div>
                                       <div>
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.interface")}</Label>
-                                        <select value={editRule.iface} onChange={(e) => setEditRule({ ...editRule, iface: e.target.value })}
-                                          className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 mt-0.5">
-                                          <option value="">{st("firewall.any")}</option>
-                                          {networkInterfaces.map((iface) => (
-                                            <option key={iface.name} value={iface.name}>
-                                              {iface.name} ({interfaceTypeLabel(iface.type)})
-                                            </option>
-                                          ))}
-                                        </select>
+                                        <OptionSelect value={editRule.iface} onChange={iface => setEditRule({ ...editRule, iface })}
+                                          ariaLabel={st("firewall.fields.interface")} className="h-8 text-xs bg-background mt-0.5"
+                                          options={[{ value: "", label: st("firewall.any") },
+                                                    ...networkInterfaces.map(iface => ({ value: iface.name, label: `${iface.name} (${interfaceTypeLabel(iface.type)})` }))]} />
                                       </div>
                                       <div className="col-span-2 sm:col-span-1">
                                         <Label className="text-[10px] text-muted-foreground uppercase">{st("firewall.fields.comment")}</Label>
@@ -3427,7 +3569,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                     <div className="flex items-center justify-between pt-2 border-t border-border/50">
                                       <code className="text-[10px] text-muted-foreground/60 font-mono truncate max-w-[50%]">{rule.raw}</code>
                                       <div className="flex items-center gap-2">
-                                        <Button
+                                        {capabilities.admin && (<Button
                                           variant="outline"
                                           size="sm"
                                           onClick={(e) => { e.stopPropagation(); startEditRule(rule) }}
@@ -3435,8 +3577,8 @@ ${(report.sections && report.sections.length > 0) ? `
                                         >
                                           <Pencil className="h-3 w-3 mr-1" />
                                           {t("actions.edit")}
-                                        </Button>
-                                        <Button
+                                        </Button>)}
+                                        {capabilities.admin && (<Button
                                           variant="outline"
                                           size="sm"
                                           onClick={(e) => { e.stopPropagation(); handleDeleteRule(rule.rule_index, rule.source_file) }}
@@ -3449,7 +3591,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                             <Trash2 className="h-3 w-3 mr-1" />
                                           )}
                                           {st("values.delete")}
-                                        </Button>
+                                        </Button>)}
                                       </div>
                                     </div>
                                   </>
@@ -3475,7 +3617,8 @@ ${(report.sections && report.sections.length > 0) ? `
       </Card>
 
       {/* Secure Gateway */}
-      <SecureGatewaySetup />
+      {/* Secure Gateway is an app: it belongs to the Apps area. */}
+      {capabilities.areas.apps && <SecureGatewaySetup />}
 
       {/* Fail2Ban */}
       <Card>
@@ -3498,7 +3641,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     {t("actions.refresh")}
                   </Button>
                 )}
-                <Button
+                {capabilities.admin && (<Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowFail2banUninstallConfirm(true)}
@@ -3511,7 +3654,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <Trash2 className="h-4 w-4 mr-2" />
                   )}
                   {st("values.uninstall")}
-                </Button>
+                </Button>)}
               </div>
             )}
           </div>
@@ -3553,13 +3696,13 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
               </div>
 
-              <Button
+              {capabilities.execute && (<Button
                 onClick={() => setShowFail2banInstaller(true)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {st("fail2ban.installConfigure")}
-              </Button>
+              </Button>)}
             </div>
           ) : (
             /* --- INSTALLED --- */
@@ -3596,7 +3739,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           <p className="text-xs text-muted-foreground mt-0.5">{st("fail2ban.trustedNetworks.description")}</p>
                         </div>
                       </div>
-                      <Button
+                      {capabilities.admin && (<Button
                         variant="outline"
                         size="sm"
                         onClick={() => { setF2bShowTrustedForm(!f2bShowTrustedForm); setF2bTrustedNotice(null) }}
@@ -3604,7 +3747,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       >
                         <Plus className="h-3 w-3 mr-1" />
                         {st("fail2ban.trustedNetworks.addRule")}
-                      </Button>
+                      </Button>)}
                     </div>
 
                     {f2bTrustedNotice && (
@@ -3682,13 +3825,13 @@ ${(report.sections && report.sections.length > 0) ? `
                               <div className="flex gap-2 sm:justify-end shrink-0">
                                 {!entry.protected ? (
                                   <>
-                                  <Button variant="outline" size="sm" onClick={() => { setF2bEditingTrusted(entry.value); setF2bTrustedEditInput(entry.value); setF2bTrustedNotice(null) }} className="h-7 text-xs text-blue-400 border-blue-400/30 hover:bg-blue-400/10 bg-transparent">
+                                  {capabilities.admin && (<Button variant="outline" size="sm" onClick={() => { setF2bEditingTrusted(entry.value); setF2bTrustedEditInput(entry.value); setF2bTrustedNotice(null) }} className="h-7 text-xs text-blue-400 border-blue-400/30 hover:bg-blue-400/10 bg-transparent">
                                     <Pencil className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.edit")}
-                                  </Button>
-                                  <Button variant="outline" size="sm" onClick={() => handleRemoveTrustedNetwork(entry.value)} disabled={f2bRemovingTrusted === entry.value} className="h-7 text-xs text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent">
+                                  </Button>)}
+                                  {capabilities.admin && (<Button variant="outline" size="sm" onClick={() => handleRemoveTrustedNetwork(entry.value)} disabled={f2bRemovingTrusted === entry.value} className="h-7 text-xs text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent">
                                     {f2bRemovingTrusted === entry.value ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />}
                                     {st("fail2ban.trustedNetworks.delete")}
-                                  </Button>
+                                  </Button>)}
                                   </>
                                 ) : (
                                   <span className="inline-flex items-center text-[10px] text-muted-foreground"><Lock className="h-3 w-3 mr-1" />{st("fail2ban.trustedNetworks.required")}</span>
@@ -3748,7 +3891,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               </p>
                             </div>
                           </div>
-                          <Button
+                          {capabilities.admin && (<Button
                             size="sm"
                             disabled={f2bApplyingJails}
                             onClick={handleApplyMissingJails}
@@ -3760,7 +3903,7 @@ ${(report.sections && report.sections.length > 0) ? `
                               <Shield className="h-3.5 w-3.5 mr-1.5" />
                             )}
                             {st("fail2ban.applyMissingJails")}
-                          </Button>
+                          </Button>)}
                         </div>
                       </div>
                     )
@@ -3824,7 +3967,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                   {st("fail2ban.window")}: <span className="text-foreground font-medium">{formatBanTime(jail.findtime)}</span>
                                 </span>
                               </div>
-                              <Button
+                              {capabilities.admin && (<Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => f2bEditingJail === jail.name ? setF2bEditingJail(null) : openJailConfig(jail)}
@@ -3832,7 +3975,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                 title={st("fail2ban.configureJailSettings")}
                               >
                                 <Settings className="h-3.5 w-3.5" />
-                              </Button>
+                              </Button>)}
                             </div>
                           </div>
 
@@ -3985,7 +4128,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                           {entry.type === "local" ? "LAN" : entry.type === "external" ? st("values.external") : t("common.unknown")}
                                         </span>
                                       </div>
-                                      <Button
+                                      {capabilities.admin && (<Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleUnbanIp(jail.name, entry.ip)}
@@ -4000,7 +4143,7 @@ ${(report.sections && report.sections.length > 0) ? `
                                             {st("fail2ban.unban")}
                                           </>
                                         )}
-                                      </Button>
+                                      </Button>)}
                                     </div>
                                   ))}
                                 </div>
@@ -4075,8 +4218,9 @@ ${(report.sections && report.sections.length > 0) ? `
               <Search className="h-5 w-5 text-cyan-500" />
               <CardTitle>{st("lynis.title")}</CardTitle>
             </div>
-            {lynisInfo?.installed && (
-              <Button
+            {/* ProxMenux removes only the copy it installed. */}
+            {lynisInfo?.installed && lynisInfo.managed !== false && (
+              capabilities.execute && (<Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowLynisUninstallConfirm(true)}
@@ -4089,7 +4233,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   <Trash2 className="h-4 w-4 mr-2" />
                 )}
                 {st("values.uninstall")}
-              </Button>
+              </Button>)
             )}
           </div>
           <CardDescription>
@@ -4128,13 +4272,13 @@ ${(report.sections && report.sections.length > 0) ? `
                 </div>
               </div>
 
-              <Button
+              {capabilities.execute && (<Button
                 onClick={() => setShowLynisInstaller(true)}
                 className="bg-cyan-600 hover:bg-cyan-700 text-white"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {st("lynis.install")}
-              </Button>
+              </Button>)}
             </div>
           ) : (
             <div className="space-y-4">
@@ -4146,7 +4290,7 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
                   <div>
                     <p className="font-medium">Lynis {lynisInfo.version}</p>
-                    <p className="text-sm text-muted-foreground">{st("lynis.installedDescription")}</p>
+                    <p className="text-sm text-muted-foreground">{st(lynisInfo.managed === false ? "lynis.installedOutside" : "lynis.installedDescription")}</p>
                   </div>
                 </div>
                 <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-500/10 text-green-500">
@@ -4372,7 +4516,7 @@ ${(report.sections && report.sections.length > 0) ? `
                         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${lynisShowReport ? "rotate-180" : ""}`} />
                         {/* Delete button separated with divider to prevent accidental clicks */}
                         <div className="hidden sm:block w-px h-5 bg-border mx-1" />
-                        <Button
+                        {capabilities.execute && (<Button
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -4403,7 +4547,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           title={st("lynis.deleteReport")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button>)}
                       </div>
                     </button>
 
@@ -4684,7 +4828,7 @@ ${(report.sections && report.sections.length > 0) ? `
               )}
 
               {/* Run audit button - at the bottom */}
-              <Button
+              {capabilities.execute && (<Button
                 onClick={handleRunLynisAudit}
                 disabled={lynisAuditRunning}
                 className="bg-cyan-600 hover:bg-cyan-700 text-white"
@@ -4700,7 +4844,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     {st("lynis.runAudit")}
                   </>
                 )}
-              </Button>
+              </Button>)}
             </div>
           )}
         </CardContent>
@@ -4832,6 +4976,8 @@ ${(report.sections && report.sections.length > 0) ? `
           </div>
         </div>
       )}
+
+      </>}
 
       <TwoFactorSetup
         open={show2FASetup}

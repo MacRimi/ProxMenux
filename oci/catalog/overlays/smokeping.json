@@ -16,5 +16,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "title": {
+      "en_US": "SmokePing"
+    },
+    "tagline": {
+      "en_US": "Smokeping keeps track of your network latency. For a full example of what this application is capable of visit UCDavis."
+    },
+    "description": {
+      "en_US": "Smokeping is a network monitoring tool designed to track and record network latency. It actively probes configured network targets to measure round-trip times and packet loss, generating visual graphs to illustrate connection quality over time. It helps administrators identify performance degradation, intermittent outages, and overall network health."
+    }
   }
 }

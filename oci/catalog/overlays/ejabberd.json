@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "An XMPP server for messaging and federation using the official ProcessOne image. The profile exposes port 5222 for XMPP and port 5280 for the web admin; the default XMPP domain is localhost and should be changed before external use."
+    },
+    "description": {
+      "en_US": "ejabberd is an open-source realtime communication platform built using Erlang/OTP. It functions as an XMPP server, an MQTT broker, and a SIP service. The platform is designed for scalable and extensible real-time messaging and data exchange."
+    }
+  }
+}

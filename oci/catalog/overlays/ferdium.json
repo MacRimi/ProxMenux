@@ -19,5 +19,31 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Ferdium is a desktop app that helps you organize how you use your favourite apps by combining them into one application."
+    },
+    "description": {
+      "en_US": "Ferdium is an application organizer that combines multiple communication and web services into a single unified window. It brings together messaging platforms, productivity tools, and web applications so they can be accessed from one place. This helps streamline daily workflows and declutters separate browser tabs and desktop programs."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/ferdium/ferdium-app/HEAD/branding/screenshots/workspaces.png",
+      "https://raw.githubusercontent.com/ferdium/ferdium-app/HEAD/branding/screenshots/todos.png",
+      "https://raw.githubusercontent.com/ferdium/ferdium-app/HEAD/branding/screenshots/service-store.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

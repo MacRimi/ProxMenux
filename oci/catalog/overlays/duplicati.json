@@ -58,6 +58,56 @@
         "prompt": "Password of the Duplicati web interface",
         "source": "linuxserver-compose"
       }
+    ],
+    "volumes": [
+      {
+        "id": "volume-0",
+        "container_path": "/config",
+        "compose_source_example": "/path/to/duplicati/config",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        }
+      },
+      {
+        "id": "volume-1",
+        "container_path": "/backups",
+        "compose_source_example": "/path/to/backups",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/source",
+        "compose_source_example": "/path/to/source",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "host-bind",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        }
+      }
     ]
   },
   "proxmox": {
@@ -95,5 +145,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups."
+    },
+    "description": {
+      "en_US": "Duplicati is an open-source backup client that creates encrypted, incremental, and compressed backups. It sends backup archives to remote file servers and major cloud storage providers using AES-256 encryption or GNU Privacy Guard. The application includes a built-in scheduler for automated routines, along with customizable filters, retention rules, and bandwidth limits."
+    },
+    "screenshots": [
+      "https://asset-cdn-duplicati.sfo3.cdn.digitaloceanspaces.com/y6eojA2gKDIVl9AulMxN2pXB9Y.webp",
+      "https://framerusercontent.com/images/WRtseKDSfGww4NwDii7bri7BqTI.webp?lossless=1&width=2880&height=2048"
+    ]
   }
 }

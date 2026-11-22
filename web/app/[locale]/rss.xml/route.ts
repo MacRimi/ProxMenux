@@ -21,7 +21,7 @@ interface ChangelogEntry {
 // Per-locale RSS feed. Mirrors /app/rss.xml/route.ts (which stays the
 // canonical English feed at the root for backwards compatibility with
 // existing subscribers) but reads the localized CHANGELOG at
-// <repo>/lang/<locale>/CHANGELOG.md. Falls back to the English source
+// web/data/changelog/<locale>.md. Falls back to the English source
 // when the localized file doesn't exist yet so partial translations
 // still produce a valid feed.
 
@@ -61,7 +61,7 @@ const STRINGS: Record<string, LocaleStrings> = {
 function resolveChangelogPath(locale: string): string {
   const repoRoot = path.join(process.cwd(), "..")
   if (locale && locale !== "en") {
-    const localized = path.join(repoRoot, "lang", locale, "CHANGELOG.md")
+    const localized = path.join(process.cwd(), "data", "changelog", `${locale}.md`)
     if (fs.existsSync(localized)) return localized
   }
   return path.join(repoRoot, "CHANGELOG.md")
@@ -79,6 +79,17 @@ function extractFirstImage(rawContent: string): string | null {
   }
   if (url.startsWith("/")) return `https://proxmenux.com${url}`
   return `https://proxmenux.com/${url}`
+}
+
+// Size of a release image of this repository, which an enclosure has to state.
+function imageBytes(url: string): number | null {
+  const name = url.match(/\/images\/([^/]+)$/)?.[1]
+  if (!name) return null
+  try {
+    return fs.statSync(path.join(process.cwd(), "..", "images", name)).size
+  } catch {
+    return null
+  }
 }
 
 function escapeXml(text: string): string {
@@ -225,15 +236,15 @@ export async function GET(
         (entry) => `
     <item>
       <title>${escapeXml(entry.title)}</title>
-      <description>${escapeXml(entry.content.replace(/<[^>]*>/g, "").substring(0, 200))}...</description>
+      <description><![CDATA[${entry.image ? `<img src="${entry.image}" alt="${escapeXml(entry.title)}"/><br/>` : ""}${entry.content.replace(/<[^>]*>/g, "").substring(0, 200)}...]]></description>
       <content:encoded><![CDATA[${entry.content}]]></content:encoded>
       <link>${entry.url}</link>
       <guid isPermaLink="true">${entry.url}</guid>
       <pubDate>${new Date(entry.date).toUTCString()}</pubDate>
       <category>${escapeXml(strings.category)}</category>${entry.image ? `
       <media:thumbnail url="${escapeXml(entry.image)}"/>
-      <media:content url="${escapeXml(entry.image)}" medium="image"/>
-      <enclosure url="${escapeXml(entry.image)}" type="image/png" length="0"/>` : ""}
+      <media:content url="${escapeXml(entry.image)}" medium="image" type="image/png"/>${imageBytes(entry.image) ? `
+      <enclosure url="${escapeXml(entry.image)}" type="image/png" length="${imageBytes(entry.image)}"/>` : ""}` : ""}
     </item>`,
       )
       .join("")}

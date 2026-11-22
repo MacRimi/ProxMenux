@@ -72,5 +72,16 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "MineOS is a server front-end to ease managing Minecraft administrative tasks. This iteration using Node.js aims to enhance previous MineOS scripts (Python-based), by leveraging the event-triggering, asyncronous model of Node.JS and websockets."
+    },
+    "description": {
+      "en_US": "MineOS is a server management front-end designed to ease Minecraft administrative tasks. It allows administrators to create, start, stop, and configure multiple Minecraft server instances through a web interface. The platform also provides real-time system health, disk and memory monitoring, and direct access to in-game console logs and command execution."
+    },
+    "tips": [
+      "Authentication uses the user accounts and passwords of the underlying Linux system."
+    ]
   }
 }

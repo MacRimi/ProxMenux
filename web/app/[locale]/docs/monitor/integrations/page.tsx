@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { ExternalLink } from "lucide-react"
@@ -53,7 +53,6 @@ export default async function MonitorIntegrationsPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.monitor.integrations" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -182,7 +181,7 @@ curl -H "Authorization: Bearer <returned-token>" http://<host>:8008/api/system |
       </Callout>
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/homepage.png" alt={t("homepage.imageAlt")} width={2000} height={1062} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl" />
+        <Image src="/monitor/integrations/homepage.png" alt={t("homepage.imageAlt")} width={2000} height={1062} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("homepage.imageCaption", { code })}</figcaption>
       </figure>
 
@@ -357,7 +356,7 @@ curl -H "Authorization: Bearer <returned-token>" http://<host>:8008/api/system |
       </p>
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} width={2000} height={1200} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl" />
+        <Image src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} width={2000} height={1200} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("homeAssistant.imageCaption")}</figcaption>
       </figure>
 
@@ -556,7 +555,8 @@ proxmenux_token_header: "Bearer <your_actual_api_token_here>"`}
       - name: "ProxMenux Monitor Update"
         unique_id: proxmenux_monitor_update
         value_template: >
-          {{ 'update available' if (value_json.stable or value_json.beta) else 'up to date' }}
+          {{ 'update available' if (value_json.update_available.stable or value_json.update_available.beta) else 'up to date' }}
+        json_attributes_path: "$.update_available"
         json_attributes:
           - stable
           - stable_version
@@ -580,7 +580,7 @@ template:
   - binary_sensor:
       - name: "ProxMenux Healthy"
         default_entity_id: binary_sensor.proxmenux_is_healthy
-        device_class: problem
+        device_class: connectivity
         delay_off: 30
         state: "{{ states('sensor.proxmenux_health') == 'OK' }}"
       - name: "ProxMenux Critical"
@@ -859,7 +859,7 @@ cards:
       />
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/home-assistant-view.png" alt={t("homeAssistant.viewImageAlt")} width={2210} height={1606} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-3xl" />
+        <Image src="/monitor/integrations/home-assistant-view.png" alt={t("homeAssistant.viewImageAlt")} width={2210} height={1606} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-3xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("homeAssistant.viewImageCaption", { em })}</figcaption>
       </figure>
 
@@ -970,7 +970,7 @@ cards:
       </p>
 
       <figure className="my-6">
-        <Image src="/monitor/integrations/grafana.png" alt={t("grafana.imageAlt")} width={2000} height={1327} className="rounded-lg border border-gray-200 shadow-sm w-full h-auto mx-auto max-w-2xl" />
+        <Image src="/monitor/integrations/grafana.png" alt={t("grafana.imageAlt")} width={2000} height={1327} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("grafana.imageCaption", { link: promAnchor })}</figcaption>
       </figure>
 
@@ -1070,8 +1070,8 @@ scrape_configs:
 
       <h2 id="uptime-kuma" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">
         <a href={t("uptimeKuma.href")} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">
-          Uptime Kuma<ExternalLink className="w-5 h-5" />
-        </a>{" "}and other status checkers
+          {t("uptimeKuma.heading")}<ExternalLink className="w-5 h-5" />
+        </a>
       </h2>
 
       <p className="mb-4 text-gray-800 leading-relaxed">
@@ -1087,12 +1087,12 @@ scrape_configs:
       </ol>
 
       <CopyableCode
-        code={`# Verify the response shape — no token required
-curl http://pve01.lan:8008/api/system-info | jq
+        code={`# Verify the public system-info response shape
+curl -fsS http://pve01.lan:8008/api/system-info | jq
 # → { "hostname": "...", "uptime": "...", "health": { "status": "healthy", ... }, ... }
 
 # A failing scriptable check (non-zero when the Monitor isn't reporting healthy)
-curl -s http://pve01.lan:8008/api/system-info | jq -e '.health.status == "healthy"'`}
+curl -fsS http://pve01.lan:8008/api/system-info | jq -e '.health.status == "healthy"'`}
         className="my-4"
       />
 
@@ -1121,7 +1121,7 @@ curl -X POST http://proxmox.example.tld:8008/api/notifications/send \\
     "event_type":"system_problem",
     "severity":"WARNING",
     "title":"Nightly rsync took 4h27m",
-    "body":"The nightly-rsync job exceeded the 2h alert threshold. Check the source storage.",
+    "message":"The nightly-rsync job exceeded the 2h alert threshold. Check the source storage.",
     "data":{
       "service_name":"nightly-rsync",
       "hostname":"backup-host"

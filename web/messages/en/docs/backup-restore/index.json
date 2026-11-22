@@ -50,7 +50,7 @@
     "heading": "Two interfaces, one backend",
     "intro": "Every step of the backup and restore workflow is available from two entry points. Both call the same shell library, produce identical archives, and read the same job registry.",
     "cliLabel": "ProxMenux Scripts (TUI)",
-    "cliDetail": "menu → Utilities →\nHost Backup / Restore\n\nDialog-based flow,\nSSH-friendly, scriptable\nfor unattended use.",
+    "cliDetail": "menu →\nHost Backup & Restore\n\nDialog-based flow,\nSSH-friendly, scriptable\nfor unattended use.",
     "webLabel": "ProxMenux Monitor (Web UI)",
     "webDetail": "Backups tab in the\nMonitor's Web interface.\n\nOne-click restore, live\nlog tail, integrated with\nnotifications and the\nrollback delta viewer."
   },

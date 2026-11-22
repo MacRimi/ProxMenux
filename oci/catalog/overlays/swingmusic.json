@@ -16,5 +16,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Swing Music is a fast, beautiful, self-hosted music player designed for your local audio files, offering a sleek experience akin to Spotify but powered by your own music library. Simply run the app and access your music collection effortlessly through a web browser.\n\nSwing Music curates Daily Mixes based on your listening habits, ensures a clean and consistent library with metadata normalization, and supports album versioning (e.g., Deluxe, Remaster) alongside related artist and album recommendations. Browse your music library via folder view, manage playlists, and enjoy a seamless listening experience with silence detection and cross-fade. Additional features include listening statistics, lyrics view, Last.fm scrobbling, multi-user support, and personalized collections for grouping albums and artists.\n\nWith its stunning browser-based interface and robust functionality, Swing Music is the perfect choice for music enthusiasts seeking a beautiful and practical way to manage and enjoy their local music collection.\n"
+    },
+    "description": {
+      "en_US": "Swing Music is a self-hosted music streaming server designed for personal audio libraries. It streams audio files through a web browser interface with features like metadata normalization, album versioning, and folder-based browsing. It also generates daily mixes based on listening activity, supports silence detection with cross-fade, and tracks playback statistics alongside Last.fm scrobbling."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/swingmx/swingmusic/master/.github/images/artist.webp"
+    ],
+    "repository": "https://github.com/swingmx/swingmusic"
   }
 }

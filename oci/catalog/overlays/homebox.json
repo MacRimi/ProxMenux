@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Track household items, locations, warranties, documents and maintenance in one place."
+    },
+    "description": {
+      "en_US": "Homebox is an inventory and organization system designed for home users. It allows users to organize their items across locations, categories, and tags, with support for custom fields. The application also tracks item details including photos, purchase histories, warranty information, and maintenance schedules."
+    }
+  }
+}

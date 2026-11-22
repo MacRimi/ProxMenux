@@ -1121,6 +1121,7 @@ analyze_iommu_group() {
     local group_dir="/sys/kernel/iommu_groups/${IOMMU_GROUP}/devices"
     local display_lines=""
     local extra_devices=0
+    local other_slot_devices=0
 
     for dev_path in "${group_dir}/"*; do
         [[ -e "$dev_path" ]] || continue
@@ -1149,8 +1150,16 @@ analyze_iommu_group() {
         display_lines+="  • ${dev}  ${dev_name}  [${dev_driver}]\n"
 
         [[ "$dev" != "$pci_full" ]] && extra_devices=$((extra_devices + 1))
+        [[ "${dev%.*}" != "${pci_full%.*}" ]] && other_slot_devices=$((other_slot_devices + 1))
     done
 
+    if [[ $other_slot_devices -gt 0 ]]; then
+        local box_h=$(( 13 + ${#IOMMU_DEVICES[@]} ))
+        (( box_h > 24 )) && box_h=24
+        _pmx_msgbox "$(translate 'IOMMU Group') ${IOMMU_GROUP}" \
+            "\n$(translate 'These devices share the IOMMU group of the selected GPU and will be assigned to the VM with it:')\n\n${display_lines}\n$(translate 'The host loses access to them. If the group includes a network or storage controller the host needs, cancel at the summary.')" \
+            "$box_h" 82
+    fi
 }
 
 # Returns 0 if the BDF at $1 is a real PCI audio device (class 04xx).

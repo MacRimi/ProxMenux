@@ -191,8 +191,10 @@ class FrigateExperimentalRocmTests(unittest.TestCase):
         self.assertEqual(plan["hardware_profile"], "vaapi")
         self.assertEqual(self.override(plan), [])
 
-    def test_a_gpu_the_image_cannot_use_is_not_offered_and_the_reason_is_said(self, *_):
+    def test_a_gpu_the_image_cannot_use_is_simply_not_offered(self, *_):
+        # The menu offers what works on the GPU; it does not explain ROCm.
         with patch("proxmenux_oci.installer.host.amd_gpu_name", return_value="Lucienne (gfx90c)"):
             ui, plan = self.build(90012, {})
         self.assertNotIn("rocm", ui.labels[PROMPT])
-        self.assertTrue(any("Lucienne (gfx90c)" in message and "not offered" in message for message in ui.messages))
+        self.assertIn("vaapi", ui.labels[PROMPT])
+        self.assertFalse(any("ROCm" in message for message in ui.messages))

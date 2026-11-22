@@ -33,5 +33,13 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "qBittorrent is an open-source BitTorrent client designed as an ad-free alternative to µTorrent."
+    },
+    "description": {
+      "en_US": "qBittorrent is an open-source BitTorrent client designed as an ad-free alternative to µTorrent. It provides remote control through a web user interface, an integrated search engine, and RSS feed support with download filters. Users can manage torrent queues, schedule bandwidth usage, filter IP addresses, and download files sequentially."
+    }
   }
 }

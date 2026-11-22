@@ -121,7 +121,7 @@
   },
   "privReq": {
     "title": "Privileged container requirement",
-    "body": "The four <strong>LXC network sharing</strong> flows above require a <strong>privileged</strong> container — the kernel modules (<code>nfs-kernel-server</code>, <code>smbd</code>, <code>mount.nfs</code>, <code>mount.cifs</code>) need capabilities that unprivileged CTs do not expose. If you only need to share files between the host and an unprivileged CT, use the <mountLink>LXC Mount Manager</mountLink> instead — it bind-mounts from the host and adjusts permissions on the host side so the container can read and write without any kernel-module magic."
+    "body": "The four <strong>LXC network sharing</strong> flows above require a <strong>privileged</strong> container. The scripts enforce this supported mode before configuring the services and mount tools (<code>nfs-kernel-server</code>, <code>smbd</code>, <code>mount.nfs</code>, <code>mount.cifs</code>). If you only need to share files between the host and an unprivileged CT, use the <mountLink>LXC Mount Manager</mountLink> instead — it bind-mounts from the host and adjusts permissions on the host side so the container can read and write without configuring these services or mount tools inside it."
   },
   "unprivExplain": {
     "title": "How ProxMenux handles unprivileged CT permissions",

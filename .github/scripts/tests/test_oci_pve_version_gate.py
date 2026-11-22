@@ -14,15 +14,16 @@ class OciPveVersionGateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         text = LAUNCHER.read_text(encoding='utf-8')
-        cls.function = re.search(r'^pve_supports_oci\(\) \{\n.*?^\}\n', text, re.M | re.S).group(0)
+        cls.function = ''.join(re.search(rf'^{name}\(\) \{{\n.*?^\}}\n', text, re.M | re.S).group(0)
+                               for name in ('pve_manager_version', 'pve_supports_oci'))
         cls.text = text
 
     def supported(self, version):
         with tempfile.TemporaryDirectory() as folder:
-            fake = Path(folder, 'pveversion')
-            # Without Proxmox the command is missing: a stand-in that fails hides the host's own.
-            fake.write_text('#!/bin/sh\nexit 127\n' if version is None else
-                            f'#!/bin/sh\necho "pve-manager/{version}/b9984c6d90a4bd80 (running kernel: 6.17)"\n')
+            fake = Path(folder, 'dpkg-query')
+            # Without Proxmox the package is not installed: dpkg-query fails.
+            fake.write_text('#!/bin/sh\nexit 1\n' if version is None else
+                            f'#!/bin/sh\nprintf %s "{version}"\n')
             fake.chmod(0o755)
             result = subprocess.run(['bash', '-c', f'PATH={folder}:/usr/bin:/bin\n{self.function}pve_supports_oci'],
                                     capture_output=True, text=True)
@@ -37,6 +38,9 @@ class OciPveVersionGateTests(unittest.TestCase):
         for version in ('8.4.1', '9.0.11', None):
             with self.subTest(version=version):
                 self.assertFalse(self.supported(version))
+
+    def test_the_version_is_read_without_the_slow_pveversion(self):
+        self.assertNotIn('pveversion', self.function)
 
     def test_it_is_checked_before_anything_is_installed(self):
         self.assertLess(self.text.index('if ! pve_supports_oci; then'), self.text.index('ensure_oci_dependencies || exit 1'))

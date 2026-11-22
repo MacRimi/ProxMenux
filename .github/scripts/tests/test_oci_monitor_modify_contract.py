@@ -36,7 +36,7 @@ class MonitorModifyContractTests(TestCase):
     def test_the_editor_has_one_name_for_one_container_and_for_several(self):
         menu = MENU.read_text(encoding='utf-8')
         self.assertIn("('modify', translate('Modify: edit resources, network, paths and GPU'))", menu)
-        self.assertIn("('modify', translate('Modify extra paths and devices'))", menu)
+        self.assertIn("('modify', translate('Modify: resources, variables, paths and devices of a container'))", menu)
         self.assertEqual(menu.count("('recreate', translate("), 1)
         self.assertIn("('recreate', translate('Recreate every container with its saved configuration'))", menu)
 
@@ -65,11 +65,14 @@ class MonitorModifyContractTests(TestCase):
         self.assertIn('kinds', [argument.arg for argument in prompt.args.args])
         self.assertIn("ask_extra_devices(ui, attached, True, kinds=", caller)
 
-    def test_modify_action_opens_the_stack_editor_without_running_lifecycle(self):
-        primary = {'stack': {'members': [{'vmid': 101}]}}
+    def modify_from(self, row_vmid):
+        primary = {'stack': {'members': [{'vmid': 101}, {'vmid': 102}]}}
+        records = {101: primary, 102: {'stack_member': {'primary_vmid': 101}}}
         instances = ModuleType('oci_instances')
         instances.ROOT = Path('/inert')
-        instances.read = lambda *_: primary
+        instances.read = lambda _root, vmid: records[vmid]
+        adapters = ModuleType('oci_stack_adapters')
+        adapters.menu_ready = lambda _primary: True
         modify_stack = Mock(return_value=True)
         run_lifecycle = Mock()
         manager = extracted_stack_manager({
@@ -79,15 +82,20 @@ class MonitorModifyContractTests(TestCase):
             '_run_lifecycle': run_lifecycle,
         })
         ui = SimpleNamespace()
-        with patch.dict(sys.modules, {
-                'oci_instances': instances,
-                'oci_stack_replay': ModuleType('oci_stack_replay'),
-        }):
-            result = manager(Path('/inert'), ui, {'vmid': 101}, action='modify')
-
+        with patch.dict(sys.modules, {'oci_instances': instances, 'oci_stack_adapters': adapters}):
+            result = manager(Path('/inert'), ui, {'vmid': row_vmid}, action='modify')
         self.assertTrue(result)
-        modify_stack.assert_called_once_with(Path('/inert'), ui, primary, run_lifecycle)
         run_lifecycle.assert_not_called()
+        return modify_stack, ui, primary, run_lifecycle
+
+    def test_modify_action_opens_the_stack_editor_without_running_lifecycle(self):
+        # Opened from the application: the editor asks which container.
+        modify_stack, ui, primary, run_lifecycle = self.modify_from(101)
+        modify_stack.assert_called_once_with(Path('/inert'), ui, primary, run_lifecycle, member_vmid=None)
+
+    def test_modify_opened_on_a_member_edits_that_container(self):
+        modify_stack, ui, primary, run_lifecycle = self.modify_from(102)
+        modify_stack.assert_called_once_with(Path('/inert'), ui, primary, run_lifecycle, member_vmid=102)
 
 
 if __name__ == '__main__':

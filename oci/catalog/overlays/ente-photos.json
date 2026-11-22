@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Encrypted photo backup. LAN browser access requires HTTPS for Photos, Museum API and S3; plain HTTP by IP cannot perform the required cryptography."
+    },
+    "description": {
+      "en_US": "Ente Photos is an open-source, end-to-end encrypted photo storage and backup platform. It allows users to store and organize their photos and videos securely without having to trust the service provider. The application includes features such as face detection, semantic search, background uploads, collaborative albums, and private sharing."
+    },
+    "screenshots": [
+      "https://ente.com/assets/second-green-section-desktop-phone.BE_tgOCK_Z2didgf.webp"
+    ]
+  }
+}

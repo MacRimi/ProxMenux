@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Your own URL shortener with statistics, plugins and a private MariaDB database."
+    },
+    "description": {
+      "en_US": "YOURLS is a self-hosted URL shortener that allows users to run their own link shortening service. It provides tools to generate short links and track detailed visitor click statistics. The platform also supports an extensible plugin system to add custom features."
+    }
+  }
+}

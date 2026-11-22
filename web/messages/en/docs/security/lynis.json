@@ -35,7 +35,7 @@
       },
       {
         "sourceRich": "<strong>Debian apt</strong>",
-        "path": "/usr/bin/lynis",
+        "path": "/usr/sbin/lynis",
         "update": "apt upgrade",
         "fresh": "Often months / years behind"
       }
@@ -57,9 +57,10 @@
     "items": [
       "<code>/usr/local/bin/lynis</code> — wrapper installed by ProxMenux",
       "<code>/opt/lynis/lynis</code> — direct path (in case the wrapper got removed)",
-      "<code>/usr/bin/lynis</code> — apt-installed version, if the user installed it that way previously"
+      "<code>/usr/sbin/lynis</code> — apt-installed version, if the user installed it that way previously"
     ],
-    "outro": "If any of these is found, the manage menu opens. The script <strong>does not</strong> uninstall an apt-installed Lynis — only the one it manages itself (<code>/opt/lynis</code> + the wrapper)."
+    "outro": "If any of these is found, the manage menu opens. The script <strong>does not</strong> uninstall an apt-installed Lynis — only the one it manages itself (<code>/opt/lynis</code> + the wrapper).",
+    "outsideNote": "A Lynis installed another way, such as the Debian package or the CISOfy APT repository, is only audited: the menu and the Monitor run its audit, and it is updated and removed the same way it was installed."
   },
   "audit": {
     "heading": "Run an audit",
@@ -112,7 +113,7 @@
       },
       {
         "actionRich": "<strong>Remove</strong>",
-        "whatRich": "Deletes <code>/opt/lynis</code> and <code>/usr/local/bin/lynis</code>. Logs at <code>/var/log/lynis*</code> are kept (they're audit history). An apt-installed Lynis at <code>/usr/bin/lynis</code> is left untouched."
+        "whatRich": "Deletes <code>/opt/lynis</code> and <code>/usr/local/bin/lynis</code>. Logs at <code>/var/log/lynis*</code> are kept (they're audit history). An apt-installed Lynis at <code>/usr/sbin/lynis</code> is left untouched."
       }
     ]
   },
@@ -130,7 +131,7 @@
     "notFoundCode": "cat > /usr/local/bin/lynis <<'EOF'\n#!/bin/bash\ncd /opt/lynis && ./lynis \"$@\"\nEOF\nchmod +x /usr/local/bin/lynis",
     "sshTitle": "Audit prints \"Warning: Test SSH-7408 — MaxAuthTries set incorrectly\"",
     "sshIntro": "The SSH daemon allows too many auth attempts per connection. Either install <link>Fail2Ban</link> from ProxMenux (which sets <code>MaxAuthTries=3</code> automatically) or edit <code>/etc/ssh/sshd_config</code> by hand:",
-    "sshCode": "sed -i 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
+    "sshCode": "sed -i -E 's/^#?MaxAuthTries.*/MaxAuthTries 3/' /etc/ssh/sshd_config\nsystemctl reload sshd",
     "scoreTitle": "Score went down after a Proxmox upgrade",
     "scoreBody": "Run <code>lynis update info</code> first — a Lynis update may have added new controls that flag existing config. Update Lynis from the menu, re-audit, and address the new findings."
   },

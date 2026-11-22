@@ -111,7 +111,47 @@ EOF
 }
 
 # ── Check for updates ──────────────────────────────────────
+# GitHub answers in well under a second, so a new version is offered as the
+# menu opens. The menu never waits more than a second for it: without
+# internet it opens at once, and an answer that arrives later is kept for
+# the next start. Until then the version read on a previous start is used.
+REMOTE_FETCHES=()
+
+fetch_remote_version() {
+    local url="$1" cache="$BASE_DIR/.remote-${2}-version"
+    ( trap '' HUP
+      curl -fsSL --connect-timeout 5 --max-time 10 "$url" 2>/dev/null | head -n 1 > "$cache.tmp.$$"
+      if [[ -s "$cache.tmp.$$" ]]; then mv -f "$cache.tmp.$$" "$cache"; else rm -f "$cache.tmp.$$"; fi
+    ) </dev/null >/dev/null 2>&1 &
+    REMOTE_FETCHES+=("$!")
+}
+
+wait_remote_versions() {
+    local i pid busy
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        busy=0
+        for pid in "${REMOTE_FETCHES[@]}"; do kill -0 "$pid" 2>/dev/null && busy=1; done
+        [[ "$busy" == 0 ]] && break
+        sleep 0.1
+    done
+    for pid in "${REMOTE_FETCHES[@]}"; do disown "$pid" 2>/dev/null || true; done
+}
+
+remote_version() {
+    local cache="$BASE_DIR/.remote-${1}-version"
+    [[ -f "$cache" ]] && head -n 1 "$cache" 2>/dev/null
+}
+
+# Whether $2 is a newer version than $1.
+version_newer() {
+    [[ -n "$1" && -n "$2" && "$1" != "$2" ]] || return 1
+    [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$2" ]]
+}
+
 check_updates() {
+    fetch_remote_version "$REPO_MAIN/version.txt" main
+    is_beta && fetch_remote_version "$REPO_DEVELOP/beta_version.txt" develop
+    wait_remote_versions
     if is_beta; then
         check_updates_beta
     else
@@ -121,19 +161,15 @@ check_updates() {
 
 # ── Stable update check (main branch) ─────────────────────
 check_updates_stable() {
-    local VERSION_URL="$REPO_MAIN/version.txt"
     local INSTALL_URL="$REPO_MAIN/install_proxmenux.sh"
     local INSTALL_SCRIPT="$BASE_DIR/install_proxmenux.sh"
 
     [[ ! -f "$LOCAL_VERSION_FILE" ]] && return 0
 
     local REMOTE_VERSION LOCAL_VERSION
-    REMOTE_VERSION="$(curl -fsSL "$VERSION_URL" 2>/dev/null | head -n 1)"
-    [[ -z "$REMOTE_VERSION" ]] && return 0
-
+    REMOTE_VERSION="$(remote_version main)"
     LOCAL_VERSION="$(head -n 1 "$LOCAL_VERSION_FILE" 2>/dev/null)"
-    [[ -z "$LOCAL_VERSION" ]] && return 0
-    [[ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]] && return 0
+    version_newer "$LOCAL_VERSION" "$REMOTE_VERSION" || return 0
 
     # Extract the translated prompt strings into variables FIRST so the
     # whiptail line below is trivially parseable. A user on the 1.2.2
@@ -193,10 +229,9 @@ check_updates_beta() {
     [[ ! -f "$BETA_VERSION_FILE" ]] && return 0
 
     local REMOTE_BETA LOCAL_BETA
-    REMOTE_BETA="$(curl -fsSL "$REPO_DEVELOP/beta_version.txt" 2>/dev/null | head -n 1)"
+    REMOTE_BETA="$(remote_version develop)"
     LOCAL_BETA="$(head -n 1 "$BETA_VERSION_FILE" 2>/dev/null)"
-    [[ -z "$REMOTE_BETA" || -z "$LOCAL_BETA" || "$LOCAL_BETA" = "$REMOTE_BETA" ]] && return 0
-    [[ "$(printf '%s\n%s\n' "$LOCAL_BETA" "$REMOTE_BETA" | sort -V | tail -1)" = "$REMOTE_BETA" ]] || return 0
+    version_newer "$LOCAL_BETA" "$REMOTE_BETA" || return 0
 
     if [[ "${PROXMENUX_TERMINAL:-}" == "monitor" ]]; then
         whiptail --title "Beta Update Available" --msgbox "\
@@ -237,7 +272,11 @@ main_menu() {
 
 # `menu -v` / `-h` print info and exit without opening the TUI so
 # admins can query the install over SSH (issue #240).
+SKIP_UPDATE_CHECK=0
 case "${1:-}" in
+    -o|--offline)
+        SKIP_UPDATE_CHECK=1
+        ;;
     -v|--version|-V)
         local_ver="unknown"
         [[ -f "$LOCAL_VERSION_FILE" ]] && local_ver="$(<"$LOCAL_VERSION_FILE")"
@@ -254,6 +293,7 @@ Usage: menu [OPTION]
 Interactive menu for Proxmox VE management.
 
 Options:
+  -o, --offline   Open the menu without checking for ProxMenux updates.
   -v, --version   Print installed ProxMenux version and exit.
   -h, --help      Show this help and exit.
 
@@ -266,5 +306,5 @@ esac
 load_language
 initialize_cache
 auto_repair_monitor_unit
-check_updates
+[[ "$SKIP_UPDATE_CHECK" == 1 ]] || check_updates
 main_menu

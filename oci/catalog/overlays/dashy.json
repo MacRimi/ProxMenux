@@ -1,0 +1,15 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted start page for services, bookmarks, status checks and dashboards."
+    },
+    "description": {
+      "en_US": "Dashy is a self-hosted personal dashboard and application launcher designed for organizing services, bookmarks, and homelab tools. It provides customizable layouts across multiple pages and views, including minimal startpage and multi-app workspace modes. The platform includes live status checks for services and hosts, dynamic data widgets, keyboard navigation, and instant search capabilities."
+    },
+    "screenshots": [
+      "https://i.ibb.co/L8YbNNc/dashy-demo2.gif",
+      "https://i.ibb.co/GFjXVHy/dashy-widgets.png",
+      "https://raw.githubusercontent.com/Lissy93/dashy/master/docs/assets/workspace-demo.gif"
+    ]
+  }
+}

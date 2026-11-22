@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -35,7 +35,6 @@ export default async function SmartDiskTestPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.diskManager.smartDiskTest" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -181,12 +180,12 @@ export default async function SmartDiskTestPage({
       <pre className="bg-gray-100 p-3 rounded-md overflow-x-auto text-sm font-mono mb-4">
         <code>{`/usr/local/share/proxmenux/smart/
 ├── sda/
-│   ├── 2026-04-23_145312_status.json
-│   ├── 2026-04-23_180041_short.json
-│   └── 2026-04-24_020015_long.json
+│   ├── 2026-04-23T14-53-12_status.json
+│   ├── 2026-04-23T18-00-41_short.json
+│   └── 2026-04-24T02-00-15_long.json
 └── nvme0n1/
-    ├── 2026-04-23_145318_status.json
-    └── 2026-04-24_021407_long.json`}</code>
+    ├── 2026-04-23T14-53-18_status.json
+    └── 2026-04-24T02-14-07_long.json`}</code>
       </pre>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("json.outro")}</p>
 

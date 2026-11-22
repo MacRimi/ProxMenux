@@ -55,7 +55,7 @@
     "steps": [
       {
         "title": "1. Safety backup",
-        "body": "Copies <code>/etc/network/interfaces</code> to <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. Path shown before and after.",
+        "body": "Copies <code>/etc/network/interfaces</code> to <code>/var/backups/proxmenux/interfaces_backup_&lt;TIMESTAMP&gt;</code>. An indicative name is shown before the copy; the exact path is shown after.",
         "tone": "blue"
       },
       {

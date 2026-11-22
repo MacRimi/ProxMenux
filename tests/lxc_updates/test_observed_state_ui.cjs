@@ -138,7 +138,7 @@ const context = {
   invalidateLxcApps: () => {}, setSelectedVM: value => { context.selectionChanged = value },
   alert: value => { context.alerted = value },
 }
-for (const name of ["Vmid", "Target", "RunId", "TargetIds", "TargetLabels", "UpdateCommand", "AppName",
+for (const name of ["Vmid", "Target", "RunId", "Resume", "TargetIds", "TargetLabels", "UpdateCommand", "AppName",
     "RunHelper", "AllowHelperWithCustom", "DockerStandaloneTargets", "DockerEngine", "DockerRefresh",
     "BackupStorage", "StartedAt", "Open", "CheckAndUpdate", "CheckedOs"])
   context[`setApply${name}`] = value => { context[`apply${name}`] = value }
@@ -162,8 +162,10 @@ assert.equal(ui.osStatus({ ...recent, available: false, count: 0 }).osUpdateStat
 assert.equal(ui.osStatus({ ...recent, error: "probe failed" }).osUpdateStatusKnown, false)
 assert.equal(ui.aggregate({ app_watches: [{ update_available: true, name: "App" }] }).last_check, null,
   "an app badge cannot invent an OS check timestamp")
-assert.equal(ui.badge(legacy).props.children[0].type, "Clock")
-assert.equal(ui.badge(legacy).props.children[1], "vmLxc.updates.checkStale")
+assert.equal(ui.badge(legacy).props.children[0].type, "Arrow",
+  "an old check keeps the same badge as a recent one")
+assert.equal(ui.badge(legacy).props.children[1], 51)
+assert.equal(ui.badge({ ...legacy, available: false, count: 0 }), null)
 assert.equal(ui.badge({ ...recent, available: true, count: 2 }).props.children[1], 2)
 assert.equal(ui.badge({ ...recent, available: false, count: 0 }), null)
 assert.equal(requests.length, 0)
@@ -203,6 +205,7 @@ for (const [target, options] of [
   context.applyOpen = false
   ui.openApply(100, target, options)
   assert.equal(context.applyOpen, true, `explicit ${target} update opens the terminal directly`)
+  assert.equal(context.applyResume, false, 'an explicitly started update is distinguished from attach-only recovery')
 }
 assert.equal(confirmationCalls, 0, 'ordinary update entry points never open a browser confirmation')
 assert(!source.includes('checkAndUpdate'), 'the abandoned combined check/install action has no UI path')

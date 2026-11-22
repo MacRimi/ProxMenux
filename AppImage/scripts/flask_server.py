@@ -52,6 +52,9 @@ import time
 import threading
 import urllib.parse
 import uuid
+import disk_identity
+import ovs_topology
+import system_board_info
 import hardware_monitor
 from health_persistence import health_persistence
 import xml.etree.ElementTree as ET
@@ -64,13 +67,21 @@ import psutil
 from flask import Flask, jsonify, request, send_file, send_from_directory, Response, after_this_request
 from flask_cors import CORS
 
+# AppRun runs this file as __main__. Modules that `import flask_server`
+# must get this module, not a second copy with its own caches and threads.
+if __name__ == '__main__':
+    sys.modules.setdefault('flask_server', sys.modules[__name__])
+
 # Ensure local imports work even if working directory changes
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+import pve_mirror  # noqa: E402
+
 from smartctl_resolver import (  # noqa: E402
     is_usb_disk as resolver_is_usb_disk,
+    ata_endurance_used,
     probe_smartctl_json,
     resolve_smartctl_probe,
     smartctl_command,
@@ -89,17 +100,23 @@ from flask_terminal_routes import (  # noqa: E402
 )
 from flask_health_routes import health_bp  # noqa: E402
 from flask_auth_routes import auth_bp  # noqa: E402
+from flask_oidc_routes import oidc_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
+from flask_pbs_routes import pbs_bp  # noqa: E402
+from flask_monitor_links_routes import monitor_links_bp  # noqa: E402
+from pbs_manager import get_platform, is_pbs_host  # noqa: E402
 from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
 from flask_vm_backup_routes import vm_backup_bp  # noqa: E402
+from flask_vm_backup_routes import active_vzdump  # noqa: E402
 from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
                                    guest_backup_deletion_status)  # noqa: E402
 from notification_manager import notification_manager, resolve_notification_hostname  # noqa: E402
+from notification_templates import health_linked_event  # noqa: E402
 import post_install_versions  # noqa: E402  — Sprint 12A: detect post-install function updates
-from jwt_middleware import require_auth, require_auth_or_ticket, require_admin_scope  # noqa: E402
+from jwt_middleware import require_auth, require_admin_or_ticket, require_admin_scope, has_full_access  # noqa: E402
 import auth_manager  # noqa: E402
 
 # -------------------------------------------------------------------
@@ -193,8 +210,11 @@ post_install_versions.scan_at_startup()
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
+app.register_blueprint(oidc_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(proxmenux_bp)
+app.register_blueprint(pbs_bp)
+app.register_blueprint(monitor_links_bp)
 app.register_blueprint(security_bp)
 app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
@@ -331,6 +351,35 @@ def check_fail2ban_ban():
             "success": False,
             "message": "Access denied. Your IP has been temporarily banned due to too many failed login attempts."
         }), 403
+
+
+# Until someone chooses how to reach the Monitor, only the first-run screen is
+# served: its static files and the routes that take that decision. The
+# internal routes keep their own loopback checks, so the scripts and Proxmox
+# itself reach them as before.
+_UNDECIDED_ROUTES = frozenset({
+    '/api/auth/status', '/api/auth/setup', '/api/auth/mode',
+    '/api/auth/skip', '/api/auth/decline',
+    '/api/notifications/webhook', '/api/updates/post-install/scan',
+})
+
+
+@app.before_request
+def require_access_decision():
+    path = request.path or '/'
+    if not (path.startswith('/api/') or path.startswith('/ws/')):
+        return None
+    if path in _UNDECIDED_ROUTES or path.startswith('/api/internal/'):
+        return None
+    try:
+        from auth_manager import access_mode
+        undecided = access_mode() == 'undecided'
+    except Exception:
+        undecided = True  # An unreadable state never opens the Monitor.
+    if undecided:
+        return jsonify({"error": "setup_required",
+                        "message": "Choose how to access ProxMenux Monitor first"}), 403
+    return None
 
 
 def identify_gpu_type(name, vendor=None, bus=None, driver=None):
@@ -552,7 +601,7 @@ def parse_lxc_hardware_config(vmid, node):
             devices.append('Coral TPU')
         
         # USB devices detection
-        if 'ttyUSB' in config_content or 'ttyACM' in config_content:
+        if 'ttyUSB' in config_content or 'ttyACM' in config_content or '/dev/serial/by-' in config_content:
             devices.append('USB Serial Devices')
         
         if '/dev/bus/usb' in config_content:
@@ -1495,35 +1544,10 @@ def _health_collector_loop():
             details = result.get('details', {})
             degraded = []
             
-            # Map health categories to specific event types for toggle checks.
-            # `_CATEGORY_EVENT_MAP` is keyword-based for sub-types (network_down vs
-            # network_latency). `_BROAD_CATEGORY_TO_EVENT` is the catch-all fallback
-            # used when no keyword matches: if the user has muted the direct
-            # Resources/Storage event for a category (e.g. ram_high, cpu_high), do
-            # not re-emit the same condition under the Health Monitor banner. This
-            # closes the "muted ram_high but still got health_degraded for memory"
-            # double-event reported by users.
-            _CATEGORY_EVENT_MAP = {
-                # (category, reason_contains) -> event_type to check
-                ('network', 'latency'): 'network_latency',
-                ('network', 'connectivity'): 'network_down',
-                ('network', 'unreachable'): 'network_down',
-            }
-            _BROAD_CATEGORY_TO_EVENT = {
-                'cpu': 'cpu_high',
-                'memory': 'ram_high',
-                'load': 'load_high',
-                'temperature': 'temp_high',
-                'disk': 'disk_space_low',
-                'disks': 'disk_io_error',
-                'smart': 'disk_io_error',
-                'zfs': 'disk_io_error',
-                'storage': 'storage_unavailable',
-                # 'network' intentionally not here — handled by the keyword map above.
-                'pve_services': 'service_fail',
-                'security': 'auth_fail',
-                'updates': 'update_summary',
-            }
+            # Each health category is linked to the direct event that reports
+            # the same condition (network latency, RAM, CPU...). When every
+            # channel has muted that event, the category is not re-sent under
+            # the Health Monitor banner; each channel filters it again.
 
             # Sub-categories already rolled up into details['storage']
             # by _check_proxmox_storage_status. Emitting them as their
@@ -1549,26 +1573,12 @@ def _health_collector_loop():
 
                 if cur_rank > prev_rank and cur_rank >= 2:  # WARNING or CRITICAL
                     reason = cat_data.get('reason', f'{cat_key} status changed to {cur_status}')
-                    reason_lower = reason.lower()
                     cat_name = _CAT_NAMES.get(cat_key, cat_key)
 
-                    # Check if this specific notification type is enabled.
-                    skip_notification = False
-                    keyword_matched = False
-                    for (map_cat, map_keyword), event_type in _CATEGORY_EVENT_MAP.items():
-                        if cat_key == map_cat and map_keyword in reason_lower:
-                            keyword_matched = True
-                            if not notification_manager.is_event_enabled(event_type):
-                                skip_notification = True
-                            break
-
-                    # Broad category fallback — only when no keyword sub-type matched.
-                    # If the user explicitly muted the linked Resources/Storage event,
-                    # don't surface the same condition through health_degraded.
-                    if not keyword_matched and not skip_notification:
-                        broad_event = _BROAD_CATEGORY_TO_EVENT.get(cat_key)
-                        if broad_event and not notification_manager.is_event_enabled(broad_event):
-                            skip_notification = True
+                    linked_event = health_linked_event(cat_key, reason)
+                    skip_notification = bool(
+                        linked_event and not notification_manager.is_event_enabled(linked_event)
+                    )
 
                     # Startup grace period: skip transient issues from categories
                     # that typically need time to stabilize after boot
@@ -1747,6 +1757,7 @@ def get_uptime():
 _system_info_cache = {
     'proxmox_version': None,
     'proxmox_version_time': 0,
+    'proxmox_version_stamp': 0.0,
     'available_updates': 0,
     'available_updates_time': 0,
     'available_updates_stamp': 0.0,
@@ -1825,10 +1836,11 @@ _HARDWARE_CACHE_TTL = 300  # 5 minutes - hardware doesn't change
 # expensive dedup / filesystem-type filtering runs at most once per
 # refresh cycle per VM.
 _vm_disk_cache = {}           # vmid -> (fetched_at, (used, total) or None)
-_VM_DISK_REFRESH_PERIOD = 60  # seconds between full refresh cycles
-_VM_DISK_STALE_AFTER = 300    # readers ignore entries older than this
-_VM_DISK_GA_TIMEOUT = 3       # per-VM `qm guest cmd` timeout (seconds)
-_VM_DISK_REFRESH_WORKERS = 6  # parallelism cap for the fsinfo pass
+_VM_DISK_REFRESH_PERIOD = 300  # seconds between full refresh cycles
+_VM_DISK_STALE_AFTER = 900     # readers ignore entries older than this
+_VM_DISK_GA_TIMEOUT = 3        # per-VM `qm guest cmd` timeout (seconds)
+_VM_DISK_REFRESH_WORKERS = 6   # parallelism cap for the fsinfo pass
+_VM_DISK_PROBE_SPACING = 2.0   # seconds between two probe starts
 
 # ── Per-VM modal caches ────────────────────────────────────────────
 # The VM/LXC modal fires several pvesh-backed calls the moment a user
@@ -2274,6 +2286,10 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     # or stops; drop the cached IP so the next /api/vms poll re-reads
     # it via `lxc-info`. QEMU guests do not touch this cache.
     if guest_type == 'lxc':
+        import native_app_discovery
+        native_app_discovery.mark_stale(guest_id)
+        import docker_app_discovery
+        docker_app_discovery.mark_stale(guest_id)
         _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
         if guest_type == 'lxc':
@@ -2284,6 +2300,7 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
                 import lxc_apps
                 lxc_apps.clear_schedule_reboot_required(guest_id)
                 _vm_cache_invalidate(guest_id, _vm_schedule_cache)
+                lxc_apps.reconcile_after_start(guest_id)
             except Exception as exc:
                 print(
                     f'[ProxMenux] could not clear scheduled-update reboot state '
@@ -2294,6 +2311,27 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
         return
     if action == 'stop':
         _publish_guest_modal_cache_revision(guest_id)
+    if action == 'destroy' and not _oci_operation_running(guest_id):
+        # The VMID can be reused by a new guest that must not inherit the
+        # applications and scheduled updates of this one. An OCI update
+        # destroys and recreates its own container: it keeps them.
+        try:
+            import lxc_apps
+            lxc_apps.forget_guest(guest_id)
+            _vm_cache_invalidate(guest_id, _vm_schedule_cache)
+        except Exception as exc:
+            print(f'[ProxMenux] could not forget the applications of {guest_type} {guest_id}: {exc}', flush=True)
+        _publish_guest_modal_cache_revision(guest_id)
+
+
+def _oci_operation_running(guest_id: int) -> bool:
+    """An OCI operation on the guest is running or ended moments ago."""
+    try:
+        with open(f'/run/proxmenux/oci-operations/{int(guest_id)}', encoding='utf-8') as handle:
+            mark = json.load(handle)
+        return mark.get('ended') is None or time.time() - float(mark['ended']) < 120
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
 
 # Filesystem types that never count towards VM disk usage:
 # read-only image / CD formats, ram-backed pseudo-fs, kernel virtual
@@ -2362,8 +2400,10 @@ def _compute_vm_disk_from_fsinfo(fsinfo):
         # real C:\ mount, and marking their signature eagerly would
         # suppress C:\ and yield None for the entire VM (bug reported
         # for a Windows 11 VM at 166 GB used / 1965 GB total).
+        # Some agents omit `dev`, so partitions of one disk share the
+        # disk fields; the filesystem name keeps /boot and / apart.
         d = disks[0]
-        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'))
+        sig = (d.get('bus'), d.get('target'), d.get('unit'), d.get('dev'), fs.get('name'))
         if sig in seen_disks:
             continue
         seen_disks.add(sig)
@@ -2416,6 +2456,19 @@ def get_cached_vm_disk(vmid):
     return value
 
 
+def _vm_guest_agent_enabled(vmid, node):
+    """Whether the VM's config enables the QEMU guest agent. A config
+    that can't be read keeps the probe, which then reports the error."""
+    try:
+        text = pve_mirror.read_guest_config(node, 'qemu', vmid)
+    except (OSError, ValueError):
+        return True
+    if text is None:
+        return True
+    value = pve_mirror.config_properties(text, ('agent',)).get('agent')
+    return pve_mirror.agent_enabled(value)
+
+
 def _vm_disk_refresh_one(vmid):
     """Refresh a single VMID's cache entry. Runs in a worker thread of
     the refresher pool — never on the request path."""
@@ -2461,16 +2514,26 @@ def _vm_disk_refresher_loop():
                 if vmid is None:
                     continue
                 live_vmids.add(vmid)
+                # Without the agent enabled `qm guest cmd` can only fail.
+                if not _vm_guest_agent_enabled(vmid, local_node):
+                    _vm_disk_cache[vmid] = (time.time(), None)
+                    continue
                 targets.append(vmid)
 
             if targets:
                 # Bounded parallelism — fsinfo calls per VM are IO-bound
                 # (waiting on the guest agent), so a small pool wins big
                 # over serial execution but doesn't stampede the host.
+                # Starts are spaced so the Perl processes don't all run
+                # in the same second.
                 try:
                     from concurrent.futures import ThreadPoolExecutor, wait
                     with ThreadPoolExecutor(max_workers=_VM_DISK_REFRESH_WORKERS) as ex:
-                        futures = [ex.submit(_vm_disk_refresh_one, v) for v in targets]
+                        futures = []
+                        for index, v in enumerate(targets):
+                            if index:
+                                time.sleep(_VM_DISK_PROBE_SPACING)
+                            futures.append(ex.submit(_vm_disk_refresh_one, v))
                         wait(futures, timeout=_VM_DISK_GA_TIMEOUT * 2)
                 except Exception:
                     # Fallback to serial if the executor itself fails
@@ -2719,6 +2782,9 @@ def _action_state(unit_name):
     return result_dict
 
 
+app.extensions['host_update_power'] = {'run': _action_run, 'state': _action_state}
+
+
 def _action_cancel(unit_name):
     """Stop a running transient action unit. Idempotent — succeeds on
     units that are not running (or don't exist).
@@ -2783,6 +2849,14 @@ def get_cached_pvesh_cluster_resources():
            now - _pvesh_cache['cluster_resources_vm_time'] < _PVESH_CACHE_TTL:
             return _pvesh_cache['cluster_resources']
 
+        # pvestatd's own status in /etc/pve answers this without a Perl
+        # process; pvesh stays for hosts where that data is unavailable.
+        data = pve_mirror.cluster_resources_vm()
+        if data is not None:
+            _pvesh_cache['cluster_resources_vm'] = data
+            _pvesh_cache['cluster_resources_vm_time'] = now
+            return data
+
         try:
             result = subprocess.run(
                 ['pvesh', 'get', '/cluster/resources', '--output-format', 'json'],
@@ -2816,8 +2890,9 @@ _PVESH_STORAGE_LIST_TTL = 30
 
 def get_cached_pvesh_storage_list():
     """Get the cluster-wide list of configured storages with 30s cache.
-    Returns the raw `pvesh get /storage` JSON (a list of dicts with
-    storage, type, content, etc.). Returns [] if pvesh is unavailable
+    Returns the `pvesh get /storage` rows (a list of dicts with storage,
+    type, content, etc.), read from storage.cfg when that answers them
+    exactly. Returns [] if pvesh is unavailable
     rather than raising — callers iterate the list and tolerate empty.
     """
     global _pvesh_cache
@@ -2826,6 +2901,12 @@ def get_cached_pvesh_storage_list():
     if _pvesh_cache['storage_list'] is not None and \
        now - _pvesh_cache['storage_list_time'] < _PVESH_STORAGE_LIST_TTL:
         return _pvesh_cache['storage_list']
+
+    data = pve_mirror.storage_list()
+    if data is not None:
+        _pvesh_cache['storage_list'] = data
+        _pvesh_cache['storage_list_time'] = now
+        return data
 
     try:
         result = subprocess.run(
@@ -3481,12 +3562,16 @@ def get_coral_info():
 
 
 def get_proxmox_version():
-    """Get Proxmox version if available. Cached for 6 hours."""
+    """Cache the installed PVE version until package state changes."""
     global _system_info_cache
+    if is_pbs_host():
+        return get_platform().get('version')
     
     now = time.time()
-    if _system_info_cache['proxmox_version'] is not None and \
-       now - _system_info_cache['proxmox_version_time'] < _SYSTEM_INFO_CACHE_TTL:
+    stamp = _apt_state_stamp()
+    age = now - _system_info_cache['proxmox_version_time']
+    if _system_info_cache['proxmox_version'] is not None and (0 <= age < _AVAILABLE_UPDATES_MIN_INTERVAL or
+       (stamp == _system_info_cache.get('proxmox_version_stamp') and 0 <= age < _SYSTEM_INFO_CACHE_TTL)):
         return _system_info_cache['proxmox_version']
     
     proxmox_version = None
@@ -3502,8 +3587,11 @@ def get_proxmox_version():
     except Exception as e:
         pass
     
+    if proxmox_version is None:
+        return None  # Keep last-known cache intact, but do not present it as fresh.
     _system_info_cache['proxmox_version'] = proxmox_version
     _system_info_cache['proxmox_version_time'] = now
+    _system_info_cache['proxmox_version_stamp'] = stamp
     return proxmox_version
 
 def _apt_state_stamp():
@@ -3798,69 +3886,6 @@ def serve_dashboard():
         pass
         return jsonify({'error': f'Dashboard not available: {str(e)}'}), 500
 
-@app.route('/manifest.json')
-def serve_manifest():
-    """Serve PWA manifest"""
-    try:
-        manifest_paths = [
-            os.path.join(os.path.dirname(__file__), '..', 'web', 'public', 'manifest.json'),
-            os.path.join(os.path.dirname(__file__), '..', 'public', 'manifest.json')
-        ]
-        
-        for manifest_path in manifest_paths:
-            if os.path.exists(manifest_path):
-                return send_file(manifest_path)
-        
-        # Return default manifest if not found
-        return jsonify({
-            "name": "ProxMenux Monitor",
-            "short_name": "ProxMenux",
-            "description": "Proxmox System Monitoring Dashboard",
-            "start_url": "/",
-            "display": "standalone",
-            "background_color": "#0a0a0a",
-            "theme_color": "#4f46e5",
-            "icons": [
-                {
-                    "src": "/images/proxmenux-logo.png",
-                    "sizes": "256x256",
-                    "type": "image/png"
-                }
-            ]
-        })
-    except Exception as e:
-        # print(f"Error serving manifest: {e}")
-        pass
-        return jsonify({}), 404
-
-@app.route('/sw.js')
-def serve_sw():
-    """Serve service worker"""
-    return '''
-    const CACHE_NAME = 'proxmenux-v1';
-    const urlsToCache = [
-        '/',
-        '/api/system',
-        '/api/storage',
-        '/api/network',
-        '/api/health'
-    ];
-
-    self.addEventListener('install', event => {
-        event.waitUntil(
-            caches.open(CACHE_NAME)
-                .then(cache => cache.addAll(urlsToCache))
-        );
-    });
-
-    self.addEventListener('fetch', event => {
-        event.respondWith(
-            caches.match(event.request)
-                .then(response => response || fetch(event.request))
-        );
-    });
-    ''', 200, {'Content-Type': 'application/javascript'}
-
 @app.route('/_next/<path:filename>')
 def serve_next_static(filename):
     """Serve Next.js static files"""
@@ -3874,14 +3899,8 @@ def serve_next_static(filename):
                 appimage_root = os.path.dirname(base_dir)
         
         static_dir = os.path.join(appimage_root, 'web', '_next')
-        file_path = os.path.join(static_dir, filename)
-        
-        if os.path.exists(file_path):
-            return send_file(file_path)
-        
-        # print(f"[v0] ❌ Next.js static file not found: {file_path}")
-        pass
-        return '', 404
+        # send_from_directory refuses any path that leaves static_dir.
+        return send_from_directory(static_dir, filename)
     except Exception as e:
         # print(f"Error serving Next.js static file {filename}: {e}")
         pass
@@ -3994,6 +4013,106 @@ def is_disk_removable(disk_name):
         return False
 
 
+_PCI_ADDR_RE = re.compile(r'^([0-9a-f]{4,}):([0-9a-f]{2}:[0-9a-f]{2}\.[0-7])$')
+
+
+def _last_pci_slot(sysfs_path):
+    """Return the deepest PCI address in a resolved sysfs path, in lspci format.
+
+    lspci omits the PCI domain when it is 0000, so we do too; that keeps the
+    result directly comparable with pci_devices[].slot. Non-zero domains (e.g.
+    Intel VMD's 10000:) are kept, matching what lspci prints for them.
+    """
+    slot = None
+    for part in sysfs_path.split('/'):
+        m = _PCI_ADDR_RE.match(part)
+        if m:
+            domain, bdf = m.groups()
+            slot = bdf if domain == '0000' else f'{domain}:{bdf}'
+    return slot
+
+
+def get_disk_controller_slot(disk_name):
+    """Return the PCI slot of the controller a disk hangs off, or None.
+
+    The disk's sysfs device path runs from the PCI root down through any
+    bridges to the controller, then into the controller's own topology:
+      SAS HBA  .../0000:01:00.0/host6/port-6:1/end_device-6:1/...  -> 01:00.0
+      SATA     .../0000:02:00.1/ata1/host0/...                     -> 02:00.1
+      USB      .../0000:0c:00.3/usb3/3-2/3-2.4/.../host7/...       -> 0c:00.3
+      NVMe     .../0000:03:04.0/0000:08:00.0/nvme/nvme0            -> 08:00.0
+    Bridges come earlier in the path, so the last PCI address is always the
+    controller. zvols, loop and other virtual devices have no device link.
+    """
+    try:
+        device_path = f'/sys/block/{disk_name}/device'
+        if os.path.exists(device_path):
+            slot = _last_pci_slot(os.path.realpath(device_path))
+            if slot:
+                return slot
+
+        # NVMe native multipath can point the namespace at an nvme-subsystem
+        # with no PCI parent; fall back to the controller's own device link.
+        match = re.match(r'(nvme\d+)n\d+', disk_name)
+        if match:
+            ctrl_path = f'/sys/class/nvme/{match.group(1)}/device'
+            if os.path.exists(ctrl_path):
+                return _last_pci_slot(os.path.realpath(ctrl_path))
+    except Exception:
+        pass
+    return None
+
+
+def get_storage_controllers(slots):
+    """Describe the PCI controllers at the given slots, keyed by slot.
+
+    Built from the cached `lspci -vmm` output rather than the full
+    /api/hardware enumeration, so the Storage view can label its
+    controller groups without paying for get_hardware_info(). No class
+    filter: whatever a disk resolved to is described, including SATA
+    controllers left in BIOS IDE mode.
+    """
+    wanted = {s for s in slots if s}
+    controllers = {}
+    if not wanted:
+        return controllers
+
+    for block in get_cached_lspci_vmm().split('\n\n'):
+        fields = {}
+        for line in block.split('\n'):
+            if ':' in line:
+                key, value = line.split(':', 1)
+                fields[key.strip()] = value.strip()
+        slot = fields.get('Slot')
+        if slot not in wanted:
+            continue
+
+        driver = None
+        try:
+            sysfs_addr = slot if slot.count(':') == 2 else f'0000:{slot}'
+            driver_link = f'/sys/bus/pci/devices/{sysfs_addr}/driver'
+            if os.path.exists(driver_link):
+                driver = os.path.basename(os.readlink(driver_link))
+        except Exception:
+            pass
+
+        # lspci prints "Device 84ca" when it has no name for the subsystem;
+        # drop that so the UI falls back to the real chip name.
+        sdevice = fields.get('SDevice') or None
+        if sdevice and re.fullmatch(r'Device [0-9a-f]{4}', sdevice):
+            sdevice = None
+
+        controllers[slot] = {
+            'slot': slot,
+            'class': fields.get('Class', ''),
+            'vendor': fields.get('Vendor', ''),
+            'device': fields.get('Device', ''),
+            'sdevice': sdevice,
+            'driver': driver,
+        }
+    return controllers
+
+
 def is_disk_usb(disk_name):
     """Return True when sysfs places the disk behind a USB bus."""
     return resolver_is_usb_disk(disk_name)
@@ -4056,6 +4175,149 @@ def _resolve_zfs_entry(entry):
     except Exception:
         pass
     return None
+
+
+def get_zpool_status_details():
+    """Return `zpool status` for every pool as parsed JSON, keyed by pool name.
+
+    Needs OpenZFS 2.3+ for `-j`. Returns None when the JSON output isn't
+    available (older ZFS, no zpool binary) so callers can tell "no details"
+    apart from "no pools". --json-int gives raw byte counts and epoch
+    timestamps; -P gives full device paths.
+    """
+    try:
+        result = subprocess.run(
+            ['zpool', 'status', '-j', '--json-int', '-P'],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return None
+        return json.loads(result.stdout).get('pools') or {}
+    except Exception:
+        return None
+
+
+def _zfs_member_disk(path):
+    """Map a pool member path (by-id, by-partlabel, /dev/sdX3...) to its base disk.
+
+    Pure sysfs (no lsblk subprocess) since /api/storage is polled and a
+    pool can have dozens of members. Non-/dev members (file vdevs) give None.
+    """
+    if not path.startswith('/dev/'):
+        return None
+    try:
+        name = os.path.basename(os.path.realpath(path))
+        if os.path.exists(f'/sys/class/block/{name}/partition'):
+            return os.path.basename(os.path.dirname(os.path.realpath(f'/sys/class/block/{name}')))
+        if os.path.exists(f'/sys/class/block/{name}'):
+            return name
+    except Exception:
+        pass
+    return None
+
+
+def _zfs_errors(node):
+    return {
+        'read_errors': node.get('read_errors', 0),
+        'write_errors': node.get('write_errors', 0),
+        'checksum_errors': node.get('checksum_errors', 0),
+    }
+
+
+def _zfs_device(node, via=None):
+    path = node.get('path') or node.get('name', '')
+    return {
+        'path': path,
+        'disk': _zfs_member_disk(path),
+        'state': node.get('state', 'UNKNOWN'),
+        'slow_ios': node.get('slow_ios', 0),
+        'via': via,
+        **_zfs_errors(node),
+    }
+
+
+_ZFS_PARITY_RE = re.compile(r'^(?:raidz|draid)(\d)')
+
+
+def _zfs_vdev(node, vdev_class):
+    """Flatten one top-level vdev into {type, parity, devices[...]}.
+
+    A leaf at the top level (single disk, stripe member, log/cache/spare
+    device) becomes a vdev of type 'disk' holding just itself. spare-N and
+    replacing-N wrappers inside a mirror/raidz are unwrapped, with each
+    device tagged `via` so the UI can show what's being swapped.
+    """
+    children = node.get('vdevs') or {}
+    if not children:
+        device = _zfs_device(node)
+        return {
+            'name': device['path'],
+            'type': 'disk',
+            'parity': None,
+            'class': vdev_class,
+            'state': device['state'],
+            'devices': [device],
+            **_zfs_errors(node),
+        }
+
+    devices = []
+    for child in children.values():
+        if child.get('vdevs'):
+            devices.extend(_zfs_device(leaf, via=child.get('name')) for leaf in child['vdevs'].values())
+        else:
+            devices.append(_zfs_device(child))
+
+    parity = _ZFS_PARITY_RE.match(node.get('name', ''))
+    return {
+        'name': node.get('name', ''),
+        'type': node.get('vdev_type', ''),
+        'parity': int(parity.group(1)) if parity else None,
+        'class': vdev_class,
+        'state': node.get('state', 'UNKNOWN'),
+        'devices': devices,
+        **_zfs_errors(node),
+    }
+
+
+def _zfs_pool_details(pool):
+    """Turn one pool from `zpool status -j` into the shape the Storage view uses.
+
+    Data/special/dedup vdevs hang off the root vdev; log, cache and spare
+    devices live in separate top-level maps. GUIDs are dropped; they don't
+    fit in a JS number and the UI doesn't need them.
+    """
+    root = (pool.get('vdevs') or {}).get(pool.get('name'), {})
+    vdevs = [_zfs_vdev(child, child.get('class', 'normal')) for child in (root.get('vdevs') or {}).values()]
+    for key, vdev_class in (('logs', 'log'), ('l2cache', 'cache'), ('spares', 'spare')):
+        vdevs.extend(_zfs_vdev(child, vdev_class) for child in (pool.get(key) or {}).values())
+
+    scan = None
+    stats = pool.get('scan_stats')
+    if stats:
+        # issued/to_examine drifts either side of 100 once finished (skipped
+        # blocks), so progress is only meaningful while the scan is running.
+        to_examine = stats.get('to_examine') or 0
+        running = stats.get('state') == 'SCANNING' and to_examine
+        scan = {
+            'function': stats.get('function'),       # SCRUB | RESILVER
+            'state': stats.get('state'),             # SCANNING | FINISHED | CANCELED
+            'start_time': stats.get('start_time'),
+            'end_time': stats.get('end_time'),
+            'errors': stats.get('errors', 0),
+            'repaired_bytes': stats.get('processed', 0),
+            'percent': min(100.0, round(100 * (stats.get('issued') or 0) / to_examine, 1)) if running else None,
+        }
+
+    def _tidy(text):
+        return ' '.join(text.split()) if text else None
+
+    return {
+        'status': _tidy(pool.get('status')),
+        'action': _tidy(pool.get('action')),
+        'error_count': pool.get('error_count', 0),
+        'scan': scan,
+        'vdevs': vdevs,
+    }
 
 
 def get_system_disks():
@@ -4202,9 +4464,6 @@ def get_system_disks():
             ['pvs', *dev_args, '--noheadings', '-o', 'pv_name,vg_name'],
             capture_output=True, text=True, timeout=5
         ) if dev_args is not None else None
-        if result is not None:
-            from lvm_device_scope import settle_scan_reads
-            settle_scan_reads()
         if result is not None and result.returncode == 0:
             for line in result.stdout.strip().split('\n'):
                 if line.strip():
@@ -4342,12 +4601,10 @@ def get_storage_info():
                         # temperature graph isn't a monitor bug — the
                         # disk is parked. See issue #232.
                         in_standby = False
-                        in_idle = False
                         in_excluded = False
                         try:
                             import disk_temperature_history as _dth
                             in_standby = _dth.is_disk_in_standby(disk_name)
-                            in_idle = _dth.is_disk_idle(disk_name)
                             in_excluded = disk_name in _dth.excluded_disk_names()
                         except Exception:
                             pass
@@ -4358,7 +4615,6 @@ def get_storage_info():
                             'size_bytes': disk_size_bytes,
                             'temperature': smart_data.get('temperature', 0),
                             'standby': in_standby,
-                            'idle': in_idle,
                             'excluded': in_excluded,
                             'health': smart_data.get('health', 'unknown'),
                             'power_on_hours': smart_data.get('power_on_hours', 0),
@@ -4376,6 +4632,7 @@ def get_storage_info():
                             'total_lbas_written': smart_data.get('total_lbas_written'),
                             'ssd_life_left': smart_data.get('ssd_life_left'),
                             'connection_type': conn_type,
+                            'controller_slot': get_disk_controller_slot(disk_name),
                             'removable': removable,
                             'is_system_disk': is_system_disk,
                             'system_usage': system_usage,
@@ -4510,9 +4767,7 @@ def get_storage_info():
             disk_partitions = psutil.disk_partitions()
             total_used = 0
             total_available = 0
-            
-            zfs_disks = set()
-            
+
             for partition in disk_partitions:
                 try:
                     # Skip special filesystems
@@ -4547,6 +4802,8 @@ def get_storage_info():
                         disk_info['used'] = round(partition_usage.used / (1024**3), 1)
                         disk_info['available'] = round(partition_usage.free / (1024**3), 1)
                         disk_info['usage_percent'] = round(partition_usage.percent, 1)
+                        disk_info['total_bytes'] = partition_usage.total
+                        disk_info['used_bytes'] = partition_usage.used
                         
                 except PermissionError:
                     continue
@@ -4556,9 +4813,11 @@ def get_storage_info():
                     continue
             
             try:
-                result = subprocess.run(['zpool', 'list', '-H', '-p', '-o', 'name,size,alloc,free,health'], 
+                result = subprocess.run(['zpool', 'list', '-H', '-p', '-o', 'name,size,alloc,free,health,frag,cap,dedup'],
                                       capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
+                    # One `zpool status` for all pools; None on ZFS < 2.3 (no -j)
+                    zpool_details = get_zpool_status_details()
                     for line in result.stdout.strip().split('\n'):
                         if line:
                             parts = line.split('\t')
@@ -4568,6 +4827,14 @@ def get_storage_info():
                                 pool_alloc_bytes = int(parts[2])
                                 pool_free_bytes = int(parts[3])
                                 pool_health = parts[4]
+                                # frag is '-' on pools without spacemap histograms
+                                extra = parts[5:8] + ['-'] * (8 - len(parts))
+                                fragmentation = int(extra[0]) if extra[0].isdigit() else None
+                                capacity = int(extra[1]) if extra[1].isdigit() else None
+                                try:
+                                    dedup_ratio = float(extra[2])
+                                except ValueError:
+                                    dedup_ratio = None
                                 
                                 total_used += pool_alloc_bytes
                                 total_available += pool_free_bytes
@@ -4588,22 +4855,20 @@ def get_storage_info():
                                     'size': format_zfs_size(pool_size_bytes),
                                     'allocated': format_zfs_size(pool_alloc_bytes),
                                     'free': format_zfs_size(pool_free_bytes),
-                                    'health': pool_health
+                                    'health': pool_health,
+                                    'fragmentation': fragmentation,
+                                    'capacity': capacity,
+                                    'dedup_ratio': dedup_ratio,
+                                    'details_available': False,
                                 }
+                                if zpool_details and pool_name in zpool_details:
+                                    try:
+                                        pool_info.update(_zfs_pool_details(zpool_details[pool_name]))
+                                        pool_info['details_available'] = True
+                                    except Exception:
+                                        pass
                                 storage_data['zfs_pools'].append(pool_info)
-                                
-                                try:
-                                    pool_status = subprocess.run(['zpool', 'status', pool_name], 
-                                                               capture_output=True, text=True, timeout=5)
-                                    if pool_status.returncode == 0:
-                                        for status_line in pool_status.stdout.split('\n'):
-                                            for disk_name in physical_disks.keys():
-                                                if disk_name in status_line:
-                                                    zfs_disks.add(disk_name)
-                                except Exception as e:
-                                    # print(f"Error getting ZFS pool status for {pool_name}: {e}")
-                                    pass
-                                    
+
             except FileNotFoundError:
                 # print("[v0] Note: ZFS not installed")
                 pass
@@ -4651,7 +4916,10 @@ def get_storage_info():
             pass
         
         storage_data['disks'] = list(physical_disks.values())
-        
+        storage_data['controllers'] = get_storage_controllers(
+            d.get('controller_slot') for d in physical_disks.values()
+        )
+
         return storage_data
         
     except Exception as e:
@@ -5021,6 +5289,30 @@ def _lvm_device_args():
     return lvm_device_args(_hdd_in_standby)
 
 
+def _smart_identity_payload(disk_name):
+    """The empty payload with what the host knows of the disk without sending
+    it any command: its model, its serial and whether it spins."""
+    base = _smart_default_payload()
+    try:
+        model = Path(f'/sys/block/{disk_name}/device/model').read_text().strip()
+        if model:
+            base['model'] = model
+    except OSError:
+        pass
+    try:
+        device = Path(f'/sys/block/{disk_name}/dev').read_text().strip()
+        for line in Path(f'/run/udev/data/b{device}').read_text().splitlines():
+            key, _, value = line.partition('=')
+            if key == 'E:ID_MODEL' and value.strip():
+                base['model'] = value.strip().replace('_', ' ')
+            elif key == 'E:ID_SERIAL_SHORT' and value.strip():
+                base['serial'] = value.strip()
+    except OSError:
+        pass
+    base['rotation_rate'] = disk_identity.rotation_rate(disk_name)
+    return base
+
+
 def get_smart_data(disk_name):
     """Cached wrapper around the underlying smartctl probe.
 
@@ -5049,20 +5341,19 @@ def get_smart_data(disk_name):
     if cached and now - cached[0] < _SMART_RESULT_TTL:
         return dict(cached[1])
 
-    # Excluded, or rotational with no I/O since it was last looked at: send
-    # it nothing — not even the power-mode question below, which is still a
-    # command. Serve what is known, without a temperature that would only be
-    # stale. Same rule as the temperature poller, so the two agree.
+    # Excluded in Settings: send it nothing — not even the power-mode
+    # question below, which is still a command. Serve what is known, without
+    # a temperature that would only be stale. Same rule as the temperature
+    # poller, so the two agree.
     try:
         import disk_temperature_history as _dth
         policy = _dth.disk_read_policy(disk_name)
     except Exception:
         policy = 'read'
     if policy != 'read':
-        base = dict(cached[1]) if cached else _smart_default_payload()
+        base = dict(cached[1]) if cached else _smart_identity_payload(disk_name)
         base['temperature'] = 0
-        base['excluded'] = policy == 'excluded'
-        base['idle'] = policy == 'idle'
+        base['excluded'] = True
         return base
 
     if _hdd_in_standby(disk_name):
@@ -5071,14 +5362,15 @@ def get_smart_data(disk_name):
         # the disk sleeps. The Storage view paints its own Standby badge
         # from the temperature poller's flag. Don't refresh the cache
         # timestamp: the moment the disk is active again we re-probe.
-        base = dict(cached[1]) if cached else _smart_default_payload()
+        base = dict(cached[1]) if cached else _smart_identity_payload(disk_name)
         base['standby'] = True
         base['temperature'] = 0
         return base
 
     retry_at = _smart_fail_backoff.get(disk_name, 0)
     if retry_at > now:
-        return dict(cached[1]) if cached else _smart_default_payload()
+        # smartctl keeps failing: show what the host knows of the disk.
+        return dict(cached[1]) if cached else _smart_identity_payload(disk_name)
 
     result = _get_smart_data_uncached(disk_name)
 
@@ -5102,9 +5394,8 @@ def _get_smart_data_uncached(disk_name):
     smart_data = _smart_default_payload()
     best_smart_data = dict(smart_data)
     best_score = -1
+    best_command = None
 
-
-    
     try:
         probes = smartctl_probe_types(disk_name)
         all_commands = [smartctl_command(disk_name, ('-a', '-j'), probe) for probe in probes]
@@ -5295,13 +5586,11 @@ def _get_smart_data_uncached(disk_name):
 
                                         # --- Wear / Life indicators ---
                                         if attr_id == 230 and ('wearout' in attr_name or 'media' in attr_name):
-                                            # WD/SanDisk Media_Wearout_Indicator: value = endurance used %
-                                            smart_data['media_wearout_indicator'] = normalized_value
-                                            smart_data['ssd_life_left'] = max(0, 100 - normalized_value)
+                                            # Attribute 230 can count either way depending on firmware.
+                                            smart_data['_needs_ata_endurance'] = True
 
                                         elif attr_id == 233 and ('wearout' in attr_name or 'media' in attr_name):
                                             # Intel/Samsung Media_Wearout_Indicator: value = life remaining %
-                                            # Skip if already set by ID 230 (prevents overwrite)
                                             if smart_data.get('media_wearout_indicator') is None:
                                                 smart_data['media_wearout_indicator'] = 100 - normalized_value
 
@@ -5467,9 +5756,7 @@ def _get_smart_data_uncached(disk_name):
                                             nv = int(parts[3]) if len(parts) > 3 else 100
 
                                             if attr_id == '230' and ('wearout' in a_name or 'media' in a_name):
-                                                # WD/SanDisk: value = endurance used %
-                                                smart_data['media_wearout_indicator'] = nv
-                                                smart_data['ssd_life_left'] = max(0, 100 - nv)
+                                                smart_data['_needs_ata_endurance'] = True
 
                                             elif attr_id == '233' and ('wearout' in a_name or 'media' in a_name):
                                                 # Intel/Samsung: value = life remaining %
@@ -5504,10 +5791,12 @@ def _get_smart_data_uncached(disk_name):
                     score = _smart_payload_score(smart_data)
                     if score > best_score:
                         best_score = score
+                        best_command = cmd
                         best_smart_data = dict(smart_data)
 
                     if _smart_probe_complete(disk_name, smart_data):
                         _smart_probe_cache[disk_name] = list(cmd)
+                        best_command = cmd
                         best_smart_data = dict(smart_data)
                         break
                 else:
@@ -5537,6 +5826,11 @@ def _get_smart_data_uncached(disk_name):
                         # print(f"[v0] Error killing process: {kill_err}")
                         pass
         smart_data = best_smart_data
+        if smart_data.pop('_needs_ata_endurance', False) and best_command:
+            used = ata_endurance_used(best_command)
+            if used is not None:
+                smart_data['media_wearout_indicator'] = used
+                smart_data['ssd_life_left'] = max(0, 100 - used)
 
         if smart_data['reallocated_sectors'] > 0 or smart_data['pending_sectors'] > 0:
             if smart_data['health'] == 'healthy':
@@ -5552,6 +5846,11 @@ def _get_smart_data_uncached(disk_name):
             # print(f"[v0] Health: CRITICAL (SMART failed)")
             pass
         
+        # Without an answer from smartctl, the kernel's flag; the temperature
+        # class below depends on it.
+        if not smart_data['_rotation_known']:
+            smart_data['rotation_rate'] = disk_identity.rotation_rate(disk_name)
+
         # Temperature-based health (only if we have a valid temperature)
         # Thresholds differ by disk class (HDD/SSD/NVMe/SAS) and are
         # user-configurable via health_thresholds; the values below are
@@ -5582,27 +5881,6 @@ def _get_smart_data_uncached(disk_name):
                 smart_data['health'] = 'critical'
             elif temp > warn:
                 smart_data['health'] = 'warning'
-
-        # Fallback: ask the kernel only when smartctl had no opinion.
-        # USB-SATA enclosures (ASM105x family etc.) advertise
-        # rotational=1 to the kernel even when there's an SSD behind
-        # them, so trusting /sys here without first checking what
-        # smartctl said would flip a correctly-identified SSD back to
-        # HDD. The previous condition (`rotation_rate == 0`) couldn't
-        # tell "smartctl confirmed SSD" from "smartctl never spoke",
-        # which is what bit the OCZ-SOLID2 behind an ASM105x dock on
-        # the lab host (sdd showed as HDD in the UI while smartctl
-        # was reporting it as SSD).
-        if not smart_data['_rotation_known']:
-            try:
-                rotational_path = f"/sys/block/{disk_name}/queue/rotational"
-                if os.path.exists(rotational_path):
-                    with open(rotational_path, 'r') as f:
-                        rotational = int(f.read().strip())
-                        if rotational == 1:
-                            smart_data['rotation_rate'] = -1  # HDD, RPM unknown
-            except Exception:
-                pass
     except FileNotFoundError:
         # print(f"[v0] ERROR: smartctl not found - install smartmontools for disk monitoring.")
         pass
@@ -5655,11 +5933,15 @@ def _get_proxmox_storage_uncached():
     try:
         # local_node = socket.gethostname()
         local_node = get_proxmox_node_name()
-        
-        result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'], 
-                              capture_output=True, text=True, timeout=10)
-        
-        if result.returncode != 0:
+
+        resources = pve_mirror.cluster_resources_storage()
+        if resources is None:
+            result = subprocess.run(['pvesh', 'get', '/cluster/resources', '--type', 'storage', '--output-format', 'json'],
+                                    capture_output=True, text=True, timeout=10)
+        else:
+            result = None
+
+        if result is not None and result.returncode != 0:
             # print(f"[v0] pvesh command failed with return code {result.returncode}")
             pass
             # print(f"[v0] stderr: {result.stderr}")
@@ -5670,8 +5952,9 @@ def _get_proxmox_storage_uncached():
             }
         
         storage_list = []
-        resources = json.loads(result.stdout)
-        
+        if result is not None:
+            resources = json.loads(result.stdout)
+
         for resource in resources:
             node = resource.get('node', '')
             
@@ -6056,20 +6339,39 @@ def _iface_master(iface_name):
 # Chain: veth/tap → fwbr (intermediate) → fwpr (peer) → vmbr (real).
 def _resolve_bridge_owner(iface_name):
     import re
+    ovs_owners = ovs_topology.get_topology().get('owners', {})
+    if iface_name in ovs_owners:
+        return ovs_owners[iface_name]
     master = _iface_master(iface_name)
     if not master:
         return None
     if master.startswith('fwbr'):
-        fwpr = re.sub(r'^fwbr', 'fwpr', master)
-        fwpr = re.sub(r'i(\d+)$', r'p\1', fwpr)
+        # A Linux bridge reaches the firewall bridge through fwprNpM; an OVS
+        # bridge through its own internal port fwlnNoM.
+        suffix = master[len('fwbr'):]
+        links = (re.sub(r'i(\d+)$', r'p\1', 'fwpr' + suffix),
+                 re.sub(r'i(\d+)$', r'o\1', 'fwln' + suffix))
         try:
-            if os.path.exists(f'/sys/class/net/{fwpr}'):
-                real = _iface_master(fwpr)
-                if real:
-                    return real
+            for link in links:
+                if os.path.exists(f'/sys/class/net/{link}'):
+                    real = ovs_owners.get(link) or _iface_master(link)
+                    if real:
+                        return real
         except Exception:
             pass
     return master
+
+
+# The OVS port a guest interface reaches. Behind the Proxmox firewall the
+# guest's veth/tap sits on fwbrNiM, and its VLAN tag and trunks are set on the
+# fwlnNoM port of the OVS bridge.
+def _ovs_port_detail(iface_name, ports):
+    if iface_name in ports:
+        return ports[iface_name]
+    master = _iface_master(iface_name)
+    if master and master.startswith('fwbr'):
+        return ports.get(re.sub(r'i(\d+)$', r'o\1', 'fwln' + master[len('fwbr'):]), {})
+    return {}
 
 
 # ─── ethtool: max link speed per NIC ────────────────────────────
@@ -6148,6 +6450,10 @@ def get_interface_type(interface_name):
         # Skip other virtual interfaces
         if interface_name.startswith(('tun', 'vnet', 'docker', 'virbr')):
             return 'skip'
+
+        ovs_type = ovs_topology.get_topology().get('types', {}).get(interface_name)
+        if ovs_type:
+            return ovs_type
 
         # Check if it's a bond — sysfs first (name-agnostic), then the
         # "bondN" convention as fallback when /sys isn't readable.
@@ -6388,6 +6694,7 @@ def get_network_info():
             pass
         
         vm_lxc_map = get_vm_lxc_names()
+        ovs = ovs_topology.get_topology()
         
         # Get network interfaces
         net_if_addrs = psutil.net_if_addrs()
@@ -6522,8 +6829,10 @@ def get_network_info():
             # vmbr so a guest behind the Proxmox firewall still lands
             # under its true bridge in the Network Flow diagram.
             master = _resolve_bridge_owner(interface_name)
+            master = ovs.get('owners', {}).get(interface_name) or master
             if master:
                 interface_info['bridge_owner'] = master
+            interface_info.update(_ovs_port_detail(interface_name, ovs.get('ports', {})))
 
             if interface_type == 'bond':
                 bond_info = get_bond_info(interface_name)
@@ -6536,6 +6845,12 @@ def get_network_info():
 
             if interface_type == 'bridge':
                 bridge_info = get_bridge_info(interface_name)
+                if interface_name in ovs.get('bridges', {}):
+                    bridge_info['members'] = ovs['bridges'][interface_name]
+                    bridge_info['physical_interface'] = next((member for member in bridge_info['members']
+                        if member in ovs.get('bonds', {}) or _is_physical_dev(member)), None)
+                    bridge_info['bond_slaves'] = ovs.get('bonds', {}).get(bridge_info['physical_interface'], {}).get('bond_slaves', [])
+                    interface_info['network_backend'] = 'ovs'
                 interface_info['bridge_members'] = bridge_info['members']
                 interface_info['bridge_physical_interface'] = bridge_info['physical_interface']
                 interface_info['bridge_physical_duplex'] = bridge_info['physical_duplex']
@@ -6555,6 +6870,22 @@ def get_network_info():
                 network_data['interfaces'].append(interface_info)
                 if interface_type == 'bond':
                     network_data['bond_interfaces'].append(interface_info)
+
+        # An OVS bond is an OVSDB port, not a kernel network interface.
+        for name, detail in ovs.get('bonds', {}).items():
+            slaves = [item for item in network_data['physical_interfaces']
+                      if item['name'] in detail['bond_slaves']]
+            network_data['bond_interfaces'] = [item for item in network_data['bond_interfaces'] if item['name'] != name]
+            bond_interface = {
+                'name': name, 'type': 'bond', 'addresses': [],
+                'status': 'up' if any(item['status'] == 'up' for item in slaves) else 'down',
+                # OVSDB membership does not reveal active-backup capacity.
+                'speed': 0, 'duplex': 'unknown', 'mtu': 0, 'mac_address': None,
+                'rx_Bps': sum(item.get('rx_Bps', 0) for item in slaves),
+                'tx_Bps': sum(item.get('tx_Bps', 0) for item in slaves), **detail}
+            network_data['bond_interfaces'].append(bond_interface)
+            network_data['interfaces'] = [item for item in network_data['interfaces'] if item['name'] != name]
+            network_data['interfaces'].append(bond_interface)
 
         network_data['physical_active_count'] = physical_active_count
         network_data['physical_total_count'] = physical_total_count
@@ -6606,6 +6937,11 @@ def get_network_info():
                     bridges_per_nic.setdefault(slave, []).append(bridge['name'])
             else:
                 bridges_per_nic.setdefault(phys, []).append(bridge['name'])
+        for name, members in ovs.get('bridges', {}).items():
+            for member in members:
+                for nic in ovs.get('bonds', {}).get(member, {}).get('bond_slaves', [member]):
+                    if name not in bridges_per_nic.setdefault(nic, []):
+                        bridges_per_nic[nic].append(name)
         for phy in network_data['physical_interfaces']:
             if phy['name'] in bridges_per_nic:
                 phy['used_by_bridges'] = bridges_per_nic[phy['name']]
@@ -7779,7 +8115,8 @@ def get_detailed_gpu_info(gpu):
                 env = os.environ.copy()
                 env['TERM'] = 'xterm'  # Ensure terminal type is set
                 
-                cmd = f'{intel_gpu_top_path} -J' # Use the found path
+                # Without a shell: the signal has to reach intel_gpu_top itself.
+                cmd = [intel_gpu_top_path, '-J']
                 # print(f"[v0] Executing command: {cmd}", flush=True)
                 pass
                 
@@ -7789,7 +8126,6 @@ def get_detailed_gpu_info(gpu):
                     stderr=subprocess.PIPE,
                     text=True,
                     bufsize=1,
-                    shell=True,
                     env=env,
                     cwd='/'  # Ejecutar desde root en lugar de dentro del AppImage
                 )
@@ -8111,9 +8447,9 @@ def get_detailed_gpu_info(gpu):
                             temp_elem = gpu_elem.find('.//temperature/gpu_temp')
                             if temp_elem is not None and temp_elem.text:
                                 try:
-                                    # Remove ' C' suffix and convert to int
+                                    # Recent drivers report decimals, such as "70.57 C".
                                     temp_str = temp_elem.text.replace(' C', '').strip()
-                                    detailed_info['temperature'] = int(temp_str)
+                                    detailed_info['temperature'] = float(temp_str)
                                     # print(f"[v0] Temperature: {detailed_info['temperature']}°C", flush=True)
                                     pass
                                     data_retrieved = True
@@ -8915,6 +9251,10 @@ def _sriov_pci_render_node(bdf):
 
 def _sriov_guest_running(guest_type, gid):
     """Best-effort status check. Returns True if running, False otherwise."""
+    state = pve_mirror.local_guest_status(gid)
+    if state is not None:
+        wanted = 'qemu' if guest_type == 'vm' else 'lxc'
+        return state.get('type') == wanted and state.get('status') == 'running'
     try:
         cmd = ['qm' if guest_type == 'vm' else 'pct', 'status', str(gid)]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
@@ -9197,41 +9537,8 @@ def _get_hardware_info_uncached():
         try:
             result = subprocess.run(['lscpu'], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                cpu_info = {}
-                for line in result.stdout.split('\n'):
-                    if ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip()
-                        value = value.strip()
-                        
-                        if key == 'Model name':
-                            cpu_info['model'] = value
-                        elif key == 'CPU(s)':
-                            cpu_info['total_threads'] = int(value)
-                        elif key == 'Core(s) per socket':
-                            cpu_info['cores_per_socket'] = int(value)
-                        elif key == 'Socket(s)':
-                            cpu_info['sockets'] = int(value)
-                        elif key == 'CPU MHz':
-                            cpu_info['current_mhz'] = float(value)
-                        elif key == 'CPU max MHz':
-                            cpu_info['max_mhz'] = float(value)
-                        elif key == 'CPU min MHz':
-                            cpu_info['min_mhz'] = float(value)
-                        elif key == 'Virtualization':
-                            cpu_info['virtualization'] = value
-                        elif key == 'L1d cache':
-                            cpu_info['l1d_cache'] = value
-                        elif key == 'L1i cache':
-                            cpu_info['l1i_cache'] = value
-                        elif key == 'L2 cache':
-                            cpu_info['l2_cache'] = value
-                        elif key == 'L3 cache':
-                            cpu_info['l3_cache'] = value
-                
-                hardware_data['cpu'] = cpu_info
-                # print(f"[v0] CPU: {cpu_info.get('model', 'Unknown')}")
-                pass
+                # Tolerant parsing: lscpu prints "-" for Socket(s) on ARM.
+                hardware_data['cpu'] = system_board_info.parse_lscpu(result.stdout)
         except Exception as e:
             # print(f"[v0] Error getting CPU info: {e}")
             pass
@@ -9258,6 +9565,10 @@ def _get_hardware_info_uncached():
         except Exception as e:
             # print(f"[v0] Error getting motherboard info: {e}")
             pass
+        
+        # Boards without DMI (Raspberry Pi, SBCs) describe themselves in the device tree
+        if not hardware_data['motherboard']:
+            hardware_data['motherboard'] = system_board_info.read_device_tree_board()
         
         # BIOS Information
         try:
@@ -9449,6 +9760,7 @@ def _get_hardware_info_uncached():
                             'rotation_rate': smart_data.get('rotation_rate', 0),
                             'form_factor': form_factor,
                             'sata_version': sata_version,
+                            'controller_slot': get_disk_controller_slot(disk_name),
                         }
                         
                         if pcie_info:
@@ -9456,6 +9768,15 @@ def _get_hardware_info_uncached():
                         
                         if model_family:
                             storage_device['family'] = model_family
+
+                        # SD cards and eMMC: no SMART, so take what the
+                        # card itself reports to the kernel.
+                        card = disk_identity.mmc_card(disk_name)
+                        for key in ('model', 'serial'):
+                            if card.get(key) and storage_device.get(key) in (None, '', 'Unknown'):
+                                storage_device[key] = card[key]
+                        if card.get('interface'):
+                            storage_device['interface'] = card['interface']
                         
                         storage_devices.append(storage_device)
                 
@@ -9479,7 +9800,7 @@ def _get_hardware_info_uncached():
                             gpu_name = parts[0]
                             mem_total = parts[1]
                             mem_used = parts[2]
-                            temp = parts[3] if parts[3] != 'N/A' else None
+                            temp = parts[3].strip() if parts[3].strip() not in ('N/A', '[N/A]') else None
                             power = parts[4] if parts[4] != 'N/A' else None
                             gpu_util = parts[5] if parts[5] != 'N/A' else None
                             mem_util = parts[6] if parts[6] != 'N/A' else None
@@ -9507,7 +9828,7 @@ def _get_hardware_info_uncached():
                                 'slot': pci_slot,
                                 'memory_total': mem_total,
                                 'memory_used': mem_used,
-                                'temperature': int(temp) if temp else None,
+                                'temperature': float(temp) if temp else None,
                                 'power_draw': power,
                                 'utilization_gpu': gpu_util,
                                 'utilization_memory': mem_util,
@@ -9593,8 +9914,9 @@ def _get_hardware_info_uncached():
                             if any(keyword in device_class for keyword in ['VGA', 'Display', '3D']):
                                 device_type = 'Graphics Card'
                                 include_device = True
-                            # Storage controllers (including SCSI/SAS HBA cards like LSI 9400-16i)
-                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory', 'SCSI', 'Serial Attached SCSI', 'SAS']):
+                            # Storage controllers (including SCSI/SAS HBA cards like LSI 9400-16i,
+                            # and SATA controllers left in BIOS IDE mode, which report "IDE interface")
+                            elif any(keyword in device_class for keyword in ['SATA', 'RAID', 'Mass storage', 'Non-Volatile memory', 'SCSI', 'Serial Attached SCSI', 'SAS', 'IDE']):
                                 device_type = 'Storage Controller'
                                 include_device = True
                             # Network controllers
@@ -9788,29 +10110,87 @@ def _get_hardware_info_uncached():
         return {}
 
 
+_LIVE_CPU_MIN_WINDOW = 0.5
+_LIVE_CPU_MAX_WINDOW = 10
+_live_cpu_lock = threading.Lock()
+_live_cpu_state = {'times': None, 'at': 0.0, 'usage': None}
+
+
+def _live_cpu_usage():
+    """CPU use since the previous call, from the /proc/stat counters.
+
+    psutil.cpu_times() keeps no baseline of its own, so this never disturbs
+    the vital-signs sampler's psutil.cpu_percent. Calls closer together than
+    the minimum window share the last result. Returns None when there is no
+    recent snapshot to compare with; the caller then uses the sampler.
+    """
+    now = time.monotonic()
+    with _live_cpu_lock:
+        state = _live_cpu_state
+        age = now - state['at']
+        if state['times'] is not None and age < _LIVE_CPU_MIN_WINDOW:
+            return state['usage']
+        times = psutil.cpu_times()
+        previous = state['times']
+        state['times'], state['at'], state['usage'] = times, now, None
+        if previous is None or age > _LIVE_CPU_MAX_WINDOW:
+            return None
+
+        def field(sample, name):
+            return getattr(sample, name, 0) or 0
+
+        def total(sample):
+            # guest time is already counted in user and nice
+            return sum(sample) - field(sample, 'guest') - field(sample, 'guest_nice')
+
+        elapsed = total(times) - total(previous)
+        if elapsed <= 0:
+            return None
+
+        def share(*names):
+            spent = sum(field(times, n) - field(previous, n) for n in names)
+            return round(min(100.0, max(0.0, spent * 100.0 / elapsed)), 1)
+
+        idle = share('idle', 'iowait')
+        state['usage'] = {
+            'value': round(100.0 - idle, 1),
+            'user': share('user', 'nice'),
+            'system': share('system', 'irq', 'softirq'),
+        }
+        return state['usage']
+
+
 @app.route('/api/system', methods=['GET'])
 @require_auth
 def api_system():
     """Get system information including CPU, memory, and temperature"""
     try:
-        # Read from the vital-signs sampler cache. The sampler is the *only*
-        # consumer of psutil.cpu_percent under gevent, so the API handler never
-        # races against it (calling psutil.cpu_percent here under monkey-patched
-        # gevent would return 0% whenever a concurrent greenlet had primed the
-        # baseline less than one /proc/stat tick ago — typical for the dashboard's
-        # parallel system+vms+storage+network requests every 5s).
+        # CPU comes from a /proc/stat delta since the previous request, so a
+        # page polling every few seconds sees that interval. Without a recent
+        # request, fall back to the vital-signs sampler cache: the sampler is
+        # the only consumer of psutil.cpu_percent, because concurrent calls to
+        # it under gevent return 0%.
         try:
-            from health_monitor import health_monitor
-            _hist = health_monitor.state_history.get('cpu_usage') or []
-            if _hist:
-                _last = _hist[-1]
-                cpu_usage = _last['value']
-                cpu_user_pct = _last.get('user', 0)
-                cpu_system_pct = _last.get('system', 0)
+            live = _live_cpu_usage()
+        except Exception:
+            live = None
+        try:
+            if live:
+                cpu_usage = live['value']
+                cpu_user_pct = live['user']
+                cpu_system_pct = live['system']
             else:
-                cpu_usage = psutil.cpu_percent(interval=0.1)
-                cpu_user_pct = 0
-                cpu_system_pct = 0
+                from health_monitor import health_monitor
+                _hist = health_monitor.state_history.get('cpu_usage') or []
+                if _hist:
+                    _last = _hist[-1]
+                    cpu_usage = _last['value']
+                    cpu_user_pct = _last.get('user', 0)
+                    cpu_system_pct = _last.get('system', 0)
+                else:
+                    cpu_usage = psutil.cpu_percent(interval=0.1)
+                    cpu_user_pct = 0
+                    cpu_system_pct = 0
         except Exception:
             cpu_usage = psutil.cpu_percent(interval=0.1)
             cpu_user_pct = 0
@@ -9874,6 +10254,7 @@ def api_system():
             'cpu_cores': cpu_cores,
             'cpu_threads': cpu_threads,
             'proxmox_version': proxmox_version,
+            'platform': get_platform(),
             'kernel_version': kernel_version,
             'available_updates': available_updates
         })
@@ -10117,6 +10498,9 @@ def api_processes():
             results.sort(key=lambda r: r['mem'], reverse=True)
             processes = results[:limit]
 
+        if not has_full_access():
+            # A command line can carry a password: read-only access sees the name.
+            processes = [dict(p, cmdline=p.get('command') or '') for p in processes]
         return jsonify({
             'processes': processes,
             'sort': sort,
@@ -10289,6 +10673,8 @@ def api_process_detail(pid):
             info['fd_count'] = None
 
         info['captured_at'] = int(time.time())
+        if not has_full_access():
+            info['cmdline'] = None  # It can carry a password.
         return jsonify(info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -11301,7 +11687,7 @@ def api_smart_status(disk_name):
                 'temperature': temp,
                 'power_on_hours': poh,
                 'power_cycles': cycles,
-                'rotation_rate': data.get('rotation_rate', 0),
+                'rotation_rate': disk_identity.rotation_rate(disk_name, data.get('rotation_rate')),
                 'form_factor': form_factor,
                 'physical_block_size': physical_block_size,
                 'trim_supported': trim_supported,
@@ -12199,6 +12585,10 @@ _NODE_METRICS_LOCKS = {
     timeframe: threading.Lock()
     for timeframe in ('hour', 'day', 'week', 'month', 'year')
 }
+# After its first pass the prewarmer only runs while the dashboard has
+# asked for metrics recently; an unattended host queries no RRD data.
+_NODE_METRICS_ACTIVE_WINDOW = 600.0
+_NODE_METRICS_LAST_REQUEST = {'ts': None}
 
 
 class _NodeMetricsError(Exception):
@@ -12245,6 +12635,17 @@ def _get_node_metrics_payload(timeframe, max_age=_NODE_METRICS_TTL):
         lock.release()
 
 
+def _node_rrd_command(local_node, timeframe, cf=None):
+    """Node RRD query; Proxmox Backup Server keeps the same fields under its own API."""
+    if is_pbs_host():
+        return ['proxmox-backup-debug', 'api', 'get', '/nodes/localhost/rrd',
+                '--timeframe', timeframe, '--cf', cf or 'AVERAGE', '--output-format', 'json']
+    command = ['pvesh', 'get', f'/nodes/{local_node}/rrddata', '--timeframe', timeframe]
+    if cf:
+        command += ['--cf', cf]
+    return command + ['--output-format', 'json']
+
+
 def _compute_node_metrics_payload(timeframe: str) -> dict:
     """Fetch and shape one node RRD snapshot within a bounded query budget."""
     valid_timeframes = ('hour', 'day', 'week', 'month', 'year')
@@ -12254,22 +12655,9 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
     deadline = time.monotonic() + _NODE_METRICS_TIMEOUT
     local_node = get_proxmox_node_name()
 
-    zfs_arc_size = 0
-    try:
-        with open('/proc/spl/kstat/zfs/arcstats', 'r') as f:
-            for line in f:
-                if line.startswith('size'):
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        zfs_arc_size = int(parts[2])
-                        break
-    except (FileNotFoundError, PermissionError, ValueError):
-        pass
-
     try:
         rrd_result = subprocess.run(
-            ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
-             '--timeframe', timeframe, '--output-format', 'json'],
+            _node_rrd_command(local_node, timeframe),
             capture_output=True, text=True, timeout=_NODE_METRICS_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
@@ -12335,11 +12723,11 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
             'code': 'metrics_invalid_data',
         })
 
+    # Only the history the node recorded is drawn. A PBS RRD has no ARC field,
+    # and the current size repeated over the period is not its history.
     for item in rrd_data:
         if 'arcsize' in item:
             item['zfsarc'] = item['arcsize']
-        elif zfs_arc_size > 0 and ('zfsarc' not in item or item.get('zfsarc', 0) == 0):
-            item['zfsarc'] = zfs_arc_size
 
     def _values_from(items, field_key, scale=1.0):
         return [item[field_key] * scale for item in items
@@ -12363,9 +12751,7 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
             return None
         try:
             extra = subprocess.run(
-                ['pvesh', 'get', f'/nodes/{local_node}/rrddata',
-                 '--timeframe', timeframe, '--cf', cf,
-                 '--output-format', 'json'],
+                _node_rrd_command(local_node, timeframe, cf),
                 capture_output=True, text=True, timeout=remaining,
             )
             if extra.returncode == 0 and extra.stdout:
@@ -12430,11 +12816,16 @@ def _compute_node_metrics_payload(timeframe: str) -> dict:
 def _node_metrics_prewarmer_loop():
     """Prewarm the Overview's default range using the same single-flight cache."""
     time.sleep(3)
+    first_pass = True
     while True:
-        try:
-            _get_node_metrics_payload('day', max_age=90.0)
-        except _NodeMetricsError:
-            pass  # The shared fetch path already records the failure.
+        last_request = _NODE_METRICS_LAST_REQUEST['ts']
+        if first_pass or (last_request is not None
+                          and time.monotonic() - last_request < _NODE_METRICS_ACTIVE_WINDOW):
+            try:
+                _get_node_metrics_payload('day', max_age=90.0)
+            except _NodeMetricsError:
+                pass  # The shared fetch path already records the failure.
+        first_pass = False
         time.sleep(90)
 
 
@@ -12451,6 +12842,11 @@ def _vm_modal_prewarmer_pass():
     disappears until something genuinely expires."""
     from flask import g as _flask_g
     warmed = 0
+    try:
+        import lxc_apps
+        lxc_apps.forget_missing_guests()
+    except Exception as exc:
+        print(f'[ProxMenux] could not check the applications of removed guests: {exc}', flush=True)
     resources = get_cached_pvesh_cluster_resources_vm() or []
     for r in resources:
         vmid = r.get('vmid')
@@ -12541,6 +12937,7 @@ def api_node_metrics():
     timeframe = request.args.get('timeframe', 'week')
     if timeframe not in _NODE_METRICS_LOCKS:
         return jsonify({'error': 'Invalid timeframe. Must be one of: hour, day, week, month, year'}), 400
+    _NODE_METRICS_LAST_REQUEST['ts'] = time.monotonic()
     try:
         return jsonify(_get_node_metrics_payload(timeframe))
     except _NodeMetricsError as exc:
@@ -13114,7 +13511,6 @@ def api_create_backup(vmid):
         mode = data.get('mode', 'snapshot')  # snapshot, suspend, stop
         compress = data.get('compress', 'zstd')  # none, lzo, gzip, zstd
         protected = data.get('protected', False)  # True/False
-        notification = data.get('notification', 'auto')  # always, failure, never, auto
         notes = data.get('notes', '')  # Backup notes/description
         pbs_change_detection = data.get('pbs_change_detection', None)  # default, legacy, data (for PBS + LXC)
         
@@ -13207,6 +13603,7 @@ def api_create_backup(vmid):
                 pass
             unit = f'proxmenux-vzdump-{vmid}-{uuid.uuid4().hex[:8]}'
             out_path = os.path.join(run_dir, f'vzdump-{unit}.out')
+            since = int(time.time()) - 1
             launch = subprocess.run(
                 ['systemd-run', f'--unit={unit}', '--collect', '--quiet',
                  f'--description=ProxMenux backup of {vm_type.upper()} {vmid}',
@@ -13234,7 +13631,21 @@ def api_create_backup(vmid):
                                        capture_output=True, text=True).stdout.strip()
                 if state not in ('active', 'activating'):
                     break
+                # pvesh prints the UPID only once the backup has ended.
+                upid = active_vzdump(node, since)
+                if upid:
+                    break
                 time.sleep(0.3)
+            if upid is None:
+                # A short backup can finish between two reads.
+                try:
+                    with open(out_path, encoding='utf-8', errors='replace') as handle:
+                        buf = handle.read()
+                except OSError:
+                    pass
+                m = upid_re.search(buf)
+                if m:
+                    upid = m.group(0).rstrip(':')
             if upid is None:
                 tail = buf.strip() or 'pvesh exited without producing a UPID'
                 return jsonify({
@@ -13633,6 +14044,19 @@ def get_task_log(upid):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+def _installed_proxmenux_version():
+    """Installed ProxMenux version; a beta install keeps beta_version.txt."""
+    for name in ('beta_version.txt', 'version.txt'):
+        try:
+            with open(f'/usr/local/share/proxmenux/{name}') as fh:
+                version = fh.read().strip()
+            if version:
+                return version
+        except OSError:
+            continue
+    return ''
+
+
 @app.route('/api/health', methods=['GET'])
 @require_auth
 def api_health():
@@ -13640,7 +14064,7 @@ def api_health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'version': '1.2.2'
+        'version': _installed_proxmenux_version()
     })
 
 # ─── User-configurable health thresholds ─────────────────────────────────────
@@ -14121,6 +14545,63 @@ def api_vm_apps_suggestions(vmid):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/vms/<int:vmid>/apps/native-discovery', methods=['GET', 'POST'])
+@require_auth
+def api_vm_apps_native_discovery(vmid):
+    """Only the Find applications button requests POST. GET never probes."""
+    import native_app_discovery
+    import lxc_apps
+    result = (native_app_discovery.discover(vmid) if request.method == 'POST'
+              else native_app_discovery.cached(vmid))
+    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    sidecar = lxc_apps.load_sidecar(vmid) or {}
+    return jsonify(native_app_discovery.filter_candidates(
+        result, suggestions, sidecar.get('apps') or []))
+
+
+@app.route('/api/vms/<int:vmid>/apps/logo-discovery', methods=['POST'])
+@require_auth
+def api_vm_apps_logo_discovery(vmid):
+    """Explicit lookup of a port on this LXC; clients cannot supply a host."""
+    import local_app_icons
+    try:
+        return jsonify(local_app_icons.discover(vmid, request.get_json(silent=True)))
+    except local_app_icons.IconError as exc:
+        return jsonify({'error': 'Local icon unavailable', 'code': exc.code}), 400
+    except Exception:
+        return jsonify({'error': 'Local icon lookup failed', 'code': 'local_logo_unavailable'}), 500
+
+
+@app.route('/api/vms/<int:vmid>/apps/logo-cache/<token>', methods=['GET'])
+@require_auth
+def api_vm_apps_logo_cache(vmid, token):
+    """Authenticated, cache-only display, including while the LXC is stopped."""
+    import local_app_icons
+    cached = local_app_icons.read(vmid, token)
+    if not cached:
+        return jsonify({'error': 'Cached icon not found'}), 404
+    body, mime = cached
+    return Response(body, mimetype=mime, headers={
+        'Cache-Control': 'private, no-store',
+        'Content-Security-Policy': "default-src 'none'; style-src 'none'; sandbox",
+        'X-Content-Type-Options': 'nosniff',
+    })
+
+
+@app.route('/api/vms/<int:vmid>/apps/docker-discovery', methods=['GET', 'POST'])
+@require_auth
+def api_vm_apps_docker_discovery(vmid):
+    """New discovery contract: explicit POST scans; GET only composes cached data."""
+    import docker_app_discovery
+    import lxc_apps
+    result = (docker_app_discovery.discover(vmid) if request.method == 'POST'
+              else docker_app_discovery.cached(vmid))
+    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    sidecar = lxc_apps.load_sidecar(vmid) or {}
+    return jsonify(docker_app_discovery.filter_candidates(
+        result, suggestions, sidecar.get('apps') or []))
+
+
 @app.route('/api/vms/<int:vmid>/apps/adguard-setup', methods=['GET'])
 @require_auth
 def api_vm_apps_adguard_setup(vmid):
@@ -14155,6 +14636,43 @@ def api_apps_catalog():
     try:
         import lxc_apps
         return jsonify(lxc_apps.get_catalog())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/apps/icon-themes', methods=['GET'])
+@require_auth
+def api_apps_icon_themes():
+    """Catalog icons that need another version on the dark theme:
+    {icon_url: light_version_url | "invert"}."""
+    try:
+        import lxc_apps
+        return jsonify(lxc_apps.oci_icon_themes())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/catalog/items', methods=['GET'])
+@require_auth
+def api_catalog_items():
+    """Every item of the Catalog tab: OCI applications and Community Scripts."""
+    try:
+        import catalog_tab
+        return jsonify(catalog_tab.list_items(request.args.get('lang', 'en'), request.args.get('known')))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/catalog/items/<kind>/<item_id>', methods=['GET'])
+@require_auth
+def api_catalog_item(kind, item_id):
+    """The sheet of one item of the Catalog tab."""
+    try:
+        import catalog_tab
+        detail = catalog_tab.item_detail(kind, item_id, request.args.get('lang', 'en'))
+        if detail is None:
+            return jsonify({'error': 'not found'}), 404
+        return jsonify(detail)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -15052,11 +15570,11 @@ def api_prometheus():
             disk_name = disk.get('name', 'unknown')
             metrics.append(f'# HELP proxmox_disk_total_bytes Total disk space in bytes')
             metrics.append(f'# TYPE proxmox_disk_total_bytes gauge')
-            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total", 0)} {timestamp}')
+            metrics.append(f'proxmox_disk_total_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("total_bytes", 0)} {timestamp}')
             
             metrics.append(f'# HELP proxmox_disk_used_bytes Used disk space in bytes')
             metrics.append(f'# TYPE proxmox_disk_used_bytes gauge')
-            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used", 0)} {timestamp}')
+            metrics.append(f'proxmox_disk_used_bytes{{node="{node}",disk="{disk_name}"}} {disk.get("used_bytes", 0)} {timestamp}')
             
             metrics.append(f'# HELP proxmox_disk_usage_percent Disk usage percentage')
             metrics.append(f'# TYPE proxmox_disk_usage_percent gauge')
@@ -15490,6 +16008,17 @@ def api_vms_modal_cache_all():
 
 
 # The endpoint returns the complete IP information.
+# Guest settings that hold credentials: left out for read-only access.
+_GUEST_SECRET_KEYS = ('cipassword', 'sshkeys')
+
+
+def _guest_details_for_reader(details):
+    if has_full_access() or not isinstance(details.get('config'), dict):
+        return details
+    config = {key: value for key, value in details['config'].items() if key not in _GUEST_SECRET_KEYS}
+    return dict(details, config=config)
+
+
 @app.route('/api/vms/<int:vmid>', methods=['GET'])
 @require_auth
 def get_vm_config(vmid):
@@ -15497,7 +16026,7 @@ def get_vm_config(vmid):
     try:
         cached = _vm_conf_cache_get(_vm_details_cache, 'details', vmid, _VM_DETAILS_TTL)
         if cached is not None:
-            return jsonify(_lxc_runtime_details(cached))
+            return jsonify(_guest_details_for_reader(_lxc_runtime_details(cached)))
 
         # Taken before reading the .conf, so an edit during the build is seen next time.
         signature = _vm_conf_signature(vmid)
@@ -15537,7 +16066,7 @@ def get_vm_config(vmid):
             response_data['hardware_info'] = hardware_info
 
         _vm_conf_cache_put(_vm_details_cache, 'details', vmid, response_data, signature)
-        return jsonify(_lxc_runtime_details(response_data))
+        return jsonify(_guest_details_for_reader(_lxc_runtime_details(response_data)))
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -16205,8 +16734,10 @@ def execute_script():
         script_path = os.path.join(BASE_SCRIPTS_DIR, script_relative_path)
 
 
-        script_path = os.path.abspath(script_path)
-        if not script_path.startswith(BASE_SCRIPTS_DIR):
+        # Inside the scripts folder only: a sibling such as `scripts-other`
+        # shares the prefix, and a symlink could point anywhere.
+        script_path = os.path.realpath(script_path)
+        if os.path.commonpath([script_path, os.path.realpath(BASE_SCRIPTS_DIR)]) != os.path.realpath(BASE_SCRIPTS_DIR):
             return jsonify({'error': 'Invalid script path'}), 403
 
         
@@ -18277,7 +18808,7 @@ def api_pbs_encryption_import():
 
 
 @app.route('/api/host-backups/pbs-encryption/download-keyfile', methods=['GET'])
-@require_auth
+@require_admin_or_ticket
 def api_pbs_encryption_download_keyfile():
     """Send the installed PBS keyfile as a downloadable attachment.
     This is how the operator gets an offsite copy without exposing
@@ -21212,7 +21743,7 @@ def api_host_backups_remote_archive_export_status(task_id):
 
 
 @app.route('/api/host-backups/remote-archives/export/<task_id>/download', methods=['GET'])
-@require_auth_or_ticket
+@require_admin_or_ticket
 def api_host_backups_remote_archive_export_download(task_id):
     """Stream the packed export to the browser. Same auth + send_file
     pattern as the local archive download. Cleans up the tarball after
@@ -22012,7 +22543,7 @@ def api_host_backups_archive_prepare_restore(archive_id):
 
 
 @app.route('/api/host-backups/archives/<path:archive_id>/download', methods=['GET'])
-@require_auth_or_ticket
+@require_admin_or_ticket
 def api_host_backups_archive_download(archive_id):
     """Stream the .tar.zst archive back to the operator with a sane
     Content-Disposition. send_file handles range requests + streaming
@@ -22880,6 +23411,11 @@ def _run_scheduled_update(vmid: int, sched: dict) -> dict:
                         and app.get('helper_slug') != 'docker']
             if eligible:
                 filtered_targets.extend(eligible)
+            elif any(other != 'apps' for other in targets):
+                # "apps" stands for every application with an update method.
+                # With none, the other targets are the whole run; only an
+                # application chosen by name reports its missing method.
+                continue
             else:
                 deferred_targets.append(value)
                 reasons.append('no application update method has been selected or is available')
@@ -23138,6 +23674,16 @@ if __name__ == '__main__':
     import sys
     import logging
 
+    # The root terminal menu shares the Monitor's checker and sidecar cache.
+    # This local socket changes neither the web API nor its authentication.
+    try:
+        if not is_pbs_host():
+            import lxc_apps
+            import oci_menu_bridge
+            oci_menu_bridge.start(lxc_apps)
+    except Exception as _e:
+        print(f"[startup] OCI menu bridge unavailable: {_e}", file=sys.stderr)
+
     # Regenerate /etc/cron.d/proxmenux-smart from the current schedule
     # config on every Monitor start. Pre-existing installs may carry
     # a cron file with the broken script path (without /storage/),
@@ -23224,9 +23770,11 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[ProxMenux] Disk temperature history init failed: {e}")
             try:
-                import managed_installs
-                managed_installs.detect_and_register()
-                print("[ProxMenux] Managed-installs registry initialised")
+                # A PBS host has no guests whose applications could be tracked.
+                if not is_pbs_host():
+                    import managed_installs
+                    managed_installs.detect_and_register()
+                    print("[ProxMenux] Managed-installs registry initialised")
             except Exception as e:
                 print(f"[ProxMenux] managed_installs init failed: {e}")
             # Docker inventories are derived runtime data and intentionally
@@ -23368,6 +23916,9 @@ if __name__ == '__main__':
     # the 24 h PollingCollector cycle. Runs in a daemon thread with
     # a delay so it doesn't block startup — notification_manager needs
     # a moment to bind channels before we emit.
+    # The guest services below read VMs and LXCs, which do not exist on a
+    # Proxmox Backup Server.
+    pve_host = not is_pbs_host()
     try:
         def _startup_emit_pending_app_updates():
             time.sleep(15)  # let channels bind + first metrics collect
@@ -23377,8 +23928,9 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[ProxMenux] startup emit_all_pending_updates failed: {e}",
                       file=sys.stderr, flush=True)
-        threading.Thread(target=_startup_emit_pending_app_updates, daemon=True,
-                         name='app-updates-startup-emit').start()
+        if pve_host:
+            threading.Thread(target=_startup_emit_pending_app_updates, daemon=True,
+                             name='app-updates-startup-emit').start()
     except Exception as e:
         print(f"[ProxMenux] app-updates startup emitter failed to arm: {e}")
 
@@ -23386,9 +23938,24 @@ if __name__ == '__main__':
     try:
         metrics_thread = threading.Thread(target=_node_metrics_prewarmer_loop, daemon=True, name='node-metrics-prewarmer')
         metrics_thread.start()
-        print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval)")
+        print("[ProxMenux] Node-metrics prewarmer started (day range, 90s interval while the dashboard is in use)")
     except Exception as e:
         print(f"[ProxMenux] Node-metrics prewarmer failed to start: {e}")
+
+    # The Catalog tab opens with its list already prepared.
+    try:
+        import catalog_tab
+        if hasattr(catalog_tab, 'warm'):
+            threading.Thread(target=catalog_tab.warm, daemon=True, name='catalog-prewarm').start()
+    except Exception as e:
+        print(f"[ProxMenux] Catalog prewarm failed to start: {e}")
+
+    # Linked Monitors for the header node selector, renewed every 5 minutes.
+    try:
+        import monitor_links
+        monitor_links.start_prewarmer()
+    except Exception as e:
+        print(f"[ProxMenux] Monitor links prewarmer failed to start: {e}")
 
     # ── VM/CT modal-cache prewarmer ──
     # Keeps _vm_details_cache / _vm_backups_cache / app snapshots /
@@ -23397,9 +23964,10 @@ if __name__ == '__main__':
     # after the tab has been closed for minutes. The React-side
     # prefetcher only ran while the page was open.
     try:
-        vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
-        vm_modal_thread.start()
-        print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
+        if pve_host:
+            vm_modal_thread = threading.Thread(target=_vm_modal_prewarmer_loop, daemon=True, name='vm-modal-prewarmer')
+            vm_modal_thread.start()
+            print("[ProxMenux] VM-modal prewarmer started (one-shot warm-up; caches refreshed by event invalidation only)")
     except Exception as e:
         print(f"[ProxMenux] VM-modal prewarmer failed to start: {e}")
 
@@ -23423,10 +23991,20 @@ if __name__ == '__main__':
     # identical (backup, restart, /usr/bin/update + custom command
     # chain) between manual and scheduled invocations.
     try:
-        scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
-        scheduler_thread.start()
+        if pve_host:
+            scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
+            scheduler_thread.start()
     except Exception as e:
         print(f"[ProxMenux] LXC update scheduler failed to start: {e}")
+
+    # App registrations travel with their container: a copy inside it and one
+    # in the cluster, checked every few minutes (lxc_apps.reconcile_copies).
+    try:
+        if pve_host:
+            import lxc_apps
+            lxc_apps.start_copy_reconciler()
+    except Exception as e:
+        print(f"[ProxMenux] App registration copies failed to start: {e}")
 
     # Check for SSL configuration
     ssl_ctx = None

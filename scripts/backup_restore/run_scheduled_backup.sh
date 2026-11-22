@@ -48,30 +48,51 @@ mkdir -p "$JOBS_DIR" "$LOG_DIR" >/dev/null 2>&1 || true
 _sb_prune_local() {
   local job_id="$1"
   local dest_dir="$2"
-  local ext="$3" # tar.zst or tar.gz
-  local keep_last="${KEEP_LAST:-0}"
+  # Use the same selector as vzdump rather than approximating calendar buckets.
+  # Only this job's timestamped host archives enter the group; never ask the
+  # storage-wide prune API to delete anything from a shared dump directory.
+  perl -MPVE::Storage -MTime::Local=timelocal -MPOSIX=strftime -e '
+    use strict;
+    use warnings;
+    my ($job, $dir, $logs) = @ARGV;
+    my $keep = {};
+    for my $period (qw(last hourly daily weekly monthly yearly)) {
+        my $value = $ENV{"KEEP_" . uc($period)} // 0;
+        $value = 0 if $value eq "";
+        die "Invalid keep-$period value\n" if $value !~ /^\d+$/;
+        $keep->{"keep-$period"} = 0 + $value;
+    }
 
-  local -a files=()
-  mapfile -t files < <(find "$dest_dir" -maxdepth 1 -type f -name "${job_id}-*.${ext}" | sort -r)
-  [[ ${#files[@]} -eq 0 ]] && return 0
+    opendir(my $dh, $dir) or die "Cannot read backup directory: $!\n";
+    my @group;
+    for my $name (sort readdir($dh)) {
+        next if $name !~ /^\Q$job\E-(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.tar\.(?:zst|gz)\z/;
+        my ($year, $month, $day, $hour, $minute, $second) = ($1, $2, $3, $4, $5, $6);
+        my $stamp = "$year$month${day}_$hour$minute$second";
+        my $ctime = eval { timelocal($second, $minute, $hour, $day, $month - 1, $year) };
+        next if !defined($ctime) || strftime("%Y%m%d_%H%M%S", localtime($ctime)) ne $stamp;
+        my $path = "$dir/$name";
+        next if !-f $path || -l $path;
+        push @group, { ctime => $ctime, path => $path, name => $name };
+    }
+    closedir($dh) or die "Cannot close backup directory: $!\n";
 
-  if [[ "$keep_last" =~ ^[0-9]+$ ]] && (( keep_last > 0 )); then
-    local idx=0
-    for f in "${files[@]}"; do
-      idx=$((idx+1))
-      (( idx <= keep_last )) && continue
-      # Remove the archive AND its sidecar in one shot — if we
-      # leave .proxmenux.json files behind, the Monitor would
-      # show them as broken entries pointing at deleted archives.
-      # Also drop the matching runner log so retention is symmetric:
-      # one archive ↔ one log, never an orphan log left behind.
-      local stem suffix
-      stem=$(basename "$f")
-      suffix=".${ext}"
-      stem="${stem%"$suffix"}"
-      rm -f "$f" "${f}.proxmenux.json" "${LOG_DIR}/${stem}.log" || true
-    done
-  fi
+    PVE::Storage::prune_mark_backup_group(\@group, $keep);
+    for my $entry (@group) {
+        next if ($entry->{mark} // "") ne "remove";
+        my $path = $entry->{path};
+        unlink($path) or die "Cannot remove backup $path: $!\n";
+        (my $stem = $entry->{name}) =~ s/\.tar\.(?:zst|gz)$//;
+        my @related = ("$path.proxmenux.json");
+        # A retry can leave both compression variants with the same run log.
+        push @related, "$logs/$stem.log"
+            if !-e "$dir/$stem.tar.zst" && !-e "$dir/$stem.tar.gz";
+        for my $related (@related) {
+            next if !-e $related && !-l $related;
+            unlink($related) or die "Cannot remove backup metadata $related: $!\n";
+        }
+    }
+  ' -- "$job_id" "$dest_dir" "$LOG_DIR"
 }
 
 _sb_run_local() {
@@ -97,7 +118,7 @@ _sb_run_local() {
   # independent of any future rename of the archive.
   hb_write_archive_sidecar "$archive" "scheduled" "$job_id" "${PROFILE:-}" || true
 
-  _sb_prune_local "$job_id" "$dest_dir" "$archive_ext"
+  _sb_prune_local "$job_id" "$dest_dir" || return 1
   echo "LOCAL_ARCHIVE=$archive"
   return 0
 }

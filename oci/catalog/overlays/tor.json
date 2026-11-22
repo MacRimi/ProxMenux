@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Sends the traffic of the applications configured to use it through the Tor network, over SOCKS5 or HTTP CONNECT."
+    },
+    "description": {
+      "en_US": "Tor is an open-source privacy network daemon that routes internet traffic through encrypted relays to conceal a user's location and usage. It provides proxy access using SOCKS5 and HTTPS protocols, enabling configured client applications to safeguard their online privacy. In addition to client proxying, it supports operating as a relay, bridge, exit node, or hidden service."
+    }
+  }
+}

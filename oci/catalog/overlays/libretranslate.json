@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted translation web interface and API powered by open-source translation models. This profile keeps downloaded language models across restarts."
+    },
+    "description": {
+      "en_US": "LibreTranslate is an open-source machine translation engine and API. It performs language translations locally without relying on proprietary third-party services. Powered by the Argos Translate library, it provides both an interactive web interface and an API for processing translation requests across multiple languages."
+    },
+    "screenshots": [
+      "https://github.com/user-attachments/assets/457696b5-dbff-40ab-a18e-7bfb152c5121"
+    ]
+  }
+}

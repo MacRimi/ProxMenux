@@ -1,0 +1,170 @@
+{
+  "meta": {
+    "title": "Príkazy na aktualizáciu a správu balíkov Proxmoxu — apt, pveupgrade, dpkg | ProxMenux",
+    "description": "Prehľad príkazov na aktualizáciu a správu balíkov Proxmox VE: apt update, apt upgrade, apt dist-upgrade, pveupgrade, dpkg -l, zisťovanie informácií o balíkoch a konfigurácia repozitárov v /etc/apt/sources.list.d/.",
+    "ogTitle": "Príkazy na aktualizáciu a správu balíkov Proxmoxu — apt, pveupgrade, dpkg",
+    "ogDescription": "Príkazy apt, pveupgrade a dpkg na udržiavanie aktuálneho Proxmox VE: aktualizácie systému, správa balíkov a konfigurácia repozitárov.",
+    "twitterTitle": "Príkazy na aktualizáciu Proxmoxu | ProxMenux",
+    "twitterDescription": "Príkazy apt a pveupgrade na správu aktualizácií a balíkov na hostiteľoch Proxmox VE."
+  },
+  "header": {
+    "title": "Aktualizácie a balíky",
+    "description": "Výber príkazov apt a na aktualizáciu Proxmoxu: aktualizácie systému, inštalácia, odstránenie a úplné vyčistenie balíkov, informácie cez apt-cache policy a dpkg -l a kontrola repozitárov.",
+    "section": "Pomoc a informácie"
+  },
+  "intro": {
+    "title": "Vždy najprv aktualizovať index",
+    "body": "<code>apt update</code> obnoví miestny zoznam balíkov z nastavených repozitárov. Bez tohto kroku môže <code>apt install</code> použiť zastarané verzie alebo zlyhať s hlásením „Unable to locate package“."
+  },
+  "commandGroups": [
+    {
+      "title": "Aktualizácie systému",
+      "commands": [
+        {
+          "command": "apt update && apt upgrade -y",
+          "description": "Obnoviť zoznamy a aktualizovať nainštalované balíky (apt upgrade)"
+        },
+        {
+          "command": "apt dist-upgrade -y",
+          "description": "Úplná aktualizácia systému vrátane závislostí"
+        },
+        {
+          "command": "apt update",
+          "description": "Aktualizovať iba zoznamy balíkov"
+        },
+        {
+          "command": "apt upgrade",
+          "description": "Aktualizovať iba balíky (interaktívne)"
+        },
+        {
+          "command": "apt full-upgrade",
+          "description": "Aktualizovať balíky s riešením závislostí (interaktívne)"
+        }
+      ]
+    },
+    {
+      "title": "Aktualizácie Proxmox",
+      "commands": [
+        {
+          "command": "pveupdate",
+          "description": "Aktualizovať zoznamy Proxmox balíkov"
+        },
+        {
+          "command": "pveupgrade",
+          "description": "Spustiť interaktívnu aktualizáciu balíkov Proxmoxu"
+        },
+        {
+          "command": "pve8to9 --full",
+          "description": "Overiť pripravenosť na prechod z PVE 8 na 9 bez vykonania aktualizácie"
+        },
+        {
+          "command": "ceph versions",
+          "description": "Zobraziť verzie démonov Ceph pred plánovaním aktualizácie"
+        }
+      ]
+    },
+    {
+      "title": "Správa balíkov",
+      "commands": [
+        {
+          "command": "apt autoremove --purge",
+          "description": "Odstrániť nepoužívané balíky aj ich nastavenia"
+        },
+        {
+          "command": "apt clean",
+          "description": "Vymazať lokálne úložisko súborov balíčkov"
+        },
+        {
+          "command": "apt autoclean",
+          "description": "Vymazať iba zastarané súbory balíkov"
+        },
+        {
+          "command": "apt install <package>",
+          "description": "Inštalovať konkrétny balík"
+        },
+        {
+          "command": "apt remove <package>",
+          "description": "Odstrániť balík"
+        },
+        {
+          "command": "apt purge <package>",
+          "description": "Odstrániť balík a jeho konfiguračné súbory"
+        }
+      ]
+    },
+    {
+      "title": "Informácie o balíku",
+      "commands": [
+        {
+          "command": "apt list --installed",
+          "description": "Zoznam všetkých nainštalovaných balíkov"
+        },
+        {
+          "command": "apt search <keyword>",
+          "description": "Hľadať balíky podľa kľúčového slova"
+        },
+        {
+          "command": "apt show <package>",
+          "description": "Zobraziť podrobné informácie o balíku"
+        },
+        {
+          "command": "dpkg -l",
+          "description": "Zoznam všetkých nainštalovaných balíkov (alternatívnych)"
+        },
+        {
+          "command": "dpkg -l | grep <keyword>",
+          "description": "Hľadať nainštalované balíky podľa kľúčového slova"
+        },
+        {
+          "command": "apt-cache policy <package>",
+          "description": "Zobraziť verzie a priority balíkov"
+        }
+      ]
+    },
+    {
+      "title": "Správa repozitárov",
+      "commands": [
+        {
+          "command": "cat /etc/apt/sources.list",
+          "description": "Zobraziť hlavné zdroje úložiska APT"
+        },
+        {
+          "command": "ls -la /etc/apt/sources.list.d/",
+          "description": "Zoznam ďalších zdrojových súborov úložiska"
+        },
+        {
+          "command": "cat /etc/apt/sources.list.d/pve-enterprise.list",
+          "description": "Zobraziť konfiguráciu repozitára Proxmox Enterprise v súbore .list pre PVE 8"
+        },
+        {
+          "command": "apt-key list",
+          "description": "Zobraziť staršie podpisové kľúče repozitárov, ak je dostupný apt-key"
+        }
+      ]
+    }
+  ],
+  "backupWarn": {
+    "title": "Pred veľkou aktualizáciou vytvorte zálohu",
+    "bodyRich": "Na bežné aktualizácie Proxmox odporúča <code>apt update &amp;&amp; apt full-upgrade</code>. Pred potvrdením skontrolujte navrhované zmeny balíkov. Pri <strong>prechode na novú hlavnú verziu</strong> (PVE 8 → 9) použite postup ProxMenuxu <upgradeLink>Aktualizovať PVE 8 na PVE 9</upgradeLink>. Zahŕňa kontroly pripravenosti, migráciu repozitárov a overenie po aktualizácii. Najskôr vytvorte zálohu."
+  },
+  "related": {
+    "heading": "Súvisiace",
+    "items": [
+      {
+        "href": "/docs/utils/system-update",
+        "label": "Aktualizácia systému Proxmox (interaktívna)",
+        "tail": " — nástroj vykoná tieto kroky s potvrdením, pri inštalácii nového jadra automaticky zostaví ovládače spravované ProxMenuxom cez DKMS a ponúkne reštart. Spustiť ho možno aj tlačidlom Aktualizovať teraz na paneli ProxMenux Monitora."
+      },
+      {
+        "href": "/docs/utils/upgrade-pve8-pve9",
+        "label": "Upgrade PVE 8 na PVE 9",
+        "tail": " — na prechod na novú hlavnú verziu."
+      },
+      {
+        "href": "/docs/help-info",
+        "label": "Prehľad pomoci a informácií",
+        "tail": "."
+      }
+    ]
+  }
+}

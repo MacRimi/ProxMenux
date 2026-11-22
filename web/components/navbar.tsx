@@ -3,7 +3,9 @@
 import NextLink from "next/link"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
-import { Book, GitBranch, FileText, Github, Menu, Rss } from "lucide-react"
+import { ProxMenuxMark } from "@/components/proxmenux-mark"
+import { Book, GitBranch, FileText, Menu, Rss } from "lucide-react"
+import { Github } from "@/components/ui/brand-icons"
 import { useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { SearchDialog } from "./search-dialog"
@@ -33,7 +35,7 @@ export default function Navbar() {
   ]
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border/40">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/40">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center space-x-2">
@@ -45,7 +47,7 @@ export default function Navbar() {
               className="w-8 h-8"
               unoptimized
             />
-            <span className="text-xl font-bold">ProxMenux</span>
+            <span className="text-xl font-bold"><ProxMenuxMark /></span>
           </Link>
 
           {/* Right side — search (responsive) + desktop nav + mobile menu button */}

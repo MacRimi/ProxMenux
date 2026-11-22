@@ -1,0 +1,178 @@
+{
+  "meta": {
+    "title": "Adicionar GPU a VM | Documentação ProxMenux",
+    "description": "Atribua uma GPU física a uma VM Proxmox. O ProxMenux verifica IOMMU, configura VFIO e dispositivos VM e deteta conflitos com outras VM ou LXC."
+  },
+  "header": {
+    "title": "Adicionar GPU a VM (passthrough)",
+    "description": "Deteta GPU Intel, AMD ou NVIDIA para acesso direto numa VM. Verifica IOMMU e dispositivos associados, configura VFIO e VM e aplica regras de compatibilidade. Verifique todos os dispositivos afetados.",
+    "section": "Hardware: GPUs e Coral-TPU"
+  },
+  "intro": {
+    "title": "O que faz",
+    "body": "Automatiza os passos do anfitrião e <code>hostpci</code> da <pveLink>documentação PCI passthrough Proxmox</pveLink>. Verifica atribuições a <em>outros</em> convidados e propõe soluções para conflitos. Não garante suporte para qualquer GPU, método de reset ou controlador convidado."
+  },
+  "who": {
+    "heading": "Para quem é isto?",
+    "body": "Para uma <strong>máquina virtual</strong> usar diretamente a GPU via VFIO. Enquanto estiver associada a VFIO, o controlador do anfitrião não a pode usar, mesmo com a VM parada. Para partilha com <em>LXC</em>, use <lxcLink>Adicionar GPU ao LXC</lxcLink>."
+  },
+  "prereqs": {
+    "title": "Antes de começar",
+    "gpu": "<strong>GPU compatível</strong> fisicamente instalada. O script deteta Intel, AMD e NVIDIA com <code>lspci</code>.",
+    "gpuCheck": "lspci | grep -iE 'VGA|3D|Display'",
+    "iommu": "<strong>Suporte IOMMU</strong> no hardware e ativação no firmware quando necessária (Intel VT-d ou AMD-Vi). Verifica o sistema e pode configurar Linux; não muda BIOS/UEFI nem prova que IOMMU inativo esteja desativado no firmware.",
+    "q35": "O assistente exige <strong>q35</strong> e recusa <code>i440fx</code>. O tipo de máquina é distinto do firmware BIOS/UEFI. Mudar o chipset de uma VM existente exige planeamento e não é automático.",
+    "q35Check": "qm config VMID | grep machine",
+    "moreGpus": "Prepare <strong>outra GPU ou acesso alternativo</strong> por SSH, IPMI ou série. Reservar a GPU principal pode retirar a imagem local. Em <em>NVIDIA</em>, uma placa fora do grupo IOMMU afetado pode ficar no anfitrião.",
+    "nvidiaInstalled": "Após <nvidiaLink>instalar NVIDIA no anfitrião</nvidiaLink>, as funções escolhidas ficam reservadas a <code>vfio-pci</code> em vez de <code>nvidia</code>. O módulo <code>nvidia</code> pode continuar disponível para <strong>outras</strong> placas fora do grupo IOMMU afetado. Verifique com <code>nvidia-smi</code>."
+  },
+  "pickOne": {
+    "title": "Atribuição exclusiva VM ou partilha LXC",
+    "body": "Um GPU ligado a <code>vfio-pci</code> para a passagem de VM não pode ser usado simultaneamente pelo hospedeiro ou por um LXC. Se você tiver duas GPUs, você pode dedicar uma a cada caminho. Se você tem apenas um, escolha:",
+    "vmItem": "<strong>VM:</strong> acesso direto e exclusivo para essa VM.",
+    "lxcItem": "<strong>LXC (<lxcLink>Adicionar GPU ao LXC</lxcLink>):</strong> partilha o dispositivo com anfitrião e outros contentores pelo controlador nativo."
+  },
+  "running": {
+    "heading": "Executar o instalador",
+    "body": "Abra o ProxMenux e escolha <strong>Hardware: GPU e Coral-TPU → Adicionar GPU a VM</strong>.",
+    "imageAlt": "Opção do menu para adicionar GPU a VM"
+  },
+  "howRuns": {
+    "heading": "Como funciona o script",
+    "body": "Deteção e seleção precedem as alterações principais, confirmadas num resumo final. Ativar IOMMU tem confirmação anterior e pode já alterar o arranque. A limpeza posterior de áudio pode também pedir uma escolha."
+  },
+  "walkthrough": {
+    "heading": "Procedimento passo a passo",
+    "detect": {
+      "title": "Detectar GPUs e verificar IOMMU",
+      "body": "Considera o IOMMU ativo apenas quando o kernel em execução tem <code>intel_iommu=on</code> ou <code>amd_iommu=on</code> e existem grupos IOMMU. Se o parâmetro já estiver guardado para o próximo arranque, continua em modo de reinício pendente; caso contrário, um passo confirmado separadamente pode adicioná-lo com <code>iommu=pt</code>. A sua heurística de ficheiro de arranque utiliza <code>/etc/kernel/cmdline</code> quando aí existe uma marca de raiz ZFS como <code>root=ZFS=</code>; caso contrário, utiliza <code>/etc/default/grub</code>. Essa heurística não é prova do carregador de arranque real. O IOMMU recém-configurado entra em vigor após o reinício; verifique depois os grupos reais.",
+      "tipTitle": "Já configurou a pós-instalação?",
+      "tipBody": "Se o <postLink>suporte VFIO IOMMU</postLink> já estiver configurado e ativo no kernel, passa a verificação. Uma definição para o próximo arranque não prova que esteja ativo agora.",
+      "imageAlt": "Lista de GPUs detectadas com fornecedor e endereço PCI"
+    },
+    "preflight": {
+      "title": "Escolher GPU e executar verificações prévias",
+      "intro": "Uma vez que você escolher o GPU, o script executa uma série de verificações que podem cada bloco mais progresso:",
+      "items": [
+        "<strong>Proteção SR-IOV.</strong> Recusa VF e PF com VF ativas porque configura dispositivos completos, não SR-IOV. Configure SR-IOV separadamente em hardware compatível.",
+        "<strong>Uma só GPU.</strong> A consola local pode perder a imagem ao reservá-la para VFIO. Verifique antes o acesso SSH ou web de outro computador.",
+        "<strong>Política de reset AMD.</strong> Lê <code>/sys/bus/pci/devices/&lt;pci&gt;/reset_method</code>. APU ou dedicada sem FLR fica <em>bloqueada pela política do assistente</em>; subtipo desconhecido sem FLR exige confirmação. Não prova impossibilidade universal.",
+        "<strong>Estado D3cold.</strong> Bloqueia placas AMD que indicam <code>D3cold</code> pelo risco de falha na ativação. Verifique alimentação e firmware.",
+        "<strong>Análise do grupo IOMMU.</strong> Lê <code>/sys/kernel/iommu_groups/</code> e inclui no plano da VM <em>todos os membros exceto pontes</em>, possivelmente controladores de rede ou de armazenamento. Se o grupo contiver dispositivos de outro slot, o script lista-os antes do resumo; verifique se o anfitrião não precisa de nenhum. Se o IOMMU aguardar reinício, os grupos reais não estão disponíveis e o plano contém inicialmente só a função GPU selecionada; verifique o isolamento após o reinício."
+      ],
+      "audioIntro": "<strong>Áudio associado.</strong> Dois casos consoante a localização do controlador:",
+      "audioDgpu": "<strong>GPU dedicada:</strong> o áudio HDMI ocupa frequentemente a função <code>.1</code> da mesma ranhura PCI e é incluído se detetado. Se o anfitrião o usava, perde acesso ao reservá-lo à VM.",
+      "audioIgpu": "<strong>Sem função áudio <code>.1</code>:</strong> pode estar noutro dispositivo como <code>00:1f.3</code>. Lista controladores e drivers como <code>snd_hda_intel</code>. Por predefinição <strong>nenhum</strong> é selecionado; escolha apenas os necessários."
+    },
+    "pickVm": {
+      "title": "Escolha a VM de destino",
+      "body": "Escolha a VM. Exige q35 e reutiliza entradas GPU existentes quando possível. BIOS/UEFI é uma definição separada, não um tipo de máquina. Não muda automaticamente o chipset nem o arranque do convidado instalado.",
+      "imageAlt": "Seleção de VM por nome, ID e estado"
+    },
+    "switchMode": {
+      "title": "Tratar atribuições existentes",
+      "intro": "O script verifica cada configuração do VM e cada configuração do LXC na máquina à procura do GPU que escolheu. Três resultados possíveis:",
+      "items": [
+        "<strong>GPU disponível.</strong> Continua sem remover atribuições.",
+        "<strong>Atribuída a outra VM.</strong> Pare primeiro a origem. Pode <em>manter as entradas e desativar o arranque automático</em> ou <em>removê-las mantendo o arranque automático</em>. Com <code>vfio-pci</code> já ativo e sem alterações necessárias no anfitrião, VM→VM pode evitar reiniciá-lo.",
+        "<strong>GPU usada por LXC.</strong> Nos contentores normais escolha <em>manter a configuração da GPU e desativar o arranque automático</em> ou <em>remover a configuração do dispositivo GPU, mantendo o arranque automático</em>. A remoção elimina as entradas <code>devN</code> e, em AMD/Intel, também as regras antigas <code>/dev/dri</code> <code>lxc.mount.entry</code> e <code>lxc.cgroup2.devices.allow</code>. Os contentores OCI conservam a configuração e são parados com o arranque automático desativado; remova a sua GPU através de OCI manager Apps. A deteção de conflitos é feita por família de dispositivos GPU e pode abranger outras placas dessa família."
+      ],
+      "imageAlt": "Oferecendo diálogo para remover o GPU de um LXC antes de atribuí-lo ao VM",
+      "smartTitle": "Rever áudio associado ao remover a GPU",
+      "smartBody": "Depois pode propor uma lista de <strong>áudio possivelmente sem uso</strong> na VM origem. Desmarque o que ainda precisar. Por exemplo, pode manter <code>02:00.1</code> e propor remover <code>00:1f.3</code>. A lista determina as remoções adicionais, sem garantir todas as associações áudio/imagem."
+    },
+    "audioPick": {
+      "title": "Sem áudio .1, selecione os controladores necessários",
+      "body": "Apenas acontece para configurações de áudio dividido Intel iGPU e semelhantes. Uma lista de verificação mostra cada controlador de áudio PCI no host (excluindo qualquer já no grupo IOMMU do GPU), etiquetado com seu driver atual. Selecione os que você deseja — ou nenhum, se o VM não precisar de áudio do hardware do host.",
+      "imageAlt": "Diálogo de lista de verificação com cada controlador de áudio PCI da máquina (controlador BDF +) quando o GPU não tem áudio .1",
+      "warnTitle": "Não selecione áudio necessário ao anfitrião",
+      "warnBody": "Atribuir áudio pode retirar acesso ao anfitrião; o controlador não pode pertencer também a outra VM ativa. Não selecione áudio desnecessário e verifique as atribuições. O sinal da consola não vem necessariamente do áudio PCI."
+    },
+    "summary": {
+      "title": "Rever o resumo da confirmação",
+      "body": "Verifique o plano final do anfitrião e da VM e cancele se estiver incorreto. Mostra o grupo IOMMU e o número dos seus dispositivos; os membros de outro slot são listados no passo anterior. O cancelamento impede as alterações principais, mas não reverte uma alteração da configuração de arranque IOMMU confirmada separadamente antes.",
+      "imageAlt": "Resumo das alterações previstas no anfitrião e VM"
+    },
+    "hostApply": {
+      "title": "As alterações da máquina são aplicadas",
+      "intro": "A fase de aplicação altera anfitrião e VM. A limpeza áudio pode ainda pedir uma escolha. Pode modificar:",
+      "items": [
+        "<code>/etc/modules</code> — acrescenta <code>vfio</code>, <code>vfio_iommu_type1</code>, <code>vfio_pci</code> (mais <code>vfio_virqfd</code> em kernels &lt; 6.2).",
+        "<code>/etc/modprobe.d/vfio.conf</code> — AMD/Intel: <code>options vfio-pci ids=&lt;vendor:device,...&gt; disable_vga=1</code>. NVIDIA: <code>softdep nvidia pre: vfio-pci</code> (<code>_drm</code>/<code>_modeset</code>/<code>_uvm</code>); a associação efetiva é por BDF. AMD adiciona a ordem de carregamento <code>softdep</code>: <code>vfio-pci</code> → <code>radeon</code>/<code>amdgpu</code>.",
+        "Escreve <code>/etc/modprobe.d/iommu_unsafe_interrupts.conf</code> e <code>kvm.conf</code> com <code>allow_unsafe_interrupts=1</code> e <code>ignore_msrs=1</code>. São definições do script, não requisitos universais Windows/macOS; interrupções inseguras reduzem a proteção do remapeamento.",
+        "<code>/etc/modprobe.d/blacklist.conf</code>: NVIDIA — <code>nouveau</code>/<code>lbm-nouveau</code>; AMD — <code>radeon</code> + <code>amdgpu</code>; Intel — <code>i915</code>. Estas regras por fabricante podem afetar outras placas com o mesmo controlador. O módulo <code>nvidia</code> é bloqueado <strong>apenas</strong> por <code>/etc/modprobe.d/proxmenux-nvidia-vfio-blacklist.conf</code> quando <em>todas</em> as NVIDIA do anfitrião estão reservadas a VFIO.",
+        "<code>/etc/udev/rules.d/10-proxmenux-vfio-bind.rules</code> + <code>/etc/proxmenux/vfio-bind.bdfs</code> — <strong>Apenas NVIDIA.</strong> Aplica <code>ATTR'{'driver_override'}'=\"vfio-pci\"</code> no PCI ADD dos BDF registados, incluindo funções do grupo IOMMU afetado. Fora desses grupos pode manter-se <code>nvidia</code>. A política BDF não divide grupos IOMMU físicos.",
+        "<strong>Apenas AMD.</strong> Tenta extrair a ROM de <code>/sys/bus/pci/.../rom</code> ou ACPI VFCT para <code>/usr/share/kvm/vbios_&lt;vendor&gt;_&lt;device&gt;.bin</code>. Se conseguir, a VM usa <code>romfile=</code>. Uma extração válida não garante a inicialização bem-sucedida da GPU.",
+        "<strong>Apenas NVIDIA.</strong> Para e desativa <code>nvidia-persistenced</code>, <code>nvidia-powerd</code>, <code>nvidia-fabricmanager</code> só quando todas as NVIDIA estão reservadas a VFIO. Em uso misto conserva os serviços e <code>nvidia</code> para as placas nativas.",
+        "<code>update-initramfs -u -k all</code> — só é executado se alguma das acima referidas tiver realmente mudado."
+      ]
+    },
+    "vmApply": {
+      "title": "A configuração do VM é aplicada através de qm set",
+      "body": "A configuração VM em <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> é atualizada via <code>qm set</code> (nunca por <code>sed</code>):",
+      "after1": "Adiciona <code>x-vga=1</code> para AMD e NVIDIA, <strong>não</strong> Intel. É a política do script, não prova de que todas as iGPU Intel não têm firmware ou que a opção causa sempre bloqueios.",
+      "after2": "Linhas adicionais de <code>hostpciN</code> são adicionadas se o grupo IOMMU do GPU contém outros dispositivos que você precisa passar juntos."
+    },
+    "reboot": {
+      "title": "Reinicie se a alteração do anfitrião exigir",
+      "body": "Siga o reinício pedido se mudar arranque ou controladores e verifique a associação ativa antes de iniciar a VM. Configuração guardada não prova ativação. VM→VM com VFIO correto pode evitar reiniciar o anfitrião.",
+      "imageAlt": "Tela de resumo mostrando o que foi alterado, seguido de um prompt de reinicialização"
+    }
+  },
+  "vendors": {
+    "heading": "Notas por fabricante",
+    "nvidiaHeading": "NVIDIA",
+    "nvidiaBody": "Mantém uma solução antiga para <em>Code 43</em>: <code>hidden=1</code>, ID <code>NV43FIX</code> em <code>args</code> e <code>kvm=off</code>. Não é requisito universal das GeForce atuais: NVIDIA ativou passthrough Windows em R465. O erro pode ter outras causas; verifique GPU e controlador.",
+    "nvidiaMultiHeading": "Suporte para multi-GPU NVIDIA",
+    "nvidiaMultiBody": "Uso misto NVIDIA <strong>por BDF</strong>. Regista funções <code>vfio-pci</code> por endereço, não só ID <code>vendor:device</code>. Fora dos grupos afetados pode conservar <code>nvidia</code>; verifique com <code>nvidia-smi</code>. Não isola duas placas do mesmo grupo.",
+    "amdHeading": "AMD",
+    "amdBody": "Algumas AMD falham ao repor após parar uma VM. O assistente verifica capacidades declaradas, não todos os ciclos reais. <vendorResetLink>vendor-reset</vendorResetLink> suporta uma lista limitada e exige kernel compatível e carregamento antecipado; não é instalado. <em>RadeonResetBugFix</em> no Windows também depende do hardware, sem garantia universal.",
+    "intelHeading": "Intel iGPU",
+    "intelBody": "Atribuição completa Intel iGPU e SR-IOV são distintos. O assistente reserva o dispositivo a uma VM sem <code>x-vga=1</code>. <sriovLink>i915-sriov-dkms</sriovLink> exige hardware/kernel suportados; «UHD 630+» não é regra de compatibilidade. Planeie acesso alternativo ao anfitrião."
+  },
+  "verification": {
+    "heading": "Verificação"
+  },
+  "troubleshoot": {
+    "heading": "Resolução de problemas",
+    "code43Title": "Código 43 no Windows (NVIDIA)",
+    "code43Body": "Code 43 não prova falha de ocultação. Consulte <code>qm config VMID | grep -E \"cpu|args\"</code> com VMID real, depois <code>hidden=1</code> e <code>hv_vendor_id=NV43FIX</code>. Verifique também controlador convidado, firmware e atribuição. Repetir pode terminar se já atribuída.",
+    "amdResetTitle": "O AMD GPU funciona uma vez, falha na reinicialização do VM",
+    "amdResetBody": "Falha de reset é uma causa possível. Reiniciar ou desligar e ligar pode ajudar temporariamente. Verifique compatibilidade e carregamento antecipado de <code>vendor-reset</code>; <code>softdep amdgpu pre: vendor-reset</code> só por si não garante carregar antes de VFIO. <em>RadeonResetBugFix</em> também exige GPU compatível.",
+    "stuckBootTitle": "O arranque emperrado do VM / GPU não foi detectado",
+    "stuckBootBody": "Consulte o endereço real com <code>lspci -nnk -s PCI_ADDRESS</code>; esperado <code>Kernel driver in use: vfio-pci</code>. Substitua PCI_ADDRESS. Se permanecer o controlador nativo, verifique a política de associação, não só <code>/etc/modprobe.d/blacklist.conf</code>; NVIDIA usa estado BDF. Leia <code>dmesg | grep vfio</code>. Após corrigir, execute <code>update-initramfs -u -k all</code> e siga o reinício previsto.",
+    "darkTitle": "O console da máquina fica escuro depois de reiniciar e eu não posso SSH em",
+    "darkBody": "Um ecrã preto não prova que o anfitrião esteja parado. Se SSH também falhar, verifique rede e controladores incluídos no grupo IOMMU. Recupere por IPMI, série ou ambiente de recuperação; reveja <code>/etc/pve/qemu-server/&lt;vmid&gt;.conf</code> e reverta só atribuições/regras relacionadas. Não elimine outras configurações.",
+    "logTitle": "Verificar o registo de instalação",
+    "logBody": "Cada execução escreve <code>/tmp/add_gpu_vm.log</code>. Anexe o registo ao pedir ajuda."
+  },
+  "revert": {
+    "heading": "Reverter alterações manualmente",
+    "intro": "Pare a VM e remova só as atribuições PCI relevantes em Hardware ou com o índice explícito abaixo. Isso não devolve a GPU ao controlador nativo. Use Alterar modo da GPU para essa transição e verifique os convidados afetados."
+  },
+  "related": {
+    "heading": "Relacionados",
+    "items": [
+      {
+        "label": "Instalar Drivers NVIDIA (Host)",
+        "href": "/docs/hardware/nvidia-host",
+        "tail": " — prepara o controlador para placas mantidas no anfitrião; uma GPU em VFIO não o pode usar ao mesmo tempo."
+      },
+      {
+        "label": "Adicionar GPU ao LXC",
+        "href": "/docs/hardware/igpu-acceleration-lxc",
+        "tail": " — modelo alternativo: partilhar o GPU com vários contentores em vez de o dedicar a um VM."
+      },
+      {
+        "label": "Alterar modo da GPU (VM ↔ LXC)",
+        "href": "/docs/hardware/switch-gpu-mode",
+        "tail": " — alterna a mesma GPU entre partilha e atribuição exclusiva."
+      },
+      {
+        "label": "Comandos de passagem GPU",
+        "href": "/docs/help-info/gpu-commands",
+        "tail": " — lspci, verificação IOMMU, referência qm set hostpci."
+      }
+    ]
+  }
+}

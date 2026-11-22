@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor — Pannello: Terminale | Documentazione ProxMenux",
+    "description": "Shell dell'host Proxmox nel browser: fino a 4 terminali in griglia, pulsanti tastiera per dispositivi mobili (ESC, TAB, frecce, combinazioni Ctrl), prontuario di comandi integrato con cheat.sh e protezione JWT."
+  },
+  "header": {
+    "title": "Pannello: Terminale",
+    "description": "Una vera sessione shell sull'host Proxmox dal browser. Fino a quattro terminali contemporaneamente, pulsanti tastiera per dispositivi mobili e prontuario dei comandi integrato, con lo stesso tema del resto del pannello.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "intro": {
+    "title": "Un vero PTY nel browser",
+    "body": "Il terminale crea un PTY sul server tramite <code>flask_terminal_routes</code>, lo collega via WebSocket a <code>xterm.js</code> nel browser e viene eseguito come <code>root</code>, utente dell'unità systemd. Come con <code>ssh root@&lt;host&gt;</code>, puoi usare <code>vim</code>, <code>tmux</code>, strumenti ncurses e le CLI Proxmox (<code>qm</code>, <code>pct</code>, <code>pvesh</code>, <code>pvecm</code>). Ogni PTY esporta <code>PROXMENUX_TERMINAL=monitor</code>, ereditata da tutti i processi figli <code>bash</code>, incluso un successivo avvio di <code>menu</code>, per riconoscere il terminale di Monitor."
+  },
+  "singleAlt": "Scheda Terminale di ProxMenux Monitor — sessione singola con il riepilogo di sistema Fastfetch allo accesso",
+  "singleCaption": "Un terminale host aperto — la barra degli strumenti sopra mostra il conteggio (<em>1 / 4 terminali</em>), <em>+ Nuovo</em>, <em>Ricerca</em>, <em>Cancellazione</em> e <em>Chiudere</em>. Gli helper della tastiera mobile appaiono sotto il terminale su dispositivi touch.",
+  "target": {
+    "heading": "Obiettivo di connessione",
+    "body1": "La scheda Terminale apre una shell sullo <strong>host Proxmox stesso</strong>, come uno accesso SSH. Ogni scheda apre un nuovo terminale dell'host.",
+    "body2": "Per accedere a un <strong>container LXC</strong> dal browser, usa <em>Console</em> sulla scheda di ogni CT in esecuzione nella <link>scheda VM e LXC</link>. Apre una finestra che esegue <code>pct enter &lt;vmid&gt;</code> e usa la stessa barra per dispositivi mobili descritta sotto."
+  },
+  "menuGuard": {
+    "heading": "Protezione durante l'aggiornamento di menu in questo terminale",
+    "body1": "Dopo la conferma, <code>menu</code> sostituisce il proprio albero di script e si ricarica. Questo funziona tramite SSH o console Proxmox, ma nel browser chiuderebbe il PTY della shell e interromperebbe il WebSocket. Per evitarlo, <code>check_updates_stable</code>, <code>check_updates_beta</code> e <code>apply_release_channel</code> leggono <code>PROXMENUX_TERMINAL</code> e riconoscono il contesto Monitor.",
+    "body2": "Il dialogo sì/no viene quindi sostituito da un messaggio con il comando ufficiale di installazione: <code>bash -c \"$(wget -qLO - https://raw.githubusercontent.com/MacRimi/ProxMenux/main/install_proxmenux.sh)\"</code> per stable e l'URL equivalente di <code>install_proxmenux_beta.sh</code> per beta. Lo aggiornamento si esegue tramite SSH o console dell'host Proxmox; il terminale del browser serve solo a leggere e confermare il messaggio."
+  },
+  "fourTerminals": {
+    "heading": "Fino a quattro terminali contemporaneamente",
+    "intro": "La scheda consente di aprire fino a quattro terminali host contemporaneamente. Ognuno ottiene il proprio PTY e il proprio WebSocket — sono sessioni completamente indipendenti. Due layout passano con le icone accanto al pulsante \"Nuovo\":",
+    "items": [
+      "<strong>Vista a schede</strong> — un terminale visibile, gli altri come schede con nome in alto (<em>Terminale 1</em>, <em>Terminale 2</em>…). Utile per un'attività con le altre in secondo piano.",
+      "<strong>Vista a griglia</strong> — tutti i terminali aperti in una griglia 2×2. Puoi osservare <code>htop</code> in uno, <code>iftop</code> in un altro e modificare file in un terzo senza cambiare scheda."
+    ],
+    "outro": "La barra indica il conteggio (<em>1/4 terminali</em>, <em>4/4 terminali</em>). <strong>+ Nuovo</strong> apre una scheda; la piccola <code>×</code> nell'intestazione la chiude. Il grande pulsante rosso <strong>Chiudi</strong> in alto chiude tutti i terminali."
+  },
+  "gridAlt": "Scheda terminale ProxMenux Monitor — visualizzazione griglia con quattro terminali host che eseguono ls, configurazione di rete, iftop e il menu principale ProxMenux fianco a fianco",
+  "gridCaption": "Vista a griglia (4 / 4 terminali) — quattro PTY indipendenti in parallelo: elenco directory, <code>/etc/network/interfaces</code>, <code>iftop</code> e menu principale ProxMenux. Il selettore di disposizione nella barra alterna griglia e schede.",
+  "keyboard": {
+    "heading": "Pulsanti tastiera per dispositivi mobili",
+    "intro": "Le tastiere di telefoni e tablet spesso non offrono ESC, TAB, frecce o combinazioni con modificatori. Servono per usare <code>vim</code>, <code>nano</code>, <code>htop</code> e menu TUI. Terminale aggiunge quindi una riga di pulsanti tattili sotto il terminale quando lo schermo è piccolo o il dispositivo supporta il tocco:",
+    "headerButton": "Pulsante",
+    "headerSends": "Invia",
+    "headerUse": "Uso tipico",
+    "rows": [
+      {
+        "button": "ESC",
+        "sends": "\\x1b",
+        "use": "Esce dalla modalità di inserimento di <code>vim</code>, annulla un dialogo TUI o chiude una ricerca."
+      },
+      {
+        "button": "TAB",
+        "sends": "\\t",
+        "use": "Completamento dei percorsi e navigazione tra campi in dialog/whiptail."
+      },
+      {
+        "button": "↑ ↓ ← →",
+        "sends": "\\x1bO[ABCD]",
+        "use": "Cronologia della shell, movimento del cursore e navigazione dei menu."
+      },
+      {
+        "button": "↵ Invio",
+        "sends": "\\r",
+        "use": "Conferma. Alcune tastiere sullo schermo sostituiscono Invio con Vai/Fine; questo pulsante evita ambiguità."
+      },
+      {
+        "button": "Ctrl ▾",
+        "sends": "Menu a discesa",
+        "useRich": true
+      }
+    ],
+    "ctrlIntro": "Tre sequenze di controllo:",
+    "ctrlItems": [
+      "<code>Ctrl+C</code> — annullare / interrompere il comando in esecuzione (<code>\\x03</code>).",
+      "<code>Ctrl+X</code> — esce da <code>nano</code> (<code>\\x18</code>).",
+      "<code>Ctrl+R</code> — ricerca a ritroso nella cronologia bash (<code>\\x12</code>)."
+    ],
+    "modalTitle": "Stessa barra nella finestra della console LXC",
+    "modalBody": "La console aperta da <link>VM e LXC → Console</link> mostra gli stessi pulsanti tastiera sotto la finestra. Alla connessione inserisce automaticamente <code>pct enter &lt;vmid&gt;</code> per entrare direttamente nel container."
+  },
+  "lxcAlt": "Finestra console LXC di ProxMenux Monitor — Terminal: ubuntu (ID: 103), con la stessa barra per dispositivi mobili (ESC, TAB, frecce, Invio, Ctrl) sotto il terminale",
+  "lxcCaption": "Console LXC aperta da <em>VM e LXC → Console</em>. L'intestazione mostra il container di destinazione (<em>Terminal: ubuntu (ID: 103)</em>) e sotto il terminale appare la stessa barra tattile.",
+  "search": {
+    "heading": "Cerca comandi — prontuario integrato",
+    "intro": "Il pulsante blu <strong>Cerca</strong> apre una ricerca approssimativa dei comandi. Digita alcune lettere di un comando Linux o Proxmox (<code>ls</code>, <code>tar</code>, <code>qm</code>, <code>pct</code>, <code>zpool</code>, <code>systemctl</code>…) per vedere esempi con <em>Invia al terminale attivo</em> in un tocco. Puoi così ritrovare un'opzione senza cambiare scheda.",
+    "modalAlt": "Finestra Cerca comandi di ProxMenux Monitor — ricerca approssimativa di comandi Linux e Proxmox tramite cheat.sh, con vari esempi di ls",
+    "modalCaption": "Ricerca di <code>ls</code> — ogni risultato mostra comando, descrizione e una piccola freccia di invio al terminale attivo. In basso a destra è indicata la fonte dei dati (<em>Fornito da cheat.sh</em>).",
+    "aboutLabel": "Informazioni su cheat.sh:",
+    "aboutBody": "è un prontuario open source curato dalla comunità, con esempi brevi e pratici per centinaia di comandi Linux, strumenti di amministrazione e linguaggi di programmazione. Progettato per essere consultato con <code>curl cheat.sh/&lt;command&gt;</code>, è accessibile anche dal browser. ProxMenux Monitor inoltra le query tramite proxy sul server per mantenere la stessa origine del pannello.",
+    "headerSource": "Fonte",
+    "headerWhen": "Quando viene usato",
+    "headerWhat": "Cosa vedi",
+    "onlineLabel": "(in linea)",
+    "onlineWhen": "Quando l'host ha accesso a Internet e il proxy cheat.sh risponde.",
+    "onlineWhat": "Vari esempi pratici per comando, con la descrizione sopra. Il punto di stato nell'intestazione è <green>verde</green>.",
+    "fallbackLabel": "Alternativa locale",
+    "fallbackWhen": "Quando cheat.sh non è raggiungibile (host offline, firewall restrittivo o interruzione del servizio cheat.sh).",
+    "fallbackWhat": "Un elenco incluso di comandi Linux e Proxmox comuni. Il catalogo è più piccolo ma sempre disponibile. Il punto di stato è <red>rosso</red>.",
+    "sendingNote": "<strong>Come funziona l'invio</strong>: la freccia accanto al risultato invia il testo al terminale attivo (la scheda selezionata o l'ultimo terminale cliccato nella griglia). La finestra si chiude automaticamente per consentire di premere Invio."
+  },
+  "auth": {
+    "heading": "Autenticazione",
+    "items": [
+      "Il browser richiede prima un ticket monouso tramite <code>POST /api/terminal/ticket</code>, autenticato con JWT nell'intestazione <code>Authorization</code>. Poi invia il ticket all'apertura del WebSocket. Scade dopo 5 secondi; se l'autenticazione è attiva e il ticket manca o non è valido, la connessione si chiude prima di creare un PTY.",
+      "Se Monitor si trova dietro un proxy inverso, questo deve inoltrare gli upgrade WebSocket. Esempi per Nginx / Caddy / Traefik nella pagina <link>Accesso e autenticazione</link>."
+    ]
+  },
+  "clipboard": {
+    "heading": "Appunti, cronologia dello schermo e ridimensionamento",
+    "items": [
+      "<strong>Copia e incolla</strong> — usa gli appunti del browser. Seleziona il testo con mouse o trackpad e usa la scorciatoia del sistema (<code>Cmd+C</code> su macOS, <code>Ctrl+Shift+C</code> su Linux/Windows). I desktop Linux supportano anche l'incollaggio con clic centrale.",
+      "<strong>Cronologia dello schermo</strong> — scorrimento con rotella o due dita. xterm.js conserva in memoria le ultime migliaia di righe.",
+      "<strong>Ridimensionamento</strong> — il terminale adatta la dimensione della finestra PTY quando ridimensioni il pannello, per visualizzare correttamente <code>htop</code> e <code>vim</code>.",
+      "<strong>Riconnessione al ritorno alla scheda</strong> — cambiare app su telefono o tablet, soprattutto iPad, può interrompere il WebSocket. Terminale rileva il cambio di visibilità e si riconnette al ritorno, con un timeout di 15 secondi per VPN lente."
+    ]
+  },
+  "disconnect": {
+    "heading": "Cause di disconnessione",
+    "intro": "Le cause più comuni della fine di una sessione e come risolverle:",
+    "headerCause": "Causa",
+    "headerFix": "Soluzione",
+    "rows": [
+      {
+        "cause": "JWT di sessione scaduto all'apertura o riconnessione di un terminale (durata di 24 ore).",
+        "fix": "Aggiorna la pagina e accedi di nuovo. Il terminale non è progettato per sessioni non assistite, quindi la durata di JWT corrisponde al normale login del cruscotto."
+      },
+      {
+        "cause": "Timeout di inattività del proxy inverso.",
+        "fix": "Aumenta <code>proxy_read_timeout</code> in Nginx o il valore equivalente in Caddy / Traefik (esempi in Accesso e autenticazione)."
+      },
+      {
+        "cause": "Telefono o tablet in sospensione.",
+        "fix": "Al risveglio del dispositivo la scheda si riconnette automaticamente (timeout di 15 secondi per i percorsi VPN). In caso contrario, ricaricala."
+      },
+      {
+        "cause": "Il servizio si riavvia sull'host.",
+        "fix": "Ogni riavvio di <code>proxmenux-monitor.service</code> chiude tutti i PTY. Apri nuovi terminali quando il pannello ha terminato il caricamento."
+      }
+    ]
+  },
+  "warning": {
+    "title": "Il terminale è una shell root sull'host",
+    "body": "Il terminale eredita l'utente dell'unità systemd (<code>root</code>) e ha pieni privilegi sull'host Proxmox. Configura nome utente, password e 2FA in <authLink>Accesso e autenticazione</authLink> prima di consentire accessi fuori dalla rete locale. Con autenticazione disattivata, chi raggiunge la porta 8008 può aprire una shell root senza altre conferme o credenziali SSH. Per accessi esterni usa <gatewayLink>Secure Gateway</gatewayLink> (Tailscale) o un proxy inverso HTTPS invece di pubblicare la porta su Internet."
+  },
+  "whereNext": {
+    "heading": "Dove proseguire",
+    "items": [
+      {
+        "label": "Accesso e autenticazione",
+        "href": "/docs/monitor/access-auth",
+        "tail": " — esempi per proxy inversi con le righe di upgrade WebSocket necessarie per il terminale."
+      },
+      {
+        "label": "Architettura",
+        "href": "/docs/monitor/architecture",
+        "tail": " — trasporto WebSocket (HTTP tramite flask-sock e HTTPS / WSS tramite gevent)."
+      },
+      {
+        "label": "Riferimento API",
+        "href": "/docs/monitor/api",
+        "tail": " — endpoint WebSocket /ws/terminal e /ws/script/<sid>, insieme al resto dell'API."
+      },
+      {
+        "label": "Integrazioni → Secure Gateway",
+        "href": "/docs/monitor/integrations",
+        "tail": "— quando si desidera l'accesso terminale da fuori della LAN senza esporre la porta 8008."
+      },
+      {
+        "label": "Indice del pannello",
+        "href": "/docs/monitor/dashboard",
+        "tail": "— le altre schede."
+      }
+    ]
+  }
+}

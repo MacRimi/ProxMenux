@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A web-based toolkit for working with PDF files on your own server."
+    },
+    "description": {
+      "en_US": "Stirling PDF is an open-source PDF manipulation platform with a web-based interface. It provides over 50 tools to edit, merge, split, sign, redact, convert, compress, and run OCR on PDF files. The application also supports no-code automation pipelines and REST APIs, allowing all operations to be processed locally without sending documents to external services."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/Stirling-Tools/Stirling-PDF/HEAD/docs/images/home-light.png"
+    ]
+  }
+}

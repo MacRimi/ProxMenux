@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Create, organize and search personal tasks through a lightweight web interface. Tasks and settings persist as files, with no external database. The app has no built-in login, so keep it on a trusted network or protect access at your reverse proxy."
+    },
+    "description": {
+      "en_US": "Tasks.md is a self-hosted task management board that stores data directly as Markdown files. It allows users to organize cards, lanes, and tags across customizable workflows, with every lane mapped to a folder and every card stored as a file. The application includes light and dark mode support, custom color themes, and the ability to treat subdirectories as distinct projects."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/BaldissaraMatheus/Tasks.md/HEAD/public/demo.gif"
+    ]
+  }
+}

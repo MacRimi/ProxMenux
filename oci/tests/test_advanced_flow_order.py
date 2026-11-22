@@ -103,6 +103,13 @@ class AdvancedFlowOrderTests(unittest.TestCase):
         localtime = next(m for m in plan["mounts"] if m["container_path"] == "/etc/localtime")
         self.assertEqual((localtime["type"], localtime["source"]), ("host-bind", "/etc/localtime"))
 
+    def test_kiwix_prompts_for_zim_host_path_in_default_mode(self, *_):
+        ui = RecordingUI({"Host path for /data": "/srv/zim-library"})
+        plan = self.build("kiwix-serve", ui, DEFAULT_MODE)
+        self.assertIn("Host path for /data", ui.asked)
+        data = next(m for m in plan["mounts"] if m["container_path"] == "/data")
+        self.assertEqual((data["type"], data["source"]), ("host-bind", "/srv/zim-library"))
+
     def test_default_mode_asks_one_storage_the_address_and_the_start(self, *_):
         ui = RecordingUI({"Storage for the container and its data": "Public"})
         plan = self.build("jellyfin", ui, DEFAULT_MODE)

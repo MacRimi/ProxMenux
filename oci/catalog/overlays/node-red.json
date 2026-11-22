@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Node-RED is a flow-based low-code development platform that enables creating automation tasks and applications by connecting various nodes. A browser-based editor, simple to use, makes it ideal for users in home automation, industrial control, or other fields to quickly build data processing flows.\n\nCore features include a low-code flow editor and robust data handling. Built on Node.js with an event-driven, non-blocking model, the platform supports real-time data collection, transformation, and visualization. A palette with over 5000 nodes allows users to construct flows via drag-and-drop. A rich text editor enables creating JavaScript functions for enhanced customization.\n\nIt stores flows in JSON format, facilitating easy import and export for sharing. A built-in library allows saving useful functions, templates, or flows for reuse, and an online flow library supports sharing top flows globally. With ease of use and efficiency at the core, the platform delivers a modern solution for diverse automation needs.\n\n**Key Features:**\n- Browser-based low-code flow editor with drag-and-drop node connections\n- Real-time data collection, transformation, and visualization\n- Event-driven, non-blocking model with Node.js\n- Palette with over 5000 nodes for extended functionality\n- Rich text editor for creating JavaScript functions\n- JSON-based flow storage for easy sharing\n- Built-in library for saving functions, templates, and flows\n- Online flow library for sharing top flows\n\n**Learn More:**\n- [Node-RED Official Website](https://nodered.org/)\n- [Node-RED GitHub](https://github.com/node-red/node-red)\n"
+    },
+    "description": {
+      "en_US": "Node-RED is a flow-based, low-code development tool for visual programming and event-driven applications. It features a browser-based editor that lets you wire together hardware devices, APIs, and online services using drag-and-drop nodes. Built on Node.js, it supports real-time data collection, transformation, and visualization, storing all workflows in portable JSON format."
+    },
+    "screenshots": [
+      "https://nodered.org/images/node-red-screenshot.png"
+    ]
+  }
+}

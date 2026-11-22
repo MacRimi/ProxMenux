@@ -22,5 +22,14 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Komga is a self-hosted app designed for managing comics, manga, magazines, and e-books (supporting CBZ, CBR, PDF, and EPUB formats), offering a secure and convenient solution for personal media libraries. Its responsive Web interface enables users to access and manage content effortlessly via any browser, without complex local installations, ideal for comic and e-book enthusiasts.\n\nThe app's core features include versatile content organization and diverse reading options. Users can arrange their library with collections and reading lists, edit metadata for series or books, and keep content neatly organized. It integrates a built-in Web reader, supports Mihon SDK extensions, or connects with third-party OPDS readers, catering to varied reading preferences. Whether managing a personal comic collection or sharing e-books with family, it supports multi-user access and delivers a smooth browsing experience. Bulk import streamlines large media library management, perfect for efficient content organization.\n\nIt can be flexibly deployed on personal servers or NAS devices, with an active community providing support documentation, enabling users to extend functionality through community resources. Whether building a personal digital library or a private media-sharing hub, the app's intuitive interface and high customizability offer a secure, modern media management platform, meeting needs from casual reading to professional collections.\n\n**Key Features:**\n- Organize your library with collections and read lists\n- Edit metadata for your series and books\n- Import embedded metadata automatically\n- Webreader with multiple reading modes\n- Manage multiple users, with per-library access control, age restrictions, and labels restrictions\n- Offers a REST API, many community tools and scripts can interact with Komga\n- OPDS v1 and v2 support\n- Kobo Sync with your Kobo eReader\n- KOReader Sync\n- Download book files, whole series, or read lists\n- Duplicate files detection\n- Duplicate pages detection and removal\n- Import books from outside your libraries directly into your series folder\n- Import ComicRack cbl read lists\n\n**Learn More:**\n- [Komga Official Website](https://komga.org)\n- [Komga GitHub Repository](https://github.com/gotson/komga)\n"
+    },
+    "description": {
+      "en_US": "Komga is a media server for comics, manga, BDs, magazines, and e-books. It allows users to organize, manage, and browse their digital publication libraries through a web interface. The platform supports reading directly in a browser or connecting with external reading apps and devices."
+    },
+    "repository": "https://github.com/gotson/komga"
   }
 }

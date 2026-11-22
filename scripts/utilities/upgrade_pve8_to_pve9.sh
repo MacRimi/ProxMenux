@@ -36,8 +36,8 @@
 #     broken repo config).
 #   - dist-upgrade with --force-confdef --force-confold in
 #     unattended mode; user-driven dpkg prompts in interactive mode.
-#   - Post-upgrade: installs grub-efi-amd64 on EFI hosts, restarts
-#     pve-manager, re-runs pve8to9 to surface residual issues.
+#   - Post-upgrade: installs grub-efi-amd64 on EFI hosts and
+#     re-runs pve8to9 to surface residual issues.
 #   - Reboot prompt at the end.
 #   - Full log written to /var/log/pve8-a-pve9-<timestamp>.log.
 # ==========================================================
@@ -117,7 +117,7 @@ ask_run_mode() {
         msg_ok "$(translate "Run mode: Unattended")"
         export DEBIAN_FRONTEND=noninteractive
         export APT_LISTCHANGES_FRONTEND=none
-        exit 0
+        return 0
     fi
 
 
@@ -549,6 +549,39 @@ check_not_web_terminal() {
     done
 }
 
+# PXVIRT ships Proxmox VE from its own repository. This assistant writes the
+# Proxmox and Ceph sources and installs the Proxmox kernel, which would turn the
+# port into upstream Proxmox VE. On PXVIRT the upgrade is a Debian one, so the
+# assistant only explains it. Same detection as the PVE 8 update worker.
+block_downstream_build() {
+    [[ "$(python3 "$LOCAL_SCRIPTS/global/proxmox_platform.py" --field variant 2>/dev/null)" == pxvirt ]] \
+        || [[ "$(python3 "$LOCAL_SCRIPTS/global/repository_policy.py" plan bookworm 2>/dev/null)" == downstream ]] \
+        || return 0
+
+    local line1 line2 line3
+    line1="$(translate "This assistant follows the official Proxmox VE upgrade and would replace the PXVIRT sources, so it is not available on PXVIRT.")"
+    line2="$(translate "On PXVIRT, the upgrade to version 9 is a standard Debian upgrade from bookworm to trixie, with the Lierfang source moved to trixie as well.")"
+    line3="$(translate "Back up your VMs, containers and host configuration first.")"
+
+    if [[ "${ASSUME_YES:-0}" != "1" ]]; then
+        if command -v dialog >/dev/null 2>&1; then
+            dialog --backtitle "ProxMenux" --title "$(translate "PXVIRT detected")" \
+                   --msgbox "\n${line1}\n\n${line2}\n\n${line3}" 16 76
+            exit 0
+        elif command -v whiptail >/dev/null 2>&1; then
+            whiptail --title "$(translate "PXVIRT detected")" \
+                     --msgbox "${line1}"$'\n\n'"${line2}"$'\n\n'"${line3}" 16 76
+            exit 0
+        fi
+    fi
+    msg_warn "$line1"
+    msg_info2 "$line2"
+    msg_info2 "$line3"
+    exit 1
+}
+
+block_downstream_build
+
 ask_run_mode
 
 check_not_web_terminal
@@ -625,7 +658,14 @@ apt_upgrade() {
         exit 1
 
     else
-        bash "$LOCAL_SCRIPTS/global/update-pve8.sh"
+        local update_rc=0
+        bash "$LOCAL_SCRIPTS/global/update-pve8.sh" || update_rc=$?
+        if [[ $update_rc -eq 3 ]]; then
+            exit 0
+        elif [[ $update_rc -ne 0 ]]; then
+            msg_error "$(translate "The Proxmox VE 8 update did not finish. The upgrade to Proxmox VE 9 was not started.")"
+            exit 1
+        fi
         hash -r
 
     fi
@@ -640,10 +680,6 @@ regenerate_pve_cache() {
   
   mkdir -p /var/lib/pve-manager
   chmod 755 /var/lib/pve-manager
-  
-  systemctl restart pve-manager 2>/dev/null || true
-  
-  sleep 2
   
   timeout 10 pvesh get /nodes/localhost/apt/update 2>/dev/null || true
   
@@ -1009,6 +1045,13 @@ else
     bash -lc "apt-get dist-upgrade"
 fi
 
+# pve-manager 9 ships pve-enterprise.sources during the upgrade.
+if [[ "$REPO_MODE" == "no-subscription" && -f /etc/apt/sources.list.d/pve-enterprise.sources ]] \
+   && ! grep -qi '^Enabled:[[:space:]]*\(false\|no\)' /etc/apt/sources.list.d/pve-enterprise.sources; then
+  disable_enterprise_repo_if_present
+  msg_ok "$(translate "Enterprise Proxmox repository disabled")"
+fi
+
 
 
 # ==========================================================
@@ -1029,7 +1072,7 @@ if [[ -d /sys/firmware/efi ]]; then
     run_step \
       "Installing grub-efi-amd64" \
       "grub-efi-amd64 installed or already present" \
-      "apt-get install grub-efi-amd64 >/dev/null 2>&1"
+      "apt-get install -y grub-efi-amd64 >/dev/null 2>&1"
   fi
 fi
 

@@ -84,5 +84,17 @@
         }
       ]
     }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "PostgreSQL is a powerful, open source object-relational database system with over 35 years of active development that has earned it a strong reputation for reliability, feature robustness, and performance.\n\nPostgreSQL is a highly stable database backed by more than 20 years of development by the open-source community.\n\nPostgreSQL is used as a primary database for many web applications as well as mobile and analytics applications.\n"
+    },
+    "description": {
+      "en_US": "PostgreSQL is an open-source object-relational database management system designed for extensibility and standards compliance. It securely stores structured data and allows client applications to query and retrieve it efficiently. The database handles workloads ranging from small single-machine tasks to large internet-facing services with many concurrent users. It provides robust transactional integrity along with support for complex queries, custom functions, and third-party extensions."
+    },
+    "tips": [
+      "The default superuser and initial database name is postgres."
+    ],
+    "repository": "https://github.com/docker-library/postgres"
   }
 }

@@ -271,6 +271,18 @@ translate() {
             echo "$cached"
             return
         fi
+        # The catalog stores texts trimmed; keep the caller's surrounding spaces.
+        local lead="${text%%[![:space:]]*}"
+        local core="${text#"$lead"}"
+        local trail="${core##*[![:space:]]}"
+        core="${core%"$trail"}"
+        if [ -n "$core" ] && [ "$core" != "$text" ]; then
+            cached=$(jq -r --arg text "$core" '.[$text] // .[($text | gsub("\\\\n"; "\n"))] // empty' "$lang_file" 2>/dev/null)
+            if [ -n "$cached" ]; then
+                echo "${lead}${cached}${trail}"
+                return
+            fi
+        fi
     fi
 
     echo "$text"
@@ -596,3 +608,17 @@ hybrid_whiptail_msgbox() {
         whiptail --title "$title" --msgbox "$text" "$height" "$width"
     fi
 }
+
+# An item of the Monitor's Catalog tab ends where its own flow does: a menu
+# other than the one the item opened, such as the one it returns to or the
+# main menu, ends instead of being drawn (see catalog/run_item.sh). Every menu
+# sources this file before drawing anything.
+if [[ "${PROXMENUX_CATALOG:-}" == "1" ]]; then
+    case "$0" in
+        */scripts/menus/*.sh|*/scripts/help_info_menu.sh)
+            if [[ "$(readlink -f "$0" 2>/dev/null)" != "$(readlink -f "${PROXMENUX_CATALOG_TARGET:-/nonexistent}" 2>/dev/null)" ]]; then
+                exit 0
+            fi
+            ;;
+    esac
+fi

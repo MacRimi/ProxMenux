@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Media discovery and request management for Jellyfin, Plex and Emby."
+    },
+    "description": {
+      "en_US": "Seerr is an open-source request management and media discovery application for personal media libraries. It integrates with Jellyfin, Plex, and Emby to scan existing media and manage user requests for movies and television shows. The application connects directly with automation tools like Sonarr and Radarr to streamline the handling and approval of new media."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/seerr-team/seerr/HEAD/public/preview.jpg"
+    ]
+  }
+}

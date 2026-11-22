@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Track devices and vehicles, manage geofences and view reports from a browser-based dashboard."
+    },
+    "description": {
+      "en_US": "Traccar is an open source GPS tracking platform. It supports more than 200 GPS protocols and thousands of tracking device models, connecting with major SQL databases and providing a REST API. The platform enables users to track vehicles, assets, or people in real time, monitor driver behavior, configure geofences, and review detailed reports and notifications."
+    },
+    "screenshots": [
+      "https://www.traccar.org/images/homepage-hero.webp"
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -29,7 +29,6 @@ export default async function PostInstallUpdatesPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.postInstall.updates" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -96,7 +95,7 @@ export default async function PostInstallUpdatesPage({
           alt={t("pathA.menuAlt")}
           width={1200}
           height={680}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("pathA.menuCaption", { em })}
@@ -113,7 +112,7 @@ export default async function PostInstallUpdatesPage({
           alt={t("pathA.checklistAlt")}
           width={1200}
           height={680}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("pathA.checklistCaption")}
@@ -132,7 +131,7 @@ export default async function PostInstallUpdatesPage({
           alt={t("pathB.imageAlt")}
           width={2000}
           height={1146}
-          className="rounded-lg border border-gray-200 shadow-sm w-full h-auto"
+          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("pathB.imageCaption")}

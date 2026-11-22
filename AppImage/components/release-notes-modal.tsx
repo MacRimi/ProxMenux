@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog"
-import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages, Package, ScrollText, ArrowUpCircle } from "lucide-react"
+import { X, Sparkles, Thermometer, Activity, HardDrive, Shield, Globe, Cpu, Zap, Sliders, Wrench, RefreshCw, Server, BellOff, Bell, Calendar, DatabaseBackup, Smartphone, Languages, Package, ScrollText, ArrowUpCircle, Search } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { useT } from "../lib/i18n/provider"
 import { APP_VERSION } from "../lib/version"
+import { ONBOARDING_CLOSED_EVENT } from "./onboarding-carousel"
 
 interface ReleaseNote {
   date: string
@@ -18,6 +19,64 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.8": {
+    date: "November 2, 2026",
+    changes: {
+      added: [
+        "Custom image installs Compose files with several services, one LXC per service on a private network (contributed by @jcastro).",
+        "OCI: a VLAN tag for the access interface (requested by @xistoso), and Ollama and llama.cpp on Intel and AMD integrated GPUs.",
+        "Seventeen new OCI applications, among them Authentik, TeslaMate, Zigbee2MQTT, Umami, Scrypted and NetAlertX (contributed by @jcastro) and Scanopy (suggested by @gabglus).",
+        "Proxmox updates run as a job on the server and carry on after signing out, and a pending reboot is shown after a new kernel (contributed by @Vaso73).",
+        "ZFS pool layout, scrub and device health, and the storage controller of each disk (contributed by @DrOwl).",
+        "VM disk thresholds in Settings (suggested by @byte21516), and an optional API key for local Ollama.",
+      ],
+      changed: [
+        "Variables added or changed in Proxmox stay in an OCI container: they are saved in its oci-compose and the update carries on with them, manual or scheduled, on single applications and on every member of a stack.",
+        "OCI updates keep the rest of what is changed in Proxmox: start command, network options, DNS, hostname, features, protection, disk sizes and lxc.* lines.",
+        "Log2RAM 2.0: the journal and the task logs of Proxmox stay on disk with their history (reported by @shtefko).",
+        "Every disk is monitored unless it is excluded in Settings (reported by @ovikiss and @peterurbanec).",
+        "A service reloading or restarting counts as running, and nothing is concluded during a package update (reported by @Joshua1264).",
+      ],
+      fixed: [
+        "Host backup jobs run on their schedule, and updating ProxMenux repairs saved jobs.",
+        "The Intel GPU view ends intel_gpu_top with each reading (reported by @FromTheCToTheG).",
+        "VM disk usage counts every filesystem of the guest (fix proposed by @TheFoxCraft).",
+        "The LVM check keeps the Proxmox filter (reported by @osipovdm-dot), and Secure Gateway installs on BTRFS hosts (reported by @78v5).",
+        "The Monitor installs as an app (PWA) from the browser, with its own web app manifest and service worker.",
+        "A disk I/O error is recorded on its disk.",
+        "The Y-axis titles stay inside the overview charts (contributed by @f3rs3n).",
+      ],
+    },
+  },
+  "1.2.7": {
+    date: "October 26, 2026",
+    changes: {
+      added: [
+        "Audit & Report — a new page under Admin that assesses the node against forty-three Proxmox checks, keeps a journal of everything ProxMenux changed on the host, lets the expected state be declared as a policy and prints focused reports.",
+        "OCI manager Apps (Technology Preview) — applications installed from their official container images as native Proxmox LXC, with no Docker engine: a catalog of 514 applications, multi-container applications, hardware acceleration, updates that keep the data and recovery after a restore.",
+        "OCI applications in the Monitor — registered in the App tab, updated and modified from the Updates tab, with a Logs tab that follows their console and a watchdog switch.",
+        "ProxMenux on Proxmox Backup Server — the same installer, a menu, post-install and a Monitor of its own; a remote PBS can also be watched from PVE with a read-only token (contributed by @jcastro).",
+        "Search in the main menu across ProxMenux options, OCI applications and Helper-Scripts, and Helper-Scripts addons run on the host or inside the LXC they belong to.",
+        "Backup jobs of VMs and LXCs listed, created, edited and run from the Backup tab (contributed by @MattiaC46); VM and CT backups can be deleted and the retention of each backup storage edited (contributed by @jcastro).",
+        "Notifications in the reader's language (contributed by @Vaso73), a delivery history in the notification settings and grouped application update notifications.",
+        "The NVIDIA Container Toolkit installs with the driver, a ZRAM swap profile joins the customizable post-install (contributed by @phyrexia) and FygoOS joins the NAS systems of Create VM.",
+      ],
+      changed: [
+        "Read-only API tokens only read: every action that changes something, opening a terminal and revealing a stored credential require a full-admin token (reported by @f3rs3n).",
+        "Docker applications are registered with their own identity while their updates stay tied to the image (contributed by @byGarcia).",
+        "The observations of a disk belong to its serial number, and idle mechanical disks are left to spin down (reported by @spectante).",
+        "Find applications recognises services installed by hand and Docker containers with published ports, and LXC package checks and installs are separate steps (contributed by @Vaso73).",
+        "The node name in the header opens the other Monitors of the cluster and the configured PBS servers.",
+      ],
+      fixed: [
+        "Proxmox notifications arrive with HTTPS enabled on the Monitor, through a local listener that needs no certificate.",
+        "The Monitor leaves /etc/pve alone while Proxmox restarts its cluster service (reported by @shtefko).",
+        "Host backups work on hosts with SELinux (reported by @sbaghdadi), and the node web certificate is restored on the node it belongs to (reported by @tropicaljoe).",
+        "Log2RAM keeps the newest records of the journal and compresses rotated logs at once (reported by @f3rs3n).",
+        "Changing the mode of a GPU leaves the devices that share its slot alone (reported by @LucasR3C3).",
+      ],
+    },
+  },
   "1.2.6": {
     date: "September 2, 2026",
     changes: {
@@ -306,48 +365,38 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 const CURRENT_VERSION_FEATURES = [
   {
     icon: <Package className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociManager",
-    text: "OCI manager Apps (Technology Preview) — a new entry in the ProxMenux menu installs applications from their official container images as native Proxmox LXC, with no Docker engine. The catalog carries over 360 applications.",
-  },
-  {
-    icon: <ScrollText className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociInMonitor",
-    text: "OCI applications in the Monitor — the App tab recognises them, the Updates tab updates and modifies them as the menu does, and a Logs tab follows the console output of the application live.",
-  },
-  {
-    icon: <Cpu className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociAcceleration",
-    text: "Hardware acceleration for OCI applications — the installer offers only the profiles the host can run: NVIDIA, Intel and AMD GPUs and, for Frigate, an Intel NPU or a Coral. The NVIDIA Container Toolkit installs with the driver.",
-  },
-  {
-    icon: <DatabaseBackup className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociRecovery",
-    text: "An OCI application travels with its backup — restored on this host or on another one, it is registered and managed again, and in a cluster it starts on whichever node it moves to.",
+    key: "releaseNotes.currentFeatures.composeStacks",
+    text: "Compose files with several services — Custom image installs one LXC per service on a private network, started in dependency order. Updates, backups and removal work on the whole application.",
   },
   {
     icon: <RefreshCw className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociWatchdog",
-    text: "Watchdog for OCI applications — an application that stops on its own is started again and a notification says so. It is not restarted when the user stops it, or while a backup or a migration is in progress.",
+    key: "releaseNotes.currentFeatures.keepProxmoxChanges",
+    text: "OCI updates keep what you change in Proxmox — variables, start command, network options, DNS, features, disk sizes and lxc.* lines stay on the rebuilt container, also in scheduled updates and on every member of a stack.",
   },
   {
-    icon: <Server className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.shareCoveX",
-    text: "ShareCoveX joins the catalog — a file server with a web panel that shares host directories or container volumes over SMB, NFS and Time Machine.",
+    icon: <Globe className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociVlan",
+    text: "VLAN tag for OCI applications — the advanced installation asks for it next to the address, and Modify changes it on a single application. The host needs no access to that VLAN.",
   },
   {
-    icon: <Calendar className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.guestBackupJobs",
-    text: "Backup jobs of VMs and LXCs — the Backup tab lists the scheduled jobs of Proxmox and creates, edits, enables and runs them; they are the same ones as Datacenter → Backup (contributed by @MattiaC46).",
+    icon: <Sparkles className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.ociNewApps",
+    text: "New in the OCI catalog — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX and ten more applications, and Ollama and llama.cpp run on Intel and AMD integrated GPUs.",
   },
   {
-    icon: <Languages className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.notificationLanguage",
-    text: "Notifications in your language — titles, bodies and daily digests are written in the language chosen for notifications (contributed by @Vaso73).",
+    icon: <ArrowUpCircle className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.hostUpdateJob",
+    text: "Proxmox updates that carry on after signing out — the update runs as a job on the server and signing back in reopens it. A pending reboot is shown after a new kernel, with a restart button that checks the host first.",
   },
   {
-    icon: <Shield className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.auditReviewDate",
-    text: "Audit & Report — an accepted finding can carry a review date that brings it back without withdrawing the decision, and the comparison says whether a finding got worse, got better or held (with @Vaso73).",
+    icon: <HardDrive className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.storageDetails",
+    text: "Storage details — ZFS pools show their layout, scrub and device health, and each disk shows the storage controller it hangs off, also in the Hardware page. VM disk thresholds join Settings.",
+  },
+  {
+    icon: <Zap className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.log2ramV2",
+    text: "Log2RAM 2.0 — the journal and the task logs of Proxmox stay on disk with their history, and only the logs that change all the time go to RAM. Installed hosts update to it with ProxMenux.",
   },
 ]
 
@@ -485,11 +534,15 @@ export function useVersionCheck() {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
 
   useEffect(() => {
-    const lastSeenVersion = localStorage.getItem("proxmenux-last-seen-version")
-
-    if (lastSeenVersion !== APP_VERSION) {
-      setShowReleaseNotes(true)
+    if (localStorage.getItem("proxmenux-last-seen-version") === APP_VERSION) return
+    const show = () => setShowReleaseNotes(true)
+    if (localStorage.getItem("proxmenux-onboarding-seen")) {
+      show()
+      return
     }
+    // The welcome tour opens first; the notes follow once it is closed.
+    window.addEventListener(ONBOARDING_CLOSED_EVENT, show, { once: true })
+    return () => window.removeEventListener(ONBOARDING_CLOSED_EVENT, show)
   }, [])
 
   return { showReleaseNotes, setShowReleaseNotes }

@@ -19,5 +19,30 @@
         }
       ]
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Spotube is an open source, cross-platform Spotify client compatible across multiple platforms utilizing Spotify's data API and YouTube, Piped.video or JioSaavn as an audio source, eliminating the need for Spotify Premium"
+    },
+    "description": {
+      "en_US": "Spotube is an open-source Spotify client that operates across multiple platforms. It utilizes the Spotify data API while retrieving audio streams from services such as YouTube, Piped.video, or JioSaavn. This allows users to browse, search, and listen to music without requiring a Spotify Premium subscription."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/KRTirtho/spotube/HEAD/assets/feature-graphics/readme-hero.png",
+      "https://raw.githubusercontent.com/KRTirtho/spotube/HEAD/assets/feature-graphics/readme-mobile.png"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

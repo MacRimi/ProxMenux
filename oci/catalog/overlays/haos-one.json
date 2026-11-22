@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Community Home Assistant OS image, derived from HAOS One, adapted as a native Proxmox OCI LXC with persistent Supervisor, Core, add-ons and backups under /mnt/data."
+    },
+    "description": {
+      "en_US": "HAOS One provides a fully featured Home Assistant Operating System environment, including Home Assistant Core, Supervisor, and add-ons. It allows users to centralize control of smart home devices, build automations, and manage integrations. The system provides access to supervisor capabilities, enabling users to install add-on applications and manage backups directly."
+    }
+  }
+}

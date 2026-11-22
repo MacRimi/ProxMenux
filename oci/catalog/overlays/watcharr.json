@@ -1,0 +1,16 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Track movies, television shows, anime and games you want to watch or play. The single container stores its database and cache in /data."
+    },
+    "description": {
+      "en_US": "Watcharr is an open-source media tracking application that lets you manage your personal watched list. It allows you to track watched, currently watching, or planned movies, TV shows, and anime. You can rate entries, track their status, and also log video games with additional configuration."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/sbondCo/Watcharr/HEAD/screenshot/homepage.png?v=2",
+      "https://raw.githubusercontent.com/sbondCo/Watcharr/HEAD/screenshot/content-details-page.png?v=2",
+      "https://raw.githubusercontent.com/sbondCo/Watcharr/HEAD/screenshot/discover-page.png?v=2",
+      "https://raw.githubusercontent.com/sbondCo/Watcharr/HEAD/screenshot/user-profile.png?v=2"
+    ]
+  }
+}

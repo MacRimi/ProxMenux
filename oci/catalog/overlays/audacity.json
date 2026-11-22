@@ -18,6 +18,35 @@
           "only_when_mount_type": "managed-volume"
         }
       ]
+    },
+    "defaults": {
+      "cores": 4,
+      "memory_mb": 4096
     }
-  }
+  },
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Audacity is an easy-to-use, multi-track audio editor and recorder. Developed by a group of volunteers as open source."
+    },
+    "description": {
+      "en_US": "Audacity is an open-source, multi-track audio editor and recorder. It enables users to record live audio and manipulate sound clips across multiple tracks. The software is used for producing, editing, and mixing various audio projects."
+    },
+    "screenshots": [
+      "https://www.audacityteam.org/_astro/hero-surface-studio-darkened.Bg6vZ4zE_Z1E7Af.webp",
+      "https://www.audacityteam.org/_astro/audacity-0.8.BLUesJEs_2cs37a.webp"
+    ],
+    "tips": [
+      "Copy and paste between your computer and the streamed desktop, including images, works over HTTPS: port 3001 or an HTTPS reverse proxy. Browsers block clipboard access over plain HTTP."
+    ]
+  },
+  "environment_additions": [
+    {
+      "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+      "example": "true",
+      "required": true,
+      "sensitive": false,
+      "prompt_user": false,
+      "source": "proxmenux-overlay"
+    }
+  ]
 }

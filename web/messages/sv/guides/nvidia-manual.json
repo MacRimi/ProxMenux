@@ -1,0 +1,165 @@
+{
+  "meta": {
+    "title": "NVIDIA-drivrutiner på Proxmox VE 9 — manuell installation | ProxMenux-guider",
+    "description": "Installera och konfigurera NVIDIA-drivrutiner manuellt på ett Proxmox VE 9-värdsystem och ge en eller flera LXC-containrar tillgång till GPU:n. Guiden täcker drivrutiner, persistens­tjänsten, en valfri NVENC-patch och inställningar för varje container.",
+    "ogTitle": "Installera NVIDIA-drivrutiner på Proxmox VE 9 manuellt",
+    "ogDescription": "Manuell NVIDIA-installation på PVE 9: värdsystemets drivrutin, persistens­tjänst, valfri NVENC-patch och GPU-åtkomst i varje LXC-container."
+  },
+  "header": {
+    "title": "Installera NVIDIA-grafikdrivrutiner på Proxmox VE 9 manuellt",
+    "description": "Installera och konfigurera NVIDIA-drivrutiner manuellt på ett Proxmox VE 9-värdsystem och ge en eller flera LXC-containrar tillgång till GPU:n. Guiden täcker drivrutiner, persistens­tjänsten, en valfri NVENC-patch och inställningar för varje container.",
+    "section": "Guider"
+  },
+  "intro": {
+    "calloutTitle": "Notera",
+    "calloutBody": "Den här manuella proceduren finns som referens. För de flesta användare rekommenderas ProxMenux-guiden: <strong>Installera NVIDIA-drivrutiner på värdsystemet</strong> under <em>GPU:er och Coral-TPU</em> och sedan <strong>Lägg till GPU i LXC</strong> eller <strong>Lägg till GPU i VM</strong> för gästens inställningar. Guiden utför samma steg med extra kontroller av kärnheaders, IOMMU och VFIO-konflikter. Den här sidan hjälper dig att förstå kommandona eller anpassa konfigurationen.",
+    "targetNote": "Riktad på <strong>Proxmox VE 9</strong> (Debian Trixie). PVE 7 (Bullseye) och PVE 8 (Bookworm) täcks inte längre.",
+    "stepsTitle": "Vad du ska göra",
+    "steps": [
+      "Förbered Proxmox VE 9-värdsystemet: blockera nouveau och kontrollera paketförråd och förutsättningar.",
+      "Installera NVIDIA-drivrutinen på värdsystemet.",
+      "Installera NVIDIAs persistens­tjänst.",
+      "Valfritt: använd keylase-patchen för att ta bort gränsen för samtidiga NVENC-sessioner på konsument-GPU:er.",
+      "Ge en eller flera LXC-containrar tillgång till GPU:n och installera rätt drivrutinsversion i varje container."
+    ]
+  },
+  "prepareHost": {
+    "heading": "1. Förbered värden (PVE 9)",
+    "blacklistHeading": "1.1 Blockera nouveau",
+    "blacklistBody": "Kontrollera om drivrutinen med öppen källkod <code>nouveau</code> redan är blockerad:",
+    "blacklistCheckCode": "cat /etc/modprobe.d/blacklist.conf",
+    "blacklistAdd": "Om <code>blacklist nouveau</code> inte visas, lägg till den och starta om:",
+    "blacklistAddCode": "echo \"blacklist nouveau\" >> /etc/modprobe.d/blacklist.conf\nupdate-initramfs -u -k all\nreboot",
+    "blacklistImageAlt": "Kontroll av blockeringslista",
+    "reposHeading": "1.2 Verifiera repositorier (PVE 9 / Trixie)",
+    "reposBody": "Verktyg för efterinstallation kan redan ha konfigurerat paketförråden. Granska befintliga källor först och hoppa över ändringar som redan är gjorda. Skapa inte dubbla poster.",
+    "reposOtherwise": "Annars, på en ursprunglig PVE 9-installation utan Enterprise-prenumeration:",
+    "reposEditCode": "nano /etc/apt/sources.list.d/proxmox.sources",
+    "reposPveBody": "Se till att den innehåller no-subscription-källan för Trixie:",
+    "reposPveCode": "Types: deb\nURIs: http://download.proxmox.com/debian/pve\nSuites: trixie\nComponents: pve-no-subscription\nSigned-By: /usr/share/keyrings/proxmox-archive-keyring.gpg",
+    "reposDebianBody": "Och Debian källor på <code>/etc/apt/sources.list.d/debian.sources</code>:",
+    "reposDebianCode": "Types: deb\nURIs: http://deb.debian.org/debian/\nSuites: trixie trixie-updates\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: http://security.debian.org/debian-security/\nSuites: trixie-security\nComponents: main contrib non-free non-free-firmware\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg",
+    "updateHeading": "1.3 Uppdatera systemet och installera förutsättningar",
+    "updateCode": "apt update && apt dist-upgrade -y",
+    "buildToolsBody": "Installera byggverktygen och de kärnheaders som behövs för att kompilera NVIDIAs kärnmodul:",
+    "buildToolsCode": "apt-get install -y git\napt-get install -qqy pve-headers-$(uname -r) gcc make"
+  },
+  "installDriver": {
+    "heading": "2. Installera NVIDIA-drivrutinen på värdsystemet",
+    "pickHeading": "2.1 Välj drivrutinsversion",
+    "pickBody": "Välj en drivrutinsgren som stöder GPU:n och den körande kärnan. Den senaste grenen kanske inte stöder äldre GPU-modeller; kontrollera NVIDIAs produktlista för den valda versionen:",
+    "pickUrlCode": "https://download.nvidia.com/XFree86/Linux-x86_64/latest.txt",
+    "nvencCallout": "Om du planerar att tillämpa NVENC-patchen (steg 4), verifiera patchen stöder din valda förarversion först: <patchLink>github.com/keylase/nvidia-patch</patchLink>",
+    "nvencCalloutTitle": "Observera",
+    "pickReplace": "Ersätt <code>latest.txt</code> i URL:en med versionsnumret för att hitta installationsfilen som slutar med <code>.run</code>. Fullständig drivrutinslista:",
+    "pickListCode": "https://download.nvidia.com/XFree86/Linux-x86_64/",
+    "pickImageAlt": "Hämta NVIDIA-drivrutin",
+    "pickVersionNote": "Under resten av denna guide, ersätt <code>'<'VERSION'>'</code> med den faktiska versionen (till exempel <code>580.95.05</code>).",
+    "downloadHeading": "2.2 Ladda ner och kör installationsprogrammet",
+    "downloadCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run",
+    "firstPassBody": "Kör installationsprogrammet. Alternativet nedan kan inaktivera <code>nouveau</code> vid behov; en omstart kan krävas innan installationen kan slutföras:",
+    "firstPassCode": "./NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none --disable-nouveau\nreboot",
+    "secondPassBody": "När värden kommer tillbaka, kör installationsprogrammet igen för att sammanställa och installera kärnmodulen:",
+    "secondPassCode": "/opt/nvidia/NVIDIA-Linux-x86_64-VERSION.run --no-questions --ui=none",
+    "modulesHeading": "2.3 Läs in NVIDIA-moduler vid start",
+    "modulesBody": "Redigera konfigurationen för modulinläsning:",
+    "modulesEditCode": "nano /etc/modules-load.d/modules.conf",
+    "modulesAddBody": "Lägg till NVIDIA-modulerna för värdsystemet och LXC. VFIO-moduler används för VM-genomkoppling och behövs inte i den här LXC-konfigurationen:",
+    "modulesAddCode": "nvidia\nnvidia_uvm",
+    "modulesSaveBody": "Spara (<code>Ctrl+X</code>) och bygg om initramfs:",
+    "modulesSaveCode": "update-initramfs -u -k all",
+    "udevHeading": "2.4 Skapa udevregler",
+    "udevBody": "Så att enhetsnoderna <code>/dev/nvidia*</code> skapas när modulerna läses in:",
+    "udevEditCode": "nano /etc/udev/rules.d/70-nvidia.rules",
+    "udevRulesCode": "# /etc/udev/rules.d/70-nvidia.rules\nKERNEL==\"nvidia\", RUN+=\"/bin/bash -c '/usr/bin/nvidia-smi -L'\"\nKERNEL==\"nvidia_uvm\", RUN+=\"/bin/bash -c '/usr/bin/nvidia-modprobe -c0 -u'\"",
+    "udevSaveBody": "Spara (<code>Ctrl+X</code>)."
+  },
+  "persistence": {
+    "heading": "3. NVIDIAs persistens­tjänst",
+    "body": "Persistens­tjänsten håller GPU:n initialiserad när ingen annan applikation använder den. Det minskar upprepad initieringsfördröjning och bevarar initieringstillståndet mellan klienter:",
+    "installCode": "cd /opt/nvidia\ngit clone https://github.com/NVIDIA/nvidia-persistenced.git\ncd nvidia-persistenced/init\n./install.sh\nreboot",
+    "verifyBody": "Kontrollera efter omstart att drivrutinen är inläst och tjänsten körs:",
+    "verifySmiCode": "nvidia-smi",
+    "smiImageAlt": "Utdata från NVIDIA SMI",
+    "verifyServiceCode": "systemctl status nvidia-persistenced",
+    "serviceImageAlt": "Status för NVIDIAs persistens­tjänst"
+  },
+  "nvenc": {
+    "heading": "4. Valfritt: ta bort gränsen för samtidiga NVENC-sessioner",
+    "body": "Gränsen för NVENC-sessioner beror på GPU-modell och drivrutinsversion. Kontrollera NVIDIAs matris i stället för att anta ett antal per generation. keylase-patchen tar bort mjukvarugränsen i versioner som stöds och kan hjälpa vid Plex- eller Jellyfin-omkodning.",
+    "code": "cd /opt/nvidia\ngit clone https://github.com/keylase/nvidia-patch.git\ncd nvidia-patch\n./patch.sh",
+    "imageAlt": "Tillämpning av NVIDIA-patch",
+    "after": "Tillämpa patchen igen efter varje drivrutinsuppdatering. keylase-repositoriet innehåller också <code>patch-fbc.sh</code> för FBC, fångst av bildbufferten."
+  },
+  "lxcSetup": {
+    "heading": "5. Konfigurera GPU-åtkomst i en LXC-container",
+    "identifyHeading": "5.1 Identifiera enhetsnummer",
+    "identifyBody": "På värden:",
+    "identifyCode": "ls -l /dev/nv*",
+    "identifyImageAlt": "NVIDIA enhetslista",
+    "identifyNote": "Notera enheternas major-nummer; de kan variera mellan system. Vanliga värden:",
+    "tableHeaders": {
+      "device": "Enhet",
+      "major": "Vanligt major-nummer"
+    },
+    "tableRows": [
+      {
+        "device": "<code>/dev/nvidia0</code>, <code>/dev/nvidiactl</code>",
+        "major": "195"
+      },
+      {
+        "device": "<code>/dev/nvidia-uvm</code>, <code>/dev/nvidia-uvm-tools</code>",
+        "major": "509 (varierar)"
+      },
+      {
+        "device": "<code>/dev/dri/*</code>",
+        "major": "226"
+      },
+      {
+        "device": "<code>/dev/nvidia-modeset</code>",
+        "major": "195 (delas med nvidia)"
+      }
+    ],
+    "editHeading": "5.2 Redigera LXC konfig",
+    "editBody": "Stoppa containern om den körs. Öppna konfigurationen och ersätt <code>'<'CTID'>'</code> med containerns ID:",
+    "editCode": "nano /etc/pve/lxc/CTID.conf",
+    "editConfigBody": "Kommentera bara bort rader för <code>lxc.cgroup2.devices.allow</code> eller <code>/dev/dri</code> som faktiskt står i konflikt. Lägg till NVIDIA-konfigurationen och anpassa major-numren efter NVIDIA-enheterna som <code>ls -l /dev/nv*</code> visar på <strong>ditt</strong> värdsystem:",
+    "editConfigCode": "lxc.cgroup2.devices.allow: c 195:* rwm\nlxc.cgroup2.devices.allow: c 509:* rwm\nlxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file\nlxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-modeset dev/nvidia-modeset none bind,optional,create=file\nlxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file",
+    "editConfigImageAlt": "LXC konfiguration",
+    "editSave": "Spara (<code>Ctrl+X</code>) och starta containern.",
+    "installCtHeading": "5.3 Installera drivrutinen i containern",
+    "installCtCalloutTitle": "Viktigt",
+    "installCtCalloutBody": "Den här delen körs <strong>inne i containern</strong>, inte på värdsystemet.",
+    "installCtBody": "Kärnmodulen är redan inläst på värdsystemet. Containern behöver bara biblioteken i användarutrymmet med samma drivrutinsversion:",
+    "installCtCode": "mkdir -p /opt/nvidia\ncd /opt/nvidia\nwget https://download.nvidia.com/XFree86/Linux-x86_64/VERSION/NVIDIA-Linux-x86_64-VERSION.run\nchmod +x NVIDIA-Linux-x86_64-VERSION.run\n./NVIDIA-Linux-x86_64-VERSION.run --no-kernel-module",
+    "installCtAfter": "Granska frågorna och begränsa installationen till bibliotek i användarutrymmet. Bygg eller installera inte en kärnmodul inne i LXC.",
+    "installCtImageAlt": "Installation av NVIDIA-drivrutin",
+    "verifyCtHeading": "5.4 Verifiera inuti containern",
+    "verifyCtSmiCode": "nvidia-smi",
+    "verifyCtSmiImageAlt": "NVIDIA SMI i LXC",
+    "verifyCtLsCode": "ls -l /dev/nv*",
+    "verifyCtLsImageAlt": "NVIDIA enheter i LXC",
+    "verifyCtAfter": "GPU:n bör visas i listan och dess enhetsnoder finnas i containerns filsystem.",
+    "workloadHeading": "5.5 Kontrollera GPU-användningen med en verklig arbetslast",
+    "workloadBody": "Aktivera NVIDIA-maskinvaruacceleration i Plex eller Jellyfin, starta en omkodning och kontrollera faktisk GPU-användning i panelen eller loggarna. Att installera drivrutinen aktiverar inte automatiskt acceleration i applikationen.",
+    "workloadImage1Alt": "Plex med NVIDIA GPU",
+    "workloadImage2Alt": "Plex med NVIDIA GPU - aktiv session",
+    "repeatNote": "Upprepa <strong>avsnitt 5</strong> för varje ytterligare container som behöver GPU-åtkomst. Håll användarutrymmets drivrutinsbibliotek i alla containrar i samma version när värdsystemets drivrutin uppdateras."
+  },
+  "docker": {
+    "heading": "6. (Optional) NVIDIA Docker inuti en LXC",
+    "body": "Om Docker redan körs inne i LXC installerar du <code>nvidia-container-toolkit</code> där för att ge Docker-containrarna tillgång till GPU:n. GPU-åtkomst från LXC måste fungera först. Följande kommandon gäller Docker som körs som root:",
+    "code": "apt-get update\napt-get install -y ca-certificates curl gnupg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor --yes -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\ncurl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' > /etc/apt/sources.list.d/nvidia-container-toolkit.list\napt-get update\napt-get install -y nvidia-container-toolkit\nnvidia-ctk runtime configure --runtime=docker\nsystemctl restart docker",
+    "after": "Kommandona konfigurerar NVIDIAs paketförråd, installerar toolkit, konfigurerar Docker-körmiljön och startar om Docker. LXCs enhetsbehörigheter och cgroup-begränsningar gäller fortfarande; verifiera GPU:n med en testlast."
+  },
+  "troubleshoot": {
+    "heading": "Felsökning",
+    "items": [
+      "<strong><code>nvidia-smi</code> fungerar på värdsystemet men ger ”No devices found” i containern:</strong> kontrollera enhetsmonteringar, behörigheter och drivrutinsbibliotek. Om versionerna skiljer sig installerar du värdsystemets <code>'<'VERSION'>'</code> i containern med <code>--no-kernel-module</code>.",
+      "<strong>Drivrutinen kan inte kompileras:</strong> granska byggloggen. ”No precompiled kernel interface was found” kan bara betyda att lokal kompilering behövs. Installera headers som matchar <code>uname -r</code> med <code>apt-get install pve-headers-$(uname -r)</code> eller motsvarande proxmox-headers-paket.",
+      "<strong>NVENC-sessionerna är fortfarande begränsade:</strong> kontrollera att patchen stöder den aktiva drivrutinen. En uppdatering kan skriva över den. För en version som stöds kör du <code>./patch.sh</code> från <code>/opt/nvidia/nvidia-patch</code> igen och granskar resultatet.",
+      "<strong>GPU:n slutar svara efter inaktivitet:</strong> kontrollera <code>systemctl status nvidia-persistenced</code> och aktivera tjänsten om det är avsikten. Granska även kärn- och drivrutinsloggar; en stoppad persistens­tjänst är inte den enda möjliga orsaken.",
+      "<strong>Containern startar men <code>ls /dev/nv*</code> visar inga NVIDIA-enheter:</strong> kontrollera bind-monteringar och enhetssökvägar på värdsystemet. Använd <code>ls -l /dev/nv*</code> för att verifiera NVIDIAs major-nummer och granska reglerna för <code>lxc.cgroup2.devices.allow</code> samt behörigheterna."
+    ]
+  }
+}

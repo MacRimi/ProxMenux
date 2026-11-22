@@ -1,0 +1,235 @@
+{
+  "meta": {
+    "title": "Installare un’app e proporla al catalogo | ProxMenux",
+    "description": "Istruzioni riutilizzabili per un agente: installare un’app self-hosted con OCI manager Apps, verificarla e preparare un contributo al catalogo per tutti."
+  },
+  "header": {
+    "title": "Installare un’app e proporla al catalogo",
+    "description": "Istruzioni pratiche da dare al tuo agente per installare l’app che desideri, verificarla sul tuo sistema Proxmox e preparare una voce del catalogo OCI di ProxMenux riutilizzabile da altri.",
+    "section": "OCI manager Apps"
+  },
+  "sections": [
+    {
+      "id": "purpose",
+      "title": "Una richiesta, due risultati",
+      "blocks": [
+        {
+          "p": "Usa questa guida quando vuoi che un agente installi un’applicazione self-hosted sul sistema Proxmox che scegli e la proponga per il catalogo OCI di ProxMenux. La guida si rivolge a utenti con host Proxmox, architetture CPU, sistemi di storage e hardware diversi. Non presuppone un computer o un homelab specifico."
+        },
+        {
+          "cards": {
+            "items": [
+              {
+                "icon": "server",
+                "title": "La tua app",
+                "body": "Il servizio richiesto viene installato e verificato sul sistema Proxmox che hai scelto. Questa istanza e i suoi dati vanno conservati, salvo tua richiesta di rimozione."
+              },
+              {
+                "icon": "boxes",
+                "title": "La voce del catalogo",
+                "body": "L’agente verifica l’immagine upstream, scrive il relativo oci-compose, lo testa nei limiti consentiti dal sistema disponibile e prepara una pull request per gli altri utenti di ProxMenux."
+              }
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Un test su un sistema non dimostra il supporto su tutti",
+            "body": "L’agente deve rilevare la versione effettiva di Proxmox, l’architettura CPU, lo storage, la rete e i dispositivi disponibili. Indica quali combinazioni sono state testate. Non dichiarare mai per deduzione il supporto di un’altra architettura, GPU, NPU, dispositivo USB o tipo di storage."
+          }
+        },
+        {
+          "p": "Una voce del catalogo non viene automaticamente indicata come verificata con un ✓ negli elenchi dell’installatore. Questo simbolo viene assegnato tramite il <validation>processo di validazione</validation> separato del progetto. Un download o un avvio del container riuscito non basta a dimostrare che l’app funziona."
+        }
+      ]
+    },
+    {
+      "id": "brief",
+      "title": "Copia queste istruzioni per il tuo agente",
+      "blocks": [
+        {
+          "p": "Sostituisci i dettagli tra parentesi quadre se li conosci. Per il resto, l’agente dovrebbe esaminare il sistema Proxmox selezionato e lo stato attuale del repository, poi segnalarti le decisioni che richiedono il tuo intervento."
+        },
+        {
+          "agentPrompt": {
+            "title": "Richiesta riutilizzabile",
+            "body": "Voglio installare [APP NAME] sul sistema Proxmox che scelgo, usando OCI manager Apps. Se l’app è adatta, voglio anche che tu prepari un contributo al catalogo OCI di ProxMenux, così che altri utenti possano installarla.\n\nProgetto upstream o immagine (se noti): [LINK OR UNKNOWN]\nSistema Proxmox da usare: [SELECTED HOST OR UNKNOWN]\nRequisiti particolari (se noti): [DATA, NETWORK, GPU/USB, HTTPS, OR NONE]\n\nSegui questi passaggi:\n1. Esamina l’host Proxmox selezionato e indica la versione di Proxmox VE, l’architettura, lo storage disponibile, le opzioni di rete e i dispositivi pertinenti. Non presupporre un’architettura o un hardware specifici.\n2. Controlla il progetto e l’immagine upstream, il catalogo ProxMenux attuale, le pull request aperte e le indicazioni recenti dei manutentori. Non aggiungere duplicati. Le applicazioni vengono proposte per il catalogo nella discussione #440 (https://github.com/MacRimi/ProxMenux/discussions/440): se l’app non è già presente, proponila indicando l’immagine, il registro in cui è pubblicata e la categoria. Il catalogo usa l’immagine pubblicata dallo sviluppatore, quando esiste; identifica con precisione chi la pubblica.\n3. Installa l’app che ho richiesto tramite OCI manager Apps. Prima di confermare, controlla l’immagine, le risorse, i percorsi dei dati, la rete e le variabili. Proteggi i servizi e i dati esistenti. Dopo i test, lascia installata l’app richiesta, salvo mia richiesta di rimozione.\n4. Verifica che il servizio risponda davvero e che l’accesso o la configurazione iniziale funzionino. Registra ciò che hai osservato; non dichiarare funzionanti caratteristiche non testate.\n5. Scrivi l’oci-compose per la voce del catalogo, seguendo oci/README.md e i file in oci/examples/, e prepara l’icona. Se l’app richiede più servizi, descrivi e testa l’intero stack con l’approccio attuale di ProxMenux; non omettere database, cache o rete interna necessari.\n6. Esegui i controlli del repository, incluso `cd oci && python3 -m unittest discover -s tests -p 'test_*.py'` come utente non privilegiato su una copia del repository, mai su un host di produzione, insieme ai controlli pertinenti su catalogo, documentazione e traduzioni offline. Correggi gli errori causati da questa modifica e ripeti i controlli.\n7. Quando è praticabile, valida la voce candidata per il catalogo usando istanze di test che puoi eliminare. Non usare l’app che voglio conservare o i suoi dati per test distruttivi di aggiornamento, ripristino o rimozione. Indica con trasparenza l’hardware non disponibile e i casi non testati.\n8. Prepara una pull request mirata con il nome dell’app, l’immagine, l’icona, una sintesi dei risultati dei test e i limiti, e allega l’oci-compose testato alla proposta nella discussione #440. Controlla tutti gli esiti CI obbligatori e i commenti dei manutentori. Non eseguire il merge della pull request.\n9. Elimina solo le istanze di test temporanee, i file temporanei e i backup di test creati per questo lavoro. Conserva l’installazione che ho richiesto, i suoi dati e tutte le istanze e i backup estranei a questo lavoro.\n\nPrima di apportare una modifica irreversibile, esporre il servizio pubblicamente o eliminare qualsiasi cosa che possa contenere i miei dati, fermati e chiedimi conferma. Non inserire password, token o configurazioni private nel repository o nella pull request. Concludi con l’URL dell’app o i dettagli di connessione, il link alla pull request, i controlli osservati, le risorse eliminate e gli eventuali limiti rimasti."
+          }
+        },
+        {
+          "calloutTip": {
+            "title": "Mantieni riservate le credenziali",
+            "body": "Inserisci le credenziali del registro e i segreti dell’app solo nell’interfaccia locale prevista. Nel catalogo, nelle schermate, nei log e nella pull request i valori devono essere oscurati: mai password o token reali."
+          }
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Cosa deve verificare prima l’agente",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Controlla l’host scelto",
+                "body": "Registra la versione di Proxmox VE e l’architettura dell’host. Individua lo storage disponibile, i bridge, l’assegnazione degli indirizzi e gli eventuali dispositivi GPU, NPU o USB pertinenti. Controlla nel registro il manifest dell’immagine dell’app per quell’architettura. Un manifest per amd64 non dimostra il supporto di arm64, né viceversa."
+              },
+              {
+                "title": "Controlla l’app e il catalogo",
+                "body": "Leggi la documentazione e l’esempio di installazione dello sviluppatore. Controlla le <proposals>proposte per il catalogo OCI</proposals>, la <roadmap>roadmap</roadmap>, il <catalog>catalogo</catalog> e le pull request aperte per individuare duplicati o decisioni progettuali attuali; prima di procedere, proponi l’app nella discussione dedicata. Il catalogo usa l’immagine pubblicata dallo sviluppatore, quando esiste; per un’immagine della community, verifica e indica chi la pubblica."
+              },
+              {
+                "title": "Comprendi l’intera configurazione di installazione",
+                "body": "Registra immagini, comandi, porte, variabili d’ambiente, volumi, utente e permessi, controlli di stato, comportamento al primo avvio, credenziali, dipendenze e hardware opzionale. Per un’app con più servizi, includi database, cache e rete interna quando necessari. Segnala i comportamenti di Compose privi di un equivalente sicuro in Proxmox, invece di ometterli senza avvisare."
+              },
+              {
+                "title": "Risolvi il riferimento all’immagine",
+                "body": "Usa la procedura Skopeo di OCI manager Apps per risolvere il riferimento all’immagine, scaricarla e verificarne i layer. Se la procedura fallisce, individua la causa reale: credenziali, immagine o tag mancanti, architettura non supportata, problemi di rete o limite di richieste del registro."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "Installa e verifica l’app richiesta",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Usa OCI manager Apps per l’installazione. Quando serve, scegli un VMID di test libero e imposta storage, bridge, indirizzo e risorse in modo adeguato all’host selezionato e alla richiesta dell’utente.",
+              "Prima di confermare, controlla l’immagine, le risorse, i percorsi persistenti, la rete e le variabili. Mantieni nascosti i segreti. Per l’installazione avanzata, confronta le scelte relative a VMID, CPU, RAM, storage, bridge, variabili e associazioni dei dispositivi supportati con la configurazione risultante in `pct config`.",
+              "Usa la modalità di gestione delle credenziali effettivamente prevista dall’app: inserite dall’utente, generate dall’installatore, mostrate al primo avvio o indicate nella documentazione dell’immagine. Verifica che funzionino e oscurale nelle prove raccolte.",
+              "Verifica il servizio reale. Per un’app web, apri l’URL mostrato e controlla che la pagina o la schermata di accesso si carichi. Per un servizio non web, verifica il protocollo e la porta previsti. Usa HTTPS o un reverse proxy solo quando serve per il test o l’installazione richiesti.",
+              "Quando l’installatore offre queste opzioni, testa sia i volumi gestiti da Proxmox sia le directory dell’host. Crea dati nell’app e verifica che rimangano nella posizione prevista con i permessi richiesti.",
+              "Riavvia l’app o lo stack e verifica che torni operativo con i suoi dati e credenziali funzionanti. Testa solo l’hardware effettivamente disponibile; in caso contrario, indica il dispositivo mancante e lascia quell’integrazione non verificata."
+            ]
+          }
+        },
+        {
+          "calloutDanger": {
+            "title": "Proteggi l’installazione che l’utente vuole conservare",
+            "body": "Il ripristino di un backup, il rollback in caso di immagine non funzionante e la rimozione possono essere distruttivi. Esegui questi controlli solo su istanze di test che puoi eliminare, oppure dopo aver definito un piano esplicito che protegga l’installazione richiesta e i suoi dati. Non rimuovere mai l’app richiesta dall’utente come normale pulizia finale."
+          }
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "title": "Prepara e valida la voce del catalogo",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Segui la guida oci-compose in <readme>oci/README.md</readme> e i file in `oci/examples/`. Aggiungi un ID univoco, la categoria corretta, l’attribuzione al progetto upstream, i link alla documentazione, le architetture supportate, il riferimento corretto all’immagine e l’icona dell’app. Verifica che l’icona corrisponda al prodotto giusto e venga visualizzata correttamente.",
+              "Conserva il comportamento di avvio, le porte, l’ambiente e i percorsi persistenti dell’immagine. Contrassegna i segreti come dati sensibili. Imposta proprietario e permessi dei dati in base a informazioni verificate del progetto upstream, non a supposizioni.",
+              "Usa valori predefiniti prudenti e scegli consapevolmente quali impostazioni opzionali rendere disponibili. Dichiara il supporto di GPU, NPU, USB o di un’architettura solo quando la procedura attuale di ProxMenux lo consente e il requisito è documentato.",
+              "Descrivi ogni servizio necessario a un’app con più servizi e conserva dipendenze, rete privata, controlli di stato, percorsi persistenti e operazioni coordinate. Mantieni separati uno stack complesso o una modifica al motore condiviso quando questo permette ai manutentori una revisione più sicura.",
+              "Esegui l’intera suite del motore OCI come utente non privilegiato su una copia del repository, anche se la CI non la esegue. Esegui i controlli pertinenti su schema, catalogo, documentazione, i18n e record di validazione. Non modificare mai a mano la pagina generata `oci/VALIDATION.md`: viene rigenerata da `python3 .github/scripts/oci_validation.py render`."
+            ]
+          }
+        },
+        {
+          "shell": {
+            "code": "cd oci && python3 -m unittest discover -s tests -p 'test_*.py'"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lifecycle",
+      "title": "Verifiche del ciclo di vita su un’istanza di test eliminabile",
+      "blocks": [
+        {
+          "p": "Usa un’istanza di test separata per i controlli che aggiornano, ripristinano o rimuovono un’app. Prova le opzioni realmente supportate dall’app e disponibili sull’host di test. Per ogni riga, indica PASS, FAIL, BLOCKED, NOT APPLICABLE o NOT TESTED e includi prove osservabili."
+        },
+        {
+          "table": {
+            "headers": [
+              "Verifica",
+              "Criterio di superamento"
+            ],
+            "rows": [
+              [
+                "Download dell’immagine",
+                "Skopeo risolve il riferimento previsto e ne verifica i layer. In caso di errore, la causa viene identificata."
+              ],
+              [
+                "Installazione predefinita",
+                "Il riepilogo di conferma è corretto; l’LXC o l’intero stack si avvia, ha connettività di rete e supera i controlli del primo avvio."
+              ],
+              [
+                "Impostazioni avanzate",
+                "Le scelte rappresentative per VMID, CPU, RAM, storage, bridge, variabili e dispositivi supportati corrispondono alla configurazione Proxmox salvata."
+              ],
+              [
+                "Credenziali e risposta del servizio",
+                "Le credenziali mostrate o configurate funzionano. La pagina web o la schermata di accesso si carica, oppure il servizio non web previsto risponde."
+              ],
+              [
+                "Dati persistenti",
+                "Le opzioni di storage gestito e directory dell’host si comportano come documentato; i dati creati rimangono dopo il riavvio con i permessi corretti."
+              ],
+              [
+                "Riavvio",
+                "L’app o lo stack si avvia automaticamente e conserva dati e configurazione."
+              ],
+              [
+                "Backup e ripristino",
+                "Un’istanza di test eliminabile, ripristinata da un backup Proxmox con un VMID diverso, si avvia, risponde e compare in «Gestisci le applicazioni OCI installate»."
+              ],
+              [
+                "Aggiornamento e rollback",
+                "Un aggiornamento dell’immagine conserva dati, credenziali, rete, dispositivi e impostazioni Proxmox. Testa il rollback se puoi farlo in sicurezza; altrimenti indicalo come NOT TESTED."
+              ],
+              [
+                "Modifica",
+                "Un’impostazione supportata viene modificata, le altre impostazioni restano invariate e l’app continua a rispondere. Le modifiche che non riguardano l’immagine non dovrebbero causarne un nuovo download o la ricreazione dell’app senza necessità."
+              ],
+              [
+                "Rimozione",
+                "«Gestisci le applicazioni OCI installate» rimuove i container LXC di test, i dischi e i record. Le directory dei dati sull’host rimangono. Elimina solo i backup creati per i VMID riservati ai test temporanei."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Indica chiaramente i limiti hardware",
+            "body": "Se l’interfaccia dell’app si avvia ma manca una telecamera, un coordinatore, una GPU, una NPU o un dispositivo USB opzionale, il controllo dell’interfaccia può riuscire mentre quell’integrazione hardware rimane NOT TESTED. Specifica il dispositivo e le capacità dell’host necessari."
+          }
+        }
+      ]
+    },
+    {
+      "id": "pr",
+      "title": "Prepara la pull request e consegna il risultato",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Mostra cosa è stato davvero testato",
+                "body": "Includi nome dell’app, ID del catalogo, immagine e digest, versione di Proxmox VE, architettura, modalità di installazione, storage, rete, profilo dei dispositivi e la verifica effettiva della risposta del servizio. Riassumi gli esiti del ciclo di vita ed elenca i casi bloccati, non disponibili e non testati. Includi l’icona e il risultato dei test del motore OCI."
+              },
+              {
+                "title": "Controlla i riscontri ricevuti",
+                "body": "Dopo aver aperto la pull request, controlla ogni verifica CI obbligatoria sul suo commit corrente. Leggi i commenti e le revisioni dei manutentori, apporta le modifiche richieste e ripeti i controlli interessati. Non dichiarare pronta la PR finché un controllo obbligatorio fallisce o una modifica richiesta resta irrisolta. Non eseguire il merge."
+              },
+              {
+                "title": "Elimina solo le risorse temporanee",
+                "body": "Elimina le istanze di test temporanee, i file e i backup di test creati per questo lavoro. Conserva l’istanza dell’app che l’utente ha chiesto di mantenere, i suoi dati e tutte le istanze e i backup estranei al lavoro. Verifica la pulizia confrontandola con i VMID di test registrati per questa esecuzione."
+              },
+              {
+                "title": "Riepiloga la consegna",
+                "body": "Fornisci all’utente l’indirizzo dell’app funzionante o i dettagli di connessione, il link alla pull request, i controlli e gli esiti CI effettivamente osservati, le risorse temporanee eliminate e gli eventuali limiti. Non includere mai segreti nella pull request o nel resoconto finale."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

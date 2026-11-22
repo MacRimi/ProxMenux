@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, getMessages, setRequestLocale } from "next-intl/server"
+import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
@@ -31,7 +31,6 @@ export default async function AddCoralTPUtoLXC({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.hardware.coralTpuLxc" })
 
   const messages = (await getMessages({ locale })) as unknown as {
@@ -304,10 +303,11 @@ apt-get update
 apt-get install -y gnupg curl ca-certificates
 
 # Google Coral APT repo
+mkdir -p /etc/apt/keyrings
 curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \\
-  | gpg --dearmor -o /usr/share/keyrings/coral-edgetpu.gpg
+  | gpg --dearmor -o /etc/apt/keyrings/coral-edgetpu.gpg
 
-echo 'deb [signed-by=/usr/share/keyrings/coral-edgetpu.gpg] https://packages.cloud.google.com/apt coral-edgetpu-stable main' \\
+echo 'deb [signed-by=/etc/apt/keyrings/coral-edgetpu.gpg] https://packages.cloud.google.com/apt coral-edgetpu-stable main' \\
   > /etc/apt/sources.list.d/coral-edgetpu.list
 
 apt-get update

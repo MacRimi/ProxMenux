@@ -17,6 +17,17 @@ SCRIPTS = ROOT / 'AppImage/scripts'
 MESSAGES = ROOT / 'AppImage/messages'
 
 
+def health_linked_event():
+    """The shared health category -> event table, without importing the module."""
+    tree = ast.parse((SCRIPTS / 'notification_templates.py').read_text())
+    scope = {'Optional': __import__('typing').Optional}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in
+                ('_HEALTH_KEYWORD_EVENTS', '_HEALTH_CATEGORY_EVENTS') for t in node.targets):
+            scope[node.targets[0].id] = ast.literal_eval(node.value)
+    return extracted('notification_templates.py', 'health_linked_event', namespace=scope)
+
+
 def extracted(path, name, cls=None, namespace=None):
     tree = ast.parse((SCRIPTS / path).read_text())
     nodes = tree.body
@@ -132,13 +143,16 @@ def polled_event(entry):
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'PollingCollector')
     maps = {target.id: ast.literal_eval(n.value) for n in cls.body if isinstance(n, ast.Assign)
             for target in n.targets if isinstance(target, ast.Name) and target.id in
-            ('_CATEGORY_TO_EVENT_TYPE', '_ENTITY_MAP', '_CATEGORY_COOLDOWNS')}
+            ('_CATEGORY_TO_EVENT_TYPE', '_ENTITY_MAP', '_CATEGORY_COOLDOWNS', '_STORAGE_EVENT_PREFIXES')}
     collector = types.SimpleNamespace(_CATEGORY_TO_EVENT_TYPE=maps['_CATEGORY_TO_EVENT_TYPE'],
         _ENTITY_MAP=maps['_ENTITY_MAP'], _CATEGORY_COOLDOWNS=maps['_CATEGORY_COOLDOWNS'],
         DIGEST_INTERVAL=86400, SAME_ERROR_COOLDOWN=86400, _queue=q, _hostname='node.example',
         _first_poll_done=True, _known_errors={}, _last_notified={}, _notified_severity={},
         _is_usb_cache={}, _get_cooldown_from_db=lambda _: None,
         _persist_last_notified=lambda *a: None, _save_known_errors_meta=lambda: None)
+    collector._STORAGE_EVENT_PREFIXES = maps['_STORAGE_EVENT_PREFIXES']
+    collector._alert_event_type = types.MethodType(
+        extracted('notification_events.py', '_alert_event_type', 'PollingCollector', {}), collector)
     old = sys.modules.get('health_persistence')
     sys.modules['health_persistence'] = types.SimpleNamespace(health_persistence=Persistence())
     try:
@@ -424,6 +438,7 @@ class ActivePayloadTests(unittest.TestCase):
                  'startup_grace': types.SimpleNamespace(should_suppress_category=lambda *_: False),
                  '_capture_health_journal_context': lambda *_: '',
                  'resolve_notification_hostname': lambda name, *_: name,
+                 'health_linked_event': health_linked_event(),
                  'health_monitor': types.SimpleNamespace(get_detailed_status=lambda: {
                      'hostname': 'node.example', 'details': {'cpu': {'status': 'WARNING',
                          'reason': 'CPU >85% sustained for 300s'}}, 'overall': 'WARNING', 'summary': 'x'},

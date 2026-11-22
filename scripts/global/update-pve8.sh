@@ -61,6 +61,17 @@ update_pve8() {
     msg_info2 "$(translate "Detected: Proxmox VE 8.x (Debian $OS_CODENAME)")"
     echo
 
+    # PXVIRT and similar downstream builds already serve Proxmox VE from their
+    # own sources; the upstream no-subscription repository would replace the port.
+    local downstream_build=false
+    # The package marker answers without the Proxmox API; the policy also reads the
+    # source files. Either one is enough to keep the port's sources.
+    if [[ "$(python3 "$LOCAL_SCRIPTS/global/proxmox_platform.py" --field variant 2>/dev/null)" == pxvirt ]] \
+        || [[ "$(python3 "$LOCAL_SCRIPTS/global/repository_policy.py" plan "$OS_CODENAME" 2>/dev/null)" == downstream ]]; then
+        downstream_build=true
+        msg_info2 "$(translate "Downstream Proxmox VE build detected (PXVIRT): APT sources left unchanged.")"
+    fi
+
     local available_space=$(df /var/cache/apt/archives | awk 'NR==2 {print int($4/1024)}')
     if [ "$available_space" -lt 1024 ]; then
         msg_error "$(translate "Insufficient disk space. Available: ${available_space}MB")"
@@ -70,7 +81,7 @@ update_pve8() {
         return 1
     fi
 
-    if ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
+    if [[ "$downstream_build" == false ]] && ! ping -c 1 download.proxmox.com >/dev/null 2>&1; then
         msg_error "$(translate "Cannot reach Proxmox repositories")"
         echo -e
         msg_success "$(translate "Press Enter to return to menu...")"
@@ -79,50 +90,57 @@ update_pve8() {
     fi
 
 
-    if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
-        pmx_edit_file /etc/apt/sources.list.d/pve-enterprise.list "s/^deb/#deb/g"
-        msg_ok "$(translate "Enterprise Proxmox repository disabled")"
-        changes_made=true
-    fi
+    configure_upstream_repositories() {
+        if [ -f /etc/apt/sources.list.d/pve-enterprise.list ] && grep -q "^deb" /etc/apt/sources.list.d/pve-enterprise.list; then
+            pmx_edit_file /etc/apt/sources.list.d/pve-enterprise.list "s/^deb/#deb/g"
+            msg_ok "$(translate "Enterprise Proxmox repository disabled")"
+            changes_made=true
+        fi
 
-    if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
-        pmx_edit_file /etc/apt/sources.list.d/ceph.list "s/^deb/#deb/g"
-        msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
-        changes_made=true
-    fi
-
-
-    if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
-        echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" | pmx_write_file /etc/apt/sources.list.d/pve-public-repo.list
-        msg_ok "$(translate "Free public Proxmox repository enabled")"
-        changes_made=true
-    fi
+        if [ -f /etc/apt/sources.list.d/ceph.list ] && grep -q "^deb" /etc/apt/sources.list.d/ceph.list; then
+            pmx_edit_file /etc/apt/sources.list.d/ceph.list "s/^deb/#deb/g"
+            msg_ok "$(translate "Enterprise Proxmox Ceph repository disabled")"
+            changes_made=true
+        fi
 
 
-    local sources_file="/etc/apt/sources.list"
-    cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
+        if [ ! -f /etc/apt/sources.list.d/pve-public-repo.list ] || ! grep -q "pve-no-subscription" /etc/apt/sources.list.d/pve-public-repo.list; then
+            echo "deb http://download.proxmox.com/debian/pve $OS_CODENAME pve-no-subscription" | pmx_write_file /etc/apt/sources.list.d/pve-public-repo.list
+            msg_ok "$(translate "Free public Proxmox repository enabled")"
+            changes_made=true
+        fi
 
-    if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
-        pmx_edit_file "$sources_file" \
-            -e '/^deb.*debian-security -security/d' \
-            -e '/^deb.*debian main$/d' \
-            -e '/^deb.*debian -updates/d'
-        changes_made=true
-        msg_ok "$(translate "Malformed repository entries cleaned")"
-    fi
 
-    pmx_write_file "$sources_file" << EOF
+        local sources_file="/etc/apt/sources.list"
+        cp "$sources_file" "${sources_file}.backup.$(date +%Y%m%d_%H%M%S)"
+
+        if grep -q -E "(debian-security -security|debian main$|debian -updates)" "$sources_file"; then
+            pmx_edit_file "$sources_file" \
+                -e '/^deb.*debian-security -security/d' \
+                -e '/^deb.*debian main$/d' \
+                -e '/^deb.*debian -updates/d'
+            changes_made=true
+            msg_ok "$(translate "Malformed repository entries cleaned")"
+        fi
+
+        pmx_write_file "$sources_file" << EOF
 # Debian $OS_CODENAME repositories
 deb http://deb.debian.org/debian $OS_CODENAME main contrib non-free non-free-firmware
 deb http://deb.debian.org/debian $OS_CODENAME-updates main contrib non-free non-free-firmware
 deb http://security.debian.org/debian-security $OS_CODENAME-security main contrib non-free non-free-firmware
 EOF
 
-    msg_ok "$(translate "Debian repositories configured for $OS_CODENAME")"
+        msg_ok "$(translate "Debian repositories configured for $OS_CODENAME")"
 
-    local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
-    if [ ! -f "$firmware_conf" ]; then
-        echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
+        local firmware_conf="/etc/apt/apt.conf.d/no-firmware-warnings.conf"
+        if [ ! -f "$firmware_conf" ]; then
+            echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' | pmx_write_file "$firmware_conf"
+        fi
+
+    }
+
+    if [[ "$downstream_build" == false ]]; then
+        configure_upstream_repositories
     fi
 
     cleanup_duplicate_repos
@@ -169,10 +187,8 @@ EOF
         else
             # The package list rides in the same dialog as the summary, so
             # the decision is taken knowing what is about to be replaced.
-            # --scrolltext keeps the buttons reachable however long it is.
-            menu_text+="$(translate "Packages to be upgraded"):\n$upgradable_list\n\n"
-            menu_text+="$(translate "Do you want to proceed with the system update?")"
-            if whiptail --title "$(translate "Proxmox Update")" --scrolltext --yesno "$menu_text" 24 78; then
+            if pmx_confirm_update "$(translate "Proxmox Update")" "$menu_text" "$upgradable_list" \
+                "$(translate "Do you want to proceed with the system update?")"; then
                 return 0
             else
                 return 1
@@ -188,7 +204,8 @@ EOF
         pmx_record_execution "Remove unused packages" "apt-get -y autoremove"
         apt-get -y autoremove > /dev/null 2>&1 || true
         apt-get -y autoclean > /dev/null 2>&1 || true
-        return 0
+        # Not an error, but the system was not updated.
+        return 3
     elif [[ $MENU_RESULT -eq 2 ]]; then
         msg_ok "$(translate "System is already up to date. No update needed.")"
         echo -e "\nSystem is already up to date." >> "$log_file"
@@ -280,6 +297,12 @@ EOF
         tput ed
         tput cnorm
         msg_ok "$(translate "System upgrade completed")"
+    else
+        tput rc
+        tput ed
+        tput cnorm
+        msg_error "$(translate "Proxmox VE 8 package upgrade failed. Review the APT output before retrying.")"
+        return 1
     fi
 
 

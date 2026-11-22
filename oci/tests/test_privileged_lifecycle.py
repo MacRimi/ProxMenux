@@ -104,6 +104,29 @@ class DeclaredSourceTests(TestCase):
             original, desired = transaction.freeze_host_sources(record, record, False)
         self.assertTrue(original['/usr']['declared'] and desired['/usr']['declared'])
 
+    def test_the_system_paths_of_a_recipe_are_declared(self):
+        for app, path in (('homeassistant-official', '/run/dbus'), ('roonserver', '/run/udev')):
+            template = json.loads((ROOT / f'catalog/apps/{app}.json').read_text())
+            deployment = {'mounts': [bind(path, path)]}
+            self.assertEqual(transaction.declared_sources({'template': template, 'deployment': deployment}), {path}, app)
+            moved = {'mounts': [bind('/run/other', path)]}
+            self.assertEqual(transaction.declared_sources({'template': template, 'deployment': moved}), set(), app)
+
+    def test_a_home_assistant_update_keeps_its_dbus_mount(self):
+        template = json.loads((ROOT / 'catalog/apps/homeassistant-official.json').read_text())
+        record = {'template': template, 'observed': {},
+                  'deployment': {'mounts': [bind('/run', '/run/dbus')]}}
+        with self.assertRaises(ValueError):
+            transaction.freeze_host_sources(record, record, True)
+        template = json.loads(json.dumps(template))
+        for volume in template['container_contract']['volumes']:
+            if volume['container_path'] == '/run/dbus':
+                volume['compose_source_example'] = '/run'
+        record['template'] = template
+        with patch.object(transaction, 'log'):
+            original, desired = transaction.freeze_host_sources(record, record, False)
+        self.assertTrue(original['/run']['declared'] and desired['/run']['declared'])
+
 
 class IncludeTests(TestCase):
     def setUp(self):

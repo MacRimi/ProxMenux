@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { getTranslations, setRequestLocale } from "next-intl/server"
+import { getTranslations } from "next-intl/server"
 import fs from "fs"
 import path from "path"
 import { remark } from "remark"
@@ -24,23 +24,27 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   }
 }
 
-async function getCodeOfConductContent(notFoundMsg: string, loadFailedMsg: string) {
+async function getCodeOfConductContent(notFoundMsg: string, loadFailedMsg: string, translatedMarkdown?: string) {
   try {
     const codeOfConductPath = path.join(process.cwd(), "..", "CODE_OF_CONDUCT.md")
 
-    if (!fs.existsSync(codeOfConductPath)) {
+    if (!translatedMarkdown && !fs.existsSync(codeOfConductPath)) {
       console.error("CODE_OF_CONDUCT.md file not found.")
       return `<p class='text-red-600'>${notFoundMsg}</p>`
     }
 
-    const fileContents = fs.readFileSync(codeOfConductPath, "utf8")
+    const fileContents = translatedMarkdown || fs.readFileSync(codeOfConductPath, "utf8")
 
     const result = await remark()
       .use(gfm.default || gfm)
       .use(html)
       .process(fileContents)
 
-    return result.toString()
+    // Repository-relative policy links otherwise resolve under the docs URL.
+    return result.toString().replaceAll(
+      'href="./SECURITY.md"',
+      'href="https://github.com/MacRimi/ProxMenux/blob/main/SECURITY.md"',
+    )
   } catch (error) {
     console.error("Error reading the CODE_OF_CONDUCT.md file", error)
     return `<p class='text-red-600'>${loadFailedMsg}</p>`
@@ -60,7 +64,9 @@ function wrapCodeBlocksWithCopyable(content: string) {
         const codeElement = domNode.children.find((child: any) => child.name === "code")
         if (codeElement) {
           const codeContent = codeElement.children[0]?.data?.trim() || ""
-          return <CopyableCode code={codeContent} />
+          // mt-4 repeats the block's own top margin: in Tailwind 4 the typography rule that
+          // zeroes the margin after a heading comes later in the CSS than my-4 and would win.
+          return <CopyableCode code={codeContent} className="mt-4" />
         }
       }
     },
@@ -69,9 +75,12 @@ function wrapCodeBlocksWithCopyable(content: string) {
 
 export default async function CodeOfConductPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "docs.about.codeOfConduct" })
-  const codeOfConductContent = await getCodeOfConductContent(t("errors.notFound"), t("errors.loadFailed"))
+  const translatedMarkdown = t.has("contentMarkdown") ? t.raw("contentMarkdown") : undefined
+  const codeOfConductContent = await getCodeOfConductContent(
+    t("errors.notFound"), t("errors.loadFailed"),
+    typeof translatedMarkdown === "string" ? translatedMarkdown : undefined,
+  )
   const cleanedInlineCode = cleanInlineCode(codeOfConductContent)
   const parsedContent = wrapCodeBlocksWithCopyable(cleanedInlineCode)
 

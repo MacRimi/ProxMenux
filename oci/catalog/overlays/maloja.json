@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "A self-hosted music scrobbler and listening statistics server. It stores its data locally and does not need a separate database service; connect compatible scrobbling clients or import supported listening-history exports."
+    },
+    "description": {
+      "en_US": "Maloja is a self-hosted music scrobble database designed to track personal listening habits over time. It records listening history independently of public music databases, allowing users to maintain their own tagging schemas and artist associations. The application supports multi-artist tracks, custom artwork, manual scrobble entry, and proxying scrobbles to other services."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/krateng/maloja/master/screenshot.png"
+    ]
+  }
+}
