@@ -24,6 +24,24 @@ NODE = "fixture"
 TASK = "UPID:fixture:0000000A:0000000B:0000000C:vzdestroy:100:root@pam:"
 
 
+def current_lxc_options():
+    # PVE returns the current configuration even with no pending changes.
+    return [
+        {"key": "arch", "value": "amd64"},
+        {"key": "hostname", "value": "plain-test"},
+        {"key": "rootfs", "value": "local-lvm:subvol-100-disk-0,size=8G"},
+        {"key": "memory", "value": "2048"},
+    ]
+
+
+def replication_job(guest, **options):
+    # GET /cluster/replication returns job configs with the numeric guest ID.
+    return {
+        "id": f"{guest}-0", "guest": guest, "jobnum": 0, "type": "local",
+        "target": "replica", "source": NODE, "schedule": "*/15", **options,
+    }
+
+
 class LxcRemoveTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -35,7 +53,8 @@ class LxcRemoveTests(unittest.TestCase):
         self.oci.mkdir()
         self.write_config()
         self.resources = [dict(vmid=VMID, type="lxc", node=NODE, name="plain-test", status="stopped")]
-        self.ha, self.replication, self.pending, self.active_tasks = [], [], [], []
+        self.ha, self.replication, self.active_tasks = [], [], []
+        self.pending = current_lxc_options()
         self.storages, self.storage_content = [], {}
         self.delete_calls = []
         self.task_state = {"status": "running"}
@@ -78,8 +97,11 @@ class LxcRemoveTests(unittest.TestCase):
             return self.result(self.ha)
         if path == "/storage":
             return self.result(self.storages)
-        if path == f"/nodes/{NODE}/lxc/{VMID}/replication":
+        if path == "/cluster/replication":
+            self.assertEqual(argv, ["pvesh", "get", "/cluster/replication", "--output-format", "json"])
             return self.result(self.replication)
+        if path == f"/nodes/{NODE}/lxc/{VMID}/replication":
+            return subprocess.CompletedProcess(argv, 1, "", f"no 'get' handler for '{path}'")
         if path == f"/nodes/{NODE}/lxc/{VMID}/pending":
             return self.result(self.pending)
         if path == f"/nodes/{NODE}/tasks":
@@ -138,15 +160,16 @@ class LxcRemoveTests(unittest.TestCase):
             "custom-lxc": lambda: self.write_config("lxc.apparmor.profile: unconfined\n"),
             "oci-marker": lambda: self.write_config("# proxmenux-instance=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\n"),
             "ha": lambda: setattr(self, "ha", [{"sid": "ct:100"}]),
-            "replication": lambda: setattr(self, "replication", [{"id": "job"}]),
-            "pending": lambda: setattr(self, "pending", [{"key": "memory", "value": "2048"}]),
+            "replication": lambda: self.replication.append(replication_job(VMID)),
+            "pending": lambda: self.pending.append({"key": "swap", "value": "512", "pending": "0"}),
             "backup-active": lambda: setattr(self, "active_tasks", [{"id": "100", "upid": "UPID:test"}]),
         }
         for name, prepare in cases.items():
             with self.subTest(name=name):
                 self.write_config()
                 self.resources = [dict(vmid=VMID, type="lxc", node=NODE, name="plain-test", status="stopped")]
-                self.ha, self.replication, self.pending, self.active_tasks = [], [], [], []
+                self.ha, self.replication, self.active_tasks = [], [], []
+                self.pending = current_lxc_options()
                 prepare()
                 response = self.call("GET", f"/api/vms/{VMID}/remove-preview")
                 self.assertEqual(response.status_code, 200, response.json)
@@ -169,6 +192,8 @@ class LxcRemoveTests(unittest.TestCase):
         self.assertFalse(self.delete_calls)
 
     def test_remove_requires_exact_vmid_and_a_no_backup_ack_before_the_one_native_delete(self):
+        self.replication = [replication_job(1000)]
+        self.pending.append({"key": "onboot", "value": "0", "delete": 0})
         check = self.preview()["check"]
         lock, module = self.fake_lock()
         with patch.dict(sys.modules, {"lxc_check_job": module}):
@@ -187,6 +212,61 @@ class LxcRemoveTests(unittest.TestCase):
         self.assertNotIn("--purge", self.delete_calls[0])
         module.begin_control.assert_called_once_with(lock, NODE)
         module.retain_control.assert_called_once_with(VMID, TASK, lock)
+
+    def test_remove_rechecks_actual_replication_and_pending_rows_after_preview(self):
+        cases = [
+            ("replication", replication_job(VMID, disable=1), "replication_configured"),
+            ("replication", replication_job(VMID, remove_job="local"), "replication_configured"),
+            ("pending", {"key": "swap", "value": "512", "pending": "0"}, "pending_changes"),
+            ("pending", {"key": "description", "pending": ""}, "pending_changes"),
+            ("pending", {"key": "nameserver", "value": "192.0.2.1", "delete": 1}, "pending_changes"),
+            ("pending", {"key": "searchdomain", "delete": 2}, "pending_changes"),
+        ]
+        for attr, row, reason in cases:
+            with self.subTest(row=row):
+                check = self.preview()["check"]
+                rows = getattr(self, attr)
+                rows.append(row)
+                lock, module = self.fake_lock()
+                try:
+                    with patch.dict(sys.modules, {"lxc_check_job": module}):
+                        response = self.call("POST", f"/api/vms/{VMID}/remove", {
+                            "check": check, "confirm_vmid": str(VMID), "confirm_no_backup": True,
+                        })
+                    self.assertEqual(response.status_code, 409, response.json)
+                    self.assertEqual(response.json["error"], "removal_blocked")
+                    self.assertIn(reason, response.json["preview"]["reasons"])
+                    module.begin_control.assert_not_called()
+                    lock.close.assert_called_once()
+                    self.assertFalse(self.delete_calls)
+                finally:
+                    rows.pop()
+
+    def test_unavailable_or_malformed_checks_block_removal_before_native_delete(self):
+        paths = ["/cluster/replication", f"/nodes/{NODE}/lxc/{VMID}/pending"]
+        cases = [
+            (paths[0], subprocess.CompletedProcess([], 1, "", "replication configuration unavailable")),
+            (paths[0], self.result([{"id": "100-0"}])),
+            (paths[1], subprocess.CompletedProcess([], 1, "", "configuration unavailable")),
+            (paths[1], self.result([{"key": "memory"}])),
+            (paths[1], self.result([{"key": "memory", "value": "2048", "delete": None}])),
+        ]
+        for path, failure in cases:
+            with self.subTest(path=path, output=failure.stdout):
+                check = self.preview()["check"]
+                lock, module = self.fake_lock()
+                self.run.side_effect = lambda argv, **kwargs: failure if argv[2] == path else self.pvesh(argv, **kwargs)
+                try:
+                    with patch.dict(sys.modules, {"lxc_check_job": module}):
+                        response = self.call("POST", f"/api/vms/{VMID}/remove", {
+                            "check": check, "confirm_vmid": str(VMID), "confirm_no_backup": True,
+                        })
+                    self.assertEqual(response.status_code, 503, response.json)
+                    module.begin_control.assert_not_called()
+                    lock.close.assert_called_once()
+                    self.assertFalse(self.delete_calls)
+                finally:
+                    self.run.side_effect = self.pvesh
 
     def test_changed_config_or_duplicate_submit_never_reaches_native_delete(self):
         check = self.preview()["check"]

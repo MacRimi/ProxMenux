@@ -259,16 +259,28 @@ def _preflight(vmid: int):
     if any(isinstance(row, dict) and row.get("sid") == f"ct:{vmid}" for row in ha):
         reasons.append("ha_managed")
 
-    replication = _pvesh_json(["get", f"/nodes/{node}/lxc/{vmid}/replication"])
-    if not isinstance(replication, list):
+    replication = _pvesh_json(["get", "/cluster/replication"])
+    # Proxmox's native destroy checks all configured jobs for the guest,
+    # including disabled jobs and jobs still marked for removal.
+    if not isinstance(replication, list) or any(
+        not isinstance(job, dict) or type(job.get("guest")) is not int
+        or not 100 <= job["guest"] <= 999999999
+        for job in replication
+    ):
         raise RemovalError("replication_state_unavailable", 503)
-    if replication:
+    if any(job["guest"] == vmid for job in replication):
         reasons.append("replication_configured")
 
     pending = _pvesh_json(["get", f"/nodes/{node}/lxc/{vmid}/pending"])
-    if not isinstance(pending, list):
+    if not isinstance(pending, list) or any(
+        not isinstance(row, dict) or not isinstance(row.get("key"), str) or not row["key"]
+        or not (row.keys() & {"value", "pending", "delete"})
+        or type(row.get("delete", 0)) is not int or row.get("delete", 0) not in (0, 1, 2)
+        for row in pending
+    ):
         raise RemovalError("pending_state_unavailable", 503)
-    if pending:
+    # The endpoint includes current values too. A pending value can be empty.
+    if any("pending" in row or row.get("delete", 0) for row in pending):
         reasons.append("pending_changes")
 
     backup = _backup_inventory(node, vmid)
