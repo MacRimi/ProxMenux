@@ -8645,7 +8645,6 @@
     "useTemplate": "Use este modelo",
     "returnToSystem": "Retornar às configurações do sistema",
     "hostname": "Nome do host do contêiner",
-    "advanced": "Configurações avançadas",
     "nesting": "Habilitar aninhamento",
     "onboot": "Iniciar quando o host inicializar",
     "access_password": "Senha root",

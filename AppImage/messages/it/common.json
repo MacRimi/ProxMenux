@@ -8645,7 +8645,6 @@
     "useTemplate": "Utilizza questo modello",
     "returnToSystem": "Torna alle impostazioni di sistema",
     "hostname": "Nome host del contenitore",
-    "advanced": "Impostazioni avanzate",
     "nesting": "Abilita l'annidamento",
     "onboot": "Inizia all'avvio dell'host",
     "access_password": "Password di root",

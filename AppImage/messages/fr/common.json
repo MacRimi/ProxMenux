@@ -8645,7 +8645,6 @@
     "useTemplate": "Utilisez ce modèle",
     "returnToSystem": "Revenir aux paramètres système",
     "hostname": "Nom d'hôte du conteneur",
-    "advanced": "Paramètres avancés",
     "nesting": "Activer l'imbrication",
     "onboot": "Démarrer au démarrage de l'hôte",
     "access_password": "Mot de passe root",

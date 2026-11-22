@@ -900,9 +900,7 @@ function PlainLxcWizard({ ref, onCreated, onEditing, onOpenTerminal }: {
           {!context.templates.length && <p role="status" className="text-sm text-muted-foreground">{t("noTemplates")}</p>}
           <TemplateDownload key={draft.template} context={context} busy={busy} onDownload={download} t={t} />
           {input("hostname", "hostname", { required: true, maxLength: 253 })}
-          <details><summary className="cursor-pointer text-sm">{t("advanced")}</summary>
-            <div className="mt-2 space-y-2">{check("nesting", "nesting")}{check("onboot", "onboot")}</div>
-          </details>
+          <div className="space-y-2">{check("nesting", "nesting")}{check("onboot", "onboot")}</div>
         </>}
         {step === 1 && <>
           {field("access", <Choice value={draft.access} label={t("access")} onChange={value => {

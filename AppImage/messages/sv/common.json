@@ -8645,7 +8645,6 @@
     "useTemplate": "Använd den här mallen",
     "returnToSystem": "Återgå till systeminställningar",
     "hostname": "Behållarens värdnamn",
-    "advanced": "Avancerade inställningar",
     "nesting": "Aktivera kapsling",
     "onboot": "Starta när värden startar",
     "access_password": "Root-lösenord",

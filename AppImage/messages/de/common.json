@@ -8645,7 +8645,6 @@
     "useTemplate": "Verwenden Sie diese Vorlage",
     "returnToSystem": "Zurück zu den Systemeinstellungen",
     "hostname": "Hostname des Containers",
-    "advanced": "Erweiterte Einstellungen",
     "nesting": "Verschachtelung aktivieren",
     "onboot": "Starten, wenn der Host startet",
     "access_password": "Root-Passwort",

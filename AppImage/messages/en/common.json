@@ -23,7 +23,6 @@
     "useTemplate": "Use this template",
     "returnToSystem": "Return to system settings",
     "hostname": "Container hostname",
-    "advanced": "Advanced settings",
     "nesting": "Enable nesting",
     "onboot": "Start when the host boots",
     "access_password": "Root password",

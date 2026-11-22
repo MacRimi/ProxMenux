@@ -23,7 +23,6 @@
     "useTemplate": "Použiť túto šablónu",
     "returnToSystem": "Späť k nastaveniam systému",
     "hostname": "Názov kontajnera",
-    "advanced": "Pokročilé nastavenia",
     "nesting": "Povoliť vnorenie",
     "onboot": "Spustiť pri štarte hostiteľa",
     "access_password": "Heslo používateľa root",

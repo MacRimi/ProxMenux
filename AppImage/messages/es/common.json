@@ -8645,7 +8645,6 @@
     "useTemplate": "Usar esta plantilla",
     "returnToSystem": "Volver a los ajustes del sistema",
     "hostname": "Nombre de host del contenedor",
-    "advanced": "Ajustes avanzados",
     "nesting": "Activar anidamiento",
     "onboot": "Arrancar al iniciar el host",
     "access_password": "Contraseña de root",
