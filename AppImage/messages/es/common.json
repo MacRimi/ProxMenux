@@ -7699,7 +7699,7 @@
         "usedAssignedLong": "USADO/ASIGNADO"
       },
       "footer": {
-        "quit": "q login",
+        "quit": "q salir",
         "switch": "Tab cluster",
         "switchNode": "Tab nodo",
         "refresh": "r actualizar",

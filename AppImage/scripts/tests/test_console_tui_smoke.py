@@ -30,6 +30,21 @@ CLEAR = (b"\x1b[2J", b"\x1b[H\x1b[J")
 GARBAGE = "\u00a4"  # never drawn by the console
 SETAF = re.compile(rb"\x1b\[3[0-7]m")
 
+sys.path.insert(0, str(SCRIPTS))
+import console_render  # noqa: E402
+import console_tui  # noqa: E402
+
+
+def host_label(key, **values):
+    """A label as the TUI draws it without a snapshot: in the language set in
+    ProxMenux on this host (a QA host may not use English)."""
+    translator = console_tui.Translator(SCRIPTS / "console_tui.py")
+    translator.set_language(console_tui._configuration_language())
+    text = console_render.sanitize(translator("runtime.consoleTui." + key), 200)
+    for name, value in values.items():
+        text = text.replace("{" + name + "}", str(value))
+    return text
+
 
 class Terminal:
     """Enough of a VT100/linux console to rebuild the screen from curses output.
@@ -422,15 +437,15 @@ class TerminalSmokeTests(unittest.TestCase):
     def test_once_without_snapshot_shows_local_panels_and_starting(self):
         session = self.start(once=True)
         self.assertEqual(session.wait_exit(8), 0)
-        self.assertTrue(session.terminal.contains("CPU"))
-        self.assertTrue(session.terminal.contains("MEMORY"))
-        self.assertTrue(session.terminal.contains("Monitor starting"))
+        self.assertTrue(session.terminal.contains(host_label("panels.cpu")))
+        self.assertTrue(session.terminal.contains(host_label("panels.memory")))
+        self.assertTrue(session.terminal.contains(host_label("status.starting")))
 
     def test_once_without_snapshot_after_boot_shows_unavailable(self):
         (self.proc_root / "proc/uptime").write_text("180.0 10.0\n", encoding="utf-8")
         session = self.start(once=True)
         self.assertEqual(session.wait_exit(8), 0)
-        self.assertTrue(session.terminal.contains("MONITOR UNAVAILABLE"))
+        self.assertTrue(session.terminal.contains(host_label("status.monitorUnavailable")))
         # --once takes the lease so that a running Monitor writes the snapshot.
         self.assertTrue((self.state_dir / "client" / "lease").is_file())
 
@@ -461,7 +476,8 @@ class TerminalSmokeTests(unittest.TestCase):
         for key, code in ((b"+", 10), (b"=", 10), (b"-", 11)):
             with self.subTest(key=key):
                 session = self.interactive("--zoom", "3/8", rows=30, cols=100)
-                self.assertIn("+/- text (3/8)", session.terminal.text(29))
+                self.assertIn(host_label("footer.zoom", position=3, count=8),
+                              session.terminal.text(29))
                 session.send(key)
                 self.assertEqual(session.wait_exit(2), code)
                 self.assertIn(b"\x1b[?25h", session.raw)

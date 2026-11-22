@@ -274,7 +274,7 @@ class ConsoleRenderTests(unittest.TestCase, Invariants):
     def test_footer_names_the_other_view_and_its_keys(self):
         self.vm["selected_view"] = "cluster"
         footer = lines(render(self.vm, 100, 30))[-1]
-        self.assertIn("q login · Tab node · c/m sort · r refresh · a glyphs", footer.replace(".", "·"))
+        self.assertIn("q quit · Tab node · c/m sort · r refresh · a glyphs", footer.replace(".", "·"))
         self.assertNotIn("w 1m/5m", footer)
         self.vm["selected_view"] = "node"
         footer = lines(render(self.vm, 100, 30))[-1]
@@ -382,8 +382,8 @@ class ConsoleRenderTests(unittest.TestCase, Invariants):
         mockup = {
             0: (" PROXMENUX MONITOR    Node [Cluster]  c1 · QUORUM OK 3/3 · 92 GiB · CPU 27%"
                 "                20:09:31 "),
-            29: (" q login · Tab node · c/m sort · r refresh · a glyphs"
-                 "                                       data 2s "),
+            29: (" q quit · Tab node · c/m sort · r refresh · a glyphs"
+                 "                                        data 2s "),
         }
         vm = self.cluster_c1()
         grid = render(vm, 100, 30)
@@ -437,7 +437,7 @@ class ConsoleRenderTests(unittest.TestCase, Invariants):
         self.assertEqual(calls, [(100, 30, True, "ok")])
         self.assertIn("[Cluster]", rows[0])
         self.assertTrue(all(row == "#" * 100 for row in rows[1:29]))
-        self.assertIn("q login", rows[29])
+        self.assertIn("q quit", rows[29])
 
     def test_cluster_view_without_console_cluster_keeps_header_and_footer(self):
         self.vm["selected_view"] = "cluster"
@@ -482,7 +482,7 @@ class ConsoleRenderTests(unittest.TestCase, Invariants):
         self.assertEqual(rows[11][40:50], "+-TOP CPU ")
         self.assertEqual(rows[22][0], "+")
         self.assertNotIn("C0 ", "\n".join(rows))
-        self.assertIn("q login", rows[23])
+        self.assertIn("q quit", rows[23])
 
     def test_node_80x24_rate_panels_are_sparklines_with_prev_and_max(self):
         self.vm.update(node320_rates())

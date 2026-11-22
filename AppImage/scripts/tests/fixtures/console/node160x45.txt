@@ -42,4 +42,4 @@
 │ CT   205  nginx         pvebox  running  819 MiB/1.0 GiB     80%  ████████·· ││ VM   110  win           pvebox  running     5%    4   0.2c    6.1 GiB        │
 │ CT   102  apt-cache     pvebox  stopped  123 MiB/512 MiB     24%  ██········ ││ CT   102  apt-cache     pvebox  stopped     1%    1   0.0c    123 MiB        │
 └──────────────────────────────────────────────────────────────────────────────┘└──────────────────────────────────────────────────────────────────────────────┘
- q login · Tab cluster · w 1m/5m · r refresh · a glyphs · Ctrl+Alt+F2 other TTY                                                                         data 2s 
+ q quit · Tab cluster · w 1m/5m · r refresh · a glyphs · Ctrl+Alt+F2 other TTY                                                                          data 2s 
