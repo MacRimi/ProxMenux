@@ -17,6 +17,8 @@ from pathlib import Path
 import re
 import socket
 import subprocess
+import time
+from uuid import uuid4
 
 from flask import Blueprint, g, jsonify, request
 from itsdangerous import BadData, URLSafeTimedSerializer
@@ -24,18 +26,17 @@ from itsdangerous import BadData, URLSafeTimedSerializer
 from auth_manager import _get_jwt_secret
 from jwt_middleware import require_admin_scope
 from pbs_manager import is_pbs_host
+import lxc_removal_receipts as receipts
 
 
 lxc_removal_bp = Blueprint("lxc_removal", __name__)
 
 CONF_DIR = Path("/etc/pve/lxc")
+CFS_DIR = Path("/etc/pve")
 OCI_INSTANCE_ROOT = Path("/usr/local/share/proxmenux/oci/instances")
+NATIVE_BRIDGE = str(Path(__file__).with_name("plain_lxc_pve.pl"))
 CHECK_AGE = 180
 NODE_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$")
-DESTROY_UPID_RE = re.compile(
-    r"^UPID:(?P<node>[\w.-]+):[0-9A-Fa-f]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:"
-    r"vzdestroy:(?P<vmid>[0-9]+):[\w.@!-]+:$"
-)
 
 
 class RemovalError(Exception):
@@ -91,7 +92,9 @@ def _local_node() -> str:
 def _plain_config(vmid: int):
     path = CONF_DIR / f"{int(vmid)}.conf"
     try:
-        raw = path.read_bytes()
+        with path.open("rb") as source:
+            info = os.fstat(source.fileno())
+            raw = source.read()
     except OSError as exc:
         raise RemovalError("configuration_unavailable", 409) from exc
     try:
@@ -110,7 +113,20 @@ def _plain_config(vmid: int):
             lxc.append((key, value))
         else:
             values[key] = value
-    return raw, values, lxc
+    return raw, values, lxc, [info.st_dev, info.st_ino, info.st_mtime_ns // 10**9, info.st_ctime_ns // 10**9]
+
+
+def _generation(vmid, node):
+    try:
+        start = json.loads((CFS_DIR / ".version").read_bytes())["starttime"]
+        guest = json.loads((CFS_DIR / ".vmlist").read_bytes())["ids"][str(vmid)]
+        version = guest["version"]
+        if (guest["node"] != node or guest["type"] != "lxc"
+                or type(start) is not int or start < 1 or type(version) is not int or version < 1):
+            raise ValueError
+        return [start, version]
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise RemovalError("node_identity_unavailable", 503) from exc
 
 
 def _truthy(value: object) -> bool:
@@ -164,8 +180,13 @@ def _backup_inventory(node: str, vmid: int):
             continue
         if "backup" not in content.split(",") and storage.get("type") != "pbs":
             continue
+        nodes = storage.get("nodes")
+        if nodes is not None and not isinstance(nodes, str):
+            raise RemovalError("backup_state_unavailable", 503)
+        if _truthy(storage.get("disable")) or (nodes and node not in re.split(r"[,\s]+", nodes.strip())):
+            continue
         items = _pvesh_json([
-            "get", f"/nodes/{node}/storage/{name}/content", "--vmid", str(vmid),
+            "get", f"/nodes/{node}/storage/{name}/content", "--vmid", str(vmid), "--content", "backup",
         ], timeout=20)
         if not isinstance(items, list):
             raise RemovalError("backup_state_unavailable", 503)
@@ -186,6 +207,22 @@ def _backup_inventory(node: str, vmid: int):
                  reverse=True)
     # The Monitor has archive presence, not a fresh isolated restore proof.
     return {"state": "unverified" if backups else "none", "archives": backups}
+
+
+def _root_volume_exists(node, vmid, volume):
+    sid = volume.split(":", 1)[0]
+    rows = _pvesh_json(["get", f"/nodes/{node}/storage/{sid}/content", "--vmid", str(vmid)])
+    if not isinstance(rows, list) or any(
+        not isinstance(row, dict) or not isinstance(row.get("volid"), str) for row in rows
+    ):
+        raise RemovalError("rootfs_state_unavailable", 503)
+    found = [row for row in rows if row["volid"] == volume]
+    if not found:
+        return False
+    if (len(found) != 1 or type(found[0].get("vmid")) is not int or found[0]["vmid"] != vmid
+            or found[0].get("content") not in ("rootdir", "images")):
+        raise RemovalError("rootfs_state_unavailable", 503)
+    return True
 
 
 def _active_backup_tasks(node: str, vmid: int):
@@ -231,7 +268,10 @@ def _preflight(vmid: int):
     if not isinstance(node, str) or not NODE_RE.fullmatch(node) or node != _local_node():
         raise RemovalError("target_not_local")
 
-    raw, config, lxc_lines = _plain_config(vmid)
+    generation = _generation(vmid, node)
+    raw, config, lxc_lines, file_identity = _plain_config(vmid)
+    if generation != _generation(vmid, node):
+        raise RemovalError("target_changed")
     reasons: list[str] = []
     if resource.get("status") != "stopped":
         reasons.append("container_running")
@@ -239,6 +279,8 @@ def _preflight(vmid: int):
         reasons.append("container_protected")
     if config.get("lock"):
         reasons.append("container_locked")
+    if _truthy(config.get("template")) or _truthy(resource.get("template")):
+        reasons.append("container_template")
     if any(re.fullmatch(r"(?:mp|unused)\d+", key) for key in config):
         reasons.append("attached_or_unassigned_disk")
     if any(key.startswith("lxc.mount") or key.startswith("lxc.hook") for key, _ in lxc_lines):
@@ -252,6 +294,8 @@ def _preflight(vmid: int):
     except RemovalError:
         reasons.append("rootfs_ambiguous")
         disk = {"storage": "", "volume": "", "size": ""}
+    if not reasons and not _root_volume_exists(node, vmid, disk["volume"]):
+        reasons.append("rootfs_ambiguous")
 
     ha = _pvesh_json(["get", "/cluster/ha/resources"])
     if not isinstance(ha, list):
@@ -288,14 +332,10 @@ def _preflight(vmid: int):
     if tasks:
         reasons.append("backup_running")
 
-    identity = sha256(json.dumps({
-        "vmid": vmid, "node": node, "name": resource.get("name"), "type": resource.get("type"),
-        "config": sha256(raw).hexdigest(), "rootfs": disk["volume"],
-    }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return {
         "eligible": not reasons,
         "reasons": reasons,
-        "identity": identity,
+        "guard": {"file": file_identity, "generation": generation, "digest": sha256(raw).hexdigest()},
         "target": {
             "vmid": vmid, "name": str(resource.get("name") or f"CT {vmid}"), "node": node,
             "status": str(resource.get("status") or "unknown"),
@@ -304,15 +344,6 @@ def _preflight(vmid: int):
         "backup": backup,
         "backup_tasks": tasks,
     }
-
-
-def _task_from_output(output: str, vmid: int, node: str):
-    lines = [line.strip().strip('"') for line in (output or "").splitlines() if line.strip()]
-    task = lines[-1] if lines else ""
-    parsed = DESTROY_UPID_RE.fullmatch(task)
-    if not parsed or parsed["vmid"] != str(vmid) or parsed["node"] != node:
-        return None
-    return task
 
 
 def _invalidate(vmid: int):
@@ -326,34 +357,47 @@ def _invalidate(vmid: int):
         pass
 
 
-def _status(vmid: int, task: str):
-    parsed = DESTROY_UPID_RE.fullmatch(task)
-    if not parsed or parsed["vmid"] != str(vmid):
-        raise RemovalError("invalid_task", 400)
-    node = parsed["node"]
+def _status(vmid, node, volume, task):
     try:
         status = _pvesh_json(["get", f"/nodes/{node}/tasks/{task}/status"])
     except RemovalError:
         return {"state": "unknown", "task": task, "reason": "task_status_unavailable"}
-    if not isinstance(status, dict) or status.get("status") not in {"running", "stopped"}:
+    if not isinstance(status, dict) or status.get("status") not in ("running", "stopped"):
         return {"state": "unknown", "task": task, "reason": "task_status_unavailable"}
     if status["status"] == "running":
         return {"state": "running", "task": task}
     exitstatus = status.get("exitstatus")
-    if not isinstance(exitstatus, str) or not exitstatus:
+    if (not isinstance(exitstatus, str) or not exitstatus or exitstatus == "unexpected status"
+            or exitstatus.startswith("unable to get last line from task log")):
         return {"state": "unknown", "task": task, "reason": "task_status_unavailable"}
+    if re.fullmatch(r"WARNINGS: [0-9]+", exitstatus):
+        return {"state": "warning", "task": task, "exitstatus": exitstatus}
     if exitstatus != "OK":
         return {"state": "failed", "task": task, "exitstatus": exitstatus}
     try:
         resources = _pvesh_json(["get", "/cluster/resources", "--type", "vm"])
     except RemovalError:
         return {"state": "unknown", "task": task, "reason": "result_verification_unavailable"}
-    if not isinstance(resources, list):
+    if not isinstance(resources, list) or any(
+        not isinstance(row, dict) or type(row.get("vmid")) is not int or row["vmid"] < 100
+        for row in resources
+    ):
         return {"state": "unknown", "task": task, "reason": "result_verification_unavailable"}
-    if any(isinstance(row, dict) and str(row.get("vmid")) == str(vmid) for row in resources):
+    if any(row["vmid"] == vmid for row in resources):
         return {"state": "warning", "task": task, "reason": "vmid_still_present"}
-    if (CONF_DIR / f"{vmid}.conf").exists():
+    try:
+        (CONF_DIR / f"{vmid}.conf").stat()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return {"state": "unknown", "task": task, "reason": "result_verification_unavailable"}
+    else:
         return {"state": "warning", "task": task, "reason": "configuration_still_present"}
+    try:
+        if _root_volume_exists(node, vmid, volume):
+            return {"state": "warning", "task": task, "reason": "root_volume_still_present"}
+    except RemovalError:
+        return {"state": "unknown", "task": task, "reason": "result_verification_unavailable"}
     _invalidate(vmid)
     return {"state": "succeeded", "task": task}
 
@@ -364,7 +408,11 @@ def _status(vmid: int, task: str):
 def preview(actor: str, vmid: int):
     try:
         preflight = _preflight(vmid)
-        check = _ticket().dumps({"actor": actor, "vmid": vmid, "identity": preflight["identity"]})
+        guard = preflight.pop("guard")
+        check = _ticket().dumps({
+            "actor": actor, "vmid": vmid, "guard": guard, "node": preflight["target"]["node"],
+            "volume": preflight["disk"]["volume"], "operation": uuid4().hex, "expires": time.time() + CHECK_AGE,
+        }) if preflight["eligible"] else None
         return jsonify(**preflight, check=check)
     except RemovalError as error:
         return jsonify(error=error.code), error.status
@@ -379,61 +427,110 @@ def remove(actor: str, vmid: int):
         return jsonify(error="invalid_request"), 400
     if body.get("confirm_vmid") != str(vmid):
         return jsonify(error="confirmation_required"), 422
-    try:
-        check = _ticket().loads(body.get("check"), max_age=CHECK_AGE)
-    except BadData:
-        return jsonify(error="check_expired"), 409
-    if not isinstance(check, dict) or check.get("actor") != actor or check.get("vmid") != vmid:
-        return jsonify(error="check_mismatch"), 409
-
     import lxc_check_job
-    reservation = None
-    retained = False
     try:
+        check = _load_check(body.get("check"), actor, vmid, CHECK_AGE)
+        operation = check["operation"]
+        if receipts.outcome(operation)[0] is not None:
+            return jsonify(_operation_status(check)), 202
         try:
             reservation = lxc_check_job.acquire(vmid)
         except BlockingIOError:
             return jsonify(error="operation_pending"), 409
-        preflight = _preflight(vmid)
-        if check.get("identity") != preflight["identity"]:
-            return jsonify(error="target_changed", preview=preflight), 409
-        if not preflight["eligible"]:
-            return jsonify(error="removal_blocked", preview=preflight), 409
-        if preflight["backup"]["state"] == "none" and body.get("confirm_no_backup") is not True:
-            return jsonify(error="no_backup_confirmation_required"), 422
-
-        # Store an uncertainty marker before the native call.  If the process
-        # times out or returns no attributable UPID, the marker stays and a
-        # second request is forbidden instead of gambling with a reused VMID.
-        lxc_check_job.begin_control(reservation, preflight["target"]["node"])
         try:
-            result = subprocess.run(
-                ["pvesh", "delete", f"/nodes/{preflight['target']['node']}/lxc/{vmid}"],
-                capture_output=True, text=True, timeout=30,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            reservation = None
-            return jsonify(state="unknown", task=None, reason="submission_unconfirmed"), 202
-        task = _task_from_output(result.stdout, vmid, preflight["target"]["node"])
-        if result.returncode != 0 or not task:
-            reservation = None
-            return jsonify(state="unknown", task=None, reason="submission_unconfirmed"), 202
-        lxc_check_job.retain_control(vmid, task, reservation)
-        retained = True
-        reservation = None
-        return jsonify(state="running", task=task, node=preflight["target"]["node"]), 202
+            if receipts.outcome(operation)[0] is not None:
+                return jsonify(_operation_status(check)), 202
+            preflight = _preflight(vmid)
+            guard = preflight.pop("guard")
+            if (check["guard"] != guard or check["node"] != preflight["target"]["node"]
+                    or check["volume"] != preflight["disk"]["volume"]):
+                return jsonify(error="target_changed", preview=preflight), 409
+            if not preflight["eligible"]:
+                return jsonify(error="removal_blocked", preview=preflight), 409
+            if preflight["backup"]["state"] == "none" and body.get("confirm_no_backup") is not True:
+                return jsonify(error="no_backup_confirmation_required"), 422
+
+            if time.time() >= check["expires"]:
+                raise RemovalError("check_expired")
+            try:
+                receipts.begin(operation)
+            except FileExistsError:
+                return jsonify(_operation_status(check)), 202
+            if time.time() >= check["expires"]:
+                receipts.seal_unstarted(operation)
+                raise RemovalError("check_expired")
+            lxc_check_job.begin_removal(reservation, check["node"], operation)
+            if not _dispatch(check):
+                receipts.seal_unstarted(operation)
+        finally:
+            reservation.close()
+        return jsonify(_operation_status(check)), 202
     except RemovalError as error:
         return jsonify(error=error.code), error.status
-    finally:
-        if reservation is not None and not retained:
-            reservation.close()
+    except (OSError, UnicodeError):
+        return jsonify(state="unknown", task=None, reason="submission_unconfirmed"), 202
 
 
-@lxc_removal_bp.get("/api/vms/<int:vmid>/remove-task/<path:task>")
+def _load_check(token, actor, vmid, max_age):
+    if not isinstance(token, str) or len(token) > 4096:
+        raise RemovalError("invalid_request", 400)
+    try:
+        check = _ticket().loads(token, max_age=max_age)
+    except BadData:
+        raise RemovalError("check_expired") from None
+    if not isinstance(check, dict) or check.get("actor") != actor or check.get("vmid") != vmid:
+        raise RemovalError("check_mismatch")
+    if not receipts.OPERATION.fullmatch(check.get("operation", "")):
+        raise RemovalError("check_expired")
+    return check
+
+
+def _dispatch(check):
+    params = {key: check[key] for key in ("vmid", "operation", "guard", "volume")}
+    try:
+        result = subprocess.run(
+            ["/usr/bin/perl", NATIVE_BRIDGE], capture_output=True, text=True, timeout=12,
+            input=json.dumps({"action": "remove", "node": check["node"], "params": params}),
+        )
+        return result.returncode == 0 and receipts.task_for(json.loads(result.stdout), check["node"], check["vmid"])
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return False
+
+
+def _operation_status(check):
+    operation, vmid, node = (check[key] for key in ("operation", "vmid", "node"))
+    started, value = receipts.outcome(operation)
+    if started is None:
+        if time.time() < check["expires"]:
+            return {"state": "unknown", "task": None, "reason": "submission_unconfirmed"}
+        # Reserve the expired operation before reporting a definite rejection.
+        # A confirmation already in progress may win this reservation instead.
+        try:
+            receipts.begin(operation)
+        except FileExistsError:
+            started, value = receipts.outcome(operation)
+        else:
+            value = receipts.seal_unstarted(operation)
+    if value is None:
+        if time.time() - started < receipts.DISPATCH_WINDOW:
+            return {"state": "running", "task": None, "reason": "dispatch_pending"}
+        value = receipts.seal_unstarted(operation)
+    if value == receipts.REJECTED:
+        return {"state": "failed", "task": None, "reason": "not_started"}
+    task = receipts.task_for(value, node, vmid)
+    if not task:
+        return {"state": "unknown", "task": None, "reason": "submission_unconfirmed"}
+    return _status(vmid, node, check["volume"], task)
+
+
+@lxc_removal_bp.get("/api/vms/<int:vmid>/remove-operation")
 @require_admin_scope
 @_admin
-def task_status(actor: str, vmid: int, task: str):
+def task_status(actor: str, vmid: int):
     try:
-        return jsonify(_status(vmid, task))
+        check = _load_check(request.headers.get("X-LXC-Removal-Check"), actor, vmid, receipts.RECEIPT_AGE)
+        return jsonify(_operation_status(check))
     except RemovalError as error:
         return jsonify(error=error.code), error.status
+    except (OSError, UnicodeError):
+        return jsonify(state="unknown", task=None, reason="submission_unconfirmed")

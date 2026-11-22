@@ -24,7 +24,7 @@ type LxcTarget = { vmid: number; name: string; type: string }
 interface RemovalPreview {
   eligible: boolean
   reasons: string[]
-  check: string
+  check: string | null
   target: { vmid: number; name: string; node: string; status: string }
   disk: { storage: string; volume: string; size: string }
   backup: { state: "none" | "unverified"; archives: Array<{ storage: string; volid: string }> }
@@ -69,16 +69,17 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
   const [submitting, setSubmitting] = useState(false)
   const [tracked, setTracked] = useState<TrackedRemoval | null>(null)
   const submitRef = useRef(false)
-  const completedRef = useRef<number | null>(null)
+  const previewRequest = useRef(0)
+  const completedRef = useRef<string | null>(null)
+  const active = tracked && (!target || tracked.vmid === target.vmid) ? tracked : null
+  const running = active?.result.state === "running"
+  const activeVmid = active?.vmid
+  const activeCheck = active?.check
 
   useEffect(() => {
     const receipt = loadLxcRemovalReceipt()
-    if (!receipt) return
-    if (receipt.task) {
-      setTracked({ ...receipt, result: { state: "running", task: receipt.task } })
-    } else {
-      setTracked({ ...receipt, result: { state: "unknown", task: null, reason: "submission_unconfirmed" } })
-    }
+    if (!receipt || target) return
+    setTracked({ ...receipt, result: { state: "running", task: null, reason: "dispatch_pending" } })
     onOpenChange(true)
   // Recover an in-flight task once, on page load. `onOpenChange` is stable in the parent.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,99 +87,129 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
 
   const refreshPreview = async () => {
     if (!target || target.type !== "lxc") return
+    const request = ++previewRequest.current
     setLoadingPreview(true)
     setPreviewError(null)
     setPreview(null)
     setTypedVmid("")
     setNoBackupConfirmed(false)
     try {
-      setPreview(await fetchApi<RemovalPreview>(`/api/vms/${target.vmid}/remove-preview`))
+      const result = await fetchApi<RemovalPreview>(`/api/vms/${target.vmid}/remove-preview`)
+      if (previewRequest.current === request) setPreview(result)
     } catch (error) {
-      setPreviewError(error instanceof Error ? error.message : String(error))
+      if (previewRequest.current === request) setPreviewError(error instanceof Error ? error.message : String(error))
     } finally {
-      setLoadingPreview(false)
+      if (previewRequest.current === request) setLoadingPreview(false)
     }
   }
 
   useEffect(() => {
-    if (open && !tracked) void refreshPreview()
+    if (!open || !target) return
+    if (active) return
+    const receipt = loadLxcRemovalReceipt(target.vmid)
+    if (receipt) {
+      setTracked({ ...receipt, result: { state: "running", task: null, reason: "dispatch_pending" } })
+    } else {
+      setTracked(null)
+      void refreshPreview()
+    }
+    return () => { previewRequest.current += 1 }
   // Preview is deliberately fresh per opening; no cached authorization is reused.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, target?.vmid])
 
   useEffect(() => {
-    if (!tracked?.task || tracked.result.state !== "running") return
+    if (!open || !activeVmid || !activeCheck || !running) return
     let cancelled = false
     let failures = 0
+    const deadline = Date.now() + 180_000
     let timer: ReturnType<typeof setTimeout> | undefined
     const inspect = async () => {
+      let result: LxcRemovalTaskResult
       try {
-        const result = await readLxcRemovalTask(tracked.vmid, tracked.task as string)
-        if (cancelled) return
-        failures = 0
-        setTracked(current => current && current.vmid === tracked.vmid ? { ...current, result } : current)
-        if (result.state === "running") timer = setTimeout(() => void inspect(), 1500)
+        result = await readLxcRemovalTask({ vmid: activeVmid, check: activeCheck })
       } catch {
-        failures += 1
-        if (failures >= 3 && !cancelled) {
-          setTracked(current => current && current.vmid === tracked.vmid
-            ? { ...current, result: { state: "unknown", task: current.task, reason: "task_status_unavailable" } }
-            : current)
-        } else if (!cancelled) {
-          timer = setTimeout(() => void inspect(), 1500)
-        }
+        result = { state: "unknown", task: null, reason: "task_status_unavailable" }
       }
+      if (cancelled) return
+      failures = result.state === "unknown" ? failures + 1 : 0
+      if (Date.now() < deadline && result.state === "unknown" && failures < 3) {
+        timer = setTimeout(() => void inspect(), 1500)
+        return
+      }
+      if (result.state === "running" && Date.now() >= deadline) {
+        result = { state: "unknown", task: result.task, reason: "task_still_running" }
+      }
+      setTracked(current => current?.check === activeCheck
+        ? { ...current, result: { ...result, task: result.task ?? current.result.task } }
+        : current)
+      if (result.state === "running") timer = setTimeout(() => void inspect(), 1500)
     }
     void inspect()
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [tracked?.task, tracked?.result.state, tracked?.vmid])
+  }, [open, activeVmid, activeCheck, running])
 
   useEffect(() => {
-    if (tracked?.result.state !== "succeeded" || completedRef.current === tracked.vmid) return
-    completedRef.current = tracked.vmid
-    clearLxcRemovalReceipt(tracked.vmid)
-    onRemoved(tracked.vmid)
-  }, [onRemoved, tracked?.result.state, tracked?.vmid])
+    if (active?.result.state !== "succeeded" || completedRef.current === active.check) return
+    completedRef.current = active.check
+    clearLxcRemovalReceipt(active.vmid)
+    onRemoved(active.vmid)
+  }, [onRemoved, active])
 
   const submit = async () => {
-    if (!preview || !target || submitRef.current) return
+    if (!preview?.check || !target || preview.target.vmid !== target.vmid || !removeEnabled || submitRef.current) return
+    const receipt = { vmid: target.vmid, check: preview.check }
+    const request = previewRequest.current
+    if (!saveLxcRemovalReceipt(receipt)) {
+      setPreviewError("receipt_unavailable")
+      return
+    }
     submitRef.current = true
     setSubmitting(true)
     try {
       const result = await fetchApi<LxcRemovalTaskResult>(`/api/vms/${target.vmid}/remove`, {
         method: "POST",
+        signal: AbortSignal.timeout(30_000),
         body: JSON.stringify({
           check: preview.check,
           confirm_vmid: typedVmid,
           confirm_no_backup: noBackupConfirmed,
         }),
       })
-      const receipt = { vmid: target.vmid, task: result.task }
-      saveLxcRemovalReceipt(receipt)
       setTracked({ ...receipt, result })
     } catch (error) {
       const body = errorBody(error)
-      if (body?.preview) setPreview(body.preview)
-      setPreviewError(body?.error || (error instanceof Error ? error.message : String(error)))
+      if (body?.error && ["target_changed", "removal_blocked", "check_expired", "check_mismatch",
+        "confirmation_required", "no_backup_confirmation_required"].includes(body.error)) {
+        clearLxcRemovalReceipt(receipt.vmid)
+        if (previewRequest.current === request) {
+          if (body.preview) setPreview(body.preview)
+          setPreviewError(body.error)
+        }
+      } else {
+        setTracked({ ...receipt, result: { state: "unknown", task: null, reason: "submission_unconfirmed" } })
+      }
     } finally {
       submitRef.current = false
       setSubmitting(false)
     }
   }
 
-  const displayTarget = preview?.target || (target ? { vmid: target.vmid, name: target.name, node: "—", status: "—" } : null)
+  const displayTarget = preview?.target.vmid === target?.vmid ? preview?.target : null
   const displayStatus = displayTarget?.status === "stopped" ? t("vmLxc.stopped")
     : displayTarget?.status === "running" ? t("vmLxc.running")
       : displayTarget?.status
-  const terminal = tracked?.result
+  const terminal = active?.result
   const previewErrorText = previewError === "target_changed"
     ? t("vmLxc.remove.targetChanged")
-    : t("vmLxc.remove.previewUnavailable")
+    : previewError === "receipt_unavailable" ? t("vmLxc.remove.receiptUnavailable")
+      : t("vmLxc.remove.previewUnavailable")
   const removeEnabled = Boolean(
     preview?.eligible
+    && preview.check && displayTarget
     && typedVmid === String(preview.target.vmid)
     && (preview.backup.state !== "none" || noBackupConfirmed)
     && !previewError
@@ -186,14 +217,24 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
   )
 
   const reviewAfterFailure = () => {
-    if (!tracked || tracked.result.state !== "failed") return
-    clearLxcRemovalReceipt(tracked.vmid)
+    if (!target || !active || active.result.state !== "failed") return
+    clearLxcRemovalReceipt(active.vmid)
     setTracked(null)
     void refreshPreview()
   }
 
+  const refreshTask = () => {
+    if (!active) return
+    setTracked({ ...active, result: { ...active.result, state: "running", reason: "checking_task" } })
+  }
+
+  const changeOpen = (nextOpen: boolean) => {
+    if (!nextOpen && active?.result.state === "succeeded") setTracked(null)
+    onOpenChange(nextOpen)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -212,7 +253,7 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
               <div>
                 <p className="font-medium">{t(`vmLxc.remove.result.${terminal.state}`)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {terminal.state === "failed" && terminal.exitstatus
+                  {(terminal.state === "failed" || terminal.state === "warning") && terminal.exitstatus
                     ? terminal.exitstatus
                     : t(`vmLxc.remove.resultReason.${terminal.reason || terminal.state}`)}
                 </p>
@@ -223,7 +264,7 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
           <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> {t("vmLxc.remove.checking")}
           </div>
-        ) : preview ? (
+        ) : preview && displayTarget ? (
           <div className="space-y-4">
             {displayTarget && (
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border p-3 text-sm">
@@ -255,7 +296,7 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
                   </p>
                   {preview.backup.state === "none" && (
                     <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <Button type="button" variant="outline" size="sm" onClick={onCreateBackup}>{t("vmLxc.remove.createBackup")}</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={onCreateBackup} disabled={submitting}>{t("vmLxc.remove.createBackup")}</Button>
                       <Label className="flex items-center gap-2 text-xs font-normal">
                         <Checkbox checked={noBackupConfirmed} onCheckedChange={value => setNoBackupConfirmed(value === true)} />
                         {t("vmLxc.remove.confirmNoBackup")}
@@ -285,10 +326,11 @@ export function LxcRemoveDialog({ target, open, onOpenChange, onCreateBackup, on
           <p className="text-xs text-red-400" role="alert">{previewErrorText}</p>
         )}
         <DialogFooter className="gap-2 sm:gap-0">
-          {terminal?.state === "failed" && <Button type="button" variant="outline" onClick={reviewAfterFailure}>{t("vmLxc.remove.reviewAgain")}</Button>}
+          {terminal?.state === "unknown" && <Button type="button" variant="outline" onClick={refreshTask}>{t("vmLxc.remove.checkTask")}</Button>}
+          {target && terminal?.state === "failed" && <Button type="button" variant="outline" onClick={reviewAfterFailure}>{t("vmLxc.remove.reviewAgain")}</Button>}
           {!terminal && <Button type="button" variant="outline" onClick={() => void refreshPreview()} disabled={loadingPreview || submitting}>{t("vmLxc.remove.checkAgain")}</Button>}
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t("vmLxc.remove.cancel")}</Button>
-          {preview?.eligible && !terminal && (
+          <Button type="button" variant="outline" onClick={() => changeOpen(false)}>{t("vmLxc.remove.cancel")}</Button>
+          {preview?.eligible && displayTarget && !terminal && (
             <Button type="button" variant="destructive" disabled={!removeEnabled} onClick={() => void submit()}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t("vmLxc.remove.confirm")}
             </Button>

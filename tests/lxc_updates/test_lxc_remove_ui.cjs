@@ -16,11 +16,9 @@ assert.match(vmPage, /DropdownMenuItem variant="destructive" onSelect=\{\(\) => 
   'the menu opens a review dialog; it does not submit a remove request')
 assert.match(dialog, /typedVmid === String\(preview\.target\.vmid\)/, 'the exact VMID gates the submit button')
 assert.match(dialog, /preview\.backup\.state !== "none" \|\| noBackupConfirmed/, 'no-backup removal needs a separate acknowledgement')
-assert.match(dialog, /if \(!preview \|\| !target \|\| submitRef\.current\) return/, 'a duplicate click cannot submit again')
-assert.match(dialog, /&& !previewError/, 'an unconfirmed response requires a new review before another submit')
-assert.match(dialog, /saveLxcRemovalReceipt\(receipt\)[\s\S]*setTracked\(\{ \.\.\.receipt, result \}\)/,
-  'the native task receipt is saved before tracking it')
-assert.match(dialog, /if \(failures >= 3[\s\S]*state: "unknown"/, 'lost task reads fail closed')
+assert.match(dialog, /submitRef\.current\) return/, 'a duplicate click cannot submit again')
+assert.match(dialog, /saveLxcRemovalReceipt\(receipt\)[\s\S]*method: "POST"/,
+  'the recovery receipt is saved before the destructive request')
 assert.doesNotMatch(dialog, /method:\s*["']DELETE["']/, 'the browser never issues PVE delete directly')
 
 const source = fs.readFileSync(path.join(root, 'lib/lxc-removal.ts'), 'utf8')
@@ -48,18 +46,25 @@ const context = {
 vm.runInNewContext(compiled, context)
 const helper = context.exports
 
-helper.saveLxcRemovalReceipt({ vmid: 100, task: 'UPID:fixture' })
+store.set(helper.lxcRemovalReceiptKey(90), 'malformed')
+assert.equal(helper.saveLxcRemovalReceipt({ vmid: 100, check: 'operation-a' }), true)
+assert.equal(helper.saveLxcRemovalReceipt({ vmid: 200, check: 'operation-b' }), true)
 const recovered = helper.loadLxcRemovalReceipt()
 assert.equal(recovered?.vmid, 100, 'reload restores the accepted VMID')
-assert.equal(recovered?.task, 'UPID:fixture', 'reload restores only the accepted task')
+assert.equal(recovered?.check, 'operation-a', 'reload restores a receipt even without a native task')
+assert.equal(helper.loadLxcRemovalReceipt(200)?.check, 'operation-b', 'reopening a target selects only its receipt')
 helper.clearLxcRemovalReceipt(100)
-assert.equal(helper.loadLxcRemovalReceipt(), null, 'terminal state removes the receipt')
+assert.equal(helper.loadLxcRemovalReceipt(100), null, 'terminal state removes only its own receipt')
+assert.equal(helper.loadLxcRemovalReceipt(200)?.check, 'operation-b')
+context.sessionStorage.setItem = () => { throw Error('storage unavailable') }
+assert.equal(helper.saveLxcRemovalReceipt({ vmid: 100, check: 'check' }), false)
 
 ;(async () => {
-  const result = await helper.readLxcRemovalTask(100, 'UPID:node/unsafe')
+  const result = await helper.readLxcRemovalTask(recovered)
   assert.equal(result.state, 'running')
   assert.equal(reads.length, 1)
-  assert.equal(reads[0][0], '/api/vms/100/remove-task/UPID%3Anode%2Funsafe')
+  assert.equal(reads[0][0], '/api/vms/100/remove-operation')
+  assert.equal(reads[0][1].headers['X-LXC-Removal-Check'], 'operation-a')
   assert.equal(reads[0][1].method, undefined, 'task tracking is read-only')
   console.log('PASS LXC remove UI: gated action, exact confirmation, receipt recovery and read-only task polling')
 })().catch(error => { console.error(error); process.exitCode = 1 })

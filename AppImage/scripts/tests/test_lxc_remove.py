@@ -1,6 +1,7 @@
 """Server-side safety boundary for plain stopped-LXC removal."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -22,6 +23,7 @@ import lxc_check_job
 VMID = 100
 NODE = "fixture"
 TASK = "UPID:fixture:0000000A:0000000B:0000000C:vzdestroy:100:root@pam:"
+VOLUME = "local-lvm:subvol-100-disk-0"
 
 
 def current_lxc_options():
@@ -52,15 +54,25 @@ class LxcRemoveTests(unittest.TestCase):
         self.oci = self.root / "oci"
         self.oci.mkdir()
         self.write_config()
+        self.write_generation(4)
+        (self.root / ".version").write_text(json.dumps({"starttime": 1700000000}))
         self.resources = [dict(vmid=VMID, type="lxc", node=NODE, name="plain-test", status="stopped")]
         self.ha, self.replication, self.active_tasks = [], [], []
         self.pending = current_lxc_options()
-        self.storages, self.storage_content = [], {}
+        self.storages = []
+        self.storage_content = {"local-lvm": [{"volid": VOLUME, "vmid": VMID, "content": "rootdir"}]}
         self.delete_calls = []
         self.task_state = {"status": "running"}
-        self.remove_completed = False
+        self.dispatch_mode = "accepted"
         self.run = Mock(side_effect=self.pvesh)
         self.enterContext(patch.object(routes, "CONF_DIR", self.conf))
+        self.enterContext(patch.object(routes, "CFS_DIR", self.root))
+        self.enterContext(patch.object(routes.receipts, "DIRECTORY", self.root / "removals"))
+        self.enterContext(patch.object(lxc_check_job, "LOCK_DIR", self.root))
+        self.enterContext(patch.object(lxc_check_job, "subprocess", SimpleNamespace(
+            run=self.run, TimeoutExpired=subprocess.TimeoutExpired,
+        )))
+        self.enterContext(patch.object(routes, "_invalidate"))
         self.enterContext(patch.object(routes, "OCI_INSTANCE_ROOT", self.oci))
         self.enterContext(patch.object(routes, "_local_node", return_value=NODE))
         self.enterContext(patch.object(routes, "is_pbs_host", return_value=False))
@@ -85,10 +97,29 @@ class LxcRemoveTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def write_generation(self, version):
+        (self.root / ".vmlist").write_text(json.dumps(
+            {"ids": {str(VMID): {"node": NODE, "type": "lxc", "version": version}}}
+        ))
+
     def result(self, payload, code=0):
         return subprocess.CompletedProcess([], code, json.dumps(payload), "")
 
     def pvesh(self, argv, **_kwargs):
+        if argv == ["/usr/bin/perl", routes.NATIVE_BRIDGE]:
+            request = json.loads(_kwargs["input"])
+            self.assertEqual((request["action"], request["node"]), ("remove", NODE))
+            self.assertEqual(set(request["params"]), {"guard", "operation", "vmid", "volume"})
+            self.assertEqual(_kwargs["timeout"], 12)
+            self.delete_calls.append(request)
+            params = request["params"]
+            if self.dispatch_mode == "rejected":
+                return self.result(None, code=1)
+            if self.dispatch_mode != "delayed":
+                (routes.receipts.DIRECTORY / params["operation"] / "result").write_text(TASK + "\n")
+            if self.dispatch_mode == "timeout_after_claim":
+                raise subprocess.TimeoutExpired(argv, 12)
+            return self.result(TASK)
         self.assertEqual(argv[0], "pvesh")
         if argv[:4] == ["pvesh", "get", "/cluster/resources", "--type"]:
             return self.result(self.resources)
@@ -111,16 +142,7 @@ class LxcRemoveTests(unittest.TestCase):
             payload = self.storage_content.get(storage, [])
             return self.result(payload)
         if path == f"/nodes/{NODE}/tasks/{TASK}/status":
-            if self.remove_completed and self.task_state.get("status") == "stopped" and self.task_state.get("exitstatus") == "OK":
-                self.resources = []
-                try:
-                    (self.conf / f"{VMID}.conf").unlink()
-                except FileNotFoundError:
-                    pass
             return self.result(self.task_state)
-        if argv[:2] == ["pvesh", "delete"]:
-            self.delete_calls.append(argv)
-            return subprocess.CompletedProcess(argv, 0, TASK + "\n", "")
         raise AssertionError(f"unexpected pvesh call: {argv}")
 
     def call(self, method, path, body=None, token="admin"):
@@ -132,10 +154,20 @@ class LxcRemoveTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.json)
         return response.json
 
+    def confirm(self, check, *, vmid=VMID, no_backup=True):
+        return self.call("POST", f"/api/vms/{vmid}/remove", {
+            "check": check, "confirm_vmid": str(vmid), "confirm_no_backup": no_backup,
+        })
+
+    def status(self, check, token="admin"):
+        return self.client.get(f"/api/vms/{VMID}/remove-operation", headers={
+            "Authorization": f"Bearer {token}", "X-LXC-Removal-Check": check,
+        })
+
     def fake_lock(self):
         lock = Mock()
         return lock, SimpleNamespace(
-            acquire=Mock(return_value=lock), begin_control=Mock(), retain_control=Mock(),
+            acquire=Mock(return_value=lock), begin_removal=Mock(),
         )
 
     def test_preview_reports_only_a_stopped_plain_lxc_and_unverified_archives(self):
@@ -154,6 +186,7 @@ class LxcRemoveTests(unittest.TestCase):
             "running": lambda: self.resources.__setitem__(0, {**self.resources[0], "status": "running"}),
             "protected": lambda: self.write_config("protection: 1\n"),
             "locked": lambda: self.write_config("lock: backup\n"),
+            "template": lambda: self.write_config("template: 1\n"),
             "mount": lambda: self.write_config("mp0: local-lvm:subvol-100-disk-1,mp=/data\n"),
             "unused": lambda: self.write_config("unused0: local-lvm:subvol-100-disk-1\n"),
             "bind": lambda: self.write_config("lxc.mount.entry: /srv data none bind 0 0\n"),
@@ -205,13 +238,11 @@ class LxcRemoveTests(unittest.TestCase):
                 "check": check, "confirm_vmid": "100", "confirm_no_backup": True,
             })
         self.assertEqual(response.status_code, 202, response.json)
-        self.assertEqual(response.json, {"state": "running", "task": TASK, "node": NODE})
+        self.assertEqual(response.json, {"state": "running", "task": TASK})
         self.assertEqual(len(self.delete_calls), 1)
-        self.assertEqual(self.delete_calls[0], ["pvesh", "delete", f"/nodes/{NODE}/lxc/{VMID}"])
-        self.assertNotIn("--force", self.delete_calls[0])
-        self.assertNotIn("--purge", self.delete_calls[0])
-        module.begin_control.assert_called_once_with(lock, NODE)
-        module.retain_control.assert_called_once_with(VMID, TASK, lock)
+        self.assertEqual(self.delete_calls[0]["params"]["volume"], VOLUME)
+        module.begin_removal.assert_called_once_with(lock, NODE, self.delete_calls[0]["params"]["operation"])
+        lock.close.assert_called()
 
     def test_remove_rechecks_actual_replication_and_pending_rows_after_preview(self):
         cases = [
@@ -236,7 +267,7 @@ class LxcRemoveTests(unittest.TestCase):
                     self.assertEqual(response.status_code, 409, response.json)
                     self.assertEqual(response.json["error"], "removal_blocked")
                     self.assertIn(reason, response.json["preview"]["reasons"])
-                    module.begin_control.assert_not_called()
+                    module.begin_removal.assert_not_called()
                     lock.close.assert_called_once()
                     self.assertFalse(self.delete_calls)
                 finally:
@@ -262,7 +293,7 @@ class LxcRemoveTests(unittest.TestCase):
                             "check": check, "confirm_vmid": str(VMID), "confirm_no_backup": True,
                         })
                     self.assertEqual(response.status_code, 503, response.json)
-                    module.begin_control.assert_not_called()
+                    module.begin_removal.assert_not_called()
                     lock.close.assert_called_once()
                     self.assertFalse(self.delete_calls)
                 finally:
@@ -289,51 +320,218 @@ class LxcRemoveTests(unittest.TestCase):
         self.assertEqual(duplicate.status_code, 409, duplicate.json)
         self.assertFalse(self.delete_calls)
 
-    def test_missing_upid_is_unknown_and_never_retries(self):
+    def test_discarded_post_response_recovers_the_same_task_without_a_second_dispatch(self):
+        self.dispatch_mode = "timeout_after_claim"
         check = self.preview()["check"]
-        lock, module = self.fake_lock()
-        self.run.side_effect = lambda argv, **kwargs: (
-            subprocess.CompletedProcess(argv, 0, "", "") if argv[:2] == ["pvesh", "delete"] else self.pvesh(argv, **kwargs)
-        )
-        with patch.dict(sys.modules, {"lxc_check_job": module}):
-            response = self.call("POST", f"/api/vms/{VMID}/remove", {
-                "check": check, "confirm_vmid": "100", "confirm_no_backup": True,
-            })
-        self.assertEqual((response.status_code, response.json["state"]), (202, "unknown"))
-        self.assertEqual(len([call for call in self.run.call_args_list if call.args[0][:2] == ["pvesh", "delete"]]), 1)
-        module.retain_control.assert_not_called()
-        module.begin_control.assert_called_once_with(lock, NODE)
+        self.confirm(check)
+        self.assertEqual(self.status(check).json, {"state": "running", "task": TASK})
+        self.assertEqual(self.confirm(check).json, {"state": "running", "task": TASK})
+        different = self.preview()["check"]
+        self.assertEqual(self.confirm(different).json["error"], "operation_pending")
+        self.assertEqual(len(self.delete_calls), 1)
 
-    def test_task_status_tracks_the_original_destroy_task_and_checks_reuse(self):
-        bad = self.call("GET", f"/api/vms/{VMID}/remove-task/UPID:other")
-        self.assertEqual(bad.status_code, 400)
+    def test_definite_rejection_unblocks_shared_lock_and_cannot_replay(self):
+        self.dispatch_mode = "rejected"
+        check = self.preview()["check"]
+        self.assertEqual(self.confirm(check).json, {"state": "failed", "task": None, "reason": "not_started"})
+        with lxc_check_job.acquire(VMID) as lock:
+            self.assertEqual(lock.read(), "")
+        self.assertEqual(self.confirm(check).json["reason"], "not_started")
+        self.assertEqual(len(self.delete_calls), 1)
+
+    def test_delayed_receipt_or_expired_dispatch_never_replays(self):
+        self.dispatch_mode = "delayed"
+        check = self.preview()["check"]
+        self.assertEqual(self.confirm(check).json["reason"], "dispatch_pending")
+        self.assertEqual(self.status(check).json["reason"], "dispatch_pending")
+        marker = routes.receipts.DIRECTORY / self.delete_calls[0]["params"]["operation"]
+        with self.assertRaises(BlockingIOError):
+            lxc_check_job.acquire(VMID)
+        os.utime(marker, (1, 1))
+        self.assertEqual(self.status(check).json["reason"], "not_started")
+        with lxc_check_job.acquire(VMID) as lock:
+            self.assertEqual(lock.read(), "")
+        self.assertEqual(self.confirm(check).json["reason"], "not_started")
+        self.assertEqual(len(self.delete_calls), 1)
+
+    def test_confirmation_expiring_during_recheck_never_dispatches(self):
+        check = self.preview()["check"]
+        claims = routes._ticket().loads(check)
+        real_preflight = routes._preflight
+        real_begin = routes.receipts.begin
+        for phase in ("preflight", "reservation"):
+            with self.subTest(phase=phase), patch.object(routes.time, "time", wraps=routes.time.time) as clock:
+                before = claims["expires"] - 1
+                after = claims["expires"]
+                clock.return_value = before
+
+                def preflight(vmid):
+                    result = real_preflight(vmid)
+                    if phase == "preflight":
+                        clock.return_value = after
+                    return result
+
+                def begin(operation):
+                    real_begin(operation)
+                    if phase == "reservation":
+                        clock.return_value = after
+
+                with patch.object(routes, "_preflight", side_effect=preflight), patch.object(
+                    routes.receipts, "begin", side_effect=begin,
+                ):
+                    self.assertEqual(self.confirm(check).json, {"error": "check_expired"})
+                if phase == "reservation":
+                    self.assertEqual(self.status(check).json["reason"], "not_started")
+        self.assertFalse(self.delete_calls)
+
+    def test_expired_status_seals_against_a_concurrent_confirmation(self):
+        check = self.preview()["check"]
+        claims = routes._ticket().loads(check)
+        real_begin = routes.receipts.begin
+        with patch.object(routes.time, "time", wraps=routes.time.time) as clock:
+            clock.return_value = claims["expires"] - 1
+
+            def expire_before_reserving(operation):
+                self.assertEqual(operation, claims["operation"])
+                clock.return_value = claims["expires"]
+                with patch.object(routes.receipts, "begin", side_effect=real_begin):
+                    self.assertEqual(self.status(check).json["reason"], "not_started")
+                real_begin(operation)
+
+            with patch.object(routes.receipts, "begin", side_effect=expire_before_reserving):
+                self.assertEqual(self.confirm(check).json["reason"], "not_started")
+        self.assertFalse(self.delete_calls)
+
+    def test_task_result_requires_the_original_task_and_removal_of_the_exact_disk(self):
+        self.assertEqual(self.status("forged").status_code, 409)
         self.run.assert_not_called()
-        self.task_state = {"status": "running"}
-        self.assertEqual(self.call("GET", f"/api/vms/{VMID}/remove-task/{TASK}").json["state"], "running")
+        check = self.preview()["check"]
+        self.assertEqual(self.status(check, token="observer").status_code, 403)
+        self.assertEqual(self.confirm(check).json["task"], TASK)
+        self.assertEqual(self.status(check).json["state"], "running")
         self.task_state = {"status": "stopped", "exitstatus": "OK"}
-        self.resources = [dict(vmid=VMID, type="lxc", node=NODE, status="stopped")]
-        warning = self.call("GET", f"/api/vms/{VMID}/remove-task/{TASK}").json
+        warning = self.status(check).json
         self.assertEqual((warning["state"], warning["reason"]), ("warning", "vmid_still_present"))
-        self.resources = [dict(vmid=VMID, type="lxc", node=NODE, status="stopped")]
-        self.write_config()
-        self.task_state = {"status": "stopped", "exitstatus": "OK"}
-        self.remove_completed = True
-        succeeded = self.call("GET", f"/api/vms/{VMID}/remove-task/{TASK}").json
-        self.assertEqual(succeeded["state"], "succeeded")
-        self.assertFalse((self.conf / f"{VMID}.conf").exists())
-        self.assertFalse(self.delete_calls, "status reads never issue a second delete")
-
-    def test_failed_task_and_task_read_failure_never_claim_success(self):
-        self.task_state = {"status": "stopped", "exitstatus": "destroy failed"}
-        failed = self.call("GET", f"/api/vms/{VMID}/remove-task/{TASK}").json
-        self.assertEqual((failed["state"], failed["exitstatus"]), ("failed", "destroy failed"))
+        self.resources = []
+        self.assertEqual(self.status(check).json["reason"], "configuration_still_present")
+        (self.conf / f"{VMID}.conf").unlink()
+        self.assertEqual(self.status(check).json["reason"], "root_volume_still_present")
+        self.resources = [{"vmid": [VMID]}]
+        self.assertEqual(self.status(check).json["state"], "unknown")
+        self.resources = []
         original = self.pvesh
         self.run.side_effect = lambda argv, **kwargs: (
-            subprocess.CompletedProcess(argv, 1, "", "") if "/tasks/" in argv[2] else original(argv, **kwargs)
+            self.result(None, 1) if "/storage/local-lvm/" in argv[2] else original(argv, **kwargs)
         )
-        unknown = self.call("GET", f"/api/vms/{VMID}/remove-task/{TASK}").json
-        self.assertEqual(unknown["state"], "unknown")
-        self.assertFalse(self.delete_calls)
+        try:
+            self.assertEqual(self.status(check).json["state"], "unknown")
+        finally:
+            self.run.side_effect = original
+        self.storage_content["local-lvm"] = []
+        self.assertEqual(self.status(check).json["state"], "succeeded")
+        routes._invalidate.assert_called_once_with(VMID)
+        self.assertEqual(len(self.delete_calls), 1, "status reads never issue a second delete")
+
+    def test_native_failure_warning_and_unknown_status_are_distinct(self):
+        check = self.preview()["check"]
+        self.confirm(check)
+        for exitstatus, state in [
+            ("destroy failed", "failed"), ("WARNINGS: 1", "warning"),
+            ("unexpected status", "unknown"), ("unable to get last line from task log - IO", "unknown"),
+        ]:
+            with self.subTest(exitstatus=exitstatus):
+                self.task_state = {"status": "stopped", "exitstatus": exitstatus}
+                result = self.status(check).json
+                self.assertEqual(result["state"], state)
+                self.assertEqual(result["task"], TASK)
+        with patch.object(self.run, "side_effect", lambda argv, **kwargs: self.result(None, 1)):
+            self.assertEqual(self.status(check).json["state"], "unknown")
+        self.task_state = {"status": ["stopped"], "exitstatus": "OK"}
+        self.assertEqual(self.status(check).json["state"], "unknown")
+        self.assertEqual(len(self.delete_calls), 1)
+
+    def test_reused_vmid_with_identical_config_cannot_use_old_confirmation(self):
+        check = self.preview()["check"]
+        original = self.conf / f"{VMID}.conf"
+        replacement = self.conf / "replacement"
+        replacement.write_bytes(original.read_bytes())
+        os.replace(replacement, original)
+        self.write_generation(5)
+        self.assertEqual(self.confirm(check).json["error"], "target_changed")
+        self.assertEqual(self.delete_calls, [])
+
+    def test_foreign_missing_or_malformed_root_volume_blocks_the_request(self):
+        check = self.preview()["check"]
+        for rows in (
+            [{"volid": "local-lvm:subvol-200-disk-0", "vmid": 200, "content": "rootdir"}],
+            [],
+            [{"volid": VOLUME, "vmid": 200, "content": "rootdir"}],
+        ):
+            with self.subTest(rows=rows):
+                self.storage_content["local-lvm"] = rows
+                self.assertIn(self.confirm(check).status_code, (409, 503))
+                self.assertEqual(self.delete_calls, [])
+        path = self.conf / f"{VMID}.conf"
+        path.write_text(path.read_text().replace("subvol-100", "subvol-200"))
+        self.assertIn("rootfs_ambiguous", self.preview()["reasons"])
+
+    def test_backup_scan_skips_disabled_and_unrelated_node_storage(self):
+        self.storages = [
+            {"storage": "remote", "nodes": "other,third", "content": "backup"},
+            {"storage": "disabled", "disable": 1, "content": "backup"},
+            {"storage": "local-backup", "nodes": f"other,{NODE}", "content": "backup"},
+        ]
+        self.assertTrue(self.preview()["eligible"])
+        paths = [call.args[0][2] for call in self.run.call_args_list]
+        self.assertFalse(any(path.endswith(("/remote/content", "/disabled/content")) for path in paths))
+        self.assertIn(f"/nodes/{NODE}/storage/local-backup/content", paths)
+
+    def test_appimage_stages_both_route_and_native_dependencies(self):
+        appdir = self.root / "AppDir"
+        bin_dir = appdir / "usr/bin"
+        bin_dir.mkdir(parents=True)
+        source = (SCRIPTS / "build_appimage.sh").read_text()
+        copy_block = source.split("# Copy Flask server\n", 1)[1].split(
+            'cp "$SCRIPT_DIR/ovs_topology.py"', 1
+        )[0]
+        subprocess.run(["bash", "-ec", copy_block], check=True, capture_output=True, env={
+            **os.environ, "SCRIPT_DIR": str(SCRIPTS), "APP_DIR": str(appdir),
+        })
+        for name in ("flask_server.py", "flask_lxc_removal_routes.py", "lxc_removal_receipts.py",
+                     "plain_lxc_pve.pl", "PlainLxcRemoval.pm"):
+            self.assertTrue((bin_dir / name).is_file(), name)
+        for name in ("plain_lxc_pve.pl", "PlainLxcRemoval.pm"):
+            subprocess.run(["perl", "-c", str(bin_dir / name)], check=True, capture_output=True)
+
+    def test_native_worker_rechecks_under_lock_and_cannot_mutate_after_losing_receipt_claim(self):
+        check = routes._ticket().loads(self.preview()["check"])
+        module = SCRIPTS.parents[1] / "scripts/lxc/PlainLxcRemoval.pm"
+        fixture = Path(__file__).with_name("lxc_removal_worker_fixture.pl")
+        for scenario, expect_calls, expected_receipt in [
+            ("success", 1, TASK),
+            ("generation_changed", 0, TASK),
+            ("foreign_disk", 0, TASK),
+            ("template_changed", 0, TASK),
+            ("sealed", 0, routes.receipts.REJECTED),
+        ]:
+            with self.subTest(scenario=scenario):
+                self.write_generation(4)
+                current = dict(check, operation=routes.uuid4().hex)
+                reservation = routes.receipts.begin(current["operation"])
+                if scenario == "sealed":
+                    routes.receipts.seal_unstarted(current["operation"])
+                request = {
+                    "args": {key: current[key] for key in ("guard", "operation", "vmid", "volume")},
+                    "cfs": str(self.root), "config": str(self.conf / f"{VMID}.conf"),
+                    "receipts": str(routes.receipts.DIRECTORY), "scenario": scenario, "task": TASK,
+                }
+                run = subprocess.run(["perl", str(fixture), str(module)], text=True, check=True,
+                                     input=json.dumps(request), capture_output=True)
+                result = json.loads(run.stdout)
+                self.assertEqual(result["returned_upid"], TASK)
+                self.assertEqual(result["before_worker"], 0, "async submit must return before effects")
+                self.assertEqual(result["native_calls"], expect_calls)
+                self.assertEqual((reservation / "result").read_text().strip(), expected_receipt)
 
     def test_shared_lxc_mutex_accepts_only_the_original_destroy_task(self):
         lock_path = self.root / "control.lock"

@@ -11,17 +11,18 @@ export interface LxcRemovalTaskResult {
 
 export interface LxcRemovalReceipt {
   vmid: number
-  task: string | null
+  check: string
 }
 
 export const lxcRemovalReceiptKey = (vmid: number) => `proxmenux.lxc-removal.${vmid}`
 
 export function saveLxcRemovalReceipt(receipt: LxcRemovalReceipt) {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return false
   try {
-    sessionStorage.setItem(lxcRemovalReceiptKey(receipt.vmid), JSON.stringify(receipt))
+    sessionStorage.setItem(lxcRemovalReceiptKey(receipt.vmid), JSON.stringify({ ...receipt, savedAt: Date.now() }))
+    return true
   } catch {
-    // Private browsing or a full session store must never turn into a retry.
+    return false
   }
 }
 
@@ -34,15 +35,21 @@ export function clearLxcRemovalReceipt(vmid: number) {
   }
 }
 
-export function loadLxcRemovalReceipt(): LxcRemovalReceipt | null {
+export function loadLxcRemovalReceipt(vmid?: number): LxcRemovalReceipt | null {
   if (typeof window === "undefined") return null
   try {
     for (let index = 0; index < sessionStorage.length; index += 1) {
       const key = sessionStorage.key(index)
-      if (!key?.startsWith("proxmenux.lxc-removal.")) continue
-      const value = JSON.parse(sessionStorage.getItem(key) || "")
-      if (Number.isSafeInteger(value?.vmid) && value.vmid > 0 && (typeof value.task === "string" || value.task === null)) {
-        return { vmid: value.vmid, task: value.task }
+      if (!key?.startsWith("proxmenux.lxc-removal.") || (vmid !== undefined && key !== lxcRemovalReceiptKey(vmid))) continue
+      try {
+        const value = JSON.parse(sessionStorage.getItem(key) || "")
+        if (Number.isSafeInteger(value?.vmid) && value.vmid > 0 && key === lxcRemovalReceiptKey(value.vmid)
+            && typeof value.check === "string" && value.check.length > 0
+            && typeof value.savedAt === "number" && Date.now() - value.savedAt < 86_400_000) {
+          return { vmid: value.vmid, check: value.check }
+        }
+      } catch {
+        // A malformed entry must not hide another guest's receipt.
       }
     }
   } catch {
@@ -51,8 +58,9 @@ export function loadLxcRemovalReceipt(): LxcRemovalReceipt | null {
   return null
 }
 
-export async function readLxcRemovalTask(vmid: number, task: string): Promise<LxcRemovalTaskResult> {
-  return fetchApi<LxcRemovalTaskResult>(`/api/vms/${vmid}/remove-task/${encodeURIComponent(task)}`, {
+export async function readLxcRemovalTask({ vmid, check }: LxcRemovalReceipt): Promise<LxcRemovalTaskResult> {
+  return fetchApi<LxcRemovalTaskResult>(`/api/vms/${vmid}/remove-operation`, {
+    headers: { "X-LXC-Removal-Check": check },
     signal: AbortSignal.timeout(10_000),
   })
 }

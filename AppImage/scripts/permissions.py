@@ -112,7 +112,7 @@ _READING = {
     "/api/plain-lxc/v1/status": "admin",
     "/api/plain-lxc/v1/log": "admin",
     "/api/vms/<int:vmid>/remove-preview": "admin",
-    "/api/vms/<int:vmid>/remove-task/<path:task>": "admin",
+    "/api/vms/<int:vmid>/remove-operation": "admin",
     "/api/vms/<int:vmid>/backups/delete-status": "backup",
     "/api/host-backups/archives/<path:archive_id>/download": "backup",
     "/api/host-backups/pbs-encryption/download-keyfile": "backup",
@@ -213,6 +213,7 @@ _ACTION = {
     "/api/managed-installs/refresh": "execute",
     "/api/oci/deploy": "execute",
     # VMs, LXC and their apps.
+    "/api/vms/<int:vmid>/remove": "admin",
     "/api/vms/<int:vmid>/": "guests",
     "/api/lxc/<int:vmid>/": "guests",
     "/api/oci/installed/": "guests",
