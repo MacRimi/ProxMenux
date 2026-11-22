@@ -70,7 +70,7 @@
       "succeeded": "Šablóna bola stiahnutá.",
       "partial": "Stiahnutú šablónu sa nepodarilo overiť.",
       "awaiting": "Odosielanie požiadavky na Proxmox…",
-      "unknown": "Výsledok zatiaľ nie je známy.Kontrola úlohy v Proxmox…",
+      "unknown": "Výsledok zatiaľ nie je známy. Kontrola úlohy v Proxmox…",
       "failed": "Šablónu sa nepodarilo stiahnuť.",
       "not_submitted": "Požiadavka nedosiahla Proxmox."
     },
@@ -78,7 +78,7 @@
       "succeeded": "Kontajner bol vytvorený.",
       "awaiting": "Odosielanie požiadavky na Proxmox…",
       "running": "Vytvára sa kontajner…",
-      "unknown": "Výsledok zatiaľ nie je známy.Kontrola úlohy v Proxmox…",
+      "unknown": "Výsledok zatiaľ nie je známy. Kontrola úlohy v Proxmox…",
       "failed": "Kontajner sa nepodarilo vytvoriť.",
       "partial": "Kontajner bol vytvorený, ale nie každý krok dokončený.",
       "not_submitted": "Požiadavka nedosiahla Proxmox."
@@ -87,8 +87,8 @@
       "no_network": "Kontajner bude bez sieťového rozhrania.",
       "nesting_enabled": "Vnorenie umožňuje spúšťať ďalšie kontajnery v tomto LXC a oslabuje jeho izoláciu.",
       "storage_overcommit": "Logická veľkosť disku presahuje aktuálne voľné miesto v úložisku.",
-      "bind_mount": "Pripojenia väzby odhaľujú údaje hostiteľa a nie sú zahrnuté v zálohách kontajnerov.Povolenia zostávajú nezmenené;neprivilegovaný kontajner môže potrebovať existujúce povolenia UID/GID.",
-      "device_passthrough": "Priechod zariadenia využíva existujúce ovládače hostiteľa a zdieľa vybrané uzly zariadení.Požadovaný softvér v kontajneri sa nenainštaluje automaticky."
+      "bind_mount": "Pripojenia väzby odhaľujú údaje hostiteľa a nie sú zahrnuté v zálohách kontajnerov. Povolenia zostávajú nezmenené;neprivilegovaný kontajner môže potrebovať existujúce povolenia UID/GID.",
+      "device_passthrough": "Priechod zariadenia využíva existujúce ovládače hostiteľa a zdieľa vybrané uzly zariadení. Požadovaný softvér v kontajneri sa nenainštaluje automaticky."
     },
     "error": {
       "unavailable": "Uzol nedokončil požiadavku. Ak ste potvrdili operáciu, sprievodca skontroluje jej stav.",
@@ -107,14 +107,14 @@
       "storage_unavailable_browser": "Prehliadač nedokázal uložiť údaje na sledovanie operácie.",
       "receipt_invalid": "Záznam operácie vypršal alebo patrí inému účtu.",
       "target_operation_pending": "Pre tento kontajner alebo šablónu už prebieha operácia.",
-      "resource_unavailable": "Vybrané zariadenie alebo adresár už nie je k dispozícii.Skontrolujte to na hostiteľovi a skúste to znova.",
+      "resource_unavailable": "Vybrané zariadenie alebo adresár už nie je k dispozícii. Skontrolujte to na hostiteľovi a skúste to znova.",
       "resource_unsupported": "Tento uzol nepodporuje toľko bodov pripojenia alebo zariadení pre kontajner.",
       "resource_in_use": "Vybraté zariadenie je už priradené k inému kontajneru alebo VM."
     },
     "phase": {
       "submit": "Pošlite požiadavku na Proxmox",
       "create": "Vytvorte kontajner",
-      "prepare": "Pripravte nádobu na prvé spustenie",
+      "prepare": "Pripravte kontajner na prvé spustenie",
       "start": "Spustite kontajner",
       "prepareStart": "Pripravte a spustite kontajner",
       "download": "Stiahnite si šablónu"
@@ -142,9 +142,9 @@
     "remove": "Odstrániť",
     "add": "Pridať",
     "hardware": "Hardvér",
-    "noHardware": "V tomto uzle nie sú k dispozícii žiadne podporované zariadenia.Vyžadujú sa ovládače hostiteľa a natívna podpora zariadenia Proxmox.",
+    "noHardware": "V tomto uzle nie sú k dispozícii žiadne podporované zariadenia. Vyžadujú sa ovládače hostiteľa a natívna podpora zariadenia Proxmox.",
     "hardwareErrors": "Niektorý hardvér sa nepodarilo skontrolovať.Neoverené zariadenia nie sú ponúkané.",
-    "nvidiaNote": "NVIDIA obsahuje všetky hostiteľské GPU a ich runtime ovládače.Hostiteľský ovládač a NVIDIA Container Toolkit už musia fungovať.",
+    "nvidiaNote": "NVIDIA obsahuje všetky hostiteľské GPU a ich runtime ovládače. Hostiteľský ovládač a NVIDIA Container Toolkit už musia fungovať.",
     "usbNote": "Zariadenia USB prechádzajú svojou identitou: kontajner si ich po reštarte uchová a po opätovnom pripojení sa reštartuje.",
     "openTerminal": "Otvorte terminál",
     "showLog": "Zobraziť denník",
@@ -3818,8 +3818,8 @@
         "authKeyRequired": "Zadajte Tailscale auth key.",
         "updateAuthKeyFailed": "Nepodarilo sa aktualizovať auth key",
         "couldNotLoadSetupData": "Nepodarilo sa načítať údaje nastavenia.",
-        "packageInstallFailed": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}.Nádoba bola odstránená.Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet;skontrolujte to a skúste to znova.",
-        "packageInstallFailedKept": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}.Pred opätovným pokusom odstráňte kontajner {vmid}.Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet."
+        "packageInstallFailed": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}. Kontajner bol odstránený. Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet;skontrolujte to a skúste to znova.",
+        "packageInstallFailedKept": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}. Pred opätovným pokusom odstráňte kontajner {vmid}. Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet."
       },
       "messages": {
         "updateApplied": "Aktualizácia bola použitá.",
@@ -3871,7 +3871,7 @@
         "approvalRequired": "Po nasadení schváľte zverejnené subnet routy v Tailscale Admin.",
         "exitNodeApprovalRequired": "Režim Exit Node tam treba schváliť tiež.",
         "showAfterDeploy": "Presné kroky schválenia ukážeme po nasadení.",
-        "setupTitle": "nastavenie Secure Gateway"
+        "setupTitle": "Nastavenie Secure Gateway"
       },
       "steps": {
         "intro": {

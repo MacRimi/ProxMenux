@@ -3667,8 +3667,8 @@
         "authKeyRequired": "Geben Sie einen Tailscale-Authentifizierungsschlüssel ein.",
         "updateAuthKeyFailed": "Der Authentifizierungsschlüssel konnte nicht aktualisiert werden",
         "couldNotLoadSetupData": "Setup-Daten konnten nicht geladen werden.",
-        "packageInstallFailed": "Tailscale konnte nicht im Gateway-Container {detail} installiert werden.Der Behälter wurde entfernt.Dies bedeutet normalerweise, dass es auf seiner Bridge keine Adresse oder keinen Internetzugang gibt;Überprüfen Sie das und versuchen Sie es erneut.",
-        "packageInstallFailedKept": "Tailscale konnte nicht im Gateway-Container {detail} installiert werden.Entfernen Sie den Container {vmid}, bevor Sie es erneut versuchen.Dies bedeutet normalerweise, dass es auf seiner Bridge keine Adresse oder keinen Internetzugang gibt."
+        "packageInstallFailed": "Tailscale konnte im Gateway-Container nicht installiert werden: {detail}. Der Container wurde entfernt. Meist bekommt er auf seiner Bridge keine Adresse oder keinen Internetzugang; prüfen Sie das und versuchen Sie es erneut.",
+        "packageInstallFailedKept": "Tailscale konnte im Gateway-Container nicht installiert werden: {detail}. Entfernen Sie den Container {vmid}, bevor Sie es erneut versuchen. Meist bekommt er auf seiner Bridge keine Adresse oder keinen Internetzugang."
       },
       "messages": {
         "updateApplied": "Update wurde angewendet.",
@@ -8581,7 +8581,7 @@
       "succeeded": "Vorlage heruntergeladen.",
       "partial": "Der Download konnte nicht überprüft werden.",
       "awaiting": "Die Anfrage wird an Proxmox gesendet…",
-      "unknown": "Das Ergebnis ist noch nicht bekannt.Überprüfung der Aufgabe in Proxmox…",
+      "unknown": "Das Ergebnis ist noch nicht bekannt. Überprüfung der Aufgabe in Proxmox…",
       "failed": "Die Vorlage konnte nicht heruntergeladen werden.",
       "not_submitted": "Die Anfrage hat Proxmox nicht erreicht."
     },
@@ -8589,7 +8589,7 @@
       "succeeded": "Container erstellt.",
       "awaiting": "Die Anfrage wird an Proxmox gesendet…",
       "running": "Den Container erstellen…",
-      "unknown": "Das Ergebnis ist noch nicht bekannt.Überprüfung der Aufgabe in Proxmox…",
+      "unknown": "Das Ergebnis ist noch nicht bekannt. Überprüfung der Aufgabe in Proxmox…",
       "failed": "Der Container konnte nicht erstellt werden.",
       "partial": "Der Container wurde erstellt, aber nicht jeder Schritt abgeschlossen.",
       "not_submitted": "Die Anfrage hat Proxmox nicht erreicht."
@@ -8598,15 +8598,15 @@
       "no_network": "Der Container verfügt über keine Netzwerkschnittstelle.",
       "nesting_enabled": "Die Verschachtelung ermöglicht die Ausführung von Containern innerhalb dieses LXC und reduziert die Isolation.",
       "storage_overcommit": "Die Größe des logischen Datenträgers überschreitet den derzeit verfügbaren Speicher.",
-      "bind_mount": "Bind-Mounts legen Hostdaten offen und sind nicht in Container-Backups enthalten.Die Berechtigungen bleiben unverändert;Ein nicht privilegierter Container benötigt möglicherweise vorhandene UID/GID-Berechtigungen.",
-      "device_passthrough": "Geräte-Passthrough nutzt die vorhandenen Host-Treiber und teilt die ausgewählten Geräteknoten.Erforderliche Software im Container wird nicht automatisch installiert."
+      "bind_mount": "Bind-Mounts legen Hostdaten offen und sind nicht in Container-Backups enthalten. Die Berechtigungen bleiben unverändert; Ein nicht privilegierter Container benötigt möglicherweise vorhandene UID/GID-Berechtigungen.",
+      "device_passthrough": "Geräte-Passthrough nutzt die vorhandenen Host-Treiber und teilt die ausgewählten Geräteknoten. Erforderliche Software im Container wird nicht automatisch installiert."
     },
     "error": {
-      "unavailable": "Der Knoten konnte die Anfrage nicht abschließen.Wenn Sie einen Vorgang bestätigt haben, wird dessen ursprünglicher Status überprüft.",
+      "unavailable": "Der Knoten konnte die Anfrage nicht abschließen. Wenn Sie einen Vorgang bestätigt haben, wird dessen ursprünglicher Status überprüft.",
       "invalid_field": "Überprüfen Sie die Werte im Formular und versuchen Sie es erneut.",
       "invalid_ssh_key": "Geben Sie einen gültigen öffentlichen SSH-Schlüssel ein.",
       "password_mismatch": "Die Root-Passwörter müssen übereinstimmen.",
-      "plan_changed": "Die überprüfte Konfiguration ist nicht mehr aktuell.Überprüfen Sie die Konfiguration erneut.",
+      "plan_changed": "Die überprüfte Konfiguration ist nicht mehr aktuell. Überprüfen Sie die Konfiguration erneut.",
       "vmid_in_use": "Diese Container-ID wird bereits verwendet.",
       "template_unverified": "Diese offizielle Vorlage ist nicht mehr verfügbar.",
       "template_already_present": "Diese Vorlage ist bereits im ausgewählten Speicher vorhanden.",
@@ -8618,7 +8618,7 @@
       "storage_unavailable_browser": "Der Browser konnte den Vorgang nicht zur Nachverfolgung speichern.",
       "receipt_invalid": "Dieser Vorgangsdatensatz ist abgelaufen oder gehört zu einem anderen Konto.",
       "target_operation_pending": "Für diesen Container oder diese Vorlage wird bereits ein Vorgang ausgeführt.",
-      "resource_unavailable": "Ein ausgewähltes Gerät oder Verzeichnis ist nicht mehr verfügbar.Überprüfen Sie es auf dem Host und versuchen Sie es erneut.",
+      "resource_unavailable": "Ein ausgewähltes Gerät oder Verzeichnis ist nicht mehr verfügbar. Überprüfen Sie es auf dem Host und versuchen Sie es erneut.",
       "resource_unsupported": "Dieser Knoten unterstützt nicht so viele Mountpunkte oder Geräte für einen Container.",
       "resource_in_use": "Ein ausgewähltes Gerät ist bereits einem anderen Container oder VM zugewiesen."
     },
@@ -8640,7 +8640,7 @@
     "officialTemplate": "Offizielle Vorlage",
     "noMatchingTemplates": "Keine passenden Vorlagen",
     "noTemplateStorage": "Kein Speicher auf diesem Knoten akzeptiert Containervorlagen.",
-    "templateStorage": "Template storage",
+    "templateStorage": "Vorlagenspeicher",
     "confirmDownload": "Download bestätigen",
     "useTemplate": "Verwenden Sie diese Vorlage",
     "returnToSystem": "Zurück zu den Systemeinstellungen",
@@ -8718,9 +8718,9 @@
     "remove": "Entfernen",
     "add": "Hinzufügen",
     "hardware": "Hardware",
-    "noHardware": "Auf diesem Knoten sind keine unterstützten Geräte verfügbar.Die Host-Treiber und die native Proxmox-Geräteunterstützung sind erforderlich.",
-    "hardwareErrors": "Einige Hardware konnte nicht überprüft werden.Nicht verifizierte Geräte werden nicht angeboten.",
-    "nvidiaNote": "NVIDIA umfasst alle Host-GPUs und ihre Treiberlaufzeit.Der Host-Treiber und das NVIDIA Container Toolkit müssen bereits funktionieren.",
+    "noHardware": "Auf diesem Knoten sind keine unterstützten Geräte verfügbar. Die Host-Treiber und die native Proxmox-Geräteunterstützung sind erforderlich.",
+    "hardwareErrors": "Einige Hardware konnte nicht überprüft werden. Nicht verifizierte Geräte werden nicht angeboten.",
+    "nvidiaNote": "NVIDIA umfasst alle Host-GPUs und ihre Treiberlaufzeit. Der Host-Treiber und das NVIDIA Container Toolkit müssen bereits funktionieren.",
     "usbNote": "USB-Geräte werden anhand ihrer Identität übergeben: Der Container behält sie nach einem Neustart und startet neu, wenn eines wieder angeschlossen wird.",
     "openTerminal": "Terminal öffnen",
     "showLog": "Protokoll anzeigen",

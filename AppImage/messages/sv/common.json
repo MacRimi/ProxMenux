@@ -3667,8 +3667,8 @@
         "authKeyRequired": "Ange en Tailscale auth-nyckel.",
         "updateAuthKeyFailed": "Det gick inte att uppdatera autentiseringsnyckeln",
         "couldNotLoadSetupData": "Det gick inte att ladda inställningsdata.",
-        "packageInstallFailed": "Tailscale kunde inte installeras i gateway-behållaren: {detail}.Behållaren togs bort.Detta betyder vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga;kontrollera det och försök igen.",
-        "packageInstallFailedKept": "Tailscale kunde inte installeras i gateway-behållaren: {detail}.Ta bort behållaren {vmid} innan du försöker igen.Detta innebär vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga."
+        "packageInstallFailed": "Tailscale kunde inte installeras i gateway-behållaren: {detail}. Behållaren togs bort. Detta betyder vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga;kontrollera det och försök igen.",
+        "packageInstallFailedKept": "Tailscale kunde inte installeras i gateway-behållaren: {detail}. Ta bort behållaren {vmid} innan du försöker igen. Detta innebär vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga."
       },
       "messages": {
         "updateApplied": "Uppdatering tillämpades.",
@@ -8581,7 +8581,7 @@
       "succeeded": "Mallen har laddats ner.",
       "partial": "Nedladdningen kunde inte verifieras.",
       "awaiting": "Skickar begäran till Proxmox...",
-      "unknown": "Resultatet är inte känt ännu.Kontrollerar uppgiften i Proxmox...",
+      "unknown": "Resultatet är inte känt ännu. Kontrollerar uppgiften i Proxmox...",
       "failed": "Mallen kunde inte laddas ned.",
       "not_submitted": "Förfrågan nådde inte Proxmox."
     },
@@ -8589,7 +8589,7 @@
       "succeeded": "Behållare skapad.",
       "awaiting": "Skickar begäran till Proxmox...",
       "running": "Skapar behållaren...",
-      "unknown": "Resultatet är inte känt ännu.Kontrollerar uppgiften i Proxmox...",
+      "unknown": "Resultatet är inte känt ännu. Kontrollerar uppgiften i Proxmox...",
       "failed": "Behållaren kunde inte skapas.",
       "partial": "Behållaren skapades, men inte alla steg avslutades.",
       "not_submitted": "Förfrågan nådde inte Proxmox."
@@ -8598,17 +8598,17 @@
       "no_network": "Behållaren kommer inte att ha något nätverksgränssnitt.",
       "nesting_enabled": "Nesting tillåter körning av behållare inuti denna LXC och minskar isoleringen.",
       "storage_overcommit": "Den logiska diskstorleken överstiger det för närvarande tillgängliga lagringsutrymmet.",
-      "bind_mount": "Bind-montering exponerar värddata och ingår inte i behållarsäkerhetskopiorna.Behörigheterna hålls oförändrade;en oprivilegierad behållare kan behöva befintliga UID/GID-behörigheter.",
-      "device_passthrough": "Device passthrough använder de befintliga värddrivrutinerna och delar de valda enhetsnoderna.Nödvändig programvara inuti behållaren installeras inte automatiskt."
+      "bind_mount": "Bind-montering exponerar värddata och ingår inte i behållarsäkerhetskopiorna. Behörigheterna hålls oförändrade;en oprivilegierad behållare kan behöva befintliga UID/GID-behörigheter.",
+      "device_passthrough": "Device passthrough använder de befintliga värddrivrutinerna och delar de valda enhetsnoderna. Nödvändig programvara inuti behållaren installeras inte automatiskt."
     },
     "error": {
-      "unavailable": "Noden kunde inte slutföra begäran.Om du har bekräftat en operation kommer dess ursprungliga status att kontrolleras.",
+      "unavailable": "Noden kunde inte slutföra begäran. Om du har bekräftat en operation kommer dess ursprungliga status att kontrolleras.",
       "invalid_field": "Kontrollera värdena i formuläret och försök igen.",
       "invalid_ssh_key": "Ange en giltig offentlig SSH-nyckel.",
       "password_mismatch": "Rootlösenorden måste matcha.",
-      "plan_changed": "Den markerade konfigurationen är inte längre aktuell.Kontrollera konfigurationen igen.",
+      "plan_changed": "Den markerade konfigurationen är inte längre aktuell. Kontrollera konfigurationen igen.",
       "vmid_in_use": "Detta behållar-ID används redan.",
-      "template_unverified": "This official template is no longer available.",
+      "template_unverified": "Denna officiella mall är inte längre tillgänglig.",
       "template_already_present": "Denna mall finns redan på den valda lagringen.",
       "template_checksum_mismatch": "Mallens kontrollsumma kunde inte verifieras.",
       "catalog_unavailable": "Den officiella mallkatalogen är för närvarande inte tillgänglig.",
@@ -8618,7 +8618,7 @@
       "storage_unavailable_browser": "Webbläsaren kunde inte spara åtgärden för spårning.",
       "receipt_invalid": "Denna operationspost har löpt ut eller tillhör ett annat konto.",
       "target_operation_pending": "En åtgärd pågår redan för den här behållaren eller mallen.",
-      "resource_unavailable": "En vald enhet eller katalog är inte längre tillgänglig.Kontrollera det på värden och försök igen.",
+      "resource_unavailable": "En vald enhet eller katalog är inte längre tillgänglig. Kontrollera det på värden och försök igen.",
       "resource_unsupported": "Den här noden stöder inte så många monteringspunkter eller enheter för en container.",
       "resource_in_use": "En vald enhet är redan tilldelad en annan behållare eller VM."
     },
@@ -8718,9 +8718,9 @@
     "remove": "Ta bort",
     "add": "Lägg till",
     "hardware": "Hårdvara",
-    "noHardware": "Inga enheter som stöds är tillgängliga på den här noden.Värddrivrutinerna och inbyggt Proxmox-enhetsstöd krävs.",
-    "hardwareErrors": "Viss hårdvara kunde inte kontrolleras.Overifierade enheter erbjuds inte.",
-    "nvidiaNote": "NVIDIA inkluderar alla värd-GPU:er och deras körtid för drivrutiner.Värddrivrutinen och NVIDIA Container Toolkit måste redan fungera.",
+    "noHardware": "Inga enheter som stöds är tillgängliga på den här noden. Värddrivrutinerna och inbyggt Proxmox-enhetsstöd krävs.",
+    "hardwareErrors": "Viss hårdvara kunde inte kontrolleras. Overifierade enheter erbjuds inte.",
+    "nvidiaNote": "NVIDIA inkluderar alla värd-GPU:er och deras körtid för drivrutiner. Värddrivrutinen och NVIDIA Container Toolkit måste redan fungera.",
     "usbNote": "USB-enheter skickas av sin identitet: behållaren behåller dem efter en omstart och startar om när en återansluts.",
     "openTerminal": "Öppna terminalen",
     "showLog": "Visa logg",
