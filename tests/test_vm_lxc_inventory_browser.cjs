@@ -24,7 +24,7 @@ const lxcBase = "/api/plain-lxc/v1/"
 const lxcTemplate = "local:vztmpl/debian-13-standard_13_amd64.tar.zst"
 const catalogTemplate = "ubuntu-24.04-standard_24.04_amd64.tar.zst"
 const downloadedTemplate = "local:vztmpl/" + catalogTemplate
-let lxcCreated = false
+let lxcCreateStatus = "not_submitted"
 let lxcDownloaded = false
 let accessMode = "password"
 let isAdmin = true
@@ -60,7 +60,7 @@ async function respond({ requestId, request }) {
     lxcRequests.push({ action, method: request.method, body })
     const json = value => reply(200, JSON.stringify(value), "application/json")
     if (action === "context" && request.method === "GET") return json({
-      node: "fixture", architecture: "amd64", next_vmid: 241,
+      node: "fixture", architecture: "amd64", next_vmid: lxcCreateStatus === "succeeded" ? 242 : 241,
       templates: lxcDownloaded ? [lxcTemplate, downloadedTemplate] : [lxcTemplate],
       catalog: [catalogTemplate], catalog_state: "available", template_storages: ["local"],
       storages: ["local-lvm"], bridges: { vmbr0: { vlan_supported: true } }, limits: { cores: 8, ram_mib: 8192 },
@@ -79,7 +79,7 @@ async function respond({ requestId, request }) {
       return send("Fetch.failRequest", { requestId, errorReason: "ConnectionReset" })
     }
     if (action === "create" && request.method === "POST") {
-      lxcCreated = true
+      lxcCreateStatus = "running"
       return send("Fetch.failRequest", { requestId, errorReason: "ConnectionReset" })
     }
     if (action === "status" && request.method === "GET") {
@@ -90,7 +90,7 @@ async function respond({ requestId, request }) {
           status: lxcDownloaded ? "succeeded" : "awaiting", phase: "download", task_warnings: false })
       }
       assert.equal(receipt, "same-operation")
-      return json({ action: "create", vmid: 241, status: lxcCreated ? "succeeded" : "awaiting",
+      return json({ action: "create", vmid: 241, status: lxcCreateStatus,
         phase: "create", task_warnings: false })
     }
   }
@@ -257,14 +257,42 @@ async function verifyPlainLxcWizard() {
     }
     await evaluate(`[...${dialog}.querySelectorAll('label')].find(el => el.textContent.includes('no network interface')).querySelector('input').click()`)
     await evaluate(`(() => { const confirm = ${confirm}; confirm.click(); confirm.click(); })()`)
-    await waitFor(`${dialog}?.textContent.includes('Container created.')`)
+    await waitFor(`${dialog}?.textContent.includes('Creation is in progress.')`)
   }
+  await advance("Close")
+  await waitFor(`!${dialog}`)
   await send("Page.reload")
   await openInventory()
   await click(button("Create LXC"))
+  await waitFor(`${dialog}?.textContent.includes('LXC 241 · Creation is in progress.')`)
+  assert.equal(lxcRequests.filter(call => call.action === "create").length, 1)
+  lxcCreateStatus = "succeeded"
   await waitFor(`${dialog}?.textContent.includes('Container created.')`)
+  const receiptKey = "proxmenux.plainLxc.operation.v1"
+  const successfulReceipt = await evaluate(`sessionStorage.getItem(${JSON.stringify(receiptKey)})`)
+  assert.ok(successfulReceipt, "Keep an unacknowledged success recoverable")
   await advance("Close")
   await waitFor(`!${dialog}`)
+  async function assertFreshWizard() {
+    const statusChecks = lxcRequests.filter(call => call.action === "status").length
+    await click(button("Create LXC"))
+    await waitFor(`Boolean(${dialog} && ${control("System template", "select")})`)
+    assert.equal(await evaluate(`${control("Container ID (VMID)", "input")}.value`), "242")
+    assert.equal(await evaluate(`${control("System template", "select")}.value`), "")
+    assert.equal(await evaluate(`${control("Container hostname", "input")}.value`), "")
+    assert.equal(lxcRequests.filter(call => call.action === "status").length, statusChecks)
+    await advance("Cancel")
+    await waitFor(`!${dialog}`)
+  }
+  await assertFreshWizard()
+  // Revisit the same completed receipt to exercise the other dialog dismissal path.
+  await evaluate(`sessionStorage.setItem(${JSON.stringify(receiptKey)}, ${JSON.stringify(successfulReceipt)})`)
+  await click(button("Create LXC"))
+  await waitFor(`${dialog}?.textContent.includes('Container created.')`)
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await waitFor(`!${dialog}`)
+  await assertFreshWizard()
   const plans = lxcRequests.filter(call => call.action === "plan")
   assert.equal(plans.length, 2)
   assert.equal(plans[1].body.spec.template.volume_id, downloadedTemplate)
@@ -296,7 +324,7 @@ async function verifyPlainLxcWizard() {
   await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false })
   await send("Page.reload")
   await openInventory()
-  console.log("Plain LXC wizard: desktop, mobile, admin gating, download, five groups, cancellation, duplicate clicks, lost responses, and reload")
+  console.log("Plain LXC wizard: desktop, mobile, admin gating, downloads, duplicate clicks, recovery while running, and a fresh form after closing success")
 }
 
 async function run() {

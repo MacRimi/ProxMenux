@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from "react"
+import { useEffect, useImperativeHandle, useRef, useState, type ComponentProps, type FormEvent, type ReactNode, type Ref } from "react"
 import { ArrowLeft, ArrowRight, ClipboardCheck, Download, HardDrive, KeyRound, Network, Plus, Server } from "lucide-react"
 import { fetchApi } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
 import { Button } from "./ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"
 import { Input } from "./ui/input"
 import { Textarea } from "./ui/textarea"
 
@@ -64,6 +64,7 @@ type Action = "create" | "download_template"
 type Receipt = { ticket: string; action: Action }
 type Operation = ({ action: "create"; vmid: number } | { action: "download_template"; volume_id: string }) &
   { status: string; phase: string; reason?: string; task_warnings: boolean }
+type WizardHandle = { dismissSuccessfulCreate: () => void }
 
 function initialDraft(context: Context): Draft {
   const defaults = context.defaults
@@ -160,7 +161,14 @@ function TemplateDownload({ context, onDownload, busy, t }: {
 export function PlainLxcCreate({ onCreated }: { onCreated: () => void }) {
   const t = useT()
   const [open, setOpen] = useState(false)
-  return <Dialog open={open} onOpenChange={setOpen}>
+  const wizard = useRef<WizardHandle>(null)
+
+  function changeOpen(nextOpen: boolean) {
+    if (!nextOpen) wizard.current?.dismissSuccessfulCreate()
+    setOpen(nextOpen)
+  }
+
+  return <Dialog open={open} onOpenChange={changeOpen}>
     <DialogTrigger asChild>
       <Button className="w-full shrink-0 sm:w-auto" size="sm" variant="secondary">
         <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />{t("plainLxc.create")}
@@ -173,12 +181,12 @@ export function PlainLxcCreate({ onCreated }: { onCreated: () => void }) {
         </DialogTitle>
         <DialogDescription>{t("plainLxc.description")}</DialogDescription>
       </DialogHeader>
-      {open && <PlainLxcWizard onClose={() => setOpen(false)} onCreated={onCreated} />}
+      {open && <PlainLxcWizard ref={wizard} onCreated={onCreated} />}
     </DialogContent>
   </Dialog>
 }
 
-function PlainLxcWizard({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function PlainLxcWizard({ ref, onCreated }: { ref: Ref<WizardHandle>; onCreated: () => void }) {
   const translate = useT()
   const t = (key: string) => translate("plainLxc." + key)
   const [context, setContext] = useState<Context | null>(null)
@@ -225,6 +233,14 @@ function PlainLxcWizard({ onClose, onCreated }: { onClose: () => void; onCreated
   }, [refresh])
 
   const state = operation?.status
+  useImperativeHandle(ref, () => ({
+    dismissSuccessfulCreate() {
+      if (operation?.action === "create" && state === "succeeded") {
+        sessionStorage.removeItem(RECEIPT)
+      }
+    },
+  }), [operation?.action, state])
+
   useEffect(() => {
     if (!receipt || busy || (state && finalStates.has(state))) return
     const { ticket } = receipt
@@ -432,7 +448,7 @@ function PlainLxcWizard({ onClose, onCreated }: { onClose: () => void; onCreated
     {!downloading && operation?.status === "partial" && <p className="text-sm text-muted-foreground">{t("partialHelp")}</p>}
     {errorMessage}
     <div className="flex flex-wrap justify-end gap-2">
-      <Button type="button" variant="outline" onClick={onClose}>{t("close")}</Button>
+      <DialogClose asChild><Button type="button" variant="outline">{t("close")}</Button></DialogClose>
       {((state && finalStates.has(state)) || error === "receipt_invalid") && (downloading
         ? <Button type="button" disabled={busy} onClick={() => void returnFromDownload()}>
           {t(state === "succeeded" ? "useTemplate" : "returnToSystem")}
@@ -571,7 +587,7 @@ function PlainLxcWizard({ onClose, onCreated }: { onClose: () => void; onCreated
       </fieldset>
       {errorMessage}
       <div className="flex flex-wrap justify-between gap-2 border-t pt-3">
-        <Button type="button" variant="outline" onClick={onClose}>{t("cancel")}</Button>
+        <DialogClose asChild><Button type="button" variant="outline">{t("cancel")}</Button></DialogClose>
         <div className="flex flex-wrap justify-end gap-2">
           {step > 0 && <Button type="button" variant="outline" disabled={busy}
             onClick={() => { invalidate(); setStep(step - 1) }}><ArrowLeft className="mr-1 h-4 w-4" />{t("back")}</Button>}
