@@ -523,7 +523,8 @@ class TranslationTests(unittest.TestCase):
                 self.assertEqual(catalog("runtime.consoleTui.onlyEnglish"), "English fallback")
                 self.assertEqual(catalog("runtime.consoleTui.missing"),
                                  "runtime.consoleTui.missing")
-                catalog.set_language("fr")
+                # A language with no catalog anywhere falls back to English.
+                catalog.set_language("xx")
                 self.assertEqual(catalog("runtime.consoleTui.title"), "English title")
 
     def test_packaged_layout_resolves_catalog_from_appdir(self):
