@@ -4622,6 +4622,7 @@ def _check_oci_app(vmid, app_id, force=False, notify=True):
                 "installed_registry_digest": result.get("installed_registry_digest"),
                 "registry_retry": bool(result.get("registry_retry")),
                 "latest_digest": result.get("latest_digest"),
+                "latest_layers": result.get("latest_layers"),
                 "image_created": result.get("image_created"),
                 "latest_image_created": result.get("latest_image_created"),
                 "image_reference": result.get("image_reference"),
@@ -6297,9 +6298,9 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
         "ports": ports,
         "endpoints": endpoints,
         "service_ports": service_ports,
-        # The exact image this container was created from. Its digest is what
-        # an update is decided on; the version label is only for reading.
+        # The archive can have a different manifest from the registry image.
         "installed_digest": str(observed_image.get("manifest_digest") or "").strip() or None,
+        "installed_image": observed_image,
         # The digest the registry served that image under. An image published
         # with a Docker-format manifest is saved under another one.
         "registry_digest": registry_digest if re.fullmatch(r"sha256:[0-9a-f]{64}", registry_digest) else None,
@@ -6454,12 +6455,10 @@ def _retry_oci_registry(vmid, app_id: str) -> None:
 def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = True) -> dict:
     """Installed and published version of a container ProxMenux installed.
 
-    Nothing is inferred. The installation record names the image and the
-    exact digest the container was created from; the registry says which
-    digest the same tag points at today. An update is available when those
-    two differ — the version strings only say which one it is, and they are
-    not compared, because a rebuild can keep its number and a build id such
-    as ``b1ee1dc8-ls55`` has no order to compare.
+    The installation record captures the image originally deployed, while
+    the registry supplies the image published under the reference today.
+    The native updater decides whether both describe the same image.
+    Version strings are only displayed because a rebuild can keep its version.
 
     The installed version is read by digest, which never changes, so a
     previous answer for the same digest is reused instead of asked again.
@@ -6503,12 +6502,18 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
         result["installed_version"] = _oci_guest_version(vmid, meta.get("template_id"))
     if not with_latest:
         return result
+    current_digest = result.get("installed_registry_digest") or installed_digest
     cached_metadata = None
     if (known.get("installed_digest") == installed_digest
-            and known.get("image_reference") == reference and known.get("latest_digest")):
+            and known.get("image_reference") == reference and known.get("latest_digest")
+            and (known["latest_digest"] == current_digest
+                 or isinstance(known.get("latest_layers"), list))):
+        # A previously different digest needs its layers for the updater's
+        # comparison; older Monitor caches did not store them.
         cached_metadata = {"manifest_digest": known["latest_digest"],
                            "version": known.get("latest_version"),
                            "created": known.get("latest_image_created"),
+                           "layers": known.get("latest_layers"),
                            "architecture": architecture}
     try:
         latest = _oci_resolve(module, reference, architecture, known=cached_metadata)
@@ -6517,17 +6522,22 @@ def _oci_image_versions(vmid, known: Optional[dict] = None, with_latest: bool = 
         # what the last check found for this same image still stands.
         if known.get("installed_digest") == installed_digest and known.get("latest_digest"):
             result.update(latest_digest=known.get("latest_digest"), latest_version=known.get("latest_version"),
+                          latest_layers=known.get("latest_layers"),
                           latest_image_created=known.get("latest_image_created"),
                           update_available=known.get("update_available"), registry_retry=True)
             return result
         return {**result, "error": _OCI_REGISTRY_UNREACHABLE, "registry_retry": True}
     latest_digest = latest.get("manifest_digest")
-    # The image decides. An application whose version did not move can still
-    # have a new image — a rebuild on a patched base — and that is an update
-    # for a container whose application only changes when its image does.
-    replaced = bool(latest_digest) and latest_digest != (result.get("installed_registry_digest") or installed_digest)
+    if cached_metadata and latest_digest == cached_metadata["manifest_digest"] and "layers" not in latest:
+        # A fresh lookup confirmed the immutable platform digest. The
+        # metadata fast path omits layers, so reuse the matching saved list.
+        latest = {**latest, "layers": cached_metadata["layers"]}
+    replaced = bool(latest_digest) and latest_digest != current_digest
+    if replaced and meta.get("installed_image"):
+        replaced = not module.same_image(latest, meta["installed_image"])
     result.update(latest_digest=latest_digest, latest_version=latest.get("version"),
-                  latest_image_created=latest.get("created"), update_available=replaced)
+                  latest_layers=latest.get("layers"), latest_image_created=latest.get("created"),
+                  update_available=replaced)
     return result
 
 
