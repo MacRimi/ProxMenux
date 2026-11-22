@@ -22,6 +22,7 @@ import { Label } from "./ui/label"
 import useSWR from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
+import { PlainLxcCreate } from "./plain-lxc-wizard"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
 import { sortVmRows, useVmListLayout, VmCardTooltip, VmListActions, VmListColumnPicker, VmListGrid, VmListMetric, VmListRow, VmListToolbar, VmListTransfer } from "./vm-list-layout"
@@ -36,6 +37,7 @@ import { formatStorage } from "../lib/utils"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { fetchApi } from "../lib/api-config"
 import { useAccess } from "../lib/access"
+import { useIsPbs } from "../lib/use-platform"
 import { waitForVmControlTask } from "../lib/vm-control"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
 import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
@@ -857,6 +859,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
 export function VirtualMachines() {
   // The profile of the session decides which actions are offered.
   const { capabilities } = useAccess()
+  const isPbs = useIsPbs()
   const t = useT()
   const { language } = useI18n()
   const [selectedVM, setSelectedVM] = useState<VMData | null>(null)
@@ -3461,10 +3464,13 @@ export function VirtualMachines() {
 
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-col gap-3">
-          <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
-            <Server className="h-6 w-6" />
-            {t("vmLxc.listTitle")}
-          </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-xl lg:text-2xl font-bold text-foreground">
+              <Server className="h-6 w-6" />
+              {t("vmLxc.listTitle")}
+            </CardTitle>
+            {capabilities.admin && !isPbs && <PlainLxcCreate onCreated={() => void mutate()} />}
+          </div>
           <VmListToolbar
             actions={
               <VmListActions key="actions" layout={listLayout} keys={filteredVMs.map(listKey)}

@@ -50,6 +50,7 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_lynis_origin.py",
     "AppImage/scripts/tests/test_snippets_storage_readonly.py",
     "AppImage/scripts/tests/test_health_persistence_recurrence.py",
+    "AppImage/scripts/tests/test_monitor_plain_lxc.py",
 )
 NODE_FILES = (
     "tests/test_host_update_ui.cjs",

@@ -16,9 +16,19 @@ const browser = spawn(process.env.CHROMIUM_BIN || "chromium", [
   "--remote-debugging-pipe", "--user-data-dir=" + profile,
   ...(process.env.CHROMIUM_NO_SANDBOX === "1" ? ["--no-sandbox"] : []),
 ], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] })
+const browserClosed = new Promise(resolve => browser.once("close", resolve))
 const pending = new Map()
 const rejectedWrites = []
 const errors = []
+const lxcRequests = []
+const lxcBase = "/api/plain-lxc/v1/"
+const lxcTemplate = "local:vztmpl/debian-13-standard_13_amd64.tar.zst"
+const catalogTemplate = "ubuntu-24.04-standard_24.04_amd64.tar.zst"
+const downloadedTemplate = "local:vztmpl/" + catalogTemplate
+let lxcCreateStatus = "not_submitted"
+let lxcDownloaded = false
+let accessMode = "password"
+let isAdmin = true
 let sessionId
 let id = 0
 let buffer = ""
@@ -31,9 +41,10 @@ const guests = [
   { vmid: 202, type: "qemu", name: "demo-running-vm", status: "running", uptime: 42, netin: 0, netout: 72 * 1024 ** 3, diskread: null, diskwrite: 5 * 1024 ** 3 },
 ].map(guest => ({ cpu: 0, mem: 0, maxmem: 1024, disk: 0, maxdisk: 1024, uptime: 0, ...guest }))
 
-function send(method, params = {}) {
+function send(method, params = {}, targetSession = sessionId) {
   return new Promise((resolve, reject) => {
-    const message = { id: ++id, method, params, sessionId }
+    const message = { id: ++id, method, params }
+    if (targetSession) message.sessionId = targetSession
     pending.set(id, { resolve, reject })
     browser.stdio[3].write(JSON.stringify(message) + "\0")
   })
@@ -45,6 +56,46 @@ async function respond({ requestId, request }) {
     requestId, responseCode, body: Buffer.from(value).toString("base64"),
     responseHeaders: [{ name: "Content-Type", value: contentType }],
   })
+  if (url.origin === origin && url.pathname.startsWith(lxcBase)) {
+    const action = url.pathname.slice(lxcBase.length)
+    const body = request.postData && JSON.parse(request.postData)
+    lxcRequests.push({ action, method: request.method, body })
+    const json = value => reply(200, JSON.stringify(value), "application/json")
+    if (action === "context" && request.method === "GET") return json({
+      node: "fixture", architecture: "amd64", next_vmid: lxcCreateStatus === "succeeded" ? 242 : 241,
+      templates: lxcDownloaded ? [lxcTemplate, downloadedTemplate] : [lxcTemplate],
+      catalog: [catalogTemplate], catalog_state: "available", template_storages: ["local"],
+      storages: ["local-lvm"], bridges: { vmbr0: { vlan_supported: true } }, limits: { cores: 8, ram_mib: 8192 },
+      defaults: { rootfs: { size_gib: 8 }, cpu: { cores: 1 }, memory: { ram_mib: 512, swap_mib: 512 },
+        nesting: false, onboot: false, start_after_create: false, prepare_system: false },
+    })
+    if (action === "plan" && request.method === "POST") return json({
+      summary: { ...body.spec, dns: { nameservers: [], search_domains: [] } },
+      warnings: ["no_network"], check: "checked-plan", receipt: "same-operation",
+    })
+    if (action === "download/plan" && request.method === "POST") {
+      return json({ check: "checked-download", receipt: "same-download" })
+    }
+    if (action === "download" && request.method === "POST") {
+      lxcDownloaded = true
+      return send("Fetch.failRequest", { requestId, errorReason: "ConnectionReset" })
+    }
+    if (action === "create" && request.method === "POST") {
+      lxcCreateStatus = "running"
+      return send("Fetch.failRequest", { requestId, errorReason: "ConnectionReset" })
+    }
+    if (action === "status" && request.method === "GET") {
+      const receipt = Object.entries(request.headers)
+        .find(([key]) => key.toLowerCase() === "x-proxmenux-lxc-receipt")?.[1]
+      if (receipt === "same-download") {
+        return json({ action: "download_template", volume_id: downloadedTemplate,
+          status: lxcDownloaded ? "succeeded" : "awaiting", phase: "download", task_warnings: false })
+      }
+      assert.equal(receipt, "same-operation")
+      return json({ action: "create", vmid: 241, status: lxcCreateStatus,
+        phase: "create", task_warnings: false })
+    }
+  }
   if (request.method !== "GET") {
     rejectedWrites.push([request.method, url.pathname])
     return reply(403, "", "text/plain")
@@ -53,7 +104,8 @@ async function respond({ requestId, request }) {
   const guestId = /^\/api\/vms\/(\d+)$/.exec(url.pathname)?.[1]
   const guest = guests.find(item => String(item.vmid) === guestId)
   const data = {
-    "/api/auth/status": { auth_configured: true, auth_enabled: true, authenticated: true },
+    "/api/auth/status": { auth_configured: true, auth_enabled: accessMode !== "open", authenticated: true,
+      access_mode: accessMode, capabilities: { admin: isAdmin } },
     "/api/auth/me": { username: "fixture", authenticated: true, role: "admin" },
     "/api/health": { status: "OK", health: { status: "OK", details: {} } },
     "/api/system": { hostname: "fixture", platform: "pve", cpu_cores: 8, memory_total: 32, memory_used: 5, memory_usage: 16, load_average: [0, 0, 0] },
@@ -73,11 +125,7 @@ browser.stdio[4].on("error", () => {})
 browser.on("error", error => { for (const reply of pending.values()) reply.reject(error) })
 browser.on("exit", () => {
   for (const reply of pending.values()) reply.reject(Error("Chromium exited"))
-  // Chromium's helper processes can still be writing to the profile when the
-  // browser exits; a temporary profile left behind does not fail the check.
-  try {
-    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
-  } catch {}
+  pending.clear()
 })
 browser.stdio[4].on("data", data => {
   buffer += data.toString()
@@ -139,6 +187,152 @@ async function openInventory(tabLabel = "VMs & LXCs", filterLabel = "Filter by g
   await waitFor(`Boolean(${labelled(filterLabel)}?.getClientRects().length)`)
 }
 
+async function verifyPlainLxcWizard() {
+  const button = (label, scope = "document") =>
+    `[...${scope}.querySelectorAll('button')].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
+  const dialog = "document.querySelector('[role=dialog]')"
+  const control = (label, selector) =>
+    `[...${dialog}.querySelectorAll('label')].find(el => el.firstElementChild?.textContent === ${JSON.stringify(label)})?.querySelector('${selector}')`
+  async function fill(label, selector, value) {
+    await evaluate(`(() => {
+      const input = ${control(label, selector)};
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value').set.call(input, ${JSON.stringify(value)});
+      input.dispatchEvent(new Event(input.tagName === 'SELECT' ? 'change' : 'input', {bubbles:true}));
+    })()`)
+  }
+  async function advance(label) {
+    const next = button(label, dialog)
+    await waitFor(`Boolean(${next})`)
+    await click(next)
+  }
+  async function assertDialogFits() {
+    assert.ok(await evaluate(`(() => {
+      const panel = ${dialog}; const bounds = panel.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth && panel.scrollWidth <= panel.clientWidth + 1;
+    })()`))
+  }
+  for (const submit of [false, true]) {
+    if (submit) {
+      await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 812, deviceScaleFactor: 1, mobile: true })
+      await waitFor("innerWidth === 390")
+    }
+    await click(button("Create LXC"))
+    await waitFor(`Boolean(${dialog} && ${control("System template", "select")})`)
+    await assertDialogFits()
+    if (submit) {
+      await fill("Container hostname", "input", "chosen-name")
+      await advance("Download an official template")
+      await waitFor(`Boolean(${control("Official template", "select")})`)
+      await fill("Official template", "select", catalogTemplate)
+      await waitFor(`!(${button("Confirm download", dialog)}).disabled`)
+      await assertDialogFits()
+      await evaluate(`(() => { const download = ${button("Confirm download", dialog)}; download.click(); download.click(); })()`)
+      await waitFor(`${dialog}?.textContent.includes('Template downloaded.')`)
+      await advance("Use this template")
+      await waitFor(`Boolean(${control("System template", "select")})`)
+      assert.equal(await evaluate(`${control("System template", "select")}.value`), downloadedTemplate)
+      assert.equal(await evaluate(`${control("Container hostname", "input")}.value`), "chosen-name")
+    } else {
+      await advance("Download an official template")
+      await waitFor(`Boolean(${control("Official template", "select")})`)
+      await fill("Official template", "select", catalogTemplate)
+      await advance("Download an official template")
+      assert.equal(lxcRequests.filter(call => call.action.startsWith("download")).length, 0)
+      await fill("System template", "select", lxcTemplate)
+    }
+    await advance("Next")
+    await fill("Root password", "input", "fixture-root-password")
+    await fill("Confirm root password", "input", "fixture-root-password")
+    await advance("Next")
+    await advance("Next")
+    await fill("Network bridge", "select", "")
+    await advance("Next")
+    await advance("Check configuration")
+    const confirm = button("Confirm creation", dialog)
+    await waitFor(`Boolean(${confirm})`)
+    assert.equal(await evaluate(`(${confirm}).disabled`), true)
+    if (!submit) {
+      await advance("Cancel")
+      await waitFor(`!${dialog}`)
+      assert.equal(lxcRequests.filter(call => call.action === "create").length, 0)
+      continue
+    }
+    await evaluate(`[...${dialog}.querySelectorAll('label')].find(el => el.textContent.includes('no network interface')).querySelector('input').click()`)
+    await evaluate(`(() => { const confirm = ${confirm}; confirm.click(); confirm.click(); })()`)
+    await waitFor(`${dialog}?.textContent.includes('Creation is in progress.')`)
+  }
+  await advance("Close")
+  await waitFor(`!${dialog}`)
+  await send("Page.reload")
+  await openInventory()
+  await click(button("Create LXC"))
+  await waitFor(`${dialog}?.textContent.includes('LXC 241 · Creation is in progress.')`)
+  assert.equal(lxcRequests.filter(call => call.action === "create").length, 1)
+  lxcCreateStatus = "succeeded"
+  await waitFor(`${dialog}?.textContent.includes('Container created.')`)
+  const receiptKey = "proxmenux.plainLxc.operation.v1"
+  const successfulReceipt = await evaluate(`sessionStorage.getItem(${JSON.stringify(receiptKey)})`)
+  assert.ok(successfulReceipt, "Keep an unacknowledged success recoverable")
+  await advance("Close")
+  await waitFor(`!${dialog}`)
+  async function assertFreshWizard() {
+    const statusChecks = lxcRequests.filter(call => call.action === "status").length
+    await click(button("Create LXC"))
+    await waitFor(`Boolean(${dialog} && ${control("System template", "select")})`)
+    assert.equal(await evaluate(`${control("Container ID (VMID)", "input")}.value`), "242")
+    assert.equal(await evaluate(`${control("System template", "select")}.value`), "")
+    assert.equal(await evaluate(`${control("Container hostname", "input")}.value`), "")
+    assert.equal(lxcRequests.filter(call => call.action === "status").length, statusChecks)
+    await advance("Cancel")
+    await waitFor(`!${dialog}`)
+  }
+  await assertFreshWizard()
+  // Revisit the same completed receipt to exercise the other dialog dismissal path.
+  await evaluate(`sessionStorage.setItem(${JSON.stringify(receiptKey)}, ${JSON.stringify(successfulReceipt)})`)
+  await click(button("Create LXC"))
+  await waitFor(`${dialog}?.textContent.includes('Container created.')`)
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await waitFor(`!${dialog}`)
+  await assertFreshWizard()
+  const plans = lxcRequests.filter(call => call.action === "plan")
+  assert.equal(plans.length, 2)
+  assert.equal(plans[1].body.spec.template.volume_id, downloadedTemplate)
+  assert.ok(plans.every(call => call.body.spec.network === null && !JSON.stringify(call).includes("fixture-root-password")))
+  assert.deepEqual(lxcRequests.filter(call => call.action === "create").map(call => call.body), [{
+    check: "checked-plan", confirmed: true, accepted_warnings: ["no_network"], password: "fixture-root-password",
+  }])
+  assert.deepEqual(lxcRequests.filter(call => call.action === "download/plan").map(call => call.body), [{
+    node: "fixture", catalog_id: catalogTemplate, template_storage: "local",
+  }])
+  assert.deepEqual(lxcRequests.filter(call => call.action === "download").map(call => call.body), [{
+    check: "checked-download", confirmed: true,
+  }])
+  assert.ok(lxcRequests.filter(call => call.action === "status" && call.method === "GET").length >= 2)
+  accessMode = "open"
+  await send("Page.reload")
+  await openInventory()
+  assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), true)
+  accessMode = "proxmox"
+  await send("Page.reload")
+  await openInventory()
+  assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), true)
+  isAdmin = false
+  await send("Page.reload")
+  await openInventory()
+  assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), false)
+  accessMode = "read_only"
+  await send("Page.reload")
+  await openInventory()
+  assert.equal(await evaluate(`Boolean(${button("Create LXC")})`), false)
+  isAdmin = true
+  accessMode = "password"
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false })
+  await send("Page.reload")
+  await openInventory()
+  console.log("Plain LXC wizard: desktop, mobile, admin gating, downloads, duplicate clicks, recovery while running, and a fresh form after closing success")
+}
+
 async function run() {
   const { targetId } = await send("Target.createTarget", { url: "about:blank" })
   sessionId = (await send("Target.attachToTarget", { targetId, flatten: true })).sessionId
@@ -154,6 +348,7 @@ async function run() {
   ` })
   await send("Page.navigate", { url: origin + "/" })
   await openInventory()
+  await verifyPlainLxcWizard()
   await waitFor("Boolean(localStorage.getItem('proxmenux.vmListLayout.v1'))")
   const initialSettings = await evaluate("JSON.parse(localStorage.getItem('proxmenux.vmListLayout.v1'))")
 
@@ -428,7 +623,24 @@ const deadline = setTimeout(() => {
   process.exitCode = 1
   browser.kill()
 }, 120000)
-run().catch(error => { console.error(error); process.exitCode = 1 }).finally(() => {
+async function cleanup() {
   clearTimeout(deadline)
-  browser.kill()
-})
+  const forceClose = setTimeout(() => browser.kill("SIGKILL"), 5000)
+  try {
+    if (browser.exitCode === null && browser.signalCode === null) {
+      // Let Chromium finish writing the profile before removing it.
+      void send("Browser.close", {}, null).catch(() => browser.kill())
+    }
+    await browserClosed
+    // Helper processes can outlive the browser for a moment; a temporary
+    // profile left behind does not fail the check.
+    await fs.promises.rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => {})
+  } finally {
+    clearTimeout(forceClose)
+  }
+}
+
+run()
+  .catch(error => { console.error(error); process.exitCode = 1 })
+  .finally(cleanup)
+  .catch(error => { console.error(error); process.exitCode = 1 })

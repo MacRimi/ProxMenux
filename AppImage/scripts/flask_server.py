@@ -110,6 +110,7 @@ from flask_notification_routes import notification_bp  # noqa: E402
 from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
 from flask_vm_backup_routes import vm_backup_bp  # noqa: E402
+from flask_plain_lxc_routes import plain_lxc_bp  # noqa: E402
 from flask_vm_backup_routes import active_vzdump  # noqa: E402
 from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
                                    guest_backup_deletion_status)  # noqa: E402
@@ -220,6 +221,7 @@ app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
 app.register_blueprint(audit_bp)
 app.register_blueprint(vm_backup_bp)
+app.register_blueprint(plain_lxc_bp)
 
 # Initialize terminal / WebSocket routes
 init_terminal_routes(app)
