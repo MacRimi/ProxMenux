@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Merge PDFs, convert images and format data with tools that run in your browser."
+    },
+    "description": {
+      "en_US": "OmniTools is a self-hosted collection of everyday tools that run in the browser, covering images, video, audio, PDF files, text, dates and numbers. It includes utilities such as image resizing and conversion, video trimming, PDF splitting and merging, text and JSON formatting, time zone conversion and simple calculators. Files are processed on the client side, so they never leave the device that opens the application."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/iib0011/omni-tools/9244e02923d99cde143ddd5b8d761d9ed0997da4/docs-images/img.png"
+    ]
+  }
+}
