@@ -104,7 +104,7 @@
               },
               {
                 "title": "Réseau privé",
-                "body": "Un pont et un sous-réseau sont créés et chaque membre reçoit son adresse fixe. Le membre principal reçoit aussi l’interface du réseau local, tout comme chaque autre membre qui publie un port ou que la recette de l’application demande."
+                "body": "Un pont et un sous-réseau sont créés et chaque membre reçoit son adresse fixe. Le membre principal reçoit aussi l’interface du réseau local, tout comme chaque autre membre qui publie un port ou que la recette de l’application demande. Un membre sans l’interface du réseau local accède à Internet par le membre principal, comme sur un réseau Docker, et rien en dehors de l’application ne peut lui ouvrir une connexion."
               },
               {
                 "title": "Persistance",

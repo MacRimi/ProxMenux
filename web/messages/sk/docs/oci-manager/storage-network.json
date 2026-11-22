@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\npevné adresy"
               }
             ],
-            "caption": "Člen bez adresy LAN je dostupný len cez súkromnú sieť."
+            "caption": "Člen bez adresy LAN je dostupný len cez súkromnú sieť. Do internetu sa dostane cez hlavný LXC."
           }
         },
         {

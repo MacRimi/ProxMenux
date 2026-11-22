@@ -104,7 +104,7 @@
               },
               {
                 "title": "Privates Netzwerk",
-                "body": "Eine Bridge und ein Subnetz werden erstellt und jedes Mitglied erhält seine feste Adresse. Das Hauptmitglied erhält zusätzlich die LAN-Schnittstelle, ebenso jedes weitere Mitglied, das einen Port veröffentlicht oder das das Rezept der Anwendung verlangt."
+                "body": "Eine Bridge und ein Subnetz werden erstellt und jedes Mitglied erhält seine feste Adresse. Das Hauptmitglied erhält zusätzlich die LAN-Schnittstelle, ebenso jedes weitere Mitglied, das einen Port veröffentlicht oder das das Rezept der Anwendung verlangt. Ein Mitglied ohne LAN-Schnittstelle erreicht das Internet über das Hauptmitglied, wie in einem Docker-Netzwerk, und von außerhalb der Anwendung kann keine Verbindung zu ihm aufgebaut werden."
               },
               {
                 "title": "Persistenz",

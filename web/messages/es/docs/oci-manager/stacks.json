@@ -104,7 +104,7 @@
               },
               {
                 "title": "Red privada",
-                "body": "Se crean un puente y una subred, y cada miembro recibe su dirección fija. El miembro principal recibe además la interfaz de la LAN, igual que cualquier otro miembro que publique un puerto o que la receta de la aplicación solicite."
+                "body": "Se crean un puente y una subred, y cada miembro recibe su dirección fija. El miembro principal recibe además la interfaz de la LAN, igual que cualquier otro miembro que publique un puerto o que la receta de la aplicación solicite. Un miembro sin la interfaz de la LAN sale a internet a través del miembro principal, como en una red de Docker, y nada de fuera de la aplicación puede abrirle una conexión."
               },
               {
                 "title": "Persistencia",

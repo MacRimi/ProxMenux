@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nendereços fixos"
               }
             ],
-            "caption": "Um membro sem endereço na LAN só é alcançado pela rede privada."
+            "caption": "Um membro sem endereço na LAN só é alcançado pela rede privada. Chega à internet pelo LXC principal."
           }
         },
         {

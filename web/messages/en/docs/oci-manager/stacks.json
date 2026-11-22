@@ -104,7 +104,7 @@
               },
               {
                 "title": "Private network",
-                "body": "A bridge and subnet are created and each member gets its fixed address. The main member also gets the LAN interface, and so does any other member that publishes a port or that the recipe of the application asks for."
+                "body": "A bridge and subnet are created and each member gets its fixed address. The main member also gets the LAN interface, and so does any other member that publishes a port or that the recipe of the application asks for. A member without the LAN interface reaches the internet through the main member, as on a Docker network, and nothing outside the application can open a connection to it."
               },
               {
                 "title": "Persistence",
