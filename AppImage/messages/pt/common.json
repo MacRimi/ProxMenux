@@ -8577,15 +8577,27 @@
     "downloadStatus": {
       "running": "Baixando o modelo…",
       "succeeded": "Modelo baixado.",
-      "partial": "O download não pôde ser verificado."
+      "partial": "O download não pôde ser verificado.",
+      "awaiting": "Enviando a solicitação para Proxmox…",
+      "unknown": "O resultado ainda não é conhecido.Verificando a tarefa em Proxmox…",
+      "failed": "O modelo não pôde ser baixado.",
+      "not_submitted": "A solicitação não atingiu Proxmox."
     },
     "status": {
-      "succeeded": "Container criado."
+      "succeeded": "Container criado.",
+      "awaiting": "Enviando a solicitação para Proxmox…",
+      "running": "Criando o contêiner…",
+      "unknown": "O resultado ainda não é conhecido.Verificando a tarefa em Proxmox…",
+      "failed": "O contêiner não pôde ser criado.",
+      "partial": "O contêiner foi criado, mas nem todas as etapas foram concluídas.",
+      "not_submitted": "A solicitação não atingiu Proxmox."
     },
     "warning": {
       "no_network": "O contêiner não terá interface de rede.",
       "nesting_enabled": "O aninhamento permite a execução de contêineres dentro deste LXC e reduz o isolamento.",
-      "storage_overcommit": "O tamanho do disco lógico excede o armazenamento disponível atualmente."
+      "storage_overcommit": "O tamanho do disco lógico excede o armazenamento disponível atualmente.",
+      "bind_mount": "as montagens de ligação expõem os dados do host e não são incluídas nos backups do contêiner.As permissões são mantidas inalteradas;um contêiner sem privilégios pode precisar de permissões UID/GID existentes.",
+      "device_passthrough": "a passagem do dispositivo usa os drivers de host existentes e compartilha os nós do dispositivo selecionado.O software necessário dentro do contêiner não é instalado automaticamente."
     },
     "error": {
       "unavailable": "O nó não conseguiu concluir a solicitação.Se você confirmou uma operação, seu status original será verificado.",
@@ -8603,7 +8615,10 @@
       "bridge_unavailable": "A ponte ou VLAN selecionada não está disponível.",
       "storage_unavailable_browser": "O navegador não conseguiu salvar a operação para rastreamento.",
       "receipt_invalid": "Este registro de operação expirou ou pertence a outra conta.",
-      "target_operation_pending": "uma operação já está em andamento para este contêiner ou modelo."
+      "target_operation_pending": "uma operação já está em andamento para este contêiner ou modelo.",
+      "resource_unavailable": "um dispositivo ou diretório selecionado não está mais disponível.Verifique no host e tente novamente.",
+      "resource_unsupported": "Este nó não suporta tantos pontos de montagem ou dispositivos para um contêiner.",
+      "resource_in_use": "Um dispositivo selecionado já está atribuído a outro contêiner ou VM."
     },
     "create": "Criar LXC",
     "description": "Crie um contêiner Linux sem privilégios a partir de um modelo Proxmox oficial.",
@@ -8669,6 +8684,45 @@
     "newDraft": "Novo contêiner",
     "loading": "Carregando modelos e recursos de nó…",
     "partialHelp": "Verifique o contêiner e sua tarefa no Proxmox antes de tentar novamente.",
-    "taskWarnings": "A tarefa Proxmox foi concluída com avisos."
+    "taskWarnings": "A tarefa Proxmox foi concluída com avisos.",
+    "phase": {
+      "submit": "Envie a solicitação para Proxmox",
+      "create": "Crie o contêiner",
+      "prepare": "Prepare o contêiner para sua primeira inicialização",
+      "start": "Inicie o contêiner",
+      "prepareStart": "Prepare e inicie o contêiner",
+      "download": "Baixe o modelo"
+    },
+    "reason": {
+      "create_failed": "Proxmox não pôde criar o contêiner.",
+      "start_failed": "O contêiner foi criado, mas não foi iniciado.",
+      "preparation_failed": "O contêiner foi criado, mas sua preparação falhou.",
+      "start_not_submitted": "O container foi criado, mas seu início não foi enviado para Proxmox.",
+      "preparation_not_submitted": "O container foi criado, mas sua preparação não foi enviada para Proxmox.",
+      "download_failed": "Proxmox não pôde baixar o modelo.",
+      "template_checksum_mismatch": "O modelo baixado não corresponde à sua soma de verificação oficial."
+    },
+    "mounts": "Pontos de montagem",
+    "addMount": "Adicionar ponto de montagem",
+    "mountType": "Tipo",
+    "mountVolume": "Novo volume de armazenamento",
+    "mountBind": "diretório de host existente",
+    "mountStorage": "armazenamento de volume",
+    "mountSize": "Tamanho (GiB)",
+    "mountSource": "diretório Host (caminho absoluto, sem links simbólicos)",
+    "mountPath": "Caminho dentro do contêiner",
+    "readOnly": "somente leitura",
+    "backupVolume": "Incluir em backups de contêiner",
+    "remove": "Remover",
+    "add": "Adicionar",
+    "hardware": "Hardware",
+    "noHardware": "Nenhum dispositivo compatível está disponível neste nó.Os drivers host e o suporte nativo ao dispositivo Proxmox são necessários.",
+    "hardwareErrors": "Alguns hardwares não puderam ser verificados.Dispositivos não verificados não são oferecidos.",
+    "nvidiaNote": "NVIDIA inclui todas as GPUs host e seu tempo de execução de driver.O driver host e o NVIDIA Container Toolkit já devem funcionar.",
+    "usbNote": "os dispositivos USB são transmitidos por sua identidade: o contêiner os mantém após uma reinicialização e reinicia quando um deles é reconectado.",
+    "openTerminal": "terminal aberto",
+    "showLog": "Mostrar log",
+    "hideLog": "ocultar registro",
+    "logUnavailable": "O log ainda não está disponível."
   }
 }

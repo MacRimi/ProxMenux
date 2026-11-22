@@ -68,15 +68,27 @@
     "downloadStatus": {
       "running": "Šablóna sa sťahuje…",
       "succeeded": "Šablóna bola stiahnutá.",
-      "partial": "Stiahnutú šablónu sa nepodarilo overiť."
+      "partial": "Stiahnutú šablónu sa nepodarilo overiť.",
+      "awaiting": "Odosielanie požiadavky na Proxmox…",
+      "unknown": "Výsledok zatiaľ nie je známy.Kontrola úlohy v Proxmox…",
+      "failed": "Šablónu sa nepodarilo stiahnuť.",
+      "not_submitted": "Požiadavka nedosiahla Proxmox."
     },
     "status": {
-      "succeeded": "Kontajner bol vytvorený."
+      "succeeded": "Kontajner bol vytvorený.",
+      "awaiting": "Odosielanie požiadavky na Proxmox…",
+      "running": "Vytvára sa kontajner…",
+      "unknown": "Výsledok zatiaľ nie je známy.Kontrola úlohy v Proxmox…",
+      "failed": "Kontajner sa nepodarilo vytvoriť.",
+      "partial": "Kontajner bol vytvorený, ale nie každý krok dokončený.",
+      "not_submitted": "Požiadavka nedosiahla Proxmox."
     },
     "warning": {
       "no_network": "Kontajner bude bez sieťového rozhrania.",
       "nesting_enabled": "Vnorenie umožňuje spúšťať ďalšie kontajnery v tomto LXC a oslabuje jeho izoláciu.",
-      "storage_overcommit": "Logická veľkosť disku presahuje aktuálne voľné miesto v úložisku."
+      "storage_overcommit": "Logická veľkosť disku presahuje aktuálne voľné miesto v úložisku.",
+      "bind_mount": "Pripojenia väzby odhaľujú údaje hostiteľa a nie sú zahrnuté v zálohách kontajnerov.Povolenia zostávajú nezmenené;neprivilegovaný kontajner môže potrebovať existujúce povolenia UID/GID.",
+      "device_passthrough": "Priechod zariadenia využíva existujúce ovládače hostiteľa a zdieľa vybrané uzly zariadení.Požadovaný softvér v kontajneri sa nenainštaluje automaticky."
     },
     "error": {
       "unavailable": "Uzol nedokončil požiadavku. Ak ste potvrdili operáciu, sprievodca skontroluje jej stav.",
@@ -94,8 +106,50 @@
       "bridge_unavailable": "Vybraný most alebo VLAN nie je dostupný.",
       "storage_unavailable_browser": "Prehliadač nedokázal uložiť údaje na sledovanie operácie.",
       "receipt_invalid": "Záznam operácie vypršal alebo patrí inému účtu.",
-      "target_operation_pending": "Pre tento kontajner alebo šablónu už prebieha operácia."
-    }
+      "target_operation_pending": "Pre tento kontajner alebo šablónu už prebieha operácia.",
+      "resource_unavailable": "Vybrané zariadenie alebo adresár už nie je k dispozícii.Skontrolujte to na hostiteľovi a skúste to znova.",
+      "resource_unsupported": "Tento uzol nepodporuje toľko bodov pripojenia alebo zariadení pre kontajner.",
+      "resource_in_use": "Vybraté zariadenie je už priradené k inému kontajneru alebo VM."
+    },
+    "phase": {
+      "submit": "Pošlite požiadavku na Proxmox",
+      "create": "Vytvorte kontajner",
+      "prepare": "Pripravte nádobu na prvé spustenie",
+      "start": "Spustite kontajner",
+      "prepareStart": "Pripravte a spustite kontajner",
+      "download": "Stiahnite si šablónu"
+    },
+    "reason": {
+      "create_failed": "Proxmox nemohol vytvoriť kontajner.",
+      "start_failed": "Kontajner bol vytvorený, ale nespustil sa.",
+      "preparation_failed": "Kontajner bol vytvorený, ale jeho príprava zlyhala.",
+      "start_not_submitted": "Kontajner bol vytvorený, ale jeho začiatok nebol odoslaný do Proxmox.",
+      "preparation_not_submitted": "Kontajner bol vytvorený, ale jeho príprava nebola odoslaná do Proxmox.",
+      "download_failed": "Proxmox nemohol stiahnuť šablónu.",
+      "template_checksum_mismatch": "Stiahnutá šablóna nezodpovedá jej oficiálnemu kontrolnému súčtu."
+    },
+    "mounts": "Montážne body",
+    "addMount": "Pridať bod pripojenia",
+    "mountType": "Typ",
+    "mountVolume": "Nový objem úložiska",
+    "mountBind": "Existujúci hostiteľský adresár",
+    "mountStorage": "Ukladací priestor",
+    "mountSize": "Veľkosť (GiB)",
+    "mountSource": "Hostiteľský adresár (absolútna cesta, žiadne symbolické odkazy)",
+    "mountPath": "Cesta vnútri kontajnera",
+    "readOnly": "Len na čítanie",
+    "backupVolume": "Zahrnúť do zálohovania kontajnera",
+    "remove": "Odstrániť",
+    "add": "Pridať",
+    "hardware": "Hardvér",
+    "noHardware": "V tomto uzle nie sú k dispozícii žiadne podporované zariadenia.Vyžadujú sa ovládače hostiteľa a natívna podpora zariadenia Proxmox.",
+    "hardwareErrors": "Niektorý hardvér sa nepodarilo skontrolovať.Neoverené zariadenia nie sú ponúkané.",
+    "nvidiaNote": "NVIDIA obsahuje všetky hostiteľské GPU a ich runtime ovládače.Hostiteľský ovládač a NVIDIA Container Toolkit už musia fungovať.",
+    "usbNote": "Zariadenia USB prechádzajú svojou identitou: kontajner si ich po reštarte uchová a po opätovnom pripojení sa reštartuje.",
+    "openTerminal": "Otvorte terminál",
+    "showLog": "Zobraziť denník",
+    "hideLog": "Skryť denník",
+    "logUnavailable": "Denník zatiaľ nie je k dispozícii."
   },
   "catalog": {
     "searchPlaceholder": "Hľadať aplikácie a nástroje…",
