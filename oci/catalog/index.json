@@ -11875,6 +11875,37 @@
       "template_id": "linuxserver-ombi"
     },
     {
+      "id": "omni-tools",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "OmniTools",
+      "repository": "https://github.com/iib0011/omni-tools",
+      "description": "Merge PDFs, convert images and format data with tools that run in your browser.",
+      "website": "https://omnitools.app/",
+      "icon": "https://raw.githubusercontent.com/iib0011/omni-tools/5f8f4c7b92060f904b40fafb0649701921fe7746/public/favicon-96x96.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/iib0011/omni-tools:latest",
+      "category": "tools",
+      "category_label": "Tools",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/omni-tools.json",
+      "template_id": "image-omni-tools",
+      "template": "apps/omni-tools.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false
+    },
+    {
       "id": "onedev",
       "provider": "theonedev",
       "template_family": "curated-profile",
@@ -21155,7 +21186,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 42
+      "included_count": 43
     }
   }
 }

@@ -195,6 +195,15 @@
     "nextcloud-stack": {
       "status": "laboratory-validated"
     },
+    "omni-tools": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-22",
+        "report": "https://github.com/MacRimi/ProxMenux/discussions/440#discussioncomment-19816860",
+        "digest": "60fc4617ab04682998b6ef5ed6050d8ece9eff9af9e1cecb14aea8449f270eaa",
+        "scenario": "PVE 9.2.32 amd64/ZFS/DHCP. Default and advanced installs, Chrome JPEG/PNG, PDF merge and trusted-origin video compression, in-place CPU/RAM changes, reboot, restore/Manage, 0.6.0 to latest and automatic rollback on failed startup health check."
+      }
+    },
     "openlist": {
       "status": "laboratory-validated"
     },

@@ -2,7 +2,7 @@
 
 <!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->
 
-89 of 596 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 33 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
+90 of 597 applications in the OCI catalog have been tested for real: 56 in the ProxMenux lab and 34 by the community. The OCI installer shows them as verified, with a ✓ in the lists.
 
 Each test describes the scenario that was run and names the image it ran on. It does not cover every possible configuration of the application, and a newer image has not been tested until someone reports it.
 
@@ -39,6 +39,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | macOS | [@jcastro](https://github.com/jcastro) | 2026-11-08 | `08d1bcaac74a` | PVE 9.2 Intel amd64/ZFS; Sequoia Recovery, KVM/browser, guest HTTPS and APFS file; default/advanced, managed/host storage; restart/CPU-RAM Modify; 3.11 to 3.12, backup/restore/Manage and readiness rollback. Full desktop installation/login, AMD and GPU not tested. | — |
 | miniserve | [@jcastro](https://github.com/jcastro) | 2026-11-07 | `70de52ea4754` | PVE 9.2/amd64/ZFS: default/advanced; browser and HTTP files; managed/host persistence, restart, Modify; 0.34.0 to 0.35.0 update/no-op/rollback; managed backup/restore to new VMID/Manage; Remove. ARM64 manifest only; optional authentication untested. | — |
 | netboot.xyz | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `a3af92f8447d` | PVE 9.2.32 amd64/ZFS; clean DHCP install retried DNS and downloaded menus once. HTTP 200 and TFTP worked after reboot with identical files and timestamps. Prior isolated SeaBIOS PXE reached Debian 13 installer; host-bind, same-digest update and Remove passed. | — |
+| OmniTools | [@jcastro](https://github.com/jcastro) | 2026-11-22 | `60fc4617ab04` | PVE 9.2.32 amd64/ZFS/DHCP. Default and advanced installs, Chrome JPEG/PNG, PDF merge and trusted-origin video compression, in-place CPU/RAM changes, reboot, restore/Manage, 0.6.0 to latest and automatic rollback on failed startup health check. | [Report](https://github.com/MacRimi/ProxMenux/discussions/440#discussioncomment-19816860) |
 | OpenProject | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `2d9a77fd8b77` | PVE 9.2.32 amd64/ZFS; default/advanced, admin reset, project/task and host-bind attachment, loopback-only internal ports. Restart, CPU/RAM Modify, stock same-digest Update and cold restore/Manage preserved project/attachment and restarted PostgreSQL with corrected permissions. | — |
 | PeerTube | [@jcastro](https://github.com/jcastro) | 2026-11-20 | `8baefef245da` | PVE 9.2.32 amd64/ZFS; advanced install, 32 GiB data, Redis 8 auth and rejected invalid hostnames; HTTPS via Caddy with verified local CA and default proxy trust; admin login, private upload/HLS; cold backup and Manage restore to new IDs, same HTTPS origin, login, media and Redis auth. | — |
 | Plik | [@jcastro](https://github.com/jcastro) | 2026-11-21 | `7b450ff320b3` | PVE amd64/ZFS; native install, Chrome, anonymous upload/download confirmed, managed and host volumes, restart, CPU/RAM Modify and same-image no-op. Verified-cache upgrade kept data and settings; cold restore adopted in OCI Manage and served the same upload. | — |
