@@ -1,6 +1,6 @@
 {
   "catalog_ui": {
     "hidden": true,
-    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+    "hidden_reason": "Early-stage project with few users; not added to the catalog"
   }
 }

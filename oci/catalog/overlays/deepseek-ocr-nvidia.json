@@ -1,6 +1,6 @@
 {
   "catalog_ui": {
     "hidden": true,
-    "hidden_reason": "Pending multi-container adaptation; retained for future work"
+    "hidden_reason": "Its images are built for CasaOS rather than published by the DeepSeek-OCR project"
   }
 }

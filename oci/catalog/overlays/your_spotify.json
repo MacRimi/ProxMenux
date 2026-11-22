@@ -1,6 +1,6 @@
 {
   "catalog_ui": {
     "hidden": true,
-    "hidden_reason": "Needs MongoDB in its own container; planned as a multi-container application"
+    "hidden_reason": "Signing in needs a Spotify developer app with an HTTPS redirect address, which a LAN address does not provide"
   }
 }
