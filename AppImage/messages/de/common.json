@@ -2502,7 +2502,9 @@
         "appriseMatrixDocs": "Matrix-URL-Formate und Einrichtung",
         "appriseServiceFinish": "Aktivieren Sie Apprise, geben Sie Ihre URL ein, wählen Sie Benachrichtigungskategorien oder einzelne Ereignisse aus, speichern Sie und verwenden Sie anschließend Test senden. Diese Beispiele ändern Ihre gespeicherte URL nicht. Dieser Apprise-Kanal hat ein Ziel; verwenden Sie die Apprise-API für mehrere Dienste gleichzeitig.",
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
-        "botTokenHelp": "Das Token kann mit oder ohne das Präfix 'bot' eingegeben werden."
+        "botTokenHelp": "Das Token kann mit oder ohne das Präfix 'bot' eingegeben werden.",
+        "richCards": "Rich Cards (Telegram)",
+        "richCardsDescription": "Benachrichtigungen als native Karten mit Tabellen, Badges und Akkordeons formatieren"
       },
       "ai": {
         "title": "KI-Verbesserung",
@@ -8104,7 +8106,8 @@
             "kernelUpdates": "Kernel-Updates",
             "importantPackages": "Wichtige Pakete",
             "currentVersion": "Aktuelle Version",
-            "newVersion": "Neue Version"
+            "newVersion": "Neue Version",
+            "channel": "Kanal"
           },
           "status": {
             "failed": "Fehlgeschlagen",

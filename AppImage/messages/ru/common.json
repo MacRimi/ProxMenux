@@ -2659,7 +2659,9 @@
         "selectNotificationLanguage": "Выберите язык уведомлений",
         "notificationLanguageHint": "Используется для уведомлений, формируемых по фиксированным правилам во время работы системы, даже если ИИ отключён.",
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
-        "botTokenHelp": "Токен можно вводить с префиксом 'bot' или без него."
+        "botTokenHelp": "Токен можно вводить с префиксом 'bot' или без него.",
+        "richCards": "Информационные карточки (Telegram)",
+        "richCardsDescription": "Форматировать оповещения как карточки с таблицами, значками и спойлерами"
       },
       "ai": {
         "title": "Улучшение с помощью ИИ",
@@ -8260,7 +8262,8 @@
             "kernelUpdates": "Обновления ядра",
             "importantPackages": "Важные пакеты",
             "currentVersion": "Текущая версия",
-            "newVersion": "Новая версия"
+            "newVersion": "Новая версия",
+            "channel": "Канал"
           },
           "status": {
             "failed": "Сбой",

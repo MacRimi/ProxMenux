@@ -26,6 +26,7 @@ import {
 interface ChannelConfig {
   enabled: boolean
   rich_format?: boolean
+  rich_cards?: boolean
   bot_token?: string
   chat_id?: string
   topic_id?: string  // Telegram topic ID for supergroups with topics
@@ -1584,6 +1585,26 @@ export function NotificationSettings() {
                         >
                           <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
                             config.channels.telegram?.rich_format ? "translate-x-[18px]" : "translate-x-0"
+                          }`} />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <div>
+                          <Label className="text-xs font-medium">{t("settings.notifications.ui.richCards")}</Label>
+                          <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.richCardsDescription")}</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={config.channels.telegram?.rich_cards || false}
+                          disabled={!editMode}
+                          className={`relative w-9 h-[18px] shrink-0 rounded-full transition-colors ${
+                            !editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                          } ${config.channels.telegram?.rich_cards ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"}`}
+                          onClick={() => { if (editMode) updateChannel("telegram", "rich_cards", !config.channels.telegram?.rich_cards) }}
+                        >
+                          <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                            config.channels.telegram?.rich_cards ? "translate-x-[18px]" : "translate-x-0"
                           }`} />
                         </button>
                       </div>
