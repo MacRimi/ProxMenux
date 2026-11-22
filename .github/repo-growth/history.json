@@ -1,11 +1,11 @@
 {
   "version": 1,
   "repository": "MacRimi/ProxMenux",
-  "updatedAt": "2026-11-15T04:22:55.941Z",
+  "updatedAt": "2026-11-22T12:41:24.311Z",
   "backfilledAt": "2026-07-22T18:09:20.834Z",
   "totals": {
     "downloads": 0,
-    "clones": 85218
+    "clones": 95576
   },
   "assets": {},
   "traffic": {
@@ -425,6 +425,38 @@
       "2026-11-13": {
         "count": 1515,
         "uniques": 431
+      },
+      "2026-11-14": {
+        "count": 777,
+        "uniques": 408
+      },
+      "2026-11-15": {
+        "count": 654,
+        "uniques": 371
+      },
+      "2026-11-16": {
+        "count": 739,
+        "uniques": 411
+      },
+      "2026-11-17": {
+        "count": 769,
+        "uniques": 409
+      },
+      "2026-11-18": {
+        "count": 716,
+        "uniques": 365
+      },
+      "2026-11-19": {
+        "count": 1966,
+        "uniques": 359
+      },
+      "2026-11-20": {
+        "count": 3053,
+        "uniques": 367
+      },
+      "2026-11-21": {
+        "count": 1684,
+        "uniques": 404
       }
     }
   },
@@ -4172,14 +4204,63 @@
       "stars": 3312,
       "forks": 187,
       "downloads": 0,
-      "clones": 85218
+      "clones": 85995
     },
     {
       "date": "2026-11-15",
       "stars": 3318,
       "forks": 189,
       "downloads": 0,
-      "clones": 85218
+      "clones": 86649
+    },
+    {
+      "date": "2026-11-16",
+      "stars": null,
+      "forks": null,
+      "downloads": null,
+      "clones": 87388
+    },
+    {
+      "date": "2026-11-17",
+      "stars": null,
+      "forks": null,
+      "downloads": null,
+      "clones": 88157
+    },
+    {
+      "date": "2026-11-18",
+      "stars": null,
+      "forks": null,
+      "downloads": null,
+      "clones": 88873
+    },
+    {
+      "date": "2026-11-19",
+      "stars": null,
+      "forks": null,
+      "downloads": null,
+      "clones": 90839
+    },
+    {
+      "date": "2026-11-20",
+      "stars": null,
+      "forks": null,
+      "downloads": null,
+      "clones": 93892
+    },
+    {
+      "date": "2026-11-21",
+      "stars": null,
+      "forks": null,
+      "downloads": null,
+      "clones": 95576
+    },
+    {
+      "date": "2026-11-22",
+      "stars": 3342,
+      "forks": 196,
+      "downloads": 0,
+      "clones": 95576
     }
   ]
 }
