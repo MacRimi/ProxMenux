@@ -123,7 +123,7 @@ async function main() {
     try {await fetchApi(route, {method, body: '{}'}); assert.fail('Expected validation failure')}
     catch (error) {
       assert.equal(error.message, backend)
-      assert.equal(localize(error.message, sk), 'Zadaj úplnú cestu k súboru (file_path), začínajúcu lomkou /.')
+      assert.equal(localize(error.message, sk), 'Zadajte úplnú cestu k súboru (file_path), začínajúcu lomkou /.')
     }
   }
   assert.equal(requests, 3)
