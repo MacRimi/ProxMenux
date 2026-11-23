@@ -1475,7 +1475,8 @@
       "removeCustomCommandConfirm": "¿Eliminar el comando de actualización personalizado para \"{name}\"?",
       "removeCustomCommandFailed": "No se pudo eliminar el comando de actualización personalizado: {message}",
       "hideNoticeFailed": "No se pudo ocultar este aviso: {message}",
-      "controlNotConfirmed": "No se ha confirmado que la operación haya terminado. Comprueba el estado de la VM o del contenedor antes de volver a intentarlo."
+      "controlNotConfirmed": "No se ha confirmado que la operación haya terminado. Comprueba el estado de la VM o del contenedor antes de volver a intentarlo.",
+      "controlWarning": "Proxmox completó la acción con advertencias ({count}).Consulte el registro de tareas en Proxmox para obtener más detalles."
     },
     "backupModal": {
       "title": "Backup de {type} {vmid} ({name})",
@@ -2278,6 +2279,71 @@
       "ariaLabel": "Filtrar por tipo",
       "all": "Todos los tipos",
       "empty": "No hay máquinas virtuales ni contenedores de ese tipo"
+    },
+    "remove": {
+      "reasons": {
+        "container_running": "el contenedor se está ejecutando.Apáguelo antes de retirarlo.",
+        "container_protected": "La protección de eliminación Proxmox está habilitada.",
+        "container_locked": "El contenedor está bloqueado por otra operación.",
+        "container_template": "Esta es una plantilla LXC.Las plantillas no se pueden eliminar aquí.",
+        "attached_or_unassigned_disk": "el contenedor tiene un disco adicional o no asignado.",
+        "bound_directory": "el contenedor tiene un directorio de host o un enlace configurado.",
+        "custom_lxc_configuration": "El contenedor tiene una configuración LXC personalizada.",
+        "oci_managed": "El contenedor es administrado por OCI.Utilice el flujo de gestión de aplicaciones OCI.",
+        "rootfs_ambiguous": "el disco raíz no es un volumen LXC local inequívoco.",
+        "ha_managed": "El contenedor está gestionado por Proxmox HA.",
+        "replication_configured": "el contenedor tiene configurada la replicación Proxmox.",
+        "pending_changes": "El contenedor tiene cambios de configuración pendientes."
+      },
+      "result": {
+        "running": "La eliminación está en curso",
+        "succeeded": "LXC fue eliminado",
+        "failed": "Error en la eliminación",
+        "warning": "Eliminación completada con una advertencia",
+        "unknown": "El resultado de la eliminación aún no se conoce"
+      },
+      "resultReason": {
+        "running": "Proxmox aceptó la tarea nativa.Puede cerrar este cuadro de diálogo y volver a la misma tarea más tarde.",
+        "succeeded": "El contenedor y el volumen raíz original no están en el inventario Proxmox.",
+        "warning": "no enviar de nuevo la eliminación.Inspeccione la tarea y el almacenamiento Proxmox originales antes de realizar otra acción.",
+        "unknown": "no enviar de nuevo la eliminación.Verifique la tarea Proxmox original en Proxmox después de restaurar la conexión.",
+        "submission_unconfirmed": "No se recibió el resultado de la solicitud.Verifique el estado de esta operación antes de realizar otra acción.",
+        "task_status_unavailable": "la tarea original no se puede leer en este momento.Verifique su estado nuevamente después de que se restablezca la conexión.",
+        "dispatch_pending": "esperando la tarea Proxmox original.",
+        "checking_task": "comprobando la operación de eliminación original.",
+        "task_still_running": "la tarea Proxmox todavía se está ejecutando.Verifique su estado nuevamente más tarde.",
+        "not_started": "La eliminación no comenzó.",
+        "vmid_still_present": "el VMID todavía está en el inventario.Inspeccione la tarea original antes de realizar otra acción.",
+        "configuration_still_present": "La configuración LXC todavía está presente.Inspeccione la tarea original antes de realizar otra acción.",
+        "root_volume_still_present": "el volumen raíz original todavía está presente en el almacenamiento.",
+        "result_verification_unavailable": "No se pudo verificar el estado final del contenedor o volumen raíz.",
+        "failed": "Proxmox informó una falla.Verifique LXC y su disco raíz antes de realizar otra acción."
+      },
+      "moreActions": "acciones adicionales",
+      "action": "Eliminar LXC",
+      "title": "Eliminar LXC",
+      "description": "tarea de eliminación de Proxmox",
+      "target": "¿Quitar {name} (LXC {vmid})?",
+      "checking": "Comprobando el estado actual de LXC...",
+      "blocked": "La eliminación está bloqueada:",
+      "reviewProtection": "Desactivar protección…",
+      "disableProtection": "Desactivar protección",
+      "disableProtectionHint": "¿Desactivar la protección de eliminación para {name} (LXC {vmid})?Esta configuración permanece desactivada si cierra este cuadro de diálogo.",
+      "disableProtectionUnconfirmed": "No se pudo confirmar el cambio de protección.Verifique el estado actual antes de continuar.",
+      "purge": "Purgar de las configuraciones del trabajo",
+      "purgeHint": "Eliminar de trabajos de replicación, HA y respaldo.",
+      "destroyUnreferenced": "destruir discos sin referencia propiedad del contenedor",
+      "destroyUnreferencedHint": "busque todos los almacenamientos habilitados para estos discos.",
+      "referencedDisks": "Los discos referenciados siempre serán destruidos.",
+      "typeVmid": "escriba el ID del contenedor {vmid} para confirmar:",
+      "checkAgain": "comprobar de nuevo",
+      "checkTask": "comprobar el estado de eliminación",
+      "reviewAgain": "Revisar LXC actual",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar LXC",
+      "previewUnavailable": "No se pudo verificar el estado de seguridad actual de LXC.No se eliminó nada.",
+      "receiptUnavailable": "el navegador no pudo guardar el recibo de recuperación.La eliminación no fue enviada.",
+      "targetChanged": "El LXC cambió desde la revisión.No se eliminó nada;compruébalo nuevamente antes de continuar."
     }
   },
   "settings": {

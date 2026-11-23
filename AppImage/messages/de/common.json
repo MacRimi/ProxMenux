@@ -1322,7 +1322,8 @@
       "removeCustomCommandConfirm": "Den benutzerdefinierten Aktualisierungsbefehl für „{name}“ entfernen?",
       "removeCustomCommandFailed": "Der benutzerdefinierte Aktualisierungsbefehl konnte nicht entfernt werden: {message}",
       "hideNoticeFailed": "Dieser Hinweis konnte nicht ausgeblendet werden: {message}",
-      "controlNotConfirmed": "Der Vorgang wurde nicht als abgeschlossen bestätigt. Überprüfen Sie den Gaststatus, bevor Sie es erneut versuchen."
+      "controlNotConfirmed": "Der Vorgang wurde nicht als abgeschlossen bestätigt. Überprüfen Sie den Gaststatus, bevor Sie es erneut versuchen.",
+      "controlWarning": "Proxmox hat die Aktion mit Warnungen abgeschlossen ({count}).Einzelheiten finden Sie im Aufgabenprotokoll in Proxmox."
     },
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
@@ -2125,6 +2126,71 @@
       "ariaLabel": "Nach Gasttyp filtern",
       "all": "Alle Typen",
       "empty": "Keine Gäste des ausgewählten Typs"
+    },
+    "remove": {
+      "reasons": {
+        "container_running": "Der Container wird ausgeführt.Schalten Sie es aus, bevor Sie es entfernen.",
+        "container_protected": "Proxmox-Entfernungsschutz ist aktiviert.",
+        "container_locked": "Der Container ist durch einen anderen Vorgang gesperrt.",
+        "container_template": "Dies ist eine LXC-Vorlage.Vorlagen können hier nicht entfernt werden.",
+        "attached_or_unassigned_disk": "Der Container verfügt über eine zusätzliche oder nicht zugewiesene Festplatte.",
+        "bound_directory": "Für den Container ist ein Hostverzeichnis oder Hook konfiguriert.",
+        "custom_lxc_configuration": "Der Container verfügt über eine benutzerdefinierte LXC-Konfiguration.",
+        "oci_managed": "Der Container wird von OCI verwaltet.Verwenden Sie den Anwendungsverwaltungsablauf OCI.",
+        "rootfs_ambiguous": "Die Root-Festplatte ist kein eindeutiges lokales LXC-Volume.",
+        "ha_managed": "Der Container wird von Proxmox HA verwaltet.",
+        "replication_configured": "Für den Container ist die Proxmox-Replikation konfiguriert.",
+        "pending_changes": "Der Container weist ausstehende Konfigurationsänderungen auf."
+      },
+      "result": {
+        "running": "Die Entfernung wird durchgeführt",
+        "succeeded": "LXC wurde entfernt",
+        "failed": "Entfernung fehlgeschlagen",
+        "warning": "Entfernung mit einer Warnung abgeschlossen",
+        "unknown": "Das Ergebnis der Entfernung ist noch nicht bekannt"
+      },
+      "resultReason": {
+        "running": "Proxmox hat die native Aufgabe akzeptiert.Sie können dieses Dialogfeld schließen und später zur gleichen Aufgabe zurückkehren.",
+        "succeeded": "Der Container und das ursprüngliche Root-Volume fehlen im Proxmox-Bestand.",
+        "warning": "Entfernung nicht erneut einreichen.Überprüfen Sie die ursprüngliche Proxmox-Aufgabe und den Speicher, bevor Sie eine weitere Aktion ausführen.",
+        "unknown": "Entfernung nicht erneut einreichen.Überprüfen Sie die ursprüngliche Proxmox-Aufgabe in Proxmox, nachdem die Verbindung wiederhergestellt wurde.",
+        "submission_unconfirmed": "Das Anfrageergebnis wurde nicht empfangen.Überprüfen Sie den Status dieses Vorgangs, bevor Sie eine andere Aktion ausführen.",
+        "task_status_unavailable": "Die ursprüngliche Aufgabe kann derzeit nicht gelesen werden.Überprüfen Sie den Status erneut, nachdem die Verbindung wiederhergestellt ist.",
+        "dispatch_pending": "Warten auf die ursprüngliche Proxmox-Aufgabe.",
+        "checking_task": "Überprüfung des ursprünglichen Entfernungsvorgangs.",
+        "task_still_running": "Die Proxmox-Aufgabe wird noch ausgeführt.Überprüfen Sie den Status später noch einmal.",
+        "not_started": "Die Entfernung wurde nicht gestartet.",
+        "vmid_still_present": "Die VMID befindet sich noch im Inventar.Überprüfen Sie die ursprüngliche Aufgabe vor einer anderen Aktion.",
+        "configuration_still_present": "Die LXC-Konfiguration ist noch vorhanden.Überprüfen Sie die ursprüngliche Aufgabe vor einer anderen Aktion.",
+        "root_volume_still_present": "Das ursprüngliche Root-Volume ist noch im Speicher vorhanden.",
+        "result_verification_unavailable": "Der Endstatus des Containers oder Root-Volumes konnte nicht überprüft werden.",
+        "failed": "Proxmox hat einen Fehler gemeldet.Überprüfen Sie LXC und seine Root-Festplatte, bevor Sie eine weitere Aktion durchführen."
+      },
+      "moreActions": "Zusätzliche Aktionen",
+      "action": "LXC entfernen",
+      "title": "LXC entfernen",
+      "description": "Proxmox-Entfernungsaufgabe",
+      "target": "{name} (LXC {vmid}) entfernen?",
+      "checking": "Überprüfen des aktuellen LXC-Status ...",
+      "blocked": "Entfernung ist blockiert:",
+      "reviewProtection": "Schutz deaktivieren…",
+      "disableProtection": "Schutz deaktivieren",
+      "disableProtectionHint": "Entfernungsschutz für {name} (LXC {vmid}) deaktivieren?Diese Einstellung bleibt deaktiviert, wenn Sie dieses Dialogfeld schließen.",
+      "disableProtectionUnconfirmed": "Die Schutzänderung konnte nicht bestätigt werden.Überprüfen Sie den aktuellen Status, bevor Sie fortfahren.",
+      "purge": "Aus Jobkonfigurationen löschen",
+      "purgeHint": "Aus Replikations-, HA- und Sicherungsjobs entfernen.",
+      "destroyUnreferenced": "Zerstören Sie nicht referenzierte Festplatten, die dem Container gehören",
+      "destroyUnreferencedHint": "Durchsuchen Sie alle aktivierten Speicher nach diesen Datenträgern.",
+      "referencedDisks": "Referenzierte Datenträger werden immer zerstört.",
+      "typeVmid": "Geben Sie zur Bestätigung die Container-ID {vmid} ein:",
+      "checkAgain": "Überprüfen Sie es erneut",
+      "checkTask": "Überprüfen Sie den Entfernungsstatus",
+      "reviewAgain": "Aktuelles LXC überprüfen",
+      "cancel": "Abbrechen",
+      "confirm": "LXC entfernen",
+      "previewUnavailable": "Der aktuelle Sicherheitsstatus von LXC konnte nicht überprüft werden.Es wurde nichts entfernt.",
+      "receiptUnavailable": "Der Browser konnte die Wiederherstellungsbestätigung nicht speichern.Die Entfernung wurde nicht gesendet.",
+      "targetChanged": "Der LXC hat sich seit der Überprüfung geändert.Es wurde nichts entfernt;Überprüfen Sie es noch einmal, bevor Sie fortfahren."
     }
   },
   "settings": {
