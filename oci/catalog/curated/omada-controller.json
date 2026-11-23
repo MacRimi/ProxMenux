@@ -1,0 +1,506 @@
+{
+  "schema_version": "0.4.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-omada-controller",
+  "status": "generated-unvalidated",
+  "community_tested": {
+    "by": "danibauti94",
+    "date": "2026-11-23",
+    "digest": "9f0fb0da0106fd9d19e72e80bc1613471ad55e585a7bcaefdeec1d051044c21c",
+    "scenario": "amd64/PVE: native OCI LXC built from an existing controller dataset; the HTTPS UI on 8043 and /api/info answered after a clean restart, and host networking kept the LAN discovery ports."
+  },
+  "catalog_ui": {
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "author": "mbentley",
+    "category": "network",
+    "category_label": "Network & Firewall",
+    "description": {
+      "en_US": "Manages TP-Link Omada access points, switches and gateways from one web interface: adoption, SSIDs, VLANs, firmware upgrades and client statistics. The controller keeps its discovery and management ports on the LXC network namespace, so devices on the LAN reach it without Docker NAT."
+    },
+    "developer": null,
+    "display_version": null,
+    "documentation": "https://github.com/mbentley/docker-omada-controller",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/omada.webp",
+    "launch": {
+      "path": "/",
+      "port": 8043,
+      "scheme": "https"
+    },
+    "mini_changelog": [],
+    "repository": "https://github.com/mbentley/docker-omada-controller",
+    "screenshots": [],
+    "tagline": {
+      "en_US": "Software controller for TP-Link Omada access points and switches."
+    },
+    "thumbnail": null,
+    "tips": [],
+    "title": {
+      "en_US": "TP-Link Omada Controller"
+    },
+    "updated_at": "2026-11-23T00:00:00Z",
+    "website": "https://www.omadanetworks.com/en/business-networking/omada-sdn/"
+  },
+  "source": {
+    "compose_sha256": "def09617283feda533c5ea27e7715a2ce6bc1f1be43474a74f5c26e5efbd07aa",
+    "default_branch": "master",
+    "generated_at": "2026-11-23T00:00:00+00:00",
+    "provider": "mbentley",
+    "readme_pushed_at": "2026-11-20T13:04:25Z",
+    "readme_raw_url": "https://raw.githubusercontent.com/mbentley/docker-omada-controller/master/docker-compose.yml",
+    "repository": "https://github.com/mbentley/docker-omada-controller",
+    "revision": "bbc88afc889afc853b5c44d5b24e906d16d6b8cd"
+  },
+  "container_contract": {
+    "container_name": "omada-controller",
+    "environment": [
+      {
+        "example": "508",
+        "name": "PUID",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "508",
+        "name": "PGID",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "8088",
+        "name": "MANAGE_HTTP_PORT",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "8043",
+        "name": "MANAGE_HTTPS_PORT",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "8088",
+        "name": "PORTAL_HTTP_PORT",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "8843",
+        "name": "PORTAL_HTTPS_PORT",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "8044",
+        "name": "UPGRADE_ES_HTTPS_PORT",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "27001",
+        "name": "PORT_APP_DISCOVERY",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29810",
+        "name": "PORT_DISCOVERY",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29811",
+        "name": "PORT_MANAGER_V1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29812",
+        "name": "PORT_ADOPT_V1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29813",
+        "name": "PORT_UPGRADE_V1",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29814",
+        "name": "PORT_MANAGER_V2",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29815",
+        "name": "PORT_TRANSFER_V2",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29816",
+        "name": "PORT_RTTY",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "29817",
+        "name": "PORT_DEVICE_MONITOR",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "false",
+        "name": "WEB_CONFIG_OVERRIDE",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "true",
+        "name": "SHOW_SERVER_LOGS",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "false",
+        "name": "SHOW_MONGODB_LOGS",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "tls.crt",
+        "name": "SSL_CERT_NAME",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "tls.key",
+        "name": "SSL_KEY_NAME",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "example": "Etc/UTC",
+        "name": "TZ",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      }
+    ],
+    "image": {
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install",
+      "reference": "mbentley/omada-controller:6.3",
+      "registry": "docker.io",
+      "repository": "mbentley/omada-controller",
+      "tag": "6.3"
+    },
+    "original_compose": "services:\n  omada-controller:\n    container_name: omada-controller\n    image: mbentley/omada-controller:6.3\n    restart: unless-stopped\n    ulimits:\n      nofile:\n        soft: 4096\n        hard: 8192\n    stop_grace_period: 60s\n    network_mode: host\n    environment:\n      - PUID=508\n      - PGID=508\n      - MANAGE_HTTP_PORT=8088\n      - MANAGE_HTTPS_PORT=8043\n      - PORTAL_HTTP_PORT=8088\n      - PORTAL_HTTPS_PORT=8843\n      # UPGRADE_HTTPS_PORT defaults to 8043 (< 6.4) or 8044 (>= 6.4); only set it to override\n      # - UPGRADE_HTTPS_PORT=8043\n      - UPGRADE_ES_HTTPS_PORT=8044\n      - PORT_APP_DISCOVERY=27001\n      - PORT_DISCOVERY=29810\n      - PORT_MANAGER_V1=29811\n      - PORT_ADOPT_V1=29812\n      - PORT_UPGRADE_V1=29813\n      - PORT_MANAGER_V2=29814\n      - PORT_TRANSFER_V2=29815\n      - PORT_RTTY=29816\n      - PORT_DEVICE_MONITOR=29817\n      - WEB_CONFIG_OVERRIDE=false\n      - SHOW_SERVER_LOGS=true\n      - SHOW_MONGODB_LOGS=false\n      - SSL_CERT_NAME=tls.crt\n      - SSL_KEY_NAME=tls.key\n      - TZ=Etc/UTC\n    volumes:\n      - omada-data:/opt/tplink/EAPController/data\n      - omada-logs:/opt/tplink/EAPController/logs\n\nvolumes:\n  omada-data:\n  omada-logs:\n",
+    "ports": [],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "service_name": "omada-controller",
+    "stop_grace_period": "60s",
+    "volumes": [
+      {
+        "compose_source_example": "omada-data",
+        "container_path": "/opt/tplink/EAPController/data",
+        "default": "managed-volume",
+        "id": "volume-0",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 8
+        },
+        "read_only": false,
+        "required": true
+      },
+      {
+        "compose_source_example": "omada-logs",
+        "container_path": "/opt/tplink/EAPController/logs",
+        "default": "managed-volume",
+        "id": "volume-1",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        },
+        "read_only": false,
+        "required": true
+      }
+    ]
+  },
+  "first_run": {
+    "credentials": [],
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "path": "/",
+        "port": 8043,
+        "scheme": "https",
+        "source": "compose-metadata"
+      }
+    ]
+  },
+  "proxmox": {
+    "adaptations": [
+      {
+        "behavioral_impact": "Users open the LXC address instead of the Proxmox host address.",
+        "id": "dedicated-lxc-network",
+        "native_lxc_behavior": "The application listens on the same container ports at its dedicated LXC address.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "upstream_behavior": "Docker publishes selected container ports on the Docker host.",
+        "validation": "pending-per-application"
+      },
+      {
+        "behavioral_impact": "None expected.",
+        "id": "compose-environment-overlay",
+        "native_lxc_behavior": "ProxMenux merges the same values into lxc.environment.runtime while the CT is stopped.",
+        "reason": "PVE imports image Env automatically; Compose values still need to override it.",
+        "upstream_behavior": "Compose environment values override OCI image environment values.",
+        "validation": "pending-per-application"
+      },
+      {
+        "behavioral_impact": "Normal Proxmox node shutdown remains governed by the node-wide shutdown policy.",
+        "id": "stop-grace-period",
+        "native_lxc_behavior": "ProxMenux records the same timeout for its pct shutdown lifecycle operations.",
+        "reason": "Proxmox has no equivalent per-CT persistent restart-policy field; startup.down is not a shutdown timeout.",
+        "upstream_behavior": "Docker waits for Compose stop_grace_period before forcing termination.",
+        "validation": "pending-per-application"
+      },
+      {
+        "behavioral_impact": "None expected.",
+        "id": "compose-shm-size",
+        "native_lxc_behavior": "ProxMenux mounts a native LXC tmpfs at /dev/shm with the same requested capacity.",
+        "reason": "The OCI image runs directly as an LXC and therefore needs the equivalent Proxmox mount entry.",
+        "upstream_behavior": "Compose sets the size of the container /dev/shm tmpfs.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "None expected.",
+        "id": "compose-command",
+        "native_lxc_behavior": "ProxMenux reads the official OCI Entrypoint and combines it with the Compose command as the native LXC init command.",
+        "reason": "Proxmox stores the effective OCI process as one entrypoint string.",
+        "upstream_behavior": "Compose replaces the image Cmd while retaining its Entrypoint.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "Compose stdin_open and tty become access through the Proxmox LXC console.",
+        "id": "compose-process-runtime",
+        "native_lxc_behavior": "ProxMenux applies the process overrides through native LXC init directives; lxc-init provides PID 1 supervision and the CT console provides terminal access.",
+        "reason": "The OCI process must start with the same identity, command and working directory without Docker.",
+        "upstream_behavior": "Compose can replace Entrypoint, User and WorkingDir and request an init process or interactive terminal.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "The check runs during installation rather than continuously after installation.",
+        "id": "compose-healthcheck",
+        "native_lxc_behavior": "For a single-service LXC, ProxMenux translates HTTP localhost checks into a mandatory first-start service check.",
+        "reason": "Proxmox has no persistent Docker health state, while the installer still must detect a failed first boot.",
+        "upstream_behavior": "Docker periodically executes the declared container healthcheck.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "Rounding and Proxmox minimum limits can slightly change very low weights.",
+        "id": "compose-cpu-priority",
+        "native_lxc_behavior": "ProxMenux converts the relative weight to Proxmox cpuunits with 100 as its neutral value and lets the user review it.",
+        "reason": "Both settings express relative CPU priority on different scales.",
+        "upstream_behavior": "Docker cpu_shares sets a relative scheduling weight with 1024 as its neutral value.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "User-selected memory overrides Compose. Swap is a separate choice. Kernel restrictions still apply; nproc counts processes by real UID, not by container.",
+        "id": "compose-resource-limits",
+        "native_lxc_behavior": "mem_limit supplies the editable Proxmox memory default, rounded up to MiB; ulimits maps to lxc.prlimit with -1 represented as unlimited.",
+        "reason": "Use native Proxmox memory and LXC prlimits, without a wrapper or changing the host kernel configuration.",
+        "upstream_behavior": "mem_limit sets the memory ceiling; ulimits sets process soft/hard resource limits.",
+        "validation": "pending-per-application"
+      },
+      {
+        "behavioral_impact": "host-gateway resolves to the IPv4 address of the selected Proxmox bridge.",
+        "id": "compose-network-identity",
+        "native_lxc_behavior": "ProxMenux applies hostname and MAC to net0, writes additional host aliases into the LXC and uses its dedicated bridge connection for single-service networks.",
+        "reason": "A dedicated LXC has its own network namespace and does not need a Docker bridge per service.",
+        "upstream_behavior": "Compose can set hostname, MAC address, extra hosts and attach a service to Docker networks.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "host means the LXC host, never the Proxmox host; this preserves Proxmox network isolation.",
+        "id": "compose-network-mode",
+        "native_lxc_behavior": "The OCI process uses the dedicated LXC network namespace directly, so host, bridge and default all listen on the LXC address without Docker NAT.",
+        "reason": "The LXC is the application host and already has its own address and port namespace.",
+        "upstream_behavior": "Docker host mode removes Docker network isolation; bridge and default use a Docker-managed network.",
+        "validation": "pending-per-application"
+      },
+      {
+        "behavioral_impact": "Host-global capabilities such as SYS_MODULE remain blocked until their host prerequisite is explicitly adapted.",
+        "id": "compose-capabilities-and-sysctls",
+        "native_lxc_behavior": "ProxMenux validates requested capabilities against the native LXC capability set and writes namespaced network settings as lxc.sysctl directives.",
+        "reason": "A native OCI-LXC already starts with the namespaced capability set; lxc.cap.keep would incorrectly discard unrelated required capabilities.",
+        "upstream_behavior": "Compose can add Linux capabilities and set kernel parameters in the container network namespace.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "Docker-only label consumers and Docker log-driver rotation do not exist in the native deployment.",
+        "id": "docker-engine-metadata",
+        "native_lxc_behavior": "Labels remain source metadata; Docker json-file settings are not applied because the OCI process runs directly under LXC.",
+        "reason": "There is no Docker object or Docker json-file log behind a native OCI-LXC application.",
+        "upstream_behavior": "Compose labels annotate Docker objects and the json-file logging driver rotates Docker-managed logs.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "Hardware is exposed only after explicit user confirmation and host-path validation.",
+        "id": "compose-device-passthrough",
+        "native_lxc_behavior": "ProxMenux converts recognized device declarations to native Proxmox dev resources; NVIDIA profiles also inject compatible host driver libraries read-only.",
+        "reason": "Native OCI-LXC does not execute Docker device or NVIDIA runtime hooks.",
+        "upstream_behavior": "Compose passes host character devices or requests an NVIDIA runtime GPU.",
+        "validation": "not-requested-by-compose"
+      },
+      {
+        "behavioral_impact": "The application cannot exchange IPC objects with processes on the Proxmox host.",
+        "id": "compose-host-ipc",
+        "native_lxc_behavior": "The application keeps the LXC IPC namespace and receives a configurable 1 GiB /dev/shm instead of sharing Proxmox host IPC.",
+        "reason": "Processes in a single native LXC already share one IPC namespace; retaining isolation is safer than exposing host IPC.",
+        "upstream_behavior": "ipc: host shares the Docker host IPC namespace, commonly to avoid Docker's small default shared-memory allocation.",
+        "validation": "not-requested-by-compose"
+      }
+    ],
+    "defaults": {
+      "bridge": "vmbr0",
+      "cores": 2,
+      "features": [
+        "nesting=1"
+      ],
+      "firewall": false,
+      "host_managed_network": true,
+      "ipv4": "dhcp",
+      "memory_mb": 4096,
+      "onboot": true,
+      "ostype": "auto-from-image",
+      "rootfs_size_gb": 6,
+      "rootfs_storage": "local-lvm",
+      "shutdown_timeout_seconds": 60,
+      "swap_mb": 1024,
+      "template_storage": "local",
+      "unprivileged": true,
+      "volume_storage": "local-lvm"
+    },
+    "image_metadata_policy": {
+      "cmd": "import-from-oci-image",
+      "entrypoint": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "stop_signal": "import-from-oci-image",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "network": {
+        "compose_mode": "host"
+      },
+      "resources": {
+        "rlimits": [
+          {
+            "hard": "8192",
+            "name": "nofile",
+            "soft": "4096"
+          }
+        ]
+      }
+    },
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview"
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests.",
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "stop_signal",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "validated": false
+  },
+  "validation": {
+    "backup_restore": "pending",
+    "clean_install": "pending",
+    "restart_persistence": "passed-clean-native-lxc-restart-with-preserved-controller-data",
+    "schema": "passed-at-generation",
+    "service_health": "passed-https-8043-and-api-info-6.3.0.111-after-restart",
+    "update_preserves_data": "pending",
+    "community_report": "Migration from Docker with the controller data restored; a clean install was not attempted because host networking occupies the controller ports on the only available node."
+  },
+  "lifecycle": {
+    "automatic_unattended_updates": false,
+    "change_detection": "compare-resolved-architecture-digest",
+    "registry_state": {
+      "image_created": null,
+      "image_version_label": null,
+      "resolved_architecture": null,
+      "resolved_digest": null
+    },
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes"
+  }
+}
