@@ -2779,6 +2779,13 @@
         "zfs_pool": {
           "title": "ZFS pool capacity",
           "description": "ZFS pools at host level, independent of PVE registration, so rpool and dedicated backup pools are also monitored."
+        },
+        "sampling_intervals": {
+          "title": "Sampling intervals",
+          "description": "Cadence for the background Vital Signs sampler. Higher values reduce CPU usage and database disk writes; lower values provide faster real-time updates.",
+          "cpu": "CPU interval",
+          "temperature": "Temperature interval",
+          "memory": "Memory interval"
         }
       },
       "swapPressure": "Swap pressure",

@@ -892,7 +892,14 @@ export function HealthThresholds() {
                       // Fallback for any future section shape — keep
                       // the original per-field number inputs.
                       <div className="divide-y divide-border/40">
-                        {section.fields.map((f) => renderField(f.path, f.label))}
+                        {section.fields.map((f) => {
+                          const leafKey = f.path[f.path.length - 1]
+                          const fieldLabel = tFallback(
+                            `settings.healthThresholds.sections.${section.id}.${leafKey}`,
+                            f.label
+                          )
+                          return renderField(f.path, fieldLabel)
+                        })}
                       </div>
                     )}
                   </div>
