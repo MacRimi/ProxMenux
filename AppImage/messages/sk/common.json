@@ -3069,9 +3069,9 @@
     "title": "Účty {product}",
     "description": "Prihláste sa pomocou používateľov a realmov {product}, vrátane ich dvojfaktorového overenia.",
     "enable": "Povoliť prihlasovanie účtom {product}",
-    "onlyWay": "Účty {product} sú spôsobom prístupu do dashboardu. Ak ich chcete prestať používať, pridajte lokálne heslo alebo vyššie zvoľte prístup len na čítanie či otvorený prístup.",
-    "whoGetsIn": "Používatelia s oprávnením Sys.Modify na / získajú úplný prístup; používatelia s oprávnením iba Sys.Audit na / prístup len na čítanie. Ostatní používatelia sa nemôžu prihlásiť.",
-    "sharedSession": "Ste prihlásení do webového rozhrania {product}? Otvorte dashboard cez HTTPS na rovnakej adrese a táto relácia vás prihlási aj sem.",
+    "onlyWay": "Do Monitora sa prihlasujete účtom {product}. Ak chcete tento spôsob vypnúť, nastavte miestne prihlasovanie heslom alebo vyššie vyberte prístup iba na čítanie či otvorený prístup.",
+    "whoGetsIn": "Na prihlásenie potrebujete oprávnenie Sys.Modify alebo Sys.Audit na ceste /. Ak v Monitore nemáte vlastné pravidlo pre profil, s oprávnením Sys.Modify získate profil Administrátor a iba s oprávnením Sys.Audit profil Pozorovateľ.",
+    "sharedSession": "Ak ste už prihlásení vo webovom rozhraní {product}, otvorte Monitor cez HTTPS na rovnakej adrese. Prihlásenie sa použije aj v Monitore.",
     "saveFailed": "Zmenu sa nepodarilo uložiť.",
     "rulesTitle": "Profily účtov {product}",
     "rulesHelp": "Prednosť má pravidlo používateľa; inak platí prvé pravidlo jednej z jeho skupín. Bez pravidla dáva Sys.Modify na / profil Administrátor a Sys.Audit profil Pozorovateľ. Pravidlo nikdy nevpustí používateľa bez oprávnení na /.",
@@ -3340,7 +3340,8 @@
       "readOnlyMode": "Ovládací panel je bez hesla iba na čítanie: je možné si ho prezerať, ale nemožno nič spúšťať ani meniť.",
       "useReadOnly": "Prepnúť na režim iba na čítanie",
       "disableChoose": "Ako má byť ovládací panel prístupný bez hesla?",
-      "pveMode": "Dashboard sa prihlasuje pomocou účtov Proxmox VE."
+      "pveMode": "Do Monitora sa prihlasujete účtom Proxmox VE.",
+      "pbsMode": "Do Monitora sa prihlasujete účtom Proxmox Backup Server."
     },
     "twoFactor": {
       "title": "Dvojfaktorové overenie",
@@ -3815,11 +3816,11 @@
         "fieldRequired": "Pole {field} je povinné.",
         "deploymentFailed": "Nasadenie zlyhalo",
         "ociRequiresPve": "Secure Gateway používa štandardný LXC a mal by fungovať na tomto serveri Proxmox. Ak sa to bude opakovať, skontrolujte protokoly backendu.",
-        "authKeyRequired": "Zadajte Tailscale auth key.",
-        "updateAuthKeyFailed": "Nepodarilo sa aktualizovať auth key",
+        "authKeyRequired": "Zadajte overovací kľúč Tailscale.",
+        "updateAuthKeyFailed": "Overovací kľúč Tailscale sa nepodarilo aktualizovať.",
         "couldNotLoadSetupData": "Nepodarilo sa načítať údaje nastavenia.",
-        "packageInstallFailed": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}. Kontajner bol odstránený. Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet;skontrolujte to a skúste to znova.",
-        "packageInstallFailedKept": "Tailscale sa nepodarilo nainštalovať do kontajnera brány: {detail}. Pred opätovným pokusom odstráňte kontajner {vmid}. Zvyčajne to znamená, že na svojom moste nemá žiadnu adresu ani prístup na internet."
+        "packageInstallFailed": "Tailscale sa nepodarilo nainštalovať do kontajnera brány ({detail}). Kontajner sa odstránil. Pred ďalším pokusom skontrolujte, či kontajner na vybranom sieťovom moste môže získať IP adresu a prístup na internet.",
+        "packageInstallFailedKept": "Tailscale sa nepodarilo nainštalovať do kontajnera brány ({detail}). Skontrolujte, či má kontajner na vybranom sieťovom moste IP adresu a prístup na internet. Pred ďalším pokusom odstráňte kontajner {vmid}."
       },
       "messages": {
         "updateApplied": "Aktualizácia bola použitá.",
@@ -3843,12 +3844,12 @@
         "introTitle": "Bezpečný vzdialený prístup cez Tailscale",
         "introDescription": "Nasadí malú LXC bránu, cez ktorú sa vaše zariadenia dostanú k ProxMenuxu, Proxmoxu a vybraným lokálnym sieťam v rámci siete Tailscale.",
         "whatYouGet": "Čo získate",
-        "benefitMonitorAnywhere": "Monitor otvoríte odkiaľkoľvek v rámci svojho tailnetu.",
-        "benefitProxmoxUi": "Dostanete sa do Proxmox web UI bez verejného otvorenia portu 8006.",
+        "benefitMonitorAnywhere": "Monitor otvoríte odkiaľkoľvek, ak je zariadenie pripojené k vašej sieti Tailscale (tailnetu).",
+        "benefitProxmoxUi": "Otvorte webové rozhranie Proxmoxu bez verejného sprístupnenia portu 8006.",
         "benefitVmLxc": "Podľa potreby sprístupníte vybrané VM a LXC siete.",
         "benefitEncryption": "Prenos ostáva šifrovaný cez Tailscale.",
         "benefitNoPorts": "Netreba verejné presmerovanie portov.",
-        "tailscaleAccountBefore": "Potrebujete Tailscale účet a pre-auth kľúč z",
+        "tailscaleAccountBefore": "Potrebujete účet Tailscale a overovací kľúč z webu",
         "reviewDeploy": "Skontrolovať a nasadiť",
         "reviewDescription": "Pred vytvorením LXC brány skontrolujte konečné nastavenia.",
         "storageLocation": "Umiestnenie úložiska",
@@ -3865,11 +3866,11 @@
         },
         "hostAccess": "Prístup k serveru",
         "networks": "Siete",
-        "exitNode": "Exit Node",
-        "acceptRoutes": "Prijímať routy",
+        "exitNode": "Výstupný uzol (Exit Node)",
+        "acceptRoutes": "Prijímať trasy",
         "important": "Dôležité",
-        "approvalRequired": "Po nasadení schváľte zverejnené subnet routy v Tailscale Admin.",
-        "exitNodeApprovalRequired": "Režim Exit Node tam treba schváliť tiež.",
+        "approvalRequired": "Po nasadení schváľte v administrácii Tailscale trasy, ktoré brána oznamuje.",
+        "exitNodeApprovalRequired": "Ak ste zapli výstupný uzol (Exit Node), schváľte aj ten.",
         "showAfterDeploy": "Presné kroky schválenia ukážeme po nasadení.",
         "setupTitle": "Nastavenie Secure Gateway"
       },
@@ -3888,7 +3889,7 @@
         },
         "options": {
           "title": "Pokročilé možnosti",
-          "description": "Doplňujúce nastavenia routovania"
+          "description": "Ďalšie nastavenia smerovania"
         },
         "deploy": {
           "title": "Nasadiť bránu",
@@ -3901,7 +3902,7 @@
         "error": "Chyba"
       },
       "installed": {
-        "description": "Secure Gateway je nasadený a riadený monitorom.",
+        "description": "Brána je nasadená a spravuje ju Monitor.",
         "uptime": "Doba behu"
       },
       "actions": {
@@ -3924,9 +3925,9 @@
         "noneAvailable": "Nie sú dostupné žiadne aktualizácie"
       },
       "authKey": {
-        "update": "Aktualizovať auth key",
-        "description": "Použite nový Tailscale auth key, ak aktuálny expiroval alebo bol zrušený.",
-        "newKey": "Nový auth key",
+        "update": "Aktualizovať overovací kľúč",
+        "description": "Použite nový overovací kľúč Tailscale, ak súčasný kľúč už vypršal alebo bol zrušený.",
+        "newKey": "Nový overovací kľúč",
         "generateAt": "Vygenerujte ho na",
         "adminKeys": "Tailscale Admin → Keys",
         "updateKey": "Aktualizovať kľúč"
@@ -3940,10 +3941,10 @@
       },
       "postDeploy": {
         "title": "Dokončite nastavenie v Tailscale Admin",
-        "description": "Brána je nasadená. Pred používaním zverejnených trás vzdialenými zariadeniami treba ešte jeden schvaľovací krok.",
+        "description": "Brána je nasadená. Aby vzdialené zariadenia mohli použiť jej trasy, schváľte ich v administrácii Tailscale.",
         "nextStep": "Ďalší krok",
-        "approveDescription": "Schváľte trasy podsietí zverejnené touto bránou.",
-        "subnetRoutes": "Subnet routy",
+        "approveDescription": "Schváľte trasy podsietí, ktoré brána oznamuje.",
+        "subnetRoutes": "Trasy podsietí",
         "exitNode": "Výstupný uzol",
         "routeAllTraffic": "Schváľte ho, ak chcete cez túto bránu smerovať všetku internetovú prevádzku zariadení.",
         "howToApprove": "Ako to schváliť",
@@ -3953,7 +3954,7 @@
         "stepOpenDetails": "Otvorte jeho detail.",
         "stepSubnetsBefore": "V časti",
         "stepSubnetsMiddle": "kliknite na",
-        "stepSubnetsAfter": "a schváľte zverejnené routy.",
+        "stepSubnetsAfter": "a schváľte trasy, ktoré brána oznamuje.",
         "stepRoutingBefore": "Pre Exit Node otvorte",
         "stepRoutingMiddle": "a schváľte",
         "accessAfterApproval": "Po schválení môžete otvoriť",
@@ -3963,19 +3964,19 @@
       },
       "notInstalled": {
         "subtitle": "Brána Tailscale ešte nie je nasadená.",
-        "description": "Nasaďte ho, aby ste sa k ProxMenuxu a Proxmoxu dostali bezpečne cez tailnet bez verejne otvorených portov.",
+        "description": "Nasaďte bránu, aby ste mohli otvoriť ProxMenux a Proxmox cez svoju sieť Tailscale bez verejne otvorených portov.",
         "deploy": "Nasadiť Secure Gateway"
       },
       "schema": {
         "auth_key": {
-          "label": "Tailscale auth key",
-          "description": "Pre-auth kľúč z Tailscale admin konzoly. Vygenerujte ho cez odkaz nižšie.",
+          "label": "Overovací kľúč Tailscale",
+          "description": "Vygenerujte kľúč v administrácii Tailscale pomocou odkazu nižšie.",
           "placeholder": "tskey-auth-xxxxx",
-          "helpText": "Vygenerovať auth key"
+          "helpText": "Vygenerovať overovací kľúč"
         },
         "hostname": {
-          "label": "Hostname zariadenia",
-          "description": "Názov, ktorý sa zobrazí v Tailscale admin konzole.",
+          "label": "Názov zariadenia",
+          "description": "Pod týmto názvom sa brána zobrazí v administrácii Tailscale.",
           "placeholder": "proxmox-brána"
         },
         "access_mode": {
@@ -3984,20 +3985,20 @@
           "options": {
             "host_only": {
               "label": "Iba Proxmox",
-              "description": "Prístup iba k tomuto serveru Proxmox, web UI a ProxMenux Monitoru."
+              "description": "Prístup iba k tomuto serveru Proxmox, jeho webovému rozhraniu a Monitoru."
             },
             "proxmox_network": {
               "label": "Celá lokálna sieť",
               "description": "Prístup ku všetkým zariadeniam v lokálnej sieti, napríklad NAS, tlačiarňam, VM a LXC."
             },
             "custom": {
-              "label": "Vlastné subnety",
-              "description": "Vyberte presne tie subnety, ktoré chcete sprístupniť."
+              "label": "Vlastné podsiete",
+              "description": "Vyberte podsiete, ktoré chcete sprístupniť."
             }
           }
         },
         "advertise_routes": {
-          "label": "Zverejnené siete",
+          "label": "Siete sprístupnené cez bránu",
           "description": "Vyberte siete, ktoré majú byť dostupné cez VPN."
         },
         "exit_node": {
@@ -4006,8 +4007,8 @@
           "warning": "Vyžaduje schválenie v Tailscale Admin. Po zapnutí na zariadení pôjde všetka internetová prevádzka cez váš server Proxmox."
         },
         "accept_routes": {
-          "label": "Prijímať routy",
-          "description": "Povoliť tejto bráne prístup k sieťam, ktoré zverejňujú iné uzly Tailscale vo vašej sieti."
+          "label": "Prijímať trasy",
+          "description": "Brána môže použiť trasy do sietí, ktoré oznamujú iné zariadenia vo vašej sieti Tailscale."
         }
       }
     }
