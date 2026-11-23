@@ -1,6 +1,7 @@
 """Inert source-contract checks; never import operational modules or touch host paths."""
 import ast
 import json
+import math
 import os
 import subprocess
 import unittest
@@ -113,10 +114,24 @@ class LynisThresholdContracts(unittest.TestCase):
                                    MEMORY_WARNING=80, MEMORY_CRITICAL=90, SWAP_HIGH_PERCENT=80, AVAILABLE_MIN_PERCENT=20)
         memory = SimpleNamespace(percent=50, available=10, total=100)
         swap = SimpleNamespace(percent=90, used=90, total=100)
-        namespace = {'Dict': dict, 'Any': object, 'psutil': SimpleNamespace(virtual_memory=lambda: memory, swap_memory=lambda: swap),
+        _, counting = extract_function(APP / 'scripts/vital_signs.py', 'samples_for')
+        sampler = {'math': math}
+        exec(compile(counting, '<reading count>', 'exec'), sampler)
+        # The check reads the vital-signs sampler; each sample() is one of its readings.
+        vital_signs = SimpleNamespace(memory=lambda max_age=None: (memory, swap), MEMORY_INTERVAL=30,
+                                      samples_for=sampler['samples_for'])
+
+        def sample():
+            self_obj.state_history['memory_usage'].append({
+                'mem_percent': memory.percent, 'swap_percent': swap.percent,
+                'available_percent': memory.available / memory.total * 100, 'time': 1000})
+
+        namespace = {'Dict': dict, 'Any': object, 'vital_signs': vital_signs,
                      'time': SimpleNamespace(time=lambda: 1000)}
         exec(compile(module, '<inert memory check>', 'exec'), namespace)
+        sample()
         first = namespace['_check_memory_comprehensive'](self_obj)
+        sample()
         second = namespace['_check_memory_comprehensive'](self_obj)
         self.assertEqual(first['status'], 'OK')
         self.assertEqual(second['checks']['swap_usage']['status'], 'CRITICAL')
@@ -124,7 +139,8 @@ class LynisThresholdContracts(unittest.TestCase):
         memory.percent = 91
         swap.percent = 0
         for _ in range(8):
-            last = namespace['_check_memory_comprehensive'](self_obj)
+            sample()
+        last = namespace['_check_memory_comprehensive'](self_obj)
         self.assertEqual(last['status'], 'CRITICAL')
         self.assertEqual(last['checks']['swap_usage']['status'], 'OK')
         hint = leaf('settings.healthThresholds.swapPressureHint').lower()

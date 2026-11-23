@@ -4,17 +4,19 @@ evaluate the sampler's readings whatever its interval."""
 from collections import namedtuple
 from pathlib import Path
 import sys
-from types import SimpleNamespace
+import tempfile
+from types import ModuleType, SimpleNamespace
 import unittest
 from unittest import mock
-
-import tempfile
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
-import vital_signs  # noqa: E402
-from health_fixture_modules import load_health_modules  # noqa: E402
+from health_fixture_modules import load_health_modules, load_source  # noqa: E402
+
+# The host's psutil is never used: each test gives the module a fake one.
+with mock.patch.dict(sys.modules, {'psutil': ModuleType('psutil')}):
+    vital_signs = load_source('vital_signs')
 
 Times = namedtuple('Times', 'user nice system idle iowait irq softirq steal guest guest_nice')
 Sensor = namedtuple('Sensor', 'label current high critical')

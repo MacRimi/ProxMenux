@@ -88,7 +88,14 @@ def render_fixture(language='en', overlays=None, missing=(), translations=None):
     return lambda kind, data: render(kind, data, language=language)
 
 
-def temperature_case(history, reading=89., active=False):
+def sampler_constants():
+    """The intervals and the reading count of vital_signs, without importing it."""
+    constants = types.SimpleNamespace(TEMPERATURE_INTERVAL=15)
+    constants.samples_for = extracted('vital_signs.py', 'samples_for', namespace={'math': math})
+    return constants
+
+
+def temperature_case(history, active=False):
     class Persistence:
         emitted = []
         resolved = []
@@ -96,9 +103,7 @@ def temperature_case(history, reading=89., active=False):
         def is_error_active(self, *a, **kw): return active
         def resolve_error(self, *a, **kw): self.resolved.append((a, kw))
     db = Persistence()
-    env = {'time': types.SimpleNamespace(time=lambda: 100000),
-           'subprocess': types.SimpleNamespace(run=lambda *a, **kw: types.SimpleNamespace(
-               returncode=0, stdout=f'temp1_input: {reading:.3f}\ntemp2_input: 45.000\n')),
+    env = {'time': types.SimpleNamespace(time=lambda: 100000), 'vital_signs': sampler_constants(),
            'health_persistence': db, 'Optional': __import__('typing').Optional,
            'Dict': dict, 'Any': object}
     check = extracted('health_monitor.py', '_check_cpu_temperature', 'HealthMonitor', env)
@@ -170,22 +175,22 @@ def polled_event(entry):
 
 class ActivePayloadTests(unittest.TestCase):
     def test_temperature_sampling_boundaries_and_recovery_policy(self):
-        # These characterize the existing threshold/guard, not new policy.
-        highs = [{'value': 89., 'time': 99900 + n * 5} for n in range(17)]
-        below, db = temperature_case(highs[:-1])  # current sample makes 17
+        # The sampler reads every 15s: 11 readings cover the 3 minutes.
+        highs = [{'value': 89., 'time': 100000 - 15 * n} for n in range(10, -1, -1)]
+        below, db = temperature_case(highs[1:])
         self.assertEqual(below['status'], 'OK')
         self.assertEqual((db.emitted, db.resolved), ([], []))
-        warning, db = temperature_case(highs)  # current sample makes 18
+        warning, db = temperature_case(highs)
         self.assertEqual(warning['status'], 'WARNING')
         self.assertEqual(len(db.emitted), 1)
-        self.assertEqual(db.emitted[0]['details']['duration'], 100)
+        self.assertEqual(db.emitted[0]['details']['duration'], 150)
         self.assertEqual((db.emitted[0]['category'], db.emitted[0]['severity'],
                           db.emitted[0]['details']['dismissable']), ('temperature', 'WARNING', True))
         low = [{'value': 79., 'time': t} for t in (99980, 99990)]
-        pending, db = temperature_case(low[:1], reading=79., active=True)
+        pending, db = temperature_case(low[:1], active=True)
         self.assertEqual(pending['status'], 'WARNING')
         self.assertEqual((db.emitted, db.resolved), ([], []))
-        recovered, db = temperature_case(low, reading=79., active=True)
+        recovered, db = temperature_case(low, active=True)
         self.assertEqual(recovered['status'], 'OK')
         self.assertEqual(db.emitted, [])
         self.assertEqual(db.resolved[0][0][0], 'cpu_temperature')
