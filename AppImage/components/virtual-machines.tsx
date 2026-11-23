@@ -30,6 +30,7 @@ import { markUpdateJobViewed, type LxcUpdateJob } from "../lib/lxc-update-jobs"
 import { OCI_CANCELLED_EXIT_CODE, shouldRefreshOciAfterCompletion } from "@/lib/script-completion"
 import { LxcAppPanel, ThemeAwareLogo, ociImageLabel } from "./lxc-app-panel"
 import { GuestBackupList } from "./guest-backup-list"
+import { GuestFirewallPanel } from "./guest-firewall-panel"
 import type { GuestBackup } from "../lib/guest-backup-archives"
 import { OciConsoleLogPanel } from "./oci-console-log-panel"
 import { AppUpdaterEditor, type AppUpdateMethod } from "./app-updater-editor"
@@ -252,6 +253,7 @@ interface LxcDockerInventory {
 
 interface VMData {
   vmid: number
+  node?: string
   name: string
   // Compact PVE description included only for list search. The full notes
   // remain in the guest detail modal.
@@ -856,7 +858,7 @@ function MountPointCard({ mp }: { mp: LxcMountPoint }) {
   )
 }
 
-export function VirtualMachines() {
+export function VirtualMachines({ onClusterFirewall }: { onClusterFirewall?: () => void } = {}) {
   // The profile of the session decides which actions are offered.
   const { capabilities } = useAccess()
   const isPbs = useIsPbs()
@@ -907,15 +909,6 @@ export function VirtualMachines() {
     // that lets us render the Mount Points tab header at open time
     // for CTs that only have NFS/CIFS mounted from inside.
     mountPoints: new Map<number, { mount_points: LxcMountPoint[]; ad_hoc_hint_count?: number }>(),
-    // Firewall log is on-demand ONLY — do NOT seed it from the bulk
-    // modal-cache endpoint or from any prewarmer. The log is a live
-    // stream (new entries flow with every packet the firewall drops)
-    // so cached data has no value beyond the current session; most
-    // users never open the Firewall tab, so pre-scanning would waste
-    // pvesh cycles for nothing. This Map fills only when
-    // `fetchFirewallLog` runs (tab click or Refresh button) and
-    // survives modal reopens within the same page load.
-    firewall: new Map<number, any>(),
   })
   const dockerInventoryRequestedRef = useRef(new Map<number, number>())
   const lifecycleCacheRevisionsRef = useRef(new Map<number, number>())
@@ -1020,14 +1013,6 @@ export function VirtualMachines() {
   const ociCompletionCodeRef = useRef<number | undefined>(undefined)
   useEffect(() => { ociCompletionCodeRef.current = undefined }, [ociAction])
 
-  // Firewall log state — fetched only when the operator opens that tab
-  // so a CT/VM without firewall use doesn't pay the pvesh cost on every
-  // modal open. Issue #14554 from the helper-scripts discussions.
-  interface FirewallLogEntry { n: number; t: string }
-  const [firewallLogs, setFirewallLogs] = useState<FirewallLogEntry[]>([])
-  const [loadingFirewallLog, setLoadingFirewallLog] = useState(false)
-  const [firewallEnabled, setFirewallEnabled] = useState<boolean>(true)
-  const [firewallLogError, setFirewallLogError] = useState<string | null>(null)
   // Sprint 13.29: per-LXC mount points lazy-loaded when the user opens
   // the LXC modal. We fetch alongside backups (one-shot) so switching
   // tabs is instantaneous; the cost is small (parses one config file
@@ -1199,7 +1184,7 @@ export function VirtualMachines() {
   // with the list — no source mismatch, no flicker.
   useEffect(() => {
     if (!selectedVM || !vmData) return
-    const updated = vmData.find((v) => v.vmid === selectedVM.vmid)
+    const updated = vmData.find((v) => v.vmid === selectedVM.vmid && v.node === selectedVM.node && v.type === selectedVM.type)
     if (!updated || updated === selectedVM) return
     setSelectedVM(updated)
   }, [vmData])
@@ -1230,7 +1215,6 @@ export function VirtualMachines() {
       cache.mountPoints.delete(vm.vmid)
       if (vm.type === "lxc") reseedMountPoints(vm.vmid)
       cache.schedule.delete(vm.vmid)
-      cache.firewall.delete(vm.vmid)
       dockerInventoryRequestedRef.current.delete(vm.vmid)
       invalidateLxcApps(vm.vmid)
       if (selectedVMRef.current?.vmid === vm.vmid) {
@@ -1356,11 +1340,6 @@ export function VirtualMachines() {
     setEditingTagDraft("")
     setSavedOnboot(false)
     setActiveModalTab("status")
-    // Reset firewall log state — fetched lazily when the user opens
-    // that tab, since most operators won't visit it on every modal open.
-    setFirewallLogs([])
-    setFirewallLogError(null)
-    setFirewallEnabled(true)
     setConsoleLogAvailable(false)
     setOciInstance(null)
     setOciRestored(false)
@@ -1690,50 +1669,6 @@ export function VirtualMachines() {
     }
   }
 
-  // Firewall log fetcher — proxies the PVE per-VM/CT firewall log
-  // endpoint. The backend returns `firewall_enabled: false` when PVE
-  // says the firewall is OFF for that guest; in that case we render
-  // a callout instead of an empty viewer.
-  const fetchFirewallLog = async (vmid: number) => {
-    // Seed from ref cache so tab-switching to Firewall doesn't flash
-    // "Loading…" when the payload was already prefetched. Backend
-    // revalidates on top so a fresh log line lands on the next poll.
-    const seed = vmModalCacheRef.current.firewall.get(vmid)
-    if (seed) {
-      setFirewallEnabled(seed.firewall_enabled !== false)
-      setFirewallLogs(Array.isArray(seed.logs) ? seed.logs : [])
-      if (seed.error && seed.firewall_enabled !== false) {
-        setFirewallLogError(seed.error)
-      } else {
-        setFirewallLogError(null)
-      }
-    }
-    setLoadingFirewallLog(!seed)
-    if (!seed) setFirewallLogError(null)
-    try {
-      const response = await fetchApi<{
-        logs?: FirewallLogEntry[]
-        firewall_enabled?: boolean
-        error?: string
-      }>(`/api/vms/${vmid}/firewall/log?limit=500`)
-      vmModalCacheRef.current.firewall.set(vmid, response)
-      setFirewallEnabled(response.firewall_enabled !== false)
-      setFirewallLogs(Array.isArray(response.logs) ? response.logs : [])
-      if (response.error && response.firewall_enabled !== false) {
-        setFirewallLogError(response.error)
-      } else {
-        setFirewallLogError(null)
-      }
-    } catch (error) {
-      if (!seed) {
-        setFirewallEnabled(true)
-        setFirewallLogs([])
-        setFirewallLogError(error instanceof Error ? error.message : String(error))
-      }
-    } finally {
-      setLoadingFirewallLog(false)
-    }
-  }
 
   const openBackupModal = () => {
     // Reset modal to defaults
@@ -1873,7 +1808,6 @@ export function VirtualMachines() {
       cache.backups.delete(vmid)
       cache.mountPoints.delete(vmid)
       cache.schedule.delete(vmid)
-      cache.firewall.delete(vmid)
       invalidateLxcApps(vmid)
 
       // Publish the confirmed result as an SWR mutation before revalidating.
@@ -3085,12 +3019,6 @@ export function VirtualMachines() {
     return t(`vmLxc.coreCount.${key}`, { count })
   }
 
-  const displayedFirewallLogs = useMemo(() => {
-    return firewallLogs.filter((entry) => {
-      const text = (entry.t || "").trim().toLowerCase()
-      return text.length > 0 && text !== "no content"
-    })
-  }, [firewallLogs])
 
   if (isLoading) {
     return (
@@ -4202,19 +4130,10 @@ export function VirtualMachines() {
                     <Badge variant="secondary" className="text-xs h-5 ml-0.5 sm:ml-1">{vmBackups.length}</Badge>
                   )}
                 </button>
-                {/* Firewall tab — issue #14554 from the helper-scripts
-                    discussions ("view individual VM/CT firewall logs").
-                    Always rendered for VMs and CTs; if the guest doesn't
-                    have firewall enabled in PVE, the panel shows a
-                    callout explaining how to turn it on. Log fetched
-                    lazily on first click to avoid hitting pvesh on
-                    every modal open. */}
                 {selectedVM && (
                   <button
-                    onClick={() => {
-                      setActiveModalTab("firewall")
-                      fetchFirewallLog(selectedVM.vmid)
-                    }}
+                    aria-label={t("vmLxc.tabs.firewall")}
+                    onClick={() => setActiveModalTab("firewall")}
                     className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                       activeModalTab === "firewall"
                         ? "border-orange-500 text-orange-500"
@@ -4229,7 +4148,7 @@ export function VirtualMachines() {
                 )}
               </div>
 
-              <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+              <div className={cn("min-h-0 flex-1 px-6 py-4", activeModalTab === "firewall" ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
                 {/* Status Tab */}
                 {activeModalTab === "status" && (
                 <div className="space-y-4">
@@ -7682,113 +7601,16 @@ export function VirtualMachines() {
                   </div>
                 )}
 
-                {/* Firewall Logs Tab — issue #14554. Reads the per-VM/CT
-                    log filtered by PVE directly (no host-wide log
-                    grep). Loading is lazy and triggered by the tab
-                    button's onClick. */}
-                {activeModalTab === "firewall" && (
-                  /* Firewall tab: Card fills the whole tab body so
-                     the log pre-block can grow with the modal
-                     instead of being capped at 480 px. Header stays
-                     pinned, log block scrolls in the middle. */
-                  <div className="h-full flex flex-col min-h-0">
-                    <Card className="border border-border bg-card/50 flex flex-col flex-1 min-h-0">
-                      <CardContent className="p-4 flex flex-col flex-1 min-h-0">
-                        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap shrink-0">
-                          <div className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-md bg-orange-500/10">
-                              <Shield className="h-4 w-4 text-orange-500" />
-                            </div>
-                            <h3 className="text-sm font-semibold text-foreground">{t("vmLxc.firewall.title")}</h3>
-                            {firewallEnabled && displayedFirewallLogs.length > 0 && (
-                              <Badge variant="secondary" className="text-xs h-5 ml-1">
-                                {displayedFirewallLogs.length}
-                              </Badge>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs gap-1"
-                            onClick={() => selectedVM && fetchFirewallLog(selectedVM.vmid)}
-                            disabled={loadingFirewallLog}
-                          >
-                            {loadingFirewallLog ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-3 w-3" />
-                            )}
-                            <span>{t("vmLxc.firewall.refresh")}</span>
-                          </Button>
-                        </div>
-
-                        <div className="border-t border-border/50 mb-4 shrink-0" />
-
-                        {loadingFirewallLog ? (
-                          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-0">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            <span className="text-sm">{t("vmLxc.firewall.loading")}</span>
-                          </div>
-                        ) : !firewallEnabled ? (
-                          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 text-sm shrink-0">
-                            <div className="flex items-start gap-2">
-                              <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                              <div className="space-y-2">
-                                <p className="font-medium text-amber-500">
-                                  {t("vmLxc.firewall.disabledTitle", {
-                                    type: selectedVM?.type === "lxc" ? t("vmLxc.guestTypes.container") : t("vmLxc.guestTypes.vm"),
-                                  })}
-                                </p>
-                                <p className="text-xs text-muted-foreground leading-relaxed">
-                                  {t("vmLxc.firewall.disabledHint", {
-                                    type: selectedVM?.type === "lxc" ? t("vmLxc.guestTypes.containerUi") : t("vmLxc.guestTypes.vm"),
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ) : firewallLogError ? (
-                          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-4 text-sm shrink-0">
-                            <div className="flex items-start gap-2">
-                              <Shield className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                              <div>
-                                <p className="font-medium text-red-500 mb-1">{t("vmLxc.firewall.readFailed")}</p>
-                                <p className="text-xs text-muted-foreground break-all">{firewallLogError}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ) : displayedFirewallLogs.length === 0 ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-sm text-muted-foreground min-h-0">
-                            {t("vmLxc.firewall.empty")}
-                            <div className="text-xs mt-1">
-                              {t("vmLxc.firewall.emptyHint")}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-md border border-border bg-background/50 flex-1 overflow-y-auto min-h-0">
-                            <pre className="text-[11px] font-mono leading-snug whitespace-pre-wrap break-all p-3">
-                              {displayedFirewallLogs.map((entry, idx) => {
-                                const text = entry.t || ""
-                                // Light colour-coding by the action keyword
-                                // PVE emits in the line itself — purely
-                                // visual, parsing stays line-by-line so
-                                // a malformed entry still renders fine.
-                                let actionClass = "text-foreground/90"
-                                if (/\bDROP\b/i.test(text)) actionClass = "text-red-400"
-                                else if (/\bREJECT\b/i.test(text)) actionClass = "text-orange-400"
-                                else if (/\bACCEPT\b/i.test(text)) actionClass = "text-green-400"
-                                return (
-                                  <div key={`${entry.n}-${idx}`} className={actionClass}>
-                                    {text}
-                                  </div>
-                                )
-                              })}
-                            </pre>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
+                {activeModalTab === "firewall" && selectedVM && (
+                  selectedVM.node && vmData?.some(vm =>
+                    vm.vmid === selectedVM.vmid && vm.node === selectedVM.node && vm.type === selectedVM.type
+                  ) ? (
+                    <GuestFirewallPanel
+                      key={`${selectedVM.node}:${selectedVM.type}:${selectedVM.vmid}:${selectedVM.modal_cache_revision ?? 0}`}
+                      guest={{ vmid: selectedVM.vmid, node: selectedVM.node, type: selectedVM.type }}
+                      onClusterFirewall={onClusterFirewall}
+                    />
+                  ) : <p className="text-sm text-muted-foreground">{t("vmLxc.firewall.guestChanged")}</p>
                 )}
 
                 {activeModalTab === "logs" && selectedVM?.type === "lxc" && (

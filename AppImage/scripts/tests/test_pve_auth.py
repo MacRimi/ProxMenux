@@ -2,6 +2,7 @@
 
 The local Proxmox VE API is simulated: tickets, permissions on `/`, realms and
 a TOTP second factor. Real auth_manager on temporary files, real routes."""
+import io
 import json
 import logging
 import logging.handlers
@@ -90,6 +91,26 @@ class PVEAccounts(unittest.TestCase):
             return jsonify(ok=True)
 
         self.client = app.test_client()
+
+    def test_guest_rule_keeps_pve_user_and_uses_csrf(self):
+        path = "/nodes/fixture/lxc/100/firewall/rules/0"
+        parameters = {"type": "in", "action": "ACCEPT", "enable": 0}
+        native = mock.Mock(side_effect=[(200, {"ticket": ADMIN, "CSRFPreventionToken": "test-csrf"}), (200, None)])
+        with mock.patch.object(pve_auth, "_request", native):
+            self.assertEqual(pve_auth.write_firewall_rule(path, parameters, ADMIN, method="PUT"), 200)
+        self.assertEqual(native.call_args_list, [
+            mock.call("POST", "/access/ticket", {"username": "root@pam", "password": ADMIN}),
+            mock.call("PUT", path, data=parameters, ticket=ADMIN, csrf="test-csrf"),
+        ])
+        native.reset_mock(side_effect=True)
+        native.side_effect = [(200, {"ticket": ADMIN, "CSRFPreventionToken": "test-csrf"}), (200, None)]
+        with mock.patch.object(pve_auth, "_request", native):
+            self.assertEqual(pve_auth.write_firewall_rule(path, {"digest": "a" * 40}, ADMIN, method="DELETE"), 200)
+        native.assert_called_with("DELETE", f"{path}?digest={'a' * 40}", data=None, ticket=ADMIN, csrf="test-csrf")
+        with mock.patch.object(pve_auth, "_request", return_value=(
+                200, {"ticket": AUDITOR, "CSRFPreventionToken": "test-csrf"})) as native:
+            self.assertEqual(pve_auth.write_firewall_rule(path, parameters, ADMIN, method="PUT"), 503)
+        self.assertEqual(native.call_count, 1)
 
     def as_ticket(self, ticket):
         return {"Authorization": f"Bearer {ticket}"}
@@ -275,6 +296,20 @@ class BackupServerAccounts(unittest.TestCase):
         self.assertTrue(pve_auth.is_ticket(PBS_AUDITOR))
         self.assertFalse(pve_auth.is_ticket(AUDITOR))
         self.assertEqual(pve_auth.cookie_name(), "PBSAuthCookie")
+
+    def test_bounded_response_rejects_oversize_and_invalid_envelope(self):
+        class Answer(io.BytesIO):
+            status = 200
+
+        valid = b'{"data":[1,2]}'
+        with mock.patch.object(pve_auth.urllib.request, "urlopen", return_value=Answer(valid)):
+            self.assertEqual(pve_auth._request("GET", "/access/domains", max_response_bytes=len(valid)),
+                             (200, [1, 2]))
+        with mock.patch.object(pve_auth.urllib.request, "urlopen", return_value=Answer(valid + b" ")):
+            self.assertEqual(pve_auth._request("GET", "/access/domains", max_response_bytes=len(valid)),
+                             (0, None))
+        with mock.patch.object(pve_auth.urllib.request, "urlopen", return_value=Answer(b"[]")):
+            self.assertEqual(pve_auth._request("GET", "/access/domains"), (0, None))
 
     def test_requests_go_to_the_backup_server_api(self):
         seen = {}

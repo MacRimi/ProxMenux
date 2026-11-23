@@ -73,19 +73,44 @@ def is_ticket(token):
             and token.startswith(_product()["prefix"] + ":"))
 
 
-def _request(method, path, data=None, ticket=None):
+def _request(method, path, data=None, ticket=None, csrf=None, *, max_response_bytes=1024 * 1024):
     body = urllib.parse.urlencode(data).encode() if data is not None else None
     product = _product()
     request = urllib.request.Request(product["api"] + path, data=body, method=method)
     if ticket:
         request.add_header("Cookie", product["cookie"] + "=" + urllib.parse.quote(ticket, safe=""))
+    if csrf:
+        request.add_header("CSRFPreventionToken", csrf)
     try:
         with urllib.request.urlopen(request, context=_CONTEXT, timeout=10) as response:
-            return response.status, json.loads(response.read(1024 * 1024) or b"{}").get("data")
+            raw = response.read(max_response_bytes + 1)
+            if len(raw) > max_response_bytes:
+                return 0, None
+            payload = json.loads(raw or b"{}")
+            return (response.status, payload.get("data")) if isinstance(payload, dict) else (0, None)
     except urllib.error.HTTPError as error:
         return error.code, None
     except (urllib.error.URLError, OSError, ValueError):
         return 0, None
+
+
+def write_firewall_rule(path, parameters, ticket, *, method):
+    """Write a guest rule with a fresh CSRF token of the same PVE account."""
+    if not is_ticket(ticket) or not ticket.startswith("PVE:"):
+        return 401
+    username = ticket.split(":")[1]
+    status, session = _request("POST", "/access/ticket", {"username": username, "password": ticket})
+    if status != 200 or not isinstance(session, dict):
+        return 401 if status in (401, 403) else 503
+    renewed = session.get("ticket")
+    csrf = session.get("CSRFPreventionToken")
+    if not is_ticket(renewed) or renewed.split(":")[1] != username or not isinstance(csrf, str) or not csrf:
+        return 503
+    if method == "DELETE":
+        path += "?" + urllib.parse.urlencode(parameters)
+        parameters = None
+    status, _ = _request(method, path, data=parameters, ticket=renewed, csrf=csrf)
+    return status
 
 
 def scope_of(privileges):

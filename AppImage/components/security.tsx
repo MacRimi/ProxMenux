@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { OptionSelect } from "./option-select"
+import { FirewallRuleForm } from "./firewall-rule-form"
 import { Label } from "./ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import {
@@ -11,7 +12,7 @@ import {
   Trash2, RefreshCw, Clock, ShieldCheck, Globe, FileKey, AlertTriangle,
   Flame, Bug, Search, Download, Power, PowerOff, Plus, Minus, Activity, Settings, Ban,
   FileText, Printer, Play, BarChart3, TriangleAlert, ChevronDown, ArrowDownLeft, ArrowUpRight,
-  ChevronRight, Network, Zap, Pencil, Check, X, ExternalLink,
+  ChevronRight, Network, Pencil, Check, X, ExternalLink,
 } from "lucide-react"
 import { getApiUrl, fetchApi } from "../lib/api-config"
 import { TwoFactorSetup } from "./two-factor-setup"
@@ -73,9 +74,18 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
   return null
 }
 
-export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}) {
+export function Security({ hostType = "pve", focusFirewall = false }: { hostType?: "pve" | "pbs"; focusFirewall?: boolean } = {}) {
   // Everyone keeps their own account here; the rest follows the profile.
   const { capabilities } = useAccess()
+  const firewallCard = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!focusFirewall) return
+    const frame = requestAnimationFrame(() => {
+      firewallCard.current?.focus({ preventScroll: true })
+      firewallCard.current?.scrollIntoView({ block: "start" })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [focusFirewall])
   // The access card is used only after Edit, as every settings card.
   const [authEditing, setAuthEditing] = useState(false)
   const { language, t } = useI18n()
@@ -2965,7 +2975,7 @@ ${(report.sections && report.sections.length > 0) ? `
       </div>
 
       {/* Proxmox Firewall */}
-      <Card>
+      <Card ref={firewallCard} tabIndex={-1} className="scroll-mt-28">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -3232,147 +3242,26 @@ ${(report.sections && report.sections.length > 0) ? `
 
                 {/* Add Rule Form */}
                 {showAddRule && (
-                  <div className="border border-orange-500/30 rounded-lg p-4 bg-orange-500/5 space-y-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Plus className="h-4 w-4 text-orange-500" />
-                      <p className="text-sm font-semibold text-orange-500">{st("firewall.newRule")}</p>
-                    </div>
-
-                    {/* Service Presets */}
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{st("firewall.quickPresets")}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { label: "HTTP", port: "80", proto: "tcp", comment: st("firewall.presets.httpWeb") },
-                          { label: "HTTPS", port: "443", proto: "tcp", comment: st("firewall.presets.httpsWeb") },
-                          { label: "SSH", port: "22", proto: "tcp", comment: st("firewall.presets.sshRemoteAccess") },
-                          { label: "DNS", port: "53", proto: "udp", comment: "DNS" },
-                          { label: "SMTP", port: "25", proto: "tcp", comment: st("firewall.presets.smtpMail") },
-                          { label: "NFS", port: "2049", proto: "tcp", comment: "NFS" },
-                          { label: "SMB", port: "445", proto: "tcp", comment: "SMB/CIFS" },
-                          { label: "Ping", port: "", proto: "icmp", comment: st("firewall.presets.icmpPing") },
-                        ].map((preset) => (
-                          <Button
-                            key={preset.label}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setNewRule({
-                              ...newRule,
-                              dport: preset.port,
-                              protocol: preset.proto,
-                              comment: preset.comment,
-                              direction: "IN",
-                              action: "ACCEPT",
-                            })}
-                            className="h-6 text-[10px] px-2 text-muted-foreground border-border hover:text-orange-500 hover:border-orange-500/30 bg-transparent"
-                          >
-                            <Zap className="h-2.5 w-2.5 mr-1" />
-                            {preset.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.direction")}</Label>
-                        <OptionSelect value={newRule.direction} onChange={direction => setNewRule({...newRule, direction})}
-                          ariaLabel={st("firewall.fields.direction")} className="bg-card"
-                          options={[{ value: "IN", label: `IN (${st("firewall.incomingLower")})` },
-                                    { value: "OUT", label: `OUT (${st("firewall.outgoingLower")})` }]} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.action")}</Label>
-                        <OptionSelect value={newRule.action} onChange={action => setNewRule({...newRule, action})}
-                          ariaLabel={st("firewall.fields.action")} className="bg-card"
-                          options={[{ value: "ACCEPT", label: `ACCEPT (${st("firewall.allowLower")})` },
-                                    { value: "DROP", label: `DROP (${st("firewall.blockSilentlyLower")})` },
-                                    { value: "REJECT", label: `REJECT (${st("firewall.blockWithResponseLower")})` }]} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.protocol")}</Label>
-                        <OptionSelect value={newRule.protocol} onChange={protocol => setNewRule({...newRule, protocol})}
-                          ariaLabel={st("firewall.fields.protocol")} className="bg-card"
-                          options={[{ value: "tcp", label: "TCP" }, { value: "udp", label: "UDP" }, { value: "icmp", label: "ICMP (ping)" }]} />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.destinationPort")}</Label>
-                        <Input
-                          placeholder={st("firewall.placeholders.destinationPort")}
-                          value={newRule.dport}
-                          onChange={(e) => setNewRule({...newRule, dport: e.target.value})}
-                          className="h-9 text-sm"
-                        />
-                        <p className="text-[10px] text-muted-foreground">{st("firewall.destinationPortHint")}</p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.sourceAddress")}</Label>
-                        <Input
-                          placeholder={st("firewall.placeholders.sourceAddress")}
-                          value={newRule.source}
-                          onChange={(e) => setNewRule({...newRule, source: e.target.value})}
-                          className="h-9 text-sm"
-                        />
-                        <p className="text-[10px] text-muted-foreground">{st("firewall.sourceAddressHint")}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.interfaceOptional")}</Label>
-                        <OptionSelect value={newRule.iface} onChange={iface => setNewRule({...newRule, iface})}
-                          ariaLabel={st("firewall.fields.interfaceOptional")} className="bg-card"
-                          options={[{ value: "", label: st("firewall.anyInterface") },
-                                    ...networkInterfaces.map(iface => ({ value: iface.name,
-                                      label: `${iface.name} (${interfaceTypeLabel(iface.type)}${iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})` }))]} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">{st("firewall.fields.applyTo")}</Label>
-                        <OptionSelect value={newRule.level} onChange={level => setNewRule({...newRule, level})}
-                          ariaLabel={st("firewall.fields.applyTo")} className="bg-card"
-                          options={[{ value: "host", label: st("firewall.hostFirewallThisNode") },
-                                    { value: "cluster", label: st("firewall.clusterFirewallAllNodes") }]} />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">{st("firewall.fields.commentOptional")}</Label>
-                      <Input
-                        placeholder={st("firewall.placeholders.comment")}
-                        value={newRule.comment}
-                        onChange={(e) => setNewRule({...newRule, comment: e.target.value})}
-                        className="h-9 text-sm"
-                      />
-                    </div>
-
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAddRule(false)}
-                        className="text-muted-foreground"
-                      >
-                        {t("actions.cancel")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        disabled={addingRule}
-                        onClick={handleAddRule}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {addingRule ? (
-                          <div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full mr-1" />
-                        ) : (
-                          <Plus className="h-3.5 w-3.5 mr-1" />
-                        )}
-                        {st("firewall.addRule")}
-                      </Button>
-                    </div>
-                  </div>
+                  <FirewallRuleForm
+                    draft={newRule}
+                    onChange={draft => setNewRule({ ...newRule, ...draft })}
+                    onCancel={() => setShowAddRule(false)}
+                    onSubmit={handleAddRule}
+                    saving={addingRule}
+                    interfaces={networkInterfaces.map(iface => ({
+                      value: iface.name,
+                      label: `${iface.name} (${interfaceTypeLabel(iface.type)}${iface.status === "up" ? `, ${st("values.up")}` : `, ${st("values.down")}`})`,
+                    }))}
+                    targetField={
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">{st("firewall.fields.applyTo")}</Label>
+                          <OptionSelect value={newRule.level} onChange={level => setNewRule({...newRule, level})}
+                            ariaLabel={st("firewall.fields.applyTo")} className="bg-card"
+                            options={[{ value: "host", label: st("firewall.hostFirewallThisNode") },
+                                      { value: "cluster", label: st("firewall.clusterFirewallAllNodes") }]} />
+                        </div>
+                    }
+                  />
                 )}
 
                 {/* Rules List */}

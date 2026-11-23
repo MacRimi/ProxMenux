@@ -211,6 +211,8 @@ _ACTION = {
     "/api/managed-installs/refresh": "execute",
     "/api/oci/deploy": "execute",
     # VMs, LXC and their apps.
+    "/api/vms/<int:vmid>/firewall/rules": "admin",
+    "/api/vms/<int:vmid>/firewall/settings": "admin",
     "/api/vms/<int:vmid>/": "guests",
     "/api/lxc/<int:vmid>/": "guests",
     "/api/oci/installed/": "guests",

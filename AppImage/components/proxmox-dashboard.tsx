@@ -188,6 +188,10 @@ function MonitorDashboard({ product }: { product: Product }) {
   const [componentKey, setComponentKey] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [focusSecurityFirewall, setFocusSecurityFirewall] = useState(false)
+  useEffect(() => {
+    if (activeTab !== "security") setFocusSecurityFirewall(false)
+  }, [activeTab])
   // On first mount, land on whatever the user's custom order says is
   // the leading tab. localStorage isn't available during SSR so this
   // runs post-hydration; the tiny flash is acceptable and matches the
@@ -1001,7 +1005,10 @@ function MonitorDashboard({ product }: { product: Product }) {
               is inactive — mount cost is ~zero (no polling loop that
               other components run). */}
           {areas.guests && <TabsContent value="vms" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
-            <VirtualMachines key={`vms-${componentKey}`} />
+            <VirtualMachines key={`vms-${componentKey}`} onClusterFirewall={() => {
+              setFocusSecurityFirewall(true)
+              setActiveTab("security")
+            }} />
           </TabsContent>}
 
           <TabsContent value="hardware" className="space-y-4 md:space-y-6 mt-0">
@@ -1030,7 +1037,7 @@ function MonitorDashboard({ product }: { product: Product }) {
           )}
 
           <TabsContent value="security" className="space-y-4 md:space-y-6 mt-0">
-            <Security key={`security-${componentKey}`} hostType={product} />
+            <Security key={`security-${componentKey}`} hostType={product} focusFirewall={focusSecurityFirewall} />
           </TabsContent>
 
           {/* Profile tab — not surfaced in the top tabs nav. The only
