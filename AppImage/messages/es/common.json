@@ -3342,8 +3342,8 @@
       "readOnlyMode": "El panel es de solo lectura sin contraseña: se puede ver, pero no se puede ejecutar ni cambiar nada.",
       "useReadOnly": "Cambiar a solo lectura",
       "disableChoose": "Sin contraseña, ¿cómo se debería acceder al panel?",
-      "pveMode": "El panel inicia sesión con las cuentas de Proxmox VE.",
-      "pbsMode": "inicie sesión en el monitor con una cuenta Proxmox Backup Server."
+      "pveMode": "Inicia sesión en el Monitor con una cuenta de Proxmox VE.",
+      "pbsMode": "Inicia sesión en el Monitor con una cuenta de Proxmox Backup Server."
     },
     "twoFactor": {
       "title": "Autenticación de dos factores",

@@ -3190,7 +3190,7 @@
       "useReadOnly": "Passa a sola lettura",
       "disableChoose": "Senza password, come deve essere raggiungibile la dashboard?",
       "pveMode": "L'accesso alla dashboard avviene con gli account di Proxmox VE.",
-      "pbsMode": "accedi al Monitor con un account Proxmox Backup Server."
+      "pbsMode": "Accedi al Monitor con un account Proxmox Backup Server."
     },
     "twoFactor": {
       "title": "Autenticazione a due fattori",
