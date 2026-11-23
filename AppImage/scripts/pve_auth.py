@@ -73,7 +73,7 @@ def is_ticket(token):
             and token.startswith(_product()["prefix"] + ":"))
 
 
-def _request(method, path, data=None, ticket=None, csrf=None):
+def _request(method, path, data=None, ticket=None, csrf=None, *, max_response_bytes=1024 * 1024):
     body = urllib.parse.urlencode(data).encode() if data is not None else None
     product = _product()
     request = urllib.request.Request(product["api"] + path, data=body, method=method)
@@ -83,7 +83,11 @@ def _request(method, path, data=None, ticket=None, csrf=None):
         request.add_header("CSRFPreventionToken", csrf)
     try:
         with urllib.request.urlopen(request, context=_CONTEXT, timeout=10) as response:
-            return response.status, json.loads(response.read(1024 * 1024) or b"{}").get("data")
+            raw = response.read(max_response_bytes + 1)
+            if len(raw) > max_response_bytes:
+                return 0, None
+            payload = json.loads(raw or b"{}")
+            return (response.status, payload.get("data")) if isinstance(payload, dict) else (0, None)
     except urllib.error.HTTPError as error:
         return error.code, None
     except (urllib.error.URLError, OSError, ValueError):

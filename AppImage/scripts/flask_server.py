@@ -16117,7 +16117,10 @@ def _firewall_pve_get(endpoint, ticket=None, **params):
     """Read only, using the caller's own PVE session when one exists."""
     if ticket:
         query = urllib.parse.urlencode(params)
-        status, data = pve_auth._request('GET', endpoint + ('?' + query if query else ''), ticket=ticket)
+        # A page of up to 5,000 native firewall log entries can exceed
+        # the usual session API response limit.
+        size = {'max_response_bytes': 8 * 1024 * 1024} if endpoint.endswith('/firewall/log') else {}
+        status, data = pve_auth._request('GET', endpoint + ('?' + query if query else ''), ticket=ticket, **size)
         if status in (401, 403):
             raise _GuestFirewallError('permission_denied', status)
         if status == 200:
@@ -16383,7 +16386,11 @@ def _firewall_rule_parameters(body):
             or protocol not in ('tcp', 'udp', 'icmp')):
         raise _GuestFirewallError('firewall_rule_invalid', 400)
     if rule['dport']:
+        rule['dport'] = re.sub(r' *(,|:) *', r'\1', rule['dport'])
         if protocol == 'icmp' or not re.fullmatch(r'[0-9]{1,5}(?::[0-9]{1,5})?(?:,[0-9]{1,5}(?::[0-9]{1,5})?)*', rule['dport']):
+            raise _GuestFirewallError('firewall_rule_invalid', 400)
+        # Proxmox counts a port range as two numbers in the list.
+        if 1 + rule['dport'].count(',') + rule['dport'].count(':') > 15:
             raise _GuestFirewallError('firewall_rule_invalid', 400)
         for interval in rule['dport'].split(','):
             start, *end = map(int, interval.split(':'))

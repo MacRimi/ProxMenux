@@ -31,6 +31,7 @@ PYTHON_FILES = (
     "AppImage/scripts/tests/test_monitor_links.py",
     "AppImage/scripts/tests/test_pve_mirror.py",
     "AppImage/scripts/tests/test_vital_signs.py",
+    "AppImage/scripts/tests/test_guest_firewall.py",
     "AppImage/scripts/tests/test_local_app_icon_isolation.py",
     "AppImage/scripts/tests/test_local_app_icons.py",
     "AppImage/scripts/tests/test_docker_app_discovery.py",

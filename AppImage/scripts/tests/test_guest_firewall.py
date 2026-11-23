@@ -2,6 +2,7 @@
 
 import ast
 import hashlib
+import io
 import json
 import os
 import re
@@ -23,6 +24,7 @@ import jwt_middleware
 import permissions
 import guest_firewall_reads
 import pve_mirror
+import pve_auth
 
 
 class GuestFirewallReadTests(unittest.TestCase):
@@ -125,9 +127,12 @@ class GuestFirewallReadTests(unittest.TestCase):
         self.assertTrue(kwargs["check"])
         return SimpleNamespace(stdout=json.dumps(self.native_data(command[2])))
 
-    def pve_request(self, method, url, ticket=None):
+    def pve_request(self, method, url, ticket=None, **options):
         self.assertEqual((method, ticket), ("GET", self.ticket))
         path = urlsplit(url).path
+        if options:
+            self.assertTrue(path.endswith("/firewall/log"))
+            self.assertEqual(options, {"max_response_bytes": 8 * 1024 * 1024})
         if path == "/access/permissions":
             guest_path, = parse_qs(urlsplit(url).query)["path"]
             return 200, {guest_path: self.grants}
@@ -315,6 +320,26 @@ class GuestFirewallReadTests(unittest.TestCase):
                 self.assertEqual(self.add_rule(vmid, guest_type, token, enabled=True).status_code, 201)
                 self.assertEqual(self.maps[path][0]["enable"], 1)
                 self.assertEqual(self.maps[path][2]["enable"], enable)
+
+    def test_port_lists_with_spaces_and_udp_ranges_use_native_syntax(self):
+        self.grants["VM.Config.Network"] = 0
+        args = (106, "lxc", self.ticket)
+        fifteen_ports = ", ".join(map(str, range(1, 16)))
+        for invalid in ("4 43", "0, 443", "65536", "90 : 80", "22,", fifteen_ports + ": 16"):
+            with self.subTest(invalid=invalid):
+                self.assertEqual(self.add_rule(*args, dport=invalid).status_code, 400)
+        self.pve_create.assert_not_called()
+
+        self.assertEqual(self.add_rule(*args, dport="22, 80, 443", enabled=True).status_code, 201)
+        self.assertEqual(self.pve_create.call_args.args[1]["dport"], "22,80,443")
+        result = self.add_rule(*args, direction="OUT", protocol="udp", dport="53, 5353 : 5355",
+                               source="2001:db8:1::/64", enabled=True)
+        self.assertEqual(result.status_code, 201, result.get_json())
+        self.assertEqual(self.pve_create.call_args.args[1], {
+            "type": "out", "action": "ACCEPT", "proto": "udp", "source": "2001:db8:1::/64",
+            "dport": "53,5353:5355", "enable": 1,
+        })
+        self.assertEqual(self.add_rule(*args, dport=fifteen_ports, enabled=True).status_code, 201)
 
     def test_rule_log_level_can_be_set_preserved_and_cleared(self):
         self.grants["VM.Config.Network"] = 0
@@ -563,6 +588,32 @@ class GuestFirewallReadTests(unittest.TestCase):
                                              "name": "test-vm", "firewall_enabled": True})
         self.read_config.assert_called_once_with("test-node", "qemu", 105)
         self.assertEqual(self.process.call_args.args[0][-4:], ["--start", "2", "--limit", "5"])
+
+    def test_ticket_log_reads_a_full_page_with_a_large_native_response(self):
+        self.grants = {"VM.Console": 0}
+        rows = [{"n": pos, "t": "105 4 tap105i0-IN " + ("SRC=192.0.2.42 DST=192.0.2.1 " * 12)}
+                for pos in range(5000)]
+        body = json.dumps({"data": rows}).encode()
+        self.assertGreater(len(body), 1024 * 1024)
+
+        class NativeResponse(io.BytesIO):
+            status = 200
+
+        def open_native(request, **kwargs):
+            url = urlsplit(request.full_url)
+            if url.path.endswith("/access/permissions"):
+                return NativeResponse(b'{"data": {"/vms/105": {"VM.Console": 0}}}')
+            self.assertTrue(url.path.endswith("/qemu/105/firewall/log"))
+            self.assertEqual(parse_qs(url.query), {"start": ["0"], "limit": ["5000"]})
+            return NativeResponse(body)
+
+        self.pve.side_effect = pve_auth._request
+        with patch.object(pve_auth.urllib.request, "urlopen", side_effect=open_native):
+            response = self.client.get("/api/vms/105/firewall/log?node=test-node&type=qemu&limit=5000",
+                                       headers={"Authorization": f"Bearer {self.ticket}"})
+        self.assertEqual(response.status_code, 200, response.get_json().get("error"))
+        self.assertEqual(response.get_json()["logs"], rows)
+        self.process.assert_not_called()
 
     def test_monitor_guard_precedes_all_pve_reads_and_methods_are_read_only(self):
         self.assertEqual(self.read("status", token=None)[0], 401)
