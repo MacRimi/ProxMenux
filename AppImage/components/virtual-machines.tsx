@@ -19,9 +19,11 @@ import { Switch } from "./ui/switch"
 import { Textarea } from "./ui/textarea"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import useSWR from "swr"
+import useSWR, { mutate as revalidate } from "swr"
 import { MetricsView } from "./metrics-dialog"
 import { LxcTerminalModal } from "./lxc-terminal-modal"
+import { LxcRemoveDialog } from "./lxc-remove-dialog"
+import lxcFooterStyles from "./lxc-footer.module.css"
 import { PlainLxcCreate } from "./plain-lxc-wizard"
 import { ScriptTerminalModal } from "./script-terminal-modal"
 import { LxcUpdateJobs } from "./lxc-update-jobs"
@@ -923,6 +925,9 @@ export function VirtualMachines() {
   const [controlLoading, setControlLoading] = useState(false)
   const controlRequestRef = useRef(false)
   const [controlAction, setControlAction] = useState<{ vmid: number; action: string } | null>(null)
+  const [controlWarning, setControlWarning] = useState<{ vmid: number; count: number } | null>(null)
+  const removalHintId = useId()
+  const [removeLxcOpen, setRemoveLxcOpen] = useState(false)
   // Destructive control confirmation. `Force Stop` and `Reboot` skip the OS
   // shutdown sequence and can corrupt running guests; gate them behind a
   // typed-VMID match prompt to prevent misclicks. See audit Tier 2 #17.
@@ -1855,6 +1860,7 @@ export function VirtualMachines() {
     controlRequestRef.current = true
     setControlAction({ vmid, action })
     setControlLoading(true)
+    setControlWarning(null)
     try {
       const accepted = await fetchApi<{ task: string }>(`/api/vms/${vmid}/control`, {
         method: "POST",
@@ -1886,6 +1892,9 @@ export function VirtualMachines() {
       // Keep the user's tab/scroll and last complete detail while revalidating.
       // Never resurrect a modal the user closed, or overwrite another guest.
       if (selectedVMRef.current?.vmid === vmid) {
+        if (completed.warning_count !== undefined) {
+          setControlWarning({ vmid, count: completed.warning_count })
+        }
         setSelectedVM(current => current?.vmid === vmid
           ? { ...current, status: completed.guest_status as VMData["status"] } : current)
         try {
@@ -3937,8 +3946,9 @@ export function VirtualMachines() {
           // user tapped the terminal's Close button and got kicked
           // all the way back to the guest list.
           if (open) return
-          if (applyOpen || terminalOpen || ociAction) return
+          if (applyOpen || terminalOpen || ociAction || removeLxcOpen) return
           setSelectedVM(null)
+          setControlWarning(null)
           setVMDetails(null)
           setCurrentView("main")
           setSelectedMetric(null)
@@ -7800,34 +7810,32 @@ export function VirtualMachines() {
                 )}
               </div>
 
-              <div className="border-t border-border bg-background px-6 py-4 mt-auto shrink-0">
-                {/* Footer controls — responsive layout:
-                    • Mobile (<sm): 4-col grid. Terminal spans all 4
-                      in row 1; the 4 control buttons show as icon-only
-                      in row 2 (labels re-appear at sm+). Two rows max.
-                    • Tablet portrait (sm..lg): 4-col grid with labels
-                      back. Terminal still full-width row → 2 rows.
-                    • Desktop / tablet landscape (lg+): everything sits
-                      on a single 5-col row when Terminal is present,
-                      or a 4-col row when it isn't.
-                    Previously this stacked as 3 rows on mobile and 2
-                    rows on desktop, eating scroll space with each new
-                    tab we added. */}
-                {(capabilities.guests || capabilities.terminal) && (() => {
+              <div className={cn("border-t border-border bg-background mt-auto shrink-0",
+                selectedVM?.type === "lxc" ? lxcFooterStyles.footer : "px-6 py-4")}>
+                {controlWarning && controlWarning.vmid === selectedVM?.vmid && (
+                  <p role="status" className="mb-2 text-sm text-amber-500">
+                    {t("vmLxc.errors.controlWarning", { count: controlWarning.count })}
+                  </p>
+                )}
+                {(capabilities.guests || capabilities.terminal || capabilities.admin) && (() => {
                   const hasTerminal = selectedVM?.type === "lxc" && selectedVM?.status === "running" && capabilities.terminal
                   const controls = capabilities.guests
+                  const canRemove = capabilities.admin && selectedVM?.type === "lxc"
+                  const showRemovalHint = canRemove && selectedVM?.status === "running"
                   const pendingAction = controlAction?.vmid === selectedVM?.vmid ? controlAction?.action : null
                   const controlLabel = (action: string, key: string) => pendingAction === action
                     ? t(`vmLxc.actions.${action}Pending`) : t(key)
                   return (
-                    <div aria-busy={controlLoading} className={`grid gap-2 sm:gap-3 ${!controls ? "grid-cols-1" : hasTerminal ? "grid-cols-4 lg:grid-cols-5" : "grid-cols-4"}`}>
+                    <>
+                    <div aria-busy={controlLoading} className={selectedVM?.type === "lxc"
+                      ? lxcFooterStyles.actions : "grid grid-cols-4 gap-2 sm:gap-3"}>
                       {hasTerminal && (
                         <Button
-                          className={`w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30 ${controls ? "col-span-4 lg:col-span-1" : ""}`}
+                          className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30"
                           onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                         >
-                          <Terminal className="h-4 w-4 mr-2" />
-                          {t("vmLxc.openTerminal")}
+                          <Terminal className="size-4 shrink-0" aria-hidden="true" />
+                          <span>{t("navigation.terminal")}</span>
                         </Button>
                       )}
                       {controls && (<>
@@ -7863,7 +7871,7 @@ export function VirtualMachines() {
                         <span className="hidden sm:inline">{controlLabel("reboot", "vmLxc.actions.reboot")}</span>
                       </Button>
                       <Button
-                        className="w-full bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
+                        className="w-full gap-1.5 px-2 whitespace-normal leading-tight bg-red-600/20 border border-red-600/50 text-red-400 hover:bg-red-600/30"
                         disabled={selectedVM?.status !== "running" || controlLoading}
                         onClick={() => selectedVM && setConfirmDestructive({
                           action: "stop",
@@ -7872,11 +7880,30 @@ export function VirtualMachines() {
                         })}
                         title={controlLabel("stop", "vmLxc.actions.forceStop")}
                       >
-                        {pendingAction === "stop" ? <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" /> : <StopCircle className="h-4 w-4 sm:mr-2" />}
+                        {pendingAction === "stop" ? <Loader2 className="size-4 shrink-0 animate-spin" /> : <StopCircle className="size-4 shrink-0" />}
                         <span className="hidden sm:inline">{controlLabel("stop", "vmLxc.actions.forceStop")}</span>
                       </Button>
                       </>)}
+                      {canRemove && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full border-red-600/50 text-red-400 hover:text-red-300"
+                          disabled={selectedVM?.status !== "stopped" || controlLoading}
+                          aria-describedby={showRemovalHint ? removalHintId : undefined}
+                          onClick={() => setRemoveLxcOpen(true)}
+                        >
+                          <Trash2 className="size-4 shrink-0" aria-hidden="true" />
+                          <span>{t("actions.remove")}</span>
+                        </Button>
+                      )}
                     </div>
+                    {showRemovalHint && (
+                      <p id={removalHintId} className="mt-2 text-right text-xs text-muted-foreground">
+                        {t("vmLxc.remove.reasons.container_running")}
+                      </p>
+                    )}
+                    </>
                   )
                 })()}
               </div>
@@ -7893,6 +7920,23 @@ export function VirtualMachines() {
           )}
         </DialogContent>
       </Dialog>
+
+      <LxcRemoveDialog
+        target={selectedVM?.type === "lxc" ? selectedVM : null}
+        open={removeLxcOpen}
+        onOpenChange={setRemoveLxcOpen}
+        onRemoved={(vmid) => {
+          void revalidate("/api/apps/custom-links")
+          vmModalCacheRef.current.details.delete(vmid)
+          vmModalCacheRef.current.backups.delete(vmid)
+          vmModalCacheRef.current.schedule.delete(vmid)
+          vmModalCacheRef.current.mountPoints.delete(vmid)
+          vmModalCacheRef.current.firewall.delete(vmid)
+          void mutate(current => current?.filter(vm => vm.vmid !== vmid), { revalidate: true })
+          setSelectedVM(current => current?.vmid === vmid ? null : current)
+          setVMDetails(current => current?.vmid === vmid ? null : current)
+        }}
+      />
 
       {/* Destructive control confirmation (Force Stop / Reboot) */}
       <Dialog

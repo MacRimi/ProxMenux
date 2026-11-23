@@ -112,6 +112,7 @@ from flask_oci_routes import oci_bp  # noqa: E402
 from flask_audit_routes import audit_bp  # noqa: E402
 from flask_vm_backup_routes import vm_backup_bp  # noqa: E402
 from flask_plain_lxc_routes import plain_lxc_bp  # noqa: E402
+from flask_lxc_removal_routes import lxc_removal_bp, reconcile_link_detachments  # noqa: E402
 from flask_vm_backup_routes import active_vzdump  # noqa: E402
 from guest_backup_archives import (BackupArchiveError, delete_guest_backups,
                                    guest_backup_deletion_status)  # noqa: E402
@@ -223,6 +224,7 @@ app.register_blueprint(oci_bp)
 app.register_blueprint(audit_bp)
 app.register_blueprint(vm_backup_bp)
 app.register_blueprint(plain_lxc_bp)
+app.register_blueprint(lxc_removal_bp)
 
 # Initialize terminal / WebSocket routes
 init_terminal_routes(app)
@@ -1958,7 +1960,7 @@ def _vm_conf_signature(vmid: int):
         except OSError:
             continue
         # Same-second, same-size changes must also invalidate the payload.
-        return (path, info.st_mtime_ns, info.st_size, digest)
+        return (path, info.st_dev, info.st_ino, info.st_mtime_ns, info.st_size, digest)
     return None
 
 def _vm_conf_cache_get(cache: dict, name: str, vmid: int, ttl: int):
@@ -1974,6 +1976,36 @@ def _vm_conf_cache_put(cache: dict, name: str, vmid: int, value, signature) -> N
     with _vm_modal_cache_lock:
         cache[vmid] = (time.time(), value)
         _vm_conf_built[(name, vmid)] = signature
+
+def _app_suggestions_source(vmid: int):
+    import oci_instance_info
+    config = _vm_conf_signature(vmid)
+    return (config, oci_instance_info.record_signature(vmid)) if config else None
+
+
+def _cached_lxc_app_suggestions(vmid: int):
+    with _vm_modal_cache_lock:
+        hit = _vm_app_suggestions_cache.get(vmid)
+        built = _vm_conf_built.get(('app_suggestions', vmid))
+    return hit[1] if hit and built is not None and built == _app_suggestions_source(vmid) else None
+
+
+def _build_lxc_app_suggestions(vmid: int):
+    import lxc_apps
+    source = _app_suggestions_source(vmid)
+    if source is None:
+        return None
+    with _guest_lifecycle_lock:
+        revision = _guest_modal_cache_revision.get(vmid)
+    payload = dict(lxc_apps.get_suggestions(vmid, force=True), ready=True)
+    if source != _app_suggestions_source(vmid):
+        return None
+    with _guest_lifecycle_lock:
+        if revision != _guest_modal_cache_revision.get(vmid):
+            return None
+        _vm_conf_cache_put(_vm_app_suggestions_cache, 'app_suggestions', vmid, payload, source)
+    return payload
+
 
 def _vm_cache_invalidate(vmid: int, *caches) -> None:
     """Drop this vmid's entries from the given caches. With no argument
@@ -1996,6 +2028,7 @@ def _vm_cache_invalidate(vmid: int, *caches) -> None:
 _guest_lifecycle_lock = threading.RLock()
 _guest_refresh_inflight: set[int] = set()
 _guest_modal_cache_revision: dict[int, int] = {}
+_guest_app_sources: dict = {}
 _guest_modal_cache_epoch = int(time.time() * 1000)
 
 
@@ -2014,6 +2047,18 @@ def _publish_guest_modal_cache_revision(vmid: int) -> int:
         ) + 1
         _guest_modal_cache_revision[int(vmid)] = revision
         return revision
+
+
+def _observe_guest_app_source(vmid: int) -> None:
+    try:
+        source = _app_suggestions_source(vmid)
+    except OSError:
+        source = None
+    with _guest_lifecycle_lock:
+        previous = _guest_app_sources.setdefault(vmid, source)
+        if previous != source:
+            _guest_app_sources[vmid] = source
+            _publish_guest_modal_cache_revision(vmid)
 
 
 def _wait_for_started_guest(vmid: int, vm_type: str) -> bool:
@@ -2155,10 +2200,8 @@ def _refresh_started_guest(vmid: int, vm_type: str) -> None:
             # the UI while discovery continues. A second revision refreshes
             # only the App suggestions when this sweep eventually finishes.
             try:
-                suggestions = dict(lxc_apps.get_suggestions(vmid, force=True))
-                suggestions['ready'] = True
-                _vm_cache_put(_vm_app_suggestions_cache, vmid, suggestions)
-                _publish_guest_modal_cache_revision(vmid)
+                if _build_lxc_app_suggestions(vmid) is not None:
+                    _publish_guest_modal_cache_revision(vmid)
                 print(f'[ProxMenux] lifecycle refresh {vm_type} {vmid}: '
                       f'suggestions ready in '
                       f'{time.monotonic() - started_at:.1f}s', flush=True)
@@ -2262,9 +2305,13 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
     # it via `lxc-info`. QEMU guests do not touch this cache.
     if guest_type == 'lxc':
         import native_app_discovery
-        native_app_discovery.mark_stale(guest_id)
         import docker_app_discovery
-        docker_app_discovery.mark_stale(guest_id)
+        if action == 'destroy':
+            native_app_discovery.forget(guest_id)
+            docker_app_discovery.forget(guest_id)
+        else:
+            native_app_discovery.mark_stale(guest_id)
+            docker_app_discovery.mark_stale(guest_id)
         _invalidate_lxc_ip(guest_id)
     if action in ('start', 'reboot'):
         if guest_type == 'lxc':
@@ -2296,6 +2343,10 @@ def _handle_guest_lifecycle(vmid: str, vm_type: str, action: str) -> None:
             _vm_cache_invalidate(guest_id, _vm_schedule_cache)
         except Exception as exc:
             print(f'[ProxMenux] could not forget the applications of {guest_type} {guest_id}: {exc}', flush=True)
+        if guest_type == 'lxc':
+            with _guest_lifecycle_lock:
+                _guest_app_sources.pop(guest_id, None)
+            reconcile_link_detachments(guest_id)
         _publish_guest_modal_cache_revision(guest_id)
 
 
@@ -7200,6 +7251,8 @@ def get_proxmox_vms():
                         revision_vmid = int(resource.get('vmid'))
                     except (TypeError, ValueError):
                         revision_vmid = 0
+                    if vm_type == 'lxc' and revision_vmid:
+                        _observe_guest_app_source(revision_vmid)
                     with _guest_lifecycle_lock:
                         vm_data['modal_cache_revision'] = (
                             _guest_modal_cache_revision.get(
@@ -14201,6 +14254,9 @@ def api_vm_apps_delete_one(vmid, app_id):
     try:
         import lxc_apps
         ok = lxc_apps.delete_app(vmid, app_id)
+        if ok:
+            _vm_cache_invalidate(vmid, _vm_app_suggestions_cache)
+            _publish_guest_modal_cache_revision(vmid)
         sidecar = lxc_apps.load_sidecar(vmid) or {'vmid': vmid, 'apps': []}
         return jsonify({**sidecar, 'success': ok, 'app_id': app_id}), 200
     except Exception as e:
@@ -14213,6 +14269,9 @@ def api_vm_apps_delete_all(vmid):
     try:
         import lxc_apps
         ok = lxc_apps.delete_all(vmid)
+        if ok:
+            _vm_cache_invalidate(vmid, _vm_app_suggestions_cache)
+            _publish_guest_modal_cache_revision(vmid)
         sidecar = {'vmid': vmid, 'apps': []}
         return jsonify({**sidecar, 'success': ok}), 200
     except Exception as e:
@@ -14381,33 +14440,28 @@ def api_vm_bulk_update_plan(vmid):
 @require_auth
 def api_vm_apps_suggestions(vmid):
     try:
-        import lxc_apps
-        cached = _vm_cache_get(
-            _vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL,
-        )
+        cached = _cached_lxc_app_suggestions(vmid)
         if request.method == 'GET' and cached is not None:
             return jsonify(cached)
 
         from flask import g as _flask_g
         internal_warmup = bool(getattr(_flask_g, '_internal_call', False))
-        if request.method == 'GET' and not internal_warmup:
-            return jsonify({
-                'ready': False,
-                'name_suggestion': None,
-                'helper_slug': None,
-                'port_suggestions': [],
-                'web_path_hint': None,
-                'tracking_suggestion': None,
-                'default_ports': [],
-                'logo_url': None,
-                'extras': [],
-                'docker_web_links': [],
-            })
-
-        payload = dict(lxc_apps.get_suggestions(vmid, force=True))
-        payload['ready'] = True
-        _vm_cache_put(_vm_app_suggestions_cache, vmid, payload)
-        return jsonify(payload)
+        if request.method == 'POST' or internal_warmup:
+            payload = _build_lxc_app_suggestions(vmid)
+            if payload is not None:
+                return jsonify(payload)
+        return jsonify({
+            'ready': False,
+            'name_suggestion': None,
+            'helper_slug': None,
+            'port_suggestions': [],
+            'web_path_hint': None,
+            'tracking_suggestion': None,
+            'default_ports': [],
+            'logo_url': None,
+            'extras': [],
+            'docker_web_links': [],
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -14420,7 +14474,7 @@ def api_vm_apps_native_discovery(vmid):
     import lxc_apps
     result = (native_app_discovery.discover(vmid) if request.method == 'POST'
               else native_app_discovery.cached(vmid))
-    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    suggestions = _cached_lxc_app_suggestions(vmid) or {}
     sidecar = lxc_apps.load_sidecar(vmid) or {}
     return jsonify(native_app_discovery.filter_candidates(
         result, suggestions, sidecar.get('apps') or []))
@@ -14463,7 +14517,7 @@ def api_vm_apps_docker_discovery(vmid):
     import lxc_apps
     result = (docker_app_discovery.discover(vmid) if request.method == 'POST'
               else docker_app_discovery.cached(vmid))
-    suggestions = _vm_cache_get(_vm_app_suggestions_cache, vmid, _VM_APP_SUGGESTIONS_TTL) or {}
+    suggestions = _cached_lxc_app_suggestions(vmid) or {}
     sidecar = lxc_apps.load_sidecar(vmid) or {}
     return jsonify(docker_app_discovery.filter_candidates(
         result, suggestions, sidecar.get('apps') or []))
@@ -14620,6 +14674,7 @@ def api_lxc_apps_dockerhub_tag_preview():
 def api_custom_links_list():
     try:
         import custom_links
+        reconcile_link_detachments()
         return jsonify(custom_links.load_all())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -15855,10 +15910,7 @@ def api_vms_modal_cache_all():
             if vm_type == 'lxc':
                 import lxc_apps
                 entry['apps'] = lxc_apps.load_sidecar(vmid) or {'vmid': vmid, 'apps': []}
-                entry['suggestions'] = _vm_cache_get(
-                    _vm_app_suggestions_cache, vmid,
-                    _VM_APP_SUGGESTIONS_TTL,
-                )
+                entry['suggestions'] = _cached_lxc_app_suggestions(vmid)
                 entry['schedule'] = _vm_cache_get(_vm_schedule_cache, vmid, _VM_SCHEDULE_TTL)
                 entry['mount_points'] = _vm_conf_cache_get(_vm_mounts_cache, 'mounts', vmid, _VM_MOUNTS_TTL)
             guests.append(entry)
@@ -16498,8 +16550,11 @@ def api_vm_control_task(vmid, task):
         status = json.loads(result.stdout)
         if not isinstance(status, dict) or status.get('status') not in ('running', 'stopped'):
             return jsonify({'error': 'Invalid control task status'}), 502
-        payload = {'status': status['status'], 'exitstatus': status.get('exitstatus')}
-        if status['status'] == 'stopped' and status.get('exitstatus') == 'OK':
+        exitstatus = status.get('exitstatus')
+        payload = {'status': status['status'], 'exitstatus': exitstatus}
+        # Proxmox considers both OK and WARNINGS: <count> non-error results.
+        warnings = re.fullmatch(r'WARNINGS: ([0-9]+)', exitstatus) if isinstance(exitstatus, str) else None
+        if status['status'] == 'stopped' and (exitstatus == 'OK' or warnings):
             current = subprocess.run(['pvesh', 'get', f'/nodes/{node}/{vm_type}/{vmid}/status/current',
                                       '--output-format', 'json'],
                                      capture_output=True, text=True, timeout=5)
@@ -16509,6 +16564,8 @@ def api_vm_control_task(vmid, task):
             if not isinstance(guest, dict) or guest.get('status') not in ('running', 'stopped'):
                 return jsonify({'error': 'Invalid guest status'}), 502
             payload['guest_status'] = guest['status']
+            if warnings:
+                payload['warning_count'] = int(warnings.group(1))
             _pvesh_cache['cluster_resources_vm_time'] = 0
             _vm_cache_invalidate(vmid)
         return jsonify(payload)

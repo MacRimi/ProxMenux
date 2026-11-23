@@ -104,6 +104,10 @@ def begin_control(handle, node):
     _write_control(handle, {'node': node, 'task': None})
 
 
+def begin_removal(handle, node, operation):
+    _write_control(handle, {'node': node, 'task': None, 'removal': operation})
+
+
 def cancel_control(handle):
     """Clear a request for which no recoverable task identity was recorded."""
     _write_control(handle, None)
@@ -128,9 +132,16 @@ def check_control_task(vmid, handle=None):
         node, task = record['node'], record['task']
         if not isinstance(node, str) or not re.fullmatch(r'[\w.-]+', node):
             raise ValueError('Invalid node')
+        if 'removal' in record:
+            from lxc_removal_receipts import shared_task
+            task = shared_task(record['removal'], node, vmid)
+            if task is None:
+                _write_control(handle, None)
+                return
         if (not isinstance(task, str)
                 or not re.fullmatch(r'UPID:[\w.-]+:[0-9A-Fa-f]+:[0-9A-Fa-f]+:'
                                     r'[0-9A-Fa-f]+:(?:vz(?:start|stop|shutdown|reboot)'
+                                    r'|vzdestroy'
                                     r'|ha(?:start|stop)):'
                                     r'[0-9]+:[\w.@!-]+:', task)
                 or task.split(':')[1] != node or task.split(':')[6] != str(vmid)):

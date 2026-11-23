@@ -31,6 +31,9 @@ import subprocess
 import threading
 import time
 
+from lxc_check_job import check_control_task
+from oci_instance_info import OciStateError, check_plain_lxc
+
 TOTAL_SECONDS = 20
 PROBE_SECONDS = 3
 OUTPUT_BYTES = 64 * 1024
@@ -494,15 +497,6 @@ def _guard(vmid, deadline, run):
     path = LOCAL_CONFIG / f'{vmid}.conf'
     if not path.is_file():
         raise ProbeError('not_local_lxc')
-    # Presence, including a damaged/in-progress record, excludes generic probes.
-    try:
-        os.lstat(OCI_ROOT / str(vmid))
-    except FileNotFoundError:
-        pass
-    except OSError:
-        raise ProbeError('oci_unknown') from None
-    else:
-        raise ProbeError('managed_oci')
     try:
         with path.open('rb') as handle:
             raw = handle.read(OUTPUT_BYTES + 1)
@@ -511,23 +505,28 @@ def _guard(vmid, deadline, run):
         config = raw.decode('utf-8')
     except (OSError, UnicodeError):
         raise ProbeError('config_unavailable') from None
+    config = config.split('\n[', 1)[0]
+    try:
+        check_plain_lxc(config, OCI_ROOT / str(vmid), deadline)
+    except OciStateError as error:
+        raise ProbeError(str(error)) from None
     if re.search(r'^lock:', config, re.M):
         raise ProbeError('guest_busy')
     update_lock = UPDATE_LOCK_ROOT / f'proxmenux-lxc-update-{vmid}.lock'
     try:
-        fd = os.open(update_lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        with os.fdopen(fd, 'rb') as handle:
-            info = os.fstat(handle.fileno())
-            if not stat.S_ISREG(info.st_mode):
+        fd = os.open(update_lock, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'r+', encoding='utf-8') as handle:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
                 raise ProbeError('lock_unavailable')
-            if info.st_size:
-                raise ProbeError('guest_busy')
             try:
-                fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
-            except BlockingIOError:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                if os.fstat(fd).st_size:
+                    # The previous guest's control task can outlive its config.
+                    # Re-read the marker under the exclusive lock before clearing it.
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    check_control_task(vmid, handle)
+            except (BlockingIOError, UnicodeError):
                 raise ProbeError('guest_busy') from None
-            finally:
-                fcntl.flock(handle, fcntl.LOCK_UN)
     except FileNotFoundError:
         pass
     except OSError:
@@ -672,10 +671,25 @@ def _scan_metadata(vmid, deadline, run):
             'scanned_at': time.time()}
 
 
+def discovery_source(vmid):
+    """Bind local scan evidence to the configuration the probe observed."""
+    try:
+        with (LOCAL_CONFIG / f'{int(vmid)}.conf').open('rb') as handle:
+            info = os.fstat(handle.fileno())
+            raw = handle.read(OUTPUT_BYTES + 1)
+        if len(raw) <= OUTPUT_BYTES:
+            return (info.st_dev, info.st_ino, info.st_ctime_ns, info.st_mtime_ns,
+                    hashlib.sha256(raw).digest())
+    except OSError:
+        pass
+    return None
+
+
 def cached(vmid):
+    source = discovery_source(vmid)
     with _mutex:
         value = copy.deepcopy(_cache.get(int(vmid)))
-    if value is None:
+    if not value or source is None or value.pop('_source', None) != source:
         return {'vmid': int(vmid), 'status': 'not_scanned', 'candidates': [], 'stale': False}
     if time.time() - value['scanned_at'] >= CACHE_SECONDS:
         value['stale'] = True
@@ -690,6 +704,13 @@ def mark_stale(vmid):
             _cache[int(vmid)]['stale'] = True
 
 
+def forget(vmid):
+    vmid = int(vmid)
+    with _mutex:
+        _generations[vmid] = _generations.get(vmid, 0) + 1
+        _cache.pop(vmid, None)
+
+
 def discover(vmid):
     vmid = int(vmid)
     with _mutex:
@@ -699,27 +720,32 @@ def discover(vmid):
     try:
         with _mutex:
             generation = _generations.get(vmid, 0)
+        source = discovery_source(vmid)
         try:
             result = scan(vmid)
         except ProbeError as exc:
             result = {**cached(vmid), 'status': 'error', 'issues': [str(exc)], 'stale': True}
             result.setdefault('scanned_at', time.time())
-        # Comparing the generation and publishing must be atomic with lifecycle
-        # invalidation, including the first scan when no cache exists yet.
+        if source != discovery_source(vmid):
+            return {'vmid': vmid, 'status': 'error', 'issues': ['guest_changed'],
+                    'candidates': [], 'stale': True}
         with _mutex:
             previous = copy.deepcopy(_cache.get(vmid))
+            if previous and previous.pop('_source', None) != source:
+                previous = None
             if _generations.get(vmid, 0) != generation:
                 result = {**(previous or {'vmid': vmid, 'candidates': [],
                                          'scanned_at': time.time()}),
                           'status': 'error', 'issues': ['guest_changed'], 'stale': True}
             elif result['status'] != 'complete' and previous and previous['candidates']:
-                # Partial output cannot prove that previously seen apps disappeared.
+                # Preserve earlier evidence only for the same guest configuration.
                 ids = {item['discovery_id'] for item in result['candidates']}
                 result['candidates'].extend(item for item in previous['candidates']
                                             if item['discovery_id'] not in ids)
                 result['candidates'] = result['candidates'][:MAX_CANDIDATES]
                 result['stale'] = True
-            _cache[vmid] = copy.deepcopy(result)
+            if source is not None:
+                _cache[vmid] = copy.deepcopy({**result, '_source': source})
         return result
     finally:
         lock.release()

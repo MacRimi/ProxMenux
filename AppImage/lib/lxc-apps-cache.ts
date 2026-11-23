@@ -150,7 +150,7 @@ export function fetchLxcApps(vmid: number): Promise<LxcAppsBundle | null> {
       return bundle
     })
     .finally(() => {
-      inFlight.delete(vmid)
+      if (inFlight.get(vmid) === p) inFlight.delete(vmid)
     })
   inFlight.set(vmid, p)
   return p
@@ -159,6 +159,7 @@ export function fetchLxcApps(vmid: number): Promise<LxcAppsBundle | null> {
 export function invalidateLxcApps(vmid: number): void {
   cacheRevision.set(vmid, (cacheRevision.get(vmid) || 0) + 1)
   dataCache.delete(vmid)
+  inFlight.delete(vmid)
   observedStates.delete(vmid)
 }
 

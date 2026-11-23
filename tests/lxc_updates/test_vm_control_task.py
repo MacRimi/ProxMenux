@@ -158,6 +158,20 @@ class ControlTaskTests(unittest.TestCase):
         self.assertEqual(self.get(vmid=999).status_code, 404)
         self.run.assert_not_called()
 
+    def test_native_start_warnings_confirm_the_actual_guest_and_keep_the_count(self):
+        task = TASK.replace('vzreboot', 'vzstart')
+        self.run.side_effect = [
+            self.result(dict(status='stopped', exitstatus='WARNINGS: 1')),
+            self.result(dict(status='running')),
+        ]
+        response = self.get(task)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json, dict(status='stopped', exitstatus='WARNINGS: 1',
+                                             warning_count=1, guest_status='running'))
+        self.assertEqual(self.run.call_args.args[0][:3],
+                         ['pvesh', 'get', '/nodes/fixture/lxc/100/status/current'])
+        self.invalidate.assert_called_once_with(100)
+
     def test_task_failure_never_probes_guest_or_claims_success(self):
         self.run.return_value = self.result(dict(status='stopped', exitstatus='start failed'))
         self.assertEqual(self.get().json['exitstatus'], 'start failed')

@@ -592,6 +592,14 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
     return () => { targetGeneration.current += 1 }
   }, [vmid, managed])
   useEffect(() => {
+    nativeRequest.current += 1
+    dockerRequest.current += 1
+    setNativeDiscovery(null)
+    setDockerDiscovery(null)
+    setDetectionNotice(null)
+    setSearchingApplications(false)
+  }, [cacheRevision])
+  useEffect(() => {
     const generation = targetGeneration.current
     const request = nativeRequest.current
     let cancelled = false
@@ -612,7 +620,7 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
           && dockerRequest.current === request) setDockerDiscovery(result)
     }).catch(() => { /* optional cached result; never initiate a scan */ })
     return () => { cancelled = true }
-  }, [vmid, managed])
+  }, [vmid, managed, cacheRevision])
   const [adguardSetupAvailable, setAdguardSetupAvailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchingApplications, setSearchingApplications] = useState(false)
@@ -1279,7 +1287,8 @@ export function LxcAppPanel({ vmid, ctIp, onChange, managed, initialData, oci, c
     try {
       const r: SidecarResponse = await fetchApi(`/api/vms/${vmid}/apps/${appId}`, { method: "DELETE" })
       setSidecar(r)
-      setLxcAppsCached(vmid, r, suggestions)
+      setSuggestions(null)
+      setLxcAppsCached(vmid, r, null)
       onChange?.()
     } catch (e: any) {
       setError(e?.message || t("vmLxc.appEditor.deleteFailed"))

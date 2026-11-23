@@ -49,7 +49,7 @@ class Scan(unittest.TestCase):
             self.calls.append(argv)
             self.assertEqual(argv[:4], ['pct', 'exec', '101', '--'])
             if argv[4] == 'sh':
-                self.assertEqual(argv[5:], ['-c', 'command -v docker >/dev/null 2>&1'])
+                self.assertEqual(argv[5], '-c')
                 return (0 if docker_present else 1), ''
             if argv[4:6] == ['docker', 'ps']:
                 return 0, '\n'.join(ids if ids is not None else [ONE])
@@ -122,6 +122,20 @@ class Scan(unittest.TestCase):
         self.assertEqual(result['candidates'], [])
         self.assertEqual(len(self.calls), 1)
 
+    def test_docker_absent_in_real_sh_is_empty_but_failed_shell_is_an_error(self):
+        def probe(argv, deadline):
+            self.assertEqual(argv[:5], ['pct', 'exec', '101', '--', 'sh'])
+            real = subprocess.run(['/bin/sh', *argv[5:]], env={'PATH': self.temp.name},
+                                  check=False, capture_output=True, text=True, timeout=2)
+            return real.returncode, real.stdout
+
+        running = lambda argv, deadline: 'status: running'
+        result = docker.scan(101, run=probe, guard_run=running)
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual(result['candidates'], [])
+        with self.assertRaisesRegex(native.ProbeError, 'read_failed'):
+            docker.scan(101, run=lambda argv, deadline: (127, ''), guard_run=running)
+
     def test_nonzero_inspect_retains_valid_stdout_and_marks_partial(self):
         result = self.scan(ids=[ONE, TWO], inspect_rc=1)
         self.assertEqual(result['status'], 'partial')
@@ -152,11 +166,18 @@ class Scan(unittest.TestCase):
         (root/'101.conf').unlink()
         with self.assertRaisesRegex(native.ProbeError, 'not_local_lxc'):
             self.scan()
-        (root/'101.conf').write_text('ostype: unmanaged\n')
-        (root/'oci'/'101').mkdir(parents=True)
+        (root/'101.conf').write_text(
+            '# proxmenux-instance=ca126dc7-09ca-47ff-bac7-3e23396b7a15\nostype: debian\n')
         with self.assertRaisesRegex(native.ProbeError, 'managed_oci'):
             self.scan()
         self.assertEqual(self.calls, [])
+
+    def test_retired_oci_history_allows_docker_detection_on_reused_vmid(self):
+        history = Path(self.temp.name) / 'oci' / '101'
+        history.mkdir(parents=True)
+        (history / 'retired-bentopdf.json').write_text('{}')
+        self.assertEqual(self.scan()['status'], 'complete')
+        self.assertTrue(self.calls)
 
     def test_guest_stopping_during_scan_never_publishes_results(self):
         states = iter(['status: running', 'status: stopped'])
@@ -166,6 +187,7 @@ class Scan(unittest.TestCase):
 
 class Cache(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch.object(native, "discovery_source", return_value="fixture"))
         docker._cache.clear(); docker._generations.clear(); docker._locks.clear()
         self.addCleanup(docker._cache.clear)
         self.addCleanup(docker._generations.clear)
@@ -203,6 +225,15 @@ class Cache(unittest.TestCase):
             with patch.object(docker, 'scan') as scan:
                 self.assertEqual(docker.discover(101)['status'], 'busy'); scan.assert_not_called()
         finally: lock.release()
+
+    def test_replaced_guest_loses_cached_apps_and_web_links(self):
+        with patch.object(docker, 'scan', return_value=self.value):
+            docker.discover(101)
+        with patch.object(native, 'discovery_source', return_value='replacement'):
+            self.assertEqual(docker.cached(101)['candidates'], [])
+            self.assertIsNone(docker.cached_web_links(101, Mock()))
+            with patch.object(docker, 'scan', side_effect=native.ProbeError('timeout')):
+                self.assertEqual(docker.discover(101)['candidates'], [])
 
     def test_shared_web_links_avoid_duplicate_inspect_and_stop_at_snapshot_boundary(self):
         lookup = Mock(return_value={'slug': None, 'name': 'web', 'logo_url': None})
@@ -295,6 +326,7 @@ class Reader(unittest.TestCase):
 
 class Routes(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch.object(native, "discovery_source", return_value="fixture"))
         from flask import Flask, request, jsonify
         self.app = Flask(__name__)
         def auth(fn):
@@ -303,17 +335,20 @@ class Routes(unittest.TestCase):
                 return fn(*args, **kwargs) if request.headers.get('X-Fixture') == 'yes' else ({'error':'unauthorized'},401)
             return wrapped
         source = SCRIPTS/'flask_server.py'
-        routes = [n for n in ast.parse(source.read_text()).body if isinstance(n,ast.FunctionDef) and n.name in ('api_vm_apps_docker_discovery','api_vm_apps_suggestions')]
+        routes = [n for n in ast.parse(source.read_text()).body if isinstance(n,ast.FunctionDef) and n.name in (
+            'api_vm_apps_docker_discovery', 'api_vm_apps_suggestions', '_build_lxc_app_suggestions')]
         self.cache = {}
         scope = {'app':self.app, 'request':request, 'jsonify':jsonify, 'require_auth':auth,
-                 '_vm_cache_get':lambda c,v,t:c.get(v), '_vm_cache_put':lambda c,v,p:c.update({v:p}),
-                 '_vm_app_suggestions_cache':self.cache, '_VM_APP_SUGGESTIONS_TTL':60}
+                 '_cached_lxc_app_suggestions':self.cache.get,
+                 '_app_suggestions_source':lambda vmid: vmid, '_guest_lifecycle_lock':threading.RLock(),
+                 '_guest_modal_cache_revision':{}, '_vm_conf_cache_put':lambda c,n,v,p,s:c.update({v:p}),
+                 '_vm_app_suggestions_cache':self.cache}
         exec(compile(ast.Module(body=routes, type_ignores=[]), str(source), 'exec'),scope)
         self.client = self.app.test_client()
 
     def test_existing_suggestions_refresh_preserves_docker_cache_without_new_scan(self):
         value = {'vmid':101,'status':'complete','candidates':[],'scanned_at':time.time(),'stale':False}
-        docker._cache[101] = copy.deepcopy(value)
+        docker._cache[101] = {**copy.deepcopy(value), '_source': 'fixture'}
         self.addCleanup(docker._cache.clear)
         with patch.object(docker,'discover') as scan, patch.object(lxc_apps,'get_suggestions',return_value={'extras':[]}) as catalog, patch.object(lxc_apps,'_write_sidecar') as write:
             response = self.client.post('/api/vms/101/apps/suggestions',headers={'X-Fixture':'yes'})

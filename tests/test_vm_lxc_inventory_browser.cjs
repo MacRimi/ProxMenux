@@ -22,6 +22,13 @@ const pending = new Map()
 const rejectedWrites = []
 const errors = []
 const lxcRequests = []
+const removalRequests = []
+const startRequests = []
+const startTask = "UPID:fixture:0000000A:0000000B:0000000C:vzstart:302:root@pam:"
+const removalTask = "UPID:fixture:0000000A:0000000B:0000000C:vzdestroy:300:root@pam:"
+let removalState = "awaiting"
+let rejectPreviousRemoval
+let releaseFirstRemovalPreview
 const lxcBase = "/api/plain-lxc/v1/"
 const lxcTemplate = "local:vztmpl/debian-13-standard_13_amd64.tar.zst"
 const catalogTemplate = "ubuntu-24.04-standard_24.04_amd64.tar.zst"
@@ -51,12 +58,74 @@ function send(method, params = {}, targetSession = sessionId) {
   })
 }
 
+let protectedLxc = true
+let pendingProtectedLxc = true
+
 async function respond({ requestId, request }) {
   const url = new URL(request.url)
   const reply = (responseCode, value, contentType) => send("Fetch.fulfillRequest", {
     requestId, responseCode, body: Buffer.from(value).toString("base64"),
     responseHeaders: [{ name: "Content-Type", value: contentType }],
   })
+  const removal = url.origin === origin && /^\/api\/vms\/(100|300|301|302)\/(remove-preview|remove-operation|remove|disable-removal-protection)$/.exec(url.pathname)
+  if (removal) {
+    const vmid = Number(removal[1])
+    const action = removal[2]
+    removalRequests.push([vmid, action, request.method])
+    const json = (value, status = 200) => reply(status, JSON.stringify(value), "application/json")
+    const check = "fixture-removal-" + vmid
+    if (action === "remove-preview" && request.method === "GET") {
+      const protection = vmid === 302 && protectedLxc
+      const pending = protection && pendingProtectedLxc
+      const preview = {
+        eligible: vmid !== 100 && !protection,
+        reasons: vmid === 100 ? ["container_running"]
+          : pending ? ["container_protected", "pending_changes"] : protection ? ["container_protected"] : [],
+        check: vmid === 100 || protection ? null : check,
+        ...(protection && !pending ? { protection_check: "fixture-protection-302" } : {}),
+        target: { vmid, name: guests.find(guest => guest.vmid === vmid)?.name, node: "fixture", status: vmid === 100 ? "running" : "stopped" },
+        disk: {storage: "local-lvm", volume: "local-lvm:subvol-" + vmid + "-disk-0", size: "8G"},
+      }
+      if (vmid === 300 && !releaseFirstRemovalPreview) {
+        releaseFirstRemovalPreview = () => json(preview)
+        return
+      }
+      return json(preview)
+    }
+    if (vmid === 302 && action === "disable-removal-protection" && request.method === "POST") {
+      assert.deepEqual(JSON.parse(request.postData), {check: "fixture-protection-302"})
+      protectedLxc = false
+      return json({protection: false})
+    }
+    if (vmid === 300 && action === "remove" && request.method === "POST") {
+      assert.deepEqual(JSON.parse(request.postData), {check, confirm_vmid: "300", purge: false, destroy_unreferenced_disks: false})
+      removalState = "running"
+      return send("Fetch.failRequest", {requestId, errorReason: "ConnectionReset"})
+    }
+    if (vmid === 301 && action === "remove" && request.method === "POST") {
+      assert.deepEqual(JSON.parse(request.postData), {check, confirm_vmid: "301", purge: true, destroy_unreferenced_disks: true})
+      rejectPreviousRemoval = () => json({error: "target_changed"}, 409)
+      return
+    }
+    if (vmid === 300 && action === "remove-operation" && request.method === "GET") {
+      const receipt = Object.entries(request.headers)
+        .find(([key]) => key.toLowerCase() === "x-lxc-removal-check")?.[1]
+      assert.equal(receipt, check)
+      return json({state: removalState, task: removalTask, ...(removalState === "unknown" ? {reason: "task_status_unavailable"} : {})})
+    }
+  }
+  if (url.origin === origin && url.pathname === "/api/vms/302/control" && request.method === "POST") {
+    assert.deepEqual(JSON.parse(request.postData), {action: "start"})
+    startRequests.push("POST")
+    return reply(200, JSON.stringify({success: true, task: startTask}), "application/json")
+  }
+  if (url.origin === origin && request.method === "GET"
+      && decodeURIComponent(url.pathname) === "/api/vms/302/control-task/" + startTask) {
+    startRequests.push("GET")
+    guests.find(guest => guest.vmid === 302).status = "running"
+    return reply(200, JSON.stringify({status: "stopped", guest_status: "running",
+      exitstatus: "WARNINGS: 1", warning_count: 1}), "application/json")
+  }
   if (url.origin === origin && url.pathname.startsWith(lxcBase)) {
     const action = url.pathname.slice(lxcBase.length)
     const body = request.postData && JSON.parse(request.postData)
@@ -144,6 +213,9 @@ browser.stdio[4].on("data", data => {
       respond(message.params).catch(error => errors.push(error.message))
     } else if (message.method === "Runtime.exceptionThrown") {
       errors.push(message.params.exceptionDetails.text)
+    } else if (message.method === "Page.javascriptDialogOpening") {
+      errors.push("Unexpected browser dialog: " + message.params.message)
+      send("Page.handleJavaScriptDialog", {accept: true}).catch(error => errors.push(error.message))
     }
   }
 })
@@ -339,6 +411,154 @@ async function verifyPlainLxcWizard() {
   console.log("Plain LXC wizard: desktop, mobile, admin gating, downloads, duplicate clicks, recovery while running, and a fresh form after closing success")
 }
 
+async function verifyLxcRemoval() {
+  const dialog = "[...document.querySelectorAll('[role=dialog]')].find(el => el.querySelector('h2')?.textContent.trim() === 'Remove LXC')"
+  const button = label => `[...(${dialog})?.querySelectorAll(':scope > div:last-of-type button') ?? []].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
+  const key = label => send("Input.dispatchKeyEvent", {type: "rawKeyDown", key: label, code: label,
+    windowsVirtualKeyCode: label === "Escape" ? 27 : 13})
+  const item = "[...document.querySelectorAll('[role=dialog] button')].find(el => el.textContent.trim() === 'Remove')"
+  const openGuest = async name => {
+    const guest = `${guestTargets("View details for ")}.find(el => el.getAttribute('aria-label').endsWith(${JSON.stringify(name)}))`
+    await waitFor(`Boolean(${guest})`)
+    await click(guest)
+    await waitFor(`Boolean(document.querySelector('[role=dialog] h2')?.textContent.includes(${JSON.stringify(name)}))`)
+  }
+  const open = async name => {
+    await openGuest(name)
+    await waitFor(`!(${item})?.disabled && Boolean(${item})`)
+    await click(item)
+    await waitFor(`Boolean(${dialog})`)
+  }
+  const close = async (label = "Cancel") => {
+    await click(button(label))
+    await waitFor(`!(${dialog})`)
+    if (await evaluate("Boolean(document.querySelector('[role=dialog]'))")) await key("Escape")
+    await waitFor("!document.querySelector('[role=dialog]')")
+  }
+  await openGuest(guests[0].name)
+  await waitFor(`(${item})?.disabled`)
+  assert.match(await evaluate(`document.getElementById((${item}).getAttribute('aria-describedby'))?.textContent`),
+    /Shut it down before removing it/)
+  await evaluate(`(${item}).click()`)
+  assert.equal(await evaluate(`Boolean(${dialog})`), false)
+  assert.equal(removalRequests.length, 0)
+  await key("Escape")
+  await waitFor("!document.querySelector('[role=dialog]')")
+  await openGuest(guests[1].name)
+  assert.equal(await evaluate(`Boolean(${item})`), false, "VMs do not offer LXC removal")
+  await key("Escape")
+  await waitFor("!document.querySelector('[role=dialog]')")
+
+  guests.push({ ...guests[0], vmid: 300, name: "removal-fixture-first", status: "stopped" },
+    { ...guests[0], vmid: 301, name: "removal-fixture-second", status: "stopped" },
+    { ...guests[0], vmid: 302, name: "removal-fixture-third", status: "stopped" })
+  await send("Emulation.setDeviceMetricsOverride", {width: 390, height: 812, deviceScaleFactor: 1, mobile: true})
+  await send("Page.reload")
+  await openInventory()
+  await open("removal-fixture-first")
+  const confirm = button("Remove LXC")
+  const options = `[...(${dialog}).querySelectorAll('[role=checkbox]')]`
+  const optionStates = () => evaluate(`${options}.map(box => box.getAttribute('aria-checked'))`)
+  await waitFor(`Boolean(${confirm})`)
+  await waitFor(`(${dialog}).textContent.includes('removal-fixture-first (LXC 300)')`)
+  assert.deepEqual(await optionStates(), ["false", "false"])
+  assert.ok(await evaluate(`(() => {
+    const panel = (${dialog}); const bounds = panel.getBoundingClientRect();
+    return bounds.left >= 0 && bounds.right <= innerWidth && panel.scrollWidth <= panel.clientWidth + 1;
+  })()`))
+  await send("Emulation.setDeviceMetricsOverride", {width: 320, height: 700, deviceScaleFactor: 1, mobile: true})
+  assert.ok(await evaluate(`(() => {
+    const panel = (${dialog}); const bounds = panel.getBoundingClientRect();
+    return bounds.left >= 0 && bounds.right <= innerWidth && panel.scrollWidth <= panel.clientWidth + 1;
+  })()`))
+  await send("Emulation.setDeviceMetricsOverride", {width: 390, height: 812, deviceScaleFactor: 1, mobile: true})
+  const fill = value => evaluate(`(() => {
+    const field = document.querySelector('#remove-lxc-vmid');
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(field), 'value').set.call(field, ${JSON.stringify(value)});
+    field.dispatchEvent(new Event('input', {bubbles:true}));
+  })()`)
+  await fill("300")
+  assert.equal(await evaluate(`(${confirm}).disabled`), true)
+  for (let attempt = 0; !releaseFirstRemovalPreview && attempt < 100; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 20))
+  }
+  assert.equal(typeof releaseFirstRemovalPreview, "function")
+  await releaseFirstRemovalPreview()
+  await fill("301")
+  assert.equal(await evaluate(`(${confirm}).disabled`), true)
+  await fill("300")
+  await waitFor(`!(${confirm}).disabled`)
+  await evaluate(`(() => {const confirm = (${confirm}); confirm.click(); confirm.click()})()`)
+  await waitFor(`Boolean(${button("Check removal status")})`)
+  assert.equal(await evaluate(`(${dialog}).textContent.includes('Nothing was removed')`), false)
+  assert.equal(await evaluate("Boolean(sessionStorage.getItem('proxmenux.lxc-removal.300'))"), true)
+  removalState = "unknown"
+  await send("Page.reload")
+  await openInventory()
+  await waitFor(`Boolean(${button("Check removal status")})`)
+  removalState = "running"
+  await click(button("Check removal status"))
+  await waitFor(`(${dialog}).textContent.includes('Proxmox accepted the native task')`)
+  removalState = "succeeded"
+  guests.splice(guests.findIndex(guest => guest.vmid === 300), 1)
+  await waitFor(`(${dialog}).textContent.includes('LXC was removed')`)
+  assert.equal(await evaluate(`Boolean(${button("Cancel")})`), false, "Cancel is gone after verified removal")
+  await close("Close")
+  await send("Emulation.setDeviceMetricsOverride", {width: 1440, height: 960, deviceScaleFactor: 1, mobile: false})
+  await open("removal-fixture-second")
+  await waitFor(`(${dialog}).textContent.includes('removal-fixture-second')`)
+  assert.equal(await evaluate(`(${dialog}).textContent.includes('LXC was removed')`), false)
+  assert.deepEqual(await optionStates(), ["false", "false"])
+  await click(`${options}[0]`)
+  await click(`${options}[1]`)
+  assert.deepEqual(await optionStates(), ["true", "true"])
+  await fill("301")
+  await waitFor(`!(${confirm}).disabled`)
+  await click(confirm)
+  assert.equal(await evaluate("Boolean(sessionStorage.getItem('proxmenux.lxc-removal.301'))"), true)
+  assert.equal(await evaluate(`${options}.every(box => box.disabled)`), true)
+  await close()
+  await open("removal-fixture-third")
+  await waitFor(`(${dialog}).textContent.includes('removal-fixture-third')`)
+  assert.equal(typeof rejectPreviousRemoval, "function")
+  await rejectPreviousRemoval()
+  await waitFor("!sessionStorage.getItem('proxmenux.lxc-removal.301')")
+  await waitFor(`(${dialog}).textContent.includes('The container has pending configuration changes.')`)
+  assert.equal(await evaluate(`Boolean(${button("Disable protection…")})`), false)
+  assert.equal(await evaluate(`Boolean(${confirm})`), false)
+  assert.equal(removalRequests.filter(([, action]) => action === "disable-removal-protection").length, 0)
+  pendingProtectedLxc = false
+  await click(button("Check again"))
+  await waitFor(`Boolean(${button("Disable protection…")})`)
+  await click(button("Disable protection…"))
+  await click(button("Cancel"))
+  assert.equal(removalRequests.filter(([, action]) => action === "disable-removal-protection").length, 0)
+  await click(button("Disable protection…"))
+  await click(button("Disable protection"))
+  await waitFor(`Boolean(${confirm}) && (${confirm}).disabled`)
+  assert.deepEqual(await optionStates(), ["false", "false"])
+  await fill("302")
+  await waitFor(`!(${confirm}).disabled`)
+  await click(button("Cancel"))
+  await waitFor(`!(${dialog})`)
+  const start = "document.querySelector('[role=dialog] button[title=Start]')"
+  await waitFor(`Boolean(${start}) && !(${start}).disabled`)
+  await click(start)
+  await waitFor("Boolean([...document.querySelectorAll('[role=dialog] [role=status]')].find(el => el.textContent.includes('completed the action with warnings (1)')))")
+  await waitFor(`(${item})?.disabled && Boolean((${start})?.closest('[aria-busy=false]'))`)
+  assert.deepEqual(startRequests, ["POST", "GET"])
+  await key("Escape")
+  await waitFor("!document.querySelector('[role=dialog]')")
+  assert.deepEqual(removalRequests.filter(([, , method]) => method !== "GET"),
+    [[300, "remove", "POST"], [301, "remove", "POST"], [302, "disable-removal-protection", "POST"]])
+  assert.ok(removalRequests.filter(([, action]) => action === "remove-operation").length >= 2)
+  guests.splice(guests.findIndex(guest => guest.vmid === 301), 1)
+  guests.splice(guests.findIndex(guest => guest.vmid === 302), 1)
+  await send("Page.reload")
+  await openInventory()
+  console.log("LXC removal: direct button, running guard and hint, exact ID, native options, mobile, task recovery, and cancel then start with warnings")
+}
+
 async function run() {
   const { targetId } = await send("Target.createTarget", { url: "about:blank" })
   sessionId = (await send("Target.attachToTarget", { targetId, flatten: true })).sessionId
@@ -355,6 +575,7 @@ async function run() {
   await send("Page.navigate", { url: origin + "/" })
   await openInventory()
   await verifyPlainLxcWizard()
+  await verifyLxcRemoval()
   await waitFor("Boolean(localStorage.getItem('proxmenux.vmListLayout.v1'))")
   const initialSettings = await evaluate("JSON.parse(localStorage.getItem('proxmenux.vmListLayout.v1'))")
 
@@ -617,7 +838,54 @@ async function run() {
   await click(settings)
   await tap(card(testLxc))
   await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
+  await waitFor("document.querySelector('[role=dialog]').getAnimations().every(animation => animation.playState !== 'running')")
   assert.match(await evaluate("document.querySelector('[role=dialog]').textContent"), /Sieť I\/O/)
+  for (const width of [320, 390, 640, 768, 1024, 1440, 1920]) {
+    const mobile = width < 640
+    await send("Emulation.setDeviceMetricsOverride", {width, height: 860, deviceScaleFactor: 1, mobile})
+    await send("Emulation.setTouchEmulationEnabled", {enabled: mobile})
+    await waitFor(`innerWidth === ${width}`)
+    const layout = await evaluate(`(() => {
+      const terminal = [...document.querySelectorAll('[role=dialog] button')].find(el => el.textContent.trim() === 'Terminál');
+      const footer = terminal.closest('[aria-busy]');
+      const buttons = [...footer.querySelectorAll('button')];
+      const remove = buttons.find(el => el.textContent.trim() === 'Odstrániť');
+      return {
+        removeDisabled: remove.disabled,
+        removalHint: document.getElementById(remove.getAttribute('aria-describedby'))?.textContent.trim(),
+        rows: new Set(buttons.map(button => button.offsetTop)).size,
+        overflow: footer.scrollWidth > footer.clientWidth + 1,
+        controls: buttons.map(button => {
+          const text = button.querySelector('span');
+          const label = document.createRange();
+          label.selectNodeContents(text);
+          const icon = button.querySelector('svg').getBoundingClientRect();
+          const bounds = button.getBoundingClientRect();
+          const line = label.getBoundingClientRect();
+          return { text: button.textContent.trim(), width: button.offsetWidth, height: button.offsetHeight,
+            fits: label.getClientRects().length === 1 && icon.width >= 11.5
+              && text.scrollWidth <= text.clientWidth + 1
+              && icon.left >= bounds.left - 0.5 && line.left >= icon.right - 0.5 && line.right <= bounds.right + 0.5 };
+        }),
+      };
+    })()`)
+    assert.ok(layout.removeDisabled && !layout.overflow, `Removal guard and layout at ${width}px`)
+    assert.equal(layout.removalHint, "Kontajner beží. Ak ho chcete odstrániť, najprv ho vypnite.")
+    assert.equal(layout.controls.length, 6)
+    assert.ok(layout.controls.some(control => control.text === "Vynútiť vypnutie"))
+    const widths = layout.controls.map(control => control.width)
+    assert.ok(Math.max(...widths) - Math.min(...widths) <= 1, `Equal button widths at ${width}px`)
+    assert.ok(layout.controls.every(control => control.fits && control.height === 40),
+      `One line with a visible icon at ${width}px: ${JSON.stringify(layout)}`)
+    assert.equal(layout.rows, width >= 768 ? 1 : width < 640 ? 3 : 2)
+  }
+  const forceStop = "document.querySelector('[role=dialog] button[title=\"Vynútiť vypnutie\"]')"
+  const forceDialog = "[...document.querySelectorAll('[role=dialog]')].find(el => el.querySelector('h2')?.textContent.trim() === 'Vynútiť vypnutie VMID 100')"
+  await click(forceStop)
+  await waitFor(`Boolean(${forceDialog})`)
+  assert.equal(await evaluate(`[...(${forceDialog}).querySelectorAll('button')].find(el => el.textContent.trim() === 'Vynútiť vypnutie').disabled`), true)
+  await click(`[...(${forceDialog}).querySelectorAll('button')].find(el => el.textContent.trim() === 'Zrušiť')`)
+  await waitFor(`!(${forceDialog})`)
   console.log("Optional metrics, legacy settings, tag colors, transfer scales, sorting and persisted column settings passed")
   assert.deepEqual(rejectedWrites, [])
   assert.deepEqual(errors, [])

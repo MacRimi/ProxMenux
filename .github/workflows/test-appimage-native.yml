@@ -5,6 +5,10 @@ on:
     paths:
       - '.github/workflows/test-appimage-native.yml'
       - 'AppImage/scripts/build_appimage.sh'
+      - 'AppImage/scripts/flask_lxc_removal_routes.py'
+      - 'AppImage/scripts/lxc_removal_receipts.py'
+      - 'scripts/lxc/plain_lxc_pve.pl'
+      - 'scripts/lxc/PlainLxcRemoval.pm'
       - 'AppImage/scripts/appimage_arch.sh'
       - 'AppImage/scripts/borg_native_arm.sh'
       - '.github/scripts/smoke_native_apprun.sh'
@@ -63,6 +67,10 @@ jobs:
           chmod +x "$image"
           "$image" --appimage-extract
           test -f squashfs-root/usr/bin/flask_server.py
+          test -f squashfs-root/usr/bin/flask_lxc_removal_routes.py
+          test -f squashfs-root/usr/bin/lxc_removal_receipts.py
+          test -f squashfs-root/usr/bin/plain_lxc_pve.pl
+          test -f squashfs-root/usr/bin/PlainLxcRemoval.pm
           test -f squashfs-root/usr/bin/appimage_arch.sh
           test -f squashfs-root/web/index.html
       - name: Import bundled Python 3.11 native WebSocket runtime

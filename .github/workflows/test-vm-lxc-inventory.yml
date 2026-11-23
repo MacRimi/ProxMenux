@@ -6,6 +6,8 @@ on:
       - '.github/workflows/test-vm-lxc-inventory.yml'
       - 'tests/test_vm_lxc_inventory_browser.cjs'
       - 'AppImage/components/virtual-machines.tsx'
+      - 'AppImage/components/lxc-remove-dialog.tsx'
+      - 'AppImage/lib/lxc-removal.ts'
       - 'AppImage/components/vm-list-layout.tsx'
       - 'AppImage/components/vm-list-layout.module.css'
       - 'AppImage/components/option-select.tsx'

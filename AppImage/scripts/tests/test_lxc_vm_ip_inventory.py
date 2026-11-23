@@ -39,6 +39,7 @@ class LxcVmIpInventoryTests(unittest.TestCase):
             "_fast_guest_status": lambda _vmid, _vm_type: "running",
             "_get_cached_vm_list_search_notes": lambda _resources, _node: {},
             "get_cached_vm_disk": lambda _vmid: None,
+            "_observe_guest_app_source": lambda _vmid: None,
             "_guest_lifecycle_lock": threading.RLock(),
             "_guest_modal_cache_revision": {},
             "_guest_modal_cache_epoch": 1,
