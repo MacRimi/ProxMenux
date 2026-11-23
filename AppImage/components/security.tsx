@@ -1973,7 +1973,8 @@ ${(report.sections && report.sections.length > 0) ? `
                 <p className="text-sm text-muted-foreground">
                   {authEnabled ? st("auth.passwordEnabled")
                     : accessMode === "read_only" ? st("auth.readOnlyMode")
-                    : accessMode === "proxmox" ? st("auth.pveMode") : st("auth.noPasswordProtection")}
+                    : accessMode === "proxmox" ? st(hostType === "pbs" ? "auth.pbsMode" : "auth.pveMode")
+                    : st("auth.noPasswordProtection")}
                 </p>
               </div>
             </div>

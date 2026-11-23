@@ -3198,7 +3198,7 @@
     "description": "Sign in with the users and realms of {product}, including their two-factor authentication.",
     "enable": "Let {product} accounts sign in",
     "onlyWay": "{product} accounts are the way into the dashboard. To stop using them, add a local password or choose read-only or open access above.",
-    "whoGetsIn": "Users with the Sys.Modify privilege on / get full access; users with only Sys.Audit on /, read-only access. Other users cannot sign in.",
+    "whoGetsIn": "To sign in, you need Sys.Modify or Sys.Audit on /. Without a Monitor profile rule, Sys.Modify gives you the Administrator profile and Sys.Audit alone gives you the Observer profile.",
     "sharedSession": "Signed in to the {product} web interface? Open the dashboard over HTTPS at the same address and that session signs you in here too.",
     "saveFailed": "The change could not be saved.",
     "rulesTitle": "Profiles of {product} accounts",
@@ -3468,7 +3468,8 @@
       "readOnlyMode": "The dashboard is read-only without a password: it can be viewed, but nothing can be run or changed.",
       "useReadOnly": "Switch to read-only",
       "disableChoose": "Without a password, how should the dashboard be reached?",
-      "pveMode": "The dashboard signs in with the accounts of Proxmox VE."
+      "pveMode": "Sign in to the Monitor with a Proxmox VE account.",
+      "pbsMode": "Sign in to the Monitor with a Proxmox Backup Server account."
     },
     "twoFactor": {
       "title": "Two-factor authentication",
