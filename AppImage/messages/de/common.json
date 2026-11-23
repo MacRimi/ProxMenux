@@ -2813,7 +2813,9 @@
         "repo_cleanup": "Repository-Bereinigung",
         "proxmox_repos": "Proxmox-APT-Repositorys",
         "entropy": "Entropie-Erzeugung (haveged)"
-      }
+      },
+      "activeCountOne": "{count} aktiv",
+      "updateCountOne": "{count}-Update"
     },
     "healthThresholds": {
       "title": "Schwellenwerte für den Health-Monitor",
@@ -3427,7 +3429,8 @@
         "sshRemoteAccess": "SSH-Fernzugriff",
         "smtpMail": "SMTP-Mail",
         "icmpPing": "ICMP-Ping"
-      }
+      },
+      "rulesOne": "{count}-Regel"
     },
     "fail2ban": {
       "description": "Blockieren Sie wiederholte fehlgeschlagene Anmeldeversuche gegen SSH, Proxmox und den Monitor.",
@@ -4470,7 +4473,13 @@
       "psus": "{count} Netzteile",
       "fans": "{count} Lüfter",
       "ups": "{count} USV",
-      "interfaces": "{count} Schnittstellen"
+      "interfaces": "{count} Schnittstellen",
+      "installedOne": "{count} installiert",
+      "sensorsOne": "{count}-Sensor",
+      "devicesOne": "{count}-Gerät",
+      "psusOne": "{count} Netzteil",
+      "fansOne": "{count}-Lüfter",
+      "interfacesOne": "{count}-Schnittstelle"
     },
     "labels": {
       "model": "Modell",
@@ -7356,7 +7365,8 @@
       "scriptLabel": {
         "install_proxmenux": "ProxMenux-Installer",
         "monitor": "ProxMenux-Monitor"
-      }
+      },
+      "countOne": "{count}-Änderung"
     },
     "comparison": {
       "loading": "Vergleich mit dem Referenzlauf…",

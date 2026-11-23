@@ -2813,7 +2813,9 @@
         "repo_cleanup": "Rensning av arkiv",
         "proxmox_repos": "Proxmox APT-arkiv",
         "entropy": "Entropigenerering (haveged)"
-      }
+      },
+      "activeCountOne": "{count} aktiv",
+      "updateCountOne": "{count} uppdatering"
     },
     "healthThresholds": {
       "title": "Health Monitor Trösklar",
@@ -3427,7 +3429,8 @@
         "sshRemoteAccess": "SSH fjärråtkomst",
         "smtpMail": "SMTP-post",
         "icmpPing": "ICMP ping"
-      }
+      },
+      "rulesOne": "{count} regel"
     },
     "fail2ban": {
       "description": "Blockera upprepade misslyckade inloggningsförsök mot SSH, Proxmox och Monitor.",
@@ -4470,7 +4473,13 @@
       "psus": "{count} nätaggregat",
       "fans": "{count} fans",
       "ups": "{count} UPS",
-      "interfaces": "{count} gränssnitt"
+      "interfaces": "{count} gränssnitt",
+      "installedOne": "{count} installerad",
+      "sensorsOne": "{count} sensor",
+      "devicesOne": "{count} enhet",
+      "psusOne": "{count} PSU",
+      "fansOne": "{count} fläkt",
+      "interfacesOne": "{count}-gränssnitt"
     },
     "labels": {
       "model": "Modell",
@@ -7356,7 +7365,8 @@
       "scriptLabel": {
         "install_proxmenux": "ProxMenux-installerare",
         "monitor": "ProxMenux-övervakning"
-      }
+      },
+      "countOne": "{count} förändring"
     },
     "comparison": {
       "loading": "Jämför med referenskörningen…",

@@ -2813,7 +2813,9 @@
         "repo_cleanup": "Limpeza de repositórios",
         "proxmox_repos": "Repositórios APT do Proxmox",
         "entropy": "Geração de entropia (haveged)"
-      }
+      },
+      "activeCountOne": "{count} ativo",
+      "updateCountOne": "atualização {count}"
     },
     "healthThresholds": {
       "title": "Limites do Monitor de Integridade",
@@ -3427,7 +3429,8 @@
         "sshRemoteAccess": "Acesso remoto SSH",
         "smtpMail": "Correio SMTP",
         "icmpPing": "Ping ICMP"
-      }
+      },
+      "rulesOne": "regra {count}"
     },
     "fail2ban": {
       "description": "Bloqueie tentativas repetidas de login com falha no SSH, Proxmox e Monitor.",
@@ -4470,7 +4473,13 @@
       "psus": "{count} PSUs",
       "fans": "{count} fãs",
       "ups": "{count} UPS",
-      "interfaces": "{count} interfaces"
+      "interfaces": "{count} interfaces",
+      "installedOne": "{count} instalado",
+      "sensorsOne": "sensor {count}",
+      "devicesOne": "dispositivo {count}",
+      "psusOne": "Fonte de alimentação {count}",
+      "fansOne": "ventilador {count}",
+      "interfacesOne": "interface {count}"
     },
     "labels": {
       "model": "Modelo",
@@ -7356,7 +7365,8 @@
       "scriptLabel": {
         "install_proxmenux": "Instalador do ProxMenux",
         "monitor": "Monitor do ProxMenux"
-      }
+      },
+      "countOne": "alteração {count}"
     },
     "comparison": {
       "loading": "Comparando com a execução de referência…",

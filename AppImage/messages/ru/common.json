@@ -2970,7 +2970,9 @@
         "repo_cleanup": "Очистка репозиториев",
         "proxmox_repos": "Репозитории APT для Proxmox",
         "entropy": "Генерация энтропии (haveged)"
-      }
+      },
+      "activeCountOne": "{count} активен",
+      "updateCountOne": "обновление {count}"
     },
     "healthThresholds": {
       "title": "Пороговые значения мониторинга состояния",
@@ -3579,7 +3581,8 @@
         "sshRemoteAccess": "Удалённый доступ по SSH",
         "smtpMail": "Почта по SMTP",
         "icmpPing": "Проверка связи по ICMP"
-      }
+      },
+      "rulesOne": "правило {count}"
     },
     "fail2ban": {
       "description": "Блокировать повторные неудачные попытки входа через SSH, в Proxmox и Monitor.",
@@ -4622,7 +4625,13 @@
       "psus": "Блоки питания: {count}",
       "fans": "Вентиляторы: {count}",
       "ups": "ИБП: {count}",
-      "interfaces": "Интерфейсы: {count}"
+      "interfaces": "Интерфейсы: {count}",
+      "installedOne": "{count} установлен.",
+      "sensorsOne": "датчик {count}",
+      "devicesOne": "Устройство {count}",
+      "psusOne": "{count} PSU",
+      "fansOne": "вентилятор {count}",
+      "interfacesOne": "интерфейс {count}"
     },
     "labels": {
       "model": "Модель",
@@ -7515,7 +7524,8 @@
       "scriptLabel": {
         "install_proxmenux": "Установщик ProxMenux",
         "monitor": "ProxMenux Monitor"
-      }
+      },
+      "countOne": "изменение {count}"
     },
     "comparison": {
       "loading": "Сравнение с эталонным запуском…",
