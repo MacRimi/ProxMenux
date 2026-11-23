@@ -994,7 +994,7 @@
     "binary_path": "/usr/bin/docker",
     "github_source": "releases",
     "installed_via": "binary",
-    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker.webp",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker-2017.webp",
     "repo": "moby/moby",
     "tag_regex": "v?(\\d+\\.\\d+\\.\\d+)",
     "website": "https://www.docker.com/"

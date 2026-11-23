@@ -1220,7 +1220,7 @@
     "group": "app",
     "type": "vm",
     "category": "Containers & Docker",
-    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker.webp",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker-2017.webp",
     "summary": "Runs the Community Scripts installer of a Debian virtual machine with SSH and Docker.",
     "via": "community-scripts",
     "cs": "docker-vm"

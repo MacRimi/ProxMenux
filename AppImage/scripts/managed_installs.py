@@ -653,6 +653,29 @@ _BASE_OS_HELPER_SLUGS = frozenset({
 })
 
 
+# Logo addresses that now serve another image. selfh.st replaced its Docker
+# icon with Docker's monochrome mark of 2025; the blue whale moved to
+# docker-2017.
+_REPLACED_LOGOS = {
+    "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker.webp":
+        "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/docker-2017.webp",
+}
+
+
+def current_logo(url: str) -> str:
+    """The address that still serves the logo `url` was chosen for."""
+    return _REPLACED_LOGOS.get(url, url)
+
+
+def _current_logos(index: dict) -> dict:
+    for meta in index.values():
+        if isinstance(meta, dict) and meta.get("logo") in _REPLACED_LOGOS:
+            meta["logo"] = current_logo(meta["logo"])
+            # The replacement reads on both themes.
+            meta["logo_dark"] = ""
+    return index
+
+
 def _fetch_helpers_cache() -> dict:
     """Return the slug→metadata index for community-scripts apps.
 
@@ -700,7 +723,7 @@ def _fetch_helpers_cache() -> dict:
                     # logo is a black mark (see lxc_apps.oci_icon_themes).
                     "logo_dark": entry.get("logo_dark") or "",
                 }
-            _helpers_cache = index
+            _helpers_cache = _current_logos(index)
             _helpers_cache_ts = now
             try:
                 os.makedirs(os.path.dirname(_HELPERS_CACHE_DISK), exist_ok=True)
@@ -720,7 +743,7 @@ def _fetch_helpers_cache() -> dict:
             try:
                 with open(_HELPERS_CACHE_DISK) as f:
                     disk = json.load(f)
-                _helpers_cache = disk.get("index") or {}
+                _helpers_cache = _current_logos(disk.get("index") or {})
                 _helpers_cache_ts = float(disk.get("ts") or 0)
                 return _helpers_cache
             except (OSError, json.JSONDecodeError):

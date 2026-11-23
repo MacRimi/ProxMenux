@@ -320,6 +320,16 @@ def _apply_runtime_verified_overrides(hints: dict, overrides: dict) -> dict:
     return result
 
 
+def _current_hint_logos(hints: dict) -> dict:
+    """Hint logos at an address that now serves another image take the one
+    they were chosen for (see managed_installs.current_logo)."""
+    import managed_installs
+    for hint in hints.values():
+        if isinstance(hint, dict) and isinstance(hint.get("logo"), str):
+            hint["logo"] = managed_installs.current_logo(hint["logo"])
+    return hints
+
+
 def _fetch_tracking_hints() -> dict:
     """Return the curated tracking-hint map (slug → hint dict).
 
@@ -352,7 +362,7 @@ def _fetch_tracking_hints() -> dict:
             else:
                 hints = dict(remote)
                 hints.update(bundled)
-            hints = _apply_runtime_verified_overrides(hints, runtime_overrides)
+            hints = _current_hint_logos(_apply_runtime_verified_overrides(hints, runtime_overrides))
             _tracking_hints_cache = hints
             _tracking_hints_ts = now
             try:
@@ -370,15 +380,15 @@ def _fetch_tracking_hints() -> dict:
             try:
                 with open(_TRACKING_HINTS_DISK) as f:
                     disk = json.load(f)
-                _tracking_hints_cache = _apply_runtime_verified_overrides(
+                _tracking_hints_cache = _current_hint_logos(_apply_runtime_verified_overrides(
                     disk.get("hints") or {}, runtime_overrides
-                )
+                ))
                 _tracking_hints_ts = float(disk.get("ts") or 0)
                 return _tracking_hints_cache
             except (OSError, json.JSONDecodeError):
-                _tracking_hints_cache = _apply_runtime_verified_overrides(
+                _tracking_hints_cache = _current_hint_logos(_apply_runtime_verified_overrides(
                     bundled, runtime_overrides
-                )
+                ))
                 _tracking_hints_ts = now  # avoid re-hammering
                 return _tracking_hints_cache
 
@@ -452,6 +462,18 @@ def _publish_sidecar_snapshot(path: str, data: dict, signature: tuple) -> dict:
     return snapshot
 
 
+def _current_app_logos(data: dict) -> None:
+    """A logo registered at an address that now serves another image shows
+    the one it was chosen for; the next write keeps it."""
+    import managed_installs
+    for app in data.get("apps") or []:
+        if not isinstance(app, dict):
+            continue
+        for item in [app, *(app.get("ports") or [])]:
+            if isinstance(item, dict) and isinstance(item.get("logo_url"), str):
+                item["logo_url"] = managed_installs.current_logo(item["logo_url"])
+
+
 def _read_sidecar(vmid) -> Optional[dict]:
     path = _sidecar_path(vmid)
     with _sidecar_cache_lock:
@@ -464,6 +486,7 @@ def _read_sidecar(vmid) -> Optional[dict]:
                 data = json.load(f)
                 signature = _sidecar_signature(os.fstat(f.fileno()))
             if isinstance(data, dict):
+                _current_app_logos(data)
                 snapshot = _publish_sidecar_snapshot(path, data, signature)
                 return copy.deepcopy(snapshot)
         except (FileNotFoundError, json.JSONDecodeError, OSError):
