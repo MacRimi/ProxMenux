@@ -5066,7 +5066,7 @@
       "archiveNotFile": "Cesta k archívu neoznačuje bežný súbor.",
       "invalidName": "Neplatný názov.",
       "invalidStaging": "Neplatná cesta k dočasným súborom.",
-      "jobRename": "Názov existujúcej úlohy sa nedá zmeniť. Ak ju chcete premenovať, odstráň ju a vytvorte novú.",
+      "jobRename": "Názov existujúcej úlohy sa nedá zmeniť. Ak ju chcete premenovať, odstráňte ju a vytvorte novú.",
       "absoluteKey": "Cesta k súboru s kľúčom musí začínať znakom /.",
       "mode": "Vyberte miestny cieľ alebo pripojenie cez SSH.",
       "nameRequired": "Zadajte názov; použite iba písmená, číslice, _ alebo -.",
@@ -7964,7 +7964,7 @@
         },
         "zfs_pool_full": {
           "title": "{hostname}: ZFS pool {pool_name} je zaplnený na {usage_percent} %",
-          "body": "ZFS pool „{pool_name}“ (spoločné úložisko diskov) je zaplnený na {usage_percent} %.\n\nVýkon a spoľahlivosť zápisu ZFS sa nad približne 80 % výrazne zhoršujú, pretože CoW potrebuje voľné miesto pre nové bloky. Uvoľnite miesto odstránením nepotrebných snímok a datasetov alebo rozšír pool o ďalšie vdevy.",
+          "body": "ZFS pool „{pool_name}“ (spoločné úložisko diskov) je zaplnený na {usage_percent} %.\n\nVýkon a spoľahlivosť zápisu ZFS sa nad približne 80 % výrazne zhoršujú, pretože CoW potrebuje voľné miesto pre nové bloky. Uvoľnite miesto odstránením nepotrebných snímok a datasetov alebo rozšírte pool o ďalšie vdevy.",
           "label": "ZFS pool je takmer plný"
         },
         "post_install_update": {
