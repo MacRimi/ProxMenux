@@ -6,6 +6,7 @@
   "community_tested": {
     "by": "danibauti94",
     "date": "2026-11-23",
+    "report": "https://github.com/MacRimi/ProxMenux/discussions/440#discussioncomment-19829190",
     "digest": "9f0fb0da0106fd9d19e72e80bc1613471ad55e585a7bcaefdeec1d051044c21c",
     "scenario": "amd64/PVE: native OCI LXC built from an existing controller dataset; the HTTPS UI on 8043 and /api/info answered after a clean restart, and host networking kept the LAN discovery ports."
   },
