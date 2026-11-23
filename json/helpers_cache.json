@@ -1243,7 +1243,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -3169,7 +3169,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -9354,7 +9354,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -13199,7 +13199,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -19798,7 +19798,7 @@
       "AI / Coding & Dev-Tools"
     ],
     "notes": [
-      "A root API key is generated during install and printed at the end of the setup; it is also stored as server.root_api_key in /opt/openviking_data/ov.conf."
+      "A root API key is generated during install - it is stored as server.root_api_key in /opt/openviking_data/ov.conf."
     ],
     "warnings": [
       "Model API keys must be configured in /opt/openviking_data/ov.conf (embedding and VLM sections) before the server can store or retrieve memory. Edit the file and restart the service afterwards."
@@ -19810,7 +19810,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -25828,7 +25828,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
@@ -29598,7 +29598,7 @@
     "updateable": true,
     "privileged": false,
     "has_arm": false,
-    "is_dev": true,
+    "is_dev": false,
     "execute_in": [
       "lxc"
     ],
