@@ -91,6 +91,26 @@ class PVEAccounts(unittest.TestCase):
 
         self.client = app.test_client()
 
+    def test_guest_rule_keeps_pve_user_and_uses_csrf(self):
+        path = "/nodes/fixture/lxc/100/firewall/rules/0"
+        parameters = {"type": "in", "action": "ACCEPT", "enable": 0}
+        native = mock.Mock(side_effect=[(200, {"ticket": ADMIN, "CSRFPreventionToken": "test-csrf"}), (200, None)])
+        with mock.patch.object(pve_auth, "_request", native):
+            self.assertEqual(pve_auth.write_firewall_rule(path, parameters, ADMIN, method="PUT"), 200)
+        self.assertEqual(native.call_args_list, [
+            mock.call("POST", "/access/ticket", {"username": "root@pam", "password": ADMIN}),
+            mock.call("PUT", path, data=parameters, ticket=ADMIN, csrf="test-csrf"),
+        ])
+        native.reset_mock(side_effect=True)
+        native.side_effect = [(200, {"ticket": ADMIN, "CSRFPreventionToken": "test-csrf"}), (200, None)]
+        with mock.patch.object(pve_auth, "_request", native):
+            self.assertEqual(pve_auth.write_firewall_rule(path, {"digest": "a" * 40}, ADMIN, method="DELETE"), 200)
+        native.assert_called_with("DELETE", f"{path}?digest={'a' * 40}", data=None, ticket=ADMIN, csrf="test-csrf")
+        with mock.patch.object(pve_auth, "_request", return_value=(
+                200, {"ticket": AUDITOR, "CSRFPreventionToken": "test-csrf"})) as native:
+            self.assertEqual(pve_auth.write_firewall_rule(path, parameters, ADMIN, method="PUT"), 503)
+        self.assertEqual(native.call_count, 1)
+
     def as_ticket(self, ticket):
         return {"Authorization": f"Bearer {ticket}"}
 

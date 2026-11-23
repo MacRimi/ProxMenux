@@ -141,6 +141,8 @@ cd "$SCRIPT_DIR"
 # Copy Flask server
 echo "📋 Copying Flask server..."
 cp "$SCRIPT_DIR/flask_server.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/guest_firewall_reads.py" "$APP_DIR/usr/bin/"
+cp "$SCRIPT_DIR/guest_firewall_overview.pl" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/flask_plain_lxc_routes.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/ovs_topology.py" "$APP_DIR/usr/bin/"
 cp "$SCRIPT_DIR/zram_metrics.py" "$APP_DIR/usr/bin/"

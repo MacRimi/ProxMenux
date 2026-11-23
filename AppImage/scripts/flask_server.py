@@ -64,7 +64,7 @@ from pathlib import Path
 
 import jwt
 import psutil
-from flask import Flask, jsonify, request, send_file, send_from_directory, Response, after_this_request
+from flask import Flask, g, jsonify, request, send_file, send_from_directory, Response, after_this_request
 from flask_cors import CORS
 
 # AppRun runs this file as __main__. Modules that `import flask_server`
@@ -79,6 +79,8 @@ if BASE_DIR not in sys.path:
 
 import pve_mirror  # noqa: E402
 import vital_signs  # noqa: E402
+import guest_firewall_reads  # noqa: E402
+import pve_auth  # noqa: E402
 
 from smartctl_resolver import (  # noqa: E402
     is_usb_disk as resolver_is_usb_disk,
@@ -7164,6 +7166,7 @@ def get_proxmox_vms():
                                  if vm_type == 'lxc' else resource.get('status', 'unknown'))
                     vm_data = {
                         'vmid': resource.get('vmid'),
+                        'node': node,
                         'name': resource.get('name', f"VM-{resource.get('vmid')}"),
                         'status': vm_status,
                         'type': vm_type,
@@ -16103,103 +16106,737 @@ def api_vm_logs(vmid):
         pass
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/vms/<int:vmid>/firewall/log', methods=['GET'])
-@require_auth
-def api_vm_firewall_log(vmid):
-    """Per-VM/CT firewall log entries — proxies the official PVE API:
-    `/nodes/<node>/{lxc,qemu}/<vmid>/firewall/log`. Returns the matching
-    lines from `/var/log/pve-firewall.log` already filtered by VMID so
-    the frontend doesn't have to parse the host-wide log itself.
+class _GuestFirewallError(Exception):
+    def __init__(self, code, status):
+        super().__init__(code)
+        self.code = code
+        self.status = status
 
-    Implements issue #14554 from the helper-scripts discussions —
-    "view individual VM/CT firewall logs" — without writing any custom
-    log parsing: PVE's API does it natively.
 
-    Query string:
-      * `start` — 0-based offset into the log (default 0).
-      * `limit` — number of lines to return (default 500, cap 5000).
+def _firewall_pve_get(endpoint, ticket=None, **params):
+    """Read only, using the caller's own PVE session when one exists."""
+    if ticket:
+        query = urllib.parse.urlencode(params)
+        status, data = pve_auth._request('GET', endpoint + ('?' + query if query else ''), ticket=ticket)
+        if status in (401, 403):
+            raise _GuestFirewallError('permission_denied', status)
+        if status == 200:
+            return data
+        raise _GuestFirewallError('firewall_read_failed', 502)
 
-    Response shape mirrors the `/api/vms/<vmid>/logs` endpoint so the
-    frontend log viewer can reuse the same renderer.
-    """
+    command = ['pvesh', 'get', endpoint, '--output-format', 'json']
+    for key, value in params.items():
+        command.extend((f'--{key}', str(value)))
     try:
-        start = max(int(request.args.get('start', 0)), 0)
-        limit = min(max(int(request.args.get('limit', 500)), 1), 5000)
-    except (TypeError, ValueError):
-        return jsonify({'error': 'start/limit must be integers'}), 400
-
-    try:
-        resources = get_cached_pvesh_cluster_resources_vm()
-        if not resources:
-            return jsonify({'error': 'Failed to enumerate cluster VMs'}), 500
-
-        vm_info = next((r for r in resources if r.get('vmid') == vmid), None)
-        if not vm_info:
-            return jsonify({'error': f'VM/LXC {vmid} not found'}), 404
-
-        vm_type = 'lxc' if vm_info.get('type') == 'lxc' else 'qemu'
-        node = vm_info.get('node', 'pve')
-
-        log_result = subprocess.run(
-            [
-                'pvesh', 'get',
-                f'/nodes/{node}/{vm_type}/{vmid}/firewall/log',
-                '--start', str(start),
-                '--limit', str(limit),
-                '--output-format', 'json',
-            ],
-            capture_output=True, text=True, timeout=10,
-        )
-
-        if log_result.returncode != 0:
-            stderr = (log_result.stderr or '').strip()
-            # PVE returns this exact wording when the firewall is OFF
-            # for the guest — surface it as a structured flag so the
-            # frontend can render a "firewall disabled" callout instead
-            # of a generic error toast.
-            firewall_disabled = (
-                'firewall' in stderr.lower() and 'disable' in stderr.lower()
-            ) or '404' in stderr
-            return jsonify({
-                'vmid': vmid,
-                'name': vm_info.get('name'),
-                'type': vm_type,
-                'node': node,
-                'firewall_enabled': not firewall_disabled,
-                'logs': [],
-                'error': stderr[:300] if stderr else 'pvesh returned non-zero',
-            }), 200 if firewall_disabled else 500
-
-        entries = []
-        try:
-            data = json.loads(log_result.stdout or '[]')
-            if isinstance(data, list):
-                for row in data:
-                    if isinstance(row, dict):
-                        entries.append({
-                            'n': row.get('n'),
-                            't': row.get('t', ''),
-                        })
-        except (json.JSONDecodeError, ValueError):
-            # Older PVE versions or oddly-shaped output: fall back to
-            # plain text parsing, one entry per line.
-            for i, line in enumerate(log_result.stdout.split('\n')):
-                if line.strip():
-                    entries.append({'n': start + i, 't': line})
-
-        return jsonify({
-            'vmid': vmid,
-            'name': vm_info.get('name'),
-            'type': vm_type,
-            'node': node,
-            'firewall_enabled': True,
-            'log_lines': len(entries),
-            'logs': entries,
-        })
+        result = subprocess.run(command, capture_output=True, text=True, timeout=6, check=True)
+        return json.loads(result.stdout)
     except subprocess.TimeoutExpired:
-        return jsonify({'error': 'pvesh timed out reading firewall log'}), 504
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        raise _GuestFirewallError('firewall_read_failed', 504) from None
+    except (OSError, subprocess.CalledProcessError, ValueError):
+        raise _GuestFirewallError('firewall_read_failed', 502) from None
+
+
+def _firewall_session(vmid, privilege):
+    # The Monitor's route permission has already run. A PVE profile can
+    # grant Monitor areas, but cannot stand in for the effective guest ACL.
+    parts = request.headers.get('Authorization', '').split()
+    if not getattr(g, 'identity', {}).get('username') or len(parts) != 2:
+        return None, {}
+    ticket = parts[1]
+    if not pve_auth.is_ticket(ticket):
+        return None, {}
+    path = f'/vms/{vmid}'
+    grants = _firewall_pve_get('/access/permissions', ticket, path=path)
+    if not isinstance(grants, dict):
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    privileges = grants.get(path, {})
+    # The value is the propagation flag. A present key with value 0 grants
+    # this privilege on this exact path.
+    if not isinstance(privileges, dict) or privilege not in privileges:
+        raise _GuestFirewallError('permission_denied', 403)
+    return ticket, privileges
+
+
+def _firewall_guest(vmid):
+    guests = pve_mirror.read_vmlist()
+    if guests is None:
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    guest = guests.get(str(vmid))
+    if guest is None:
+        raise _GuestFirewallError('guest_changed', 404)
+    node = guest['node']
+    vm_type = guest['type']
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]*', node):
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    try:
+        config = os.stat(pve_mirror.guest_config_path(node, vm_type, vmid))
+    except FileNotFoundError:
+        raise _GuestFirewallError('guest_changed', 409) from None
+    except OSError:
+        raise _GuestFirewallError('firewall_read_failed', 502) from None
+    return node, vm_type, (config.st_ino, config.st_mtime_ns, config.st_size)
+
+
+def _firewall_optional_get(path, expected_type, ticket):
+    try:
+        data = _firewall_pve_get(path, ticket)
+    except _GuestFirewallError as error:
+        if error.status == 401:
+            raise
+        return None
+    return data if isinstance(data, expected_type) else None
+
+
+def _firewall_switch(value):
+    if value in (1, '1'):
+        return True
+    if value in (0, '0'):
+        return False
+    return None
+
+
+def _firewall_nic_flag(config):
+    if not isinstance(config, str) or not config:
+        return None
+    flags = [value for key, _, value in (item.partition('=') for item in config.split(','))
+             if key == 'firewall']
+    if len(flags) > 1:
+        return None
+    return _firewall_switch(flags[0]) if flags else False
+
+
+def _firewall_interfaces(config, prerequisites):
+    if config is None:
+        return None
+    interfaces = []
+    names = set()
+    for row in config:
+        if not isinstance(row, dict) or not isinstance(row.get('key'), str):
+            return None
+        name = row['key']
+        if not re.fullmatch(r'net[0-9]+', name):
+            continue
+        if name in names or not any(key in row for key in ('value', 'pending', 'delete')):
+            return None
+        names.add(name)
+        active = 'value' in row
+        flag = _firewall_nic_flag(row.get('value'))
+        conditions = (*prerequisites, flag)
+        coverage = 'absent'
+        if active:
+            coverage = 'disabled' if False in conditions else 'configured' if all(conditions) else 'unknown'
+        pending = None
+        if row.get('delete') in (1, 2, '1', '2'):
+            pending = 'remove'
+        elif 'pending' in row:
+            pending = 'change' if active else 'add'
+        interfaces.append({'name': name, 'flag': flag, 'coverage': coverage, 'pending': pending,
+                           'pending_flag': _firewall_nic_flag(row.get('pending'))})
+    return sorted(interfaces, key=lambda row: int(row['name'][3:]))
+
+
+def _firewall_service(backend, state):
+    service = {'iptables': 'pve-firewall', 'nftables': 'proxmox-firewall'}.get(backend)
+    if service is None or state is None or state.get('service') != service:
+        return 'unknown'
+    if state.get('unit-state') == 'not-found':
+        return 'unavailable'
+    if state.get('active-state') == 'active' or (
+            'active-state' not in state and state.get('state') == 'running'):
+        return 'running'
+    if state.get('active-state') in ('inactive', 'failed') or (
+            'active-state' not in state and state.get('state') in ('dead', 'failed')):
+        return 'stopped'
+    return 'unknown'
+
+
+def _firewall_overview_native(base, node_path, ticket):
+    guest_path = f'{base}/firewall/options'
+    if ticket:
+        def read(path, expected_type):
+            if path == guest_path:
+                return _firewall_pve_get(path, ticket)
+            return _firewall_optional_get(path, expected_type, ticket)
+
+        return guest_firewall_reads.collect(base, node_path, read)
+
+    # gevent's subprocess implementation can time out in threaded HTTP mode
+    # when several PVE commands are spawned concurrently in the Monitor.
+    helper = os.path.join(os.path.dirname(__file__), 'guest_firewall_reads.py')
+    command = [sys.executable, '-I', '-B', helper, *base.split('/')[2:]]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=18, check=True)
+        overview = json.loads(result.stdout)
+        if not isinstance(overview, dict):
+            raise _GuestFirewallError('firewall_read_failed', 502)
+    except subprocess.TimeoutExpired:
+        raise _GuestFirewallError('firewall_read_failed', 504) from None
+    except (OSError, subprocess.CalledProcessError, ValueError):
+        raise _GuestFirewallError('firewall_read_failed', 502) from None
+    if overview.get('guest') is None:
+        overview['guest'] = _firewall_pve_get(guest_path)
+    return overview
+
+
+def _firewall_status(base, node_path, ticket):
+    overview = _firewall_overview_native(base, node_path, ticket)
+    guest, cluster, host, config, service_state = (overview[key] for key in ('guest', 'cluster', 'host', 'config', 'service'))
+    if not isinstance(guest, dict):
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    nft = _firewall_switch(host.get('nftables', 0)) if host is not None else None
+    backend = {True: 'nftables', False: 'iptables', None: None}[nft]
+    service = _firewall_service(backend, service_state)
+
+    # Cluster enable can be a timestamp (the native timed preview setting).
+    cluster_value = cluster.get('enable', 0) if cluster is not None else None
+    cluster_enabled = _firewall_switch(cluster_value)
+    if type(cluster_value) is int and cluster_value > 1:
+        # Match the integer-second timeout in PVE's cluster option parser.
+        cluster_enabled = int(time.time()) - cluster_value <= 60
+    guest_enabled = _firewall_switch(guest.get('enable', 0))
+    # PVE may fall back to the legacy backend when nftables is configured
+    # but its package is unavailable. A service reading cannot prove that.
+    service_running = {'running': True, 'stopped': False}.get(service)
+    prerequisites = (cluster_enabled, guest_enabled, service_running)
+    interfaces = _firewall_interfaces(config, prerequisites)
+    coverage = {row['coverage'] for row in interfaces or []} - {'absent'}
+    if False in prerequisites or coverage == {'disabled'}:
+        status = 'disabled'
+    elif None in prerequisites or interfaces is None or 'unknown' in coverage:
+        status = 'unknown'
+    elif not coverage:
+        status = 'noInterfaces'
+    elif coverage == {'configured', 'disabled'}:
+        status = 'partial'
+    else:
+        status = 'configured'
+    return {'status': status, 'cluster_enabled': cluster_enabled, 'guest_enabled': guest_enabled,
+            'backend': backend, 'service': service, 'interfaces': interfaces,
+            'log_levels': {direction: guest.get(f'log_level_{direction}', 'nolog')
+                           for direction in ('in', 'out')}}
+
+
+def _firewall_rules(base, ticket, *, with_digest=False):
+    data = _firewall_pve_get(f'{base}/firewall/rules', ticket)
+    if not isinstance(data, list) or any(
+        not isinstance(row, dict) or type(row.get('pos')) is not int
+        or not isinstance(row.get('type'), str) or not isinstance(row.get('action'), str)
+        for row in data
+    ):
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    fields = ('type', 'action', 'macro', 'iface', 'proto', 'source', 'dest', 'sport', 'dport',
+              'icmp-type', 'ipversion', 'log', 'comment')
+    result = {'rules': [
+        {'pos': row['pos'], 'enabled': _firewall_switch(row.get('enable')),
+         **{key: str(row[key]) for key in fields
+            if isinstance(row.get(key), (str, int)) and (key != 'log' or row[key] != 'nolog')}}
+        for row in data
+    ]}
+    if with_digest:
+        result['digests'] = {row['pos']: row['digest'] for row in data
+                             if isinstance(row.get('digest'), str) and re.fullmatch(r'[0-9a-f]{40}', row['digest'])}
+    return result
+
+
+_FIREWALL_WRITE_LOCKS = tuple(threading.Lock() for _ in range(16))
+_FIREWALL_LOG_LEVELS = ('nolog', 'emerg', 'alert', 'crit', 'err', 'warning', 'notice', 'info', 'debug')
+
+
+def _firewall_can_add(ticket, privileges):
+    identity = getattr(g, 'identity', {})
+    return (bool(identity.get('username')) and 'admin' in identity.get('permissions', ())
+            and (not ticket or 'VM.Config.Network' in privileges))
+
+
+def _firewall_rule_revision(guest, rules):
+    data = json.dumps((guest, rules), sort_keys=True, separators=(',', ':')).encode()
+    return hashlib.sha256(data).hexdigest()
+
+
+def _firewall_rules_snapshot(guest, native, can_write):
+    rules = native['rules']
+    digests = native['digests']
+    return {
+        'rules': rules,
+        'add_rule_revision': _firewall_rule_revision(guest, native) if can_write else None,
+        'editable_rule_positions': [rule['pos'] for rule in rules
+                                    if can_write and rule['pos'] in digests and _firewall_editable(rule)],
+        'writable_rule_positions': list(digests) if can_write else [],
+    }
+
+
+def _firewall_rule_parameters(body):
+    from ipaddress import ip_network
+
+    limits = {'direction': 3, 'action': 6, 'protocol': 4, 'source': 100,
+              'dport': 128, 'iface': 16, 'comment': 240, 'log': 7}
+    if not isinstance(body, dict) or not body.keys() <= limits.keys():
+        raise _GuestFirewallError('firewall_rule_invalid', 400)
+    rule = {}
+    for key, limit in limits.items():
+        value = body.get(key, '')
+        if not isinstance(value, str) or len(value) > limit or any(not char.isprintable() for char in value):
+            raise _GuestFirewallError('firewall_rule_invalid', 400)
+        rule[key] = value.strip()
+    direction, action, protocol = (rule.pop(key) for key in ('direction', 'action', 'protocol'))
+    if (direction not in ('IN', 'OUT') or action not in ('ACCEPT', 'DROP', 'REJECT')
+            or protocol not in ('tcp', 'udp', 'icmp')):
+        raise _GuestFirewallError('firewall_rule_invalid', 400)
+    if rule['dport']:
+        if protocol == 'icmp' or not re.fullmatch(r'[0-9]{1,5}(?::[0-9]{1,5})?(?:,[0-9]{1,5}(?::[0-9]{1,5})?)*', rule['dport']):
+            raise _GuestFirewallError('firewall_rule_invalid', 400)
+        for interval in rule['dport'].split(','):
+            start, *end = map(int, interval.split(':'))
+            if not 1 <= start <= (end[0] if end else start) <= 65535:
+                raise _GuestFirewallError('firewall_rule_invalid', 400)
+    elif not rule['source'] and protocol != 'icmp':
+        raise _GuestFirewallError('firewall_rule_invalid', 400)
+    if rule['source']:
+        try:
+            ip_network(rule['source'], strict=False)
+        except ValueError:
+            raise _GuestFirewallError('firewall_rule_invalid', 400) from None
+    if rule['iface'] and not re.fullmatch(r'net[0-9]+', rule['iface']):
+        raise _GuestFirewallError('firewall_rule_invalid', 400)
+    if 'log' in body and rule['log'] not in _FIREWALL_LOG_LEVELS:
+        raise _GuestFirewallError('firewall_rule_invalid', 400)
+    if rule['log'] == 'nolog':
+        rule.pop('log')
+    return {'type': direction.lower(), 'action': action, 'proto': protocol,
+            **{key: value for key, value in rule.items() if value}}
+
+
+def _firewall_editable(rule):
+    if rule['enabled'] is None or any(key in rule for key in ('macro', 'sport', 'icmp-type')):
+        return False
+    try:
+        _firewall_rule_parameters({'direction': rule['type'].upper(), 'action': rule['action'],
+                                 'protocol': rule.get('proto', ''),
+                                 **{key: rule[key] for key in ('dport', 'source', 'iface', 'comment', 'log') if key in rule}})
+    except _GuestFirewallError:
+        return False
+    return True
+
+
+def _firewall_write_rule(base, parameters, ticket, method, position):
+    path = f'{base}/firewall/rules' if position is None else f'{base}/firewall/rules/{position}'
+    native_method = 'PUT' if method == 'PATCH' else method
+    _firewall_write_native(path, parameters, ticket, native_method)
+
+
+def _firewall_write_native(path, parameters, ticket, native_method, *, settings=False):
+    invalid = 'firewall_settings_invalid' if settings else 'firewall_rule_invalid'
+    changed = 'firewall_settings_changed' if settings else 'firewall_rules_changed'
+    uncertain = 'firewall_settings_uncertain' if settings else 'firewall_rule_uncertain'
+    if ticket:
+        status = pve_auth.write_firewall_rule(path, parameters, ticket, method=native_method)
+        if status in (401, 403):
+            raise _GuestFirewallError('permission_denied', status)
+        if status in (400, 422):
+            raise _GuestFirewallError(invalid, 400)
+        if status == 409:
+            raise _GuestFirewallError(changed, 409)
+        if status != 200:
+            raise _GuestFirewallError(uncertain, 502)
+        return
+    command = ['pvesh', {'POST': 'create', 'PUT': 'set', 'DELETE': 'delete'}[native_method], path,
+               *(f'--{key}={value}' for key, value in parameters.items())]
+    try:
+        subprocess.run(command, capture_output=True, text=True, timeout=10, check=True)
+    except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        raise _GuestFirewallError(uncertain, 502) from None
+
+
+def _firewall_settings_native(base, ticket, include_bridges):
+    node, vm_type, vmid = base.split('/')[2:]
+    if not ticket:
+        helper = os.path.join(os.path.dirname(__file__), 'guest_firewall_overview.pl')
+        mode = 'settings-network' if include_bridges else 'settings'
+        try:
+            result = subprocess.run(['perl', helper, node, vm_type, vmid, mode],
+                                    capture_output=True, text=True, timeout=4, check=True)
+            data = json.loads(result.stdout)
+            if isinstance(data, dict) and data.keys() == {'options', 'config', 'pending', 'bridges'}:
+                return data['options'], data['config'], data['pending'], _firewall_bridge_names(data['bridges'])
+        except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError, ValueError):
+            pass
+
+    options = _firewall_pve_get(f'{base}/firewall/options', ticket)
+    config = _firewall_pve_get(f'{base}/config', ticket)
+    pending = _firewall_pve_get(f'{base}/pending', ticket)
+    bridges = _firewall_bridges(node, ticket) if include_bridges else []
+    return options, config, pending, bridges
+
+
+def _firewall_settings_snapshot(guest, options, config, pending):
+    if not all(isinstance(value, dict) and isinstance(value.get('digest'), str)
+               and re.fullmatch(r'[0-9a-f]{40}', value['digest']) for value in (options, config)):
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    interfaces = _firewall_interfaces(pending, ()) if isinstance(pending, list) else None
+    if interfaces is None:
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    values = {'enabled': _firewall_switch(options.get('enable', 0)),
+              'policy_in': options.get('policy_in', 'DROP'), 'policy_out': options.get('policy_out', 'ACCEPT'),
+              'log_level_in': options.get('log_level_in', 'nolog'),
+              'log_level_out': options.get('log_level_out', 'nolog')}
+    if values['enabled'] is None:
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    nets = {row['key']: row for row in pending if re.fullmatch(r'net[0-9]+', row['key'])}
+    revision = _firewall_rule_revision(guest, (options['digest'], config['digest'], nets))
+    return values, interfaces, revision, options['digest'], config['digest'], nets
+
+
+def _firewall_bridges(node, ticket):
+    # Ask Proxmox to filter bridges (and SDN according to the caller's grants).
+    try:
+        rows = _firewall_pve_get(f'/nodes/{node}/network', ticket, type='any_bridge')
+    except _GuestFirewallError as error:
+        if error.status == 401:
+            raise
+        return []
+    return _firewall_bridge_names(rows)
+
+
+def _firewall_bridge_names(rows):
+    if not isinstance(rows, list):
+        return []
+    return sorted({row['iface'] for row in rows if isinstance(row, dict)
+                   and row.get('type') in ('bridge', 'OVSBridge', 'vnet')
+                   and isinstance(row.get('iface'), str)
+                   and re.fullmatch(r'[A-Za-z][A-Za-z0-9_.-]{0,14}', row['iface'])})
+
+
+def _firewall_new_interface(details, vm_type, nets, bridges):
+    from ipaddress import IPv4Address, IPv4Interface
+
+    invalid = _GuestFirewallError('firewall_settings_invalid', 400)
+    required = {'bridge', 'vlan', 'firewall'} | ({'mode', 'ip', 'gateway'} if vm_type == 'lxc' else {'model'})
+    if not isinstance(details, dict) or set(details) != required or details['bridge'] not in bridges:
+        raise invalid
+    vlan = details['vlan']
+    if type(details['firewall']) is not bool or (vlan is not None and (type(vlan) is not int or not 1 <= vlan <= 4094)):
+        raise invalid
+    name = next((f'net{i}' for i in range(32) if f'net{i}' not in nets), None)
+    if name is None:
+        raise _GuestFirewallError('firewall_no_interface_slot', 409)
+    fields = [f"bridge={details['bridge']}", f"firewall={int(details['firewall'])}"]
+    if vlan is not None:
+        fields.append(f'tag={vlan}')
+    if vm_type == 'qemu':
+        if details['model'] not in ('virtio', 'e1000', 'e1000e', 'rtl8139', 'vmxnet3'):
+            raise invalid
+        return name, ','.join([details['model'], *fields])
+
+    used = {item[5:] for row in nets.values() for key in ('value', 'pending')
+            if isinstance(row.get(key), str) for item in row[key].split(',') if item.startswith('name=')}
+    interface = next(f'eth{i}' for i in range(len(used) + 1) if f'eth{i}' not in used)
+    mode, address, gateway = (details[key] for key in ('mode', 'ip', 'gateway'))
+    if mode == 'dhcp' and address == gateway == '':
+        fields.append('ip=dhcp')
+    elif mode == 'static' and isinstance(address, str) and '/' in address and isinstance(gateway, str):
+        try:
+            fields.append(f'ip={IPv4Interface(address)}')
+            if gateway:
+                fields.append(f'gw={IPv4Address(gateway)}')
+        except ValueError:
+            raise invalid from None
+    else:
+        raise invalid
+    return name, ','.join([f'name={interface}', *fields])
+
+
+@app.route('/api/vms/<int:vmid>/firewall/settings', methods=['GET', 'PUT'])
+@require_auth
+def api_vm_firewall_settings(vmid):
+    applied = []
+    try:
+        ticket, privileges = _firewall_session(vmid, 'VM.Audit')
+        if not _firewall_can_add(ticket, privileges):
+            raise _GuestFirewallError('permission_denied', 403)
+        updating = request.method == 'PUT'
+        body = request.get_json(silent=True) if updating else request.args
+        if updating and (not isinstance(body, dict) or set(body) not in (
+                {'node', 'type', 'revision', 'options', 'interfaces'}, {'node', 'type', 'revision', 'options', 'network'})):
+            raise _GuestFirewallError('firewall_settings_invalid', 400)
+        with _FIREWALL_WRITE_LOCKS[vmid % len(_FIREWALL_WRITE_LOCKS)]:
+            guest = _firewall_guest(vmid)
+            node, vm_type, _ = guest
+            if (node, vm_type) != (body.get('node'), body.get('type')):
+                raise _GuestFirewallError('guest_changed', 409)
+            base = f'/nodes/{node}/{vm_type}/{vmid}'
+            include_bridges = 'network' in body if updating else body.get('network') == '1'
+            native_options, config, pending, bridges = _firewall_settings_native(base, ticket, include_bridges)
+            values, interfaces, revision, options_digest, config_digest, nets = _firewall_settings_snapshot(
+                guest, native_options, config, pending)
+            identity = {'vmid': vmid, 'node': node, 'type': vm_type}
+            if not updating:
+                if _firewall_guest(vmid) != guest:
+                    raise _GuestFirewallError('guest_changed', 409)
+                return jsonify({**identity, 'settings': values, 'interfaces': interfaces, 'revision': revision, 'bridges': bridges})
+            if body['revision'] != revision:
+                raise _GuestFirewallError('firewall_settings_changed', 409)
+
+            invalid = _GuestFirewallError('firewall_settings_invalid', 400)
+            options = body['options']
+            policy = ('ACCEPT', 'DROP', 'REJECT')
+            choices = {'policy_in': policy, 'policy_out': policy,
+                       'log_level_in': _FIREWALL_LOG_LEVELS, 'log_level_out': _FIREWALL_LOG_LEVELS}
+            if not isinstance(options, dict) or any(
+                    (type(value) is not bool if key == 'enabled' else key not in choices or value not in choices[key])
+                    for key, value in options.items()):
+                raise invalid
+            network = {}
+            new_name = None
+            if 'network' in body:
+                if options and options != {'enabled': True}:
+                    raise invalid
+                new_name, definition = _firewall_new_interface(body['network'], vm_type, nets, bridges)
+                network[new_name] = definition
+            else:
+                flags = body['interfaces']
+                available = {row['name']: row['flag'] for row in interfaces if not row['pending'] and row['flag'] is not None}
+                if not isinstance(flags, dict) or any(key not in available or type(flag) is not bool for key, flag in flags.items()):
+                    raise invalid
+                for key, flag in flags.items():
+                    if flag != available[key]:
+                        fields = [item for item in nets[key]['value'].split(',') if not item.startswith('firewall=')]
+                        network[key] = ','.join([*fields, f'firewall={int(flag)}'])
+
+            changed = {key: value for key, value in options.items() if values[key] != value}
+            option_params = {('enable' if key == 'enabled' else key): int(value) if type(value) is bool else value
+                             for key, value in changed.items()}
+            if _firewall_guest(vmid) != guest:
+                raise _GuestFirewallError('guest_changed', 409)
+            writes = []
+            if option_params:
+                writes.append(('settings', f'{base}/firewall/options', {**option_params, 'digest': options_digest}))
+            if network:
+                writes.append(('interfaces', f'{base}/config', {**network, 'digest': config_digest}))
+            # Disable before changing NIC flags. When enabling an existing
+            # setup, prepare its NICs first. For a new NIC enable before attach.
+            if 'network' not in body and changed.get('enabled') is not False:
+                writes.reverse()
+            for part, path, parameters in writes:
+                if _firewall_guest(vmid)[:2] != guest[:2]:
+                    raise _GuestFirewallError('guest_changed', 409)
+                _firewall_write_native(path, parameters, ticket, 'PUT', settings=True)
+                applied.append(part)
+                if part == 'settings':
+                    readback = _firewall_pve_get(path, ticket)
+                    if not isinstance(readback, dict) or any(
+                            (_firewall_switch(readback.get('enable', 0)) if key == 'enabled' else readback.get(key)) != flag
+                            for key, flag in changed.items()):
+                        raise _GuestFirewallError('firewall_settings_uncertain', 502)
+                else:
+                    pending = _firewall_pve_get(f'{base}/pending', ticket)
+                    rows = _firewall_interfaces(pending, ()) if isinstance(pending, list) else None
+                    observed = {row['key']: row.get('pending', row.get('value')) for row in pending
+                                if row.get('delete') not in (1, 2, '1', '2')} if rows is not None else {}
+                    if any(not _firewall_interface_matches(definition, observed.get(name))
+                           for name, definition in network.items()):
+                        raise _GuestFirewallError('firewall_settings_uncertain', 502)
+            if _firewall_guest(vmid)[:2] != guest[:2]:
+                raise _GuestFirewallError('guest_changed', 409)
+            return jsonify({**identity, 'saved': True, 'applied': applied, 'interface': new_name,
+                            'pending': [row['name'] for row in (rows if network else [])
+                                        if row['name'] in network and row['pending']]})
+    except _GuestFirewallError as error:
+        return jsonify({'error': error.code, 'applied': applied}), error.status
+
+
+def _firewall_interface_matches(definition, actual):
+    if not isinstance(actual, str):
+        return False
+    expected = set(definition.split(','))
+    observed = set(actual.split(','))
+    for field in expected - observed:
+        if field == 'firewall=0' and _firewall_nic_flag(actual) is False:
+            continue
+        if '=' not in field and any(item.startswith(f'{field}=') for item in observed):
+            # PVE generates a MAC address for a new VM NIC.
+            continue
+        return False
+    return True
+
+
+@app.route('/api/vms/<int:vmid>/firewall/rules', methods=['POST', 'PUT', 'PATCH', 'DELETE'])
+@require_auth
+def api_write_vm_firewall_rule(vmid):
+    try:
+        ticket, privileges = _firewall_session(vmid, 'VM.Audit')
+        if not _firewall_can_add(ticket, privileges):
+            raise _GuestFirewallError('permission_denied', 403)
+        body = request.get_json(silent=True)
+        method = request.method
+        creating = method == 'POST'
+        moving = method == 'PATCH' and isinstance(body, dict) and 'to' in body
+        fields = {'node', 'type', 'revision'} | {
+            'POST': {'rule'}, 'PUT': {'pos', 'rule'},
+            'PATCH': {'pos', 'to' if moving else 'enabled'}, 'DELETE': {'pos'},
+        }[method]
+        if not isinstance(body, dict) or (set(body) != fields and (not creating or set(body) != fields | {'enabled'})):
+            raise _GuestFirewallError('firewall_rule_invalid', 400)
+        # Clients that opened the previous form may still be submitting a draft for a disabled rule.
+        enabled = body.get('enabled', False)
+        if type(enabled) is not bool:
+            raise _GuestFirewallError('firewall_rule_invalid', 400)
+        position = body.get('pos')
+        if not creating and (type(position) is not int or position < 0):
+            raise _GuestFirewallError('firewall_rule_invalid', 400)
+        target = body.get('to')
+        if moving and (type(target) is not int or target < 0 or target == position):
+            raise _GuestFirewallError('firewall_rule_invalid', 400)
+        parameters = _firewall_rule_parameters(body['rule']) if 'rule' in body else {}
+        # Serialise writes from this Monitor. Native PVE takes its own lock;
+        # it does not support a conditional digest for an insertion.
+        with _FIREWALL_WRITE_LOCKS[vmid % len(_FIREWALL_WRITE_LOCKS)]:
+            guest = _firewall_guest(vmid)
+            node, vm_type, _ = guest
+            if (node, vm_type) != (body['node'], body['type']):
+                raise _GuestFirewallError('guest_changed', 409)
+            base = f'/nodes/{node}/{vm_type}/{vmid}'
+            if 'iface' in parameters:
+                config = _firewall_pve_get(f'{base}/pending', ticket)
+                if not isinstance(config, list) or not any(
+                        isinstance(row, dict) and row.get('key') == parameters['iface']
+                        and isinstance(row.get('value'), str) for row in config):
+                    raise _GuestFirewallError('firewall_rule_invalid', 400)
+            native = _firewall_rules(base, ticket, with_digest=True)
+            before = native['rules']
+            if body['revision'] != _firewall_rule_revision(guest, native):
+                raise _GuestFirewallError('firewall_rules_changed', 409)
+            if _firewall_guest(vmid) != guest:
+                raise _GuestFirewallError('guest_changed', 409)
+            expected = parameters.copy()
+            if not creating:
+                index = next((i for i, row in enumerate(before) if row['pos'] == position), None)
+                digest = native['digests'].get(position)
+                if index is None or not digest:
+                    raise _GuestFirewallError('firewall_rule_not_editable', 409)
+                current = before[index]
+                parameters['digest'] = digest
+                if moving:
+                    if target >= len(before) or any(row['pos'] != i for i, row in enumerate(before)):
+                        raise _GuestFirewallError('firewall_rule_invalid', 400)
+                    # PVE inserts before the original slot. Convert the
+                    # requested final position, including an append.
+                    parameters['moveto'] = target + int(position < target)
+                    order = before.copy()
+                    order.insert(target, order.pop(index))
+                    expected = [dict(row, pos=i) for i, row in enumerate(order)]
+                elif method == 'PUT':
+                    if not _firewall_editable(current):
+                        raise _GuestFirewallError('firewall_rule_not_editable', 409)
+                    enabled = current['enabled']
+                    cleared = {key for key in ('dport', 'source', 'iface', 'comment')
+                               if key in current and key not in expected}
+                    # An older client may omit log; only an explicit Off clears it.
+                    if 'log' in body['rule'] and 'log' in current and 'log' not in expected:
+                        cleared.add('log')
+                    expected = {key: value for key, value in current.items()
+                                if key not in cleared and key != 'ipversion'} | expected
+                    if cleared:
+                        parameters['delete'] = ','.join(sorted(cleared))
+                elif method == 'PATCH':
+                    if current['enabled'] is None:
+                        raise _GuestFirewallError('firewall_rule_not_editable', 409)
+                    expected = {key: value for key, value in current.items() if key != 'ipversion'} | {'enabled': enabled}
+            if method != 'DELETE' and not moving:
+                parameters['enable'] = int(enabled)
+            _firewall_write_rule(base, parameters, ticket, method, position)
+            try:
+                readback = _firewall_rules(base, ticket, with_digest=moving)
+                after = readback['rules']
+                if moving:
+                    confirmed = after == expected
+                elif method == 'DELETE':
+                    confirmed = after == before[:index] + [dict(row, pos=row['pos'] - 1) for row in before[index + 1:]]
+                elif not creating:
+                    confirmed = (len(after) == len(before)
+                                 and after[:index] == before[:index] and after[index + 1:] == before[index + 1:]
+                                 and {key: value for key, value in after[index].items() if key != 'ipversion'} == expected)
+                else:
+                    confirmed = (len(after) == len(before) + 1 and after[0]['pos'] == 0
+                                 and after[0]['enabled'] is enabled
+                                 and all(after[0].get(key) == value for key, value in expected.items())
+                                 and after[1:] == [dict(row, pos=row['pos'] + 1) for row in before])
+                if _firewall_guest(vmid) != guest or not confirmed:
+                    raise _GuestFirewallError('firewall_rule_uncertain', 502)
+            except _GuestFirewallError:
+                raise _GuestFirewallError('firewall_rule_uncertain', 502) from None
+        result_key = 'moved' if moving else {'POST': 'created', 'PUT': 'updated', 'PATCH': 'updated', 'DELETE': 'deleted'}[method]
+        result = {'vmid': vmid, 'node': node, 'type': vm_type, result_key: True}
+        if moving:
+            result['rules_snapshot'] = _firewall_rules_snapshot(guest, readback, can_write=True)
+        return jsonify(result), 201 if creating else 200
+    except _GuestFirewallError as error:
+        return jsonify({'error': error.code}), error.status
+
+
+def _firewall_log(base, vmid, ticket, start, limit):
+    data = _firewall_pve_get(f'{base}/firewall/log', ticket, start=start, limit=limit)
+    if not isinstance(data, list):
+        raise _GuestFirewallError('firewall_read_failed', 502)
+    entries = []
+    for row in data:
+        if not isinstance(row, dict) or not isinstance(row.get('t'), str):
+            raise _GuestFirewallError('firewall_read_failed', 502)
+        if row['t'] == 'no content':
+            continue
+        # Native log lines start with the guest VMID. This also rejects PVE's
+        # in-band log-file read error instead of showing it as a packet.
+        if not row['t'].startswith(f'{vmid} ') or type(row.get('n')) is not int:
+            raise _GuestFirewallError('firewall_read_failed', 502)
+        entries.append({'n': row['n'], 't': row['t']})
+    return {'log_lines': len(entries), 'logs': entries}
+
+
+@app.route('/api/vms/<int:vmid>/firewall/<section>', methods=['GET'])
+@require_auth
+def api_vm_firewall(vmid, section):
+    if section not in ('status', 'rules', 'log'):
+        return jsonify({'error': 'firewall_read_failed'}), 404
+    expected_node, expected_type = request.args.get('node'), request.args.get('type')
+    # The documented log endpoint also accepts its original VMID-only URL.
+    legacy_log = section == 'log' and expected_node is None and expected_type is None
+    if not legacy_log and (not expected_node or expected_type not in ('qemu', 'lxc')):
+        return jsonify({'error': 'guest_changed'}), 400
+    if section == 'log':
+        try:
+            start = max(int(request.args.get('start', 0)), 0)
+            limit = min(max(int(request.args.get('limit', 500)), 1), 5000)
+        except ValueError:
+            return jsonify({'error': 'start/limit must be integers'}), 400
+    try:
+        ticket, privileges = _firewall_session(vmid, 'VM.Console' if section == 'log' else 'VM.Audit')
+        node, vm_type, signature = _firewall_guest(vmid)
+        if expected_node and (node, vm_type) != (expected_node, expected_type):
+            raise _GuestFirewallError('guest_changed', 409)
+        node_path = f'/nodes/{node}'
+        base = f'{node_path}/{vm_type}/{vmid}'
+        if section == 'log':
+            result = _firewall_log(base, vmid, ticket, start, limit)
+            if legacy_log:
+                # Old consumers expect these fields on a successful log GET.
+                # The scoped route uses the separate coverage endpoint.
+                name_key = 'hostname' if vm_type == 'lxc' else 'name'
+                try:
+                    config = pve_mirror.read_guest_config(node, vm_type, vmid)
+                except OSError:
+                    config = None
+                name = pve_mirror.config_properties(config, (name_key,)).get(name_key) if config else None
+                result.update(name=name, firewall_enabled=True)
+        elif section == 'rules':
+            native = _firewall_rules(base, ticket, with_digest=True)
+            result = _firewall_rules_snapshot((node, vm_type, signature), native, _firewall_can_add(ticket, privileges))
+        else:
+            result = _firewall_status(base, node_path, ticket)
+            result['can_configure'] = _firewall_can_add(ticket, privileges)
+        if _firewall_guest(vmid) != (node, vm_type, signature):
+            raise _GuestFirewallError('guest_changed', 409)
+        return jsonify({'vmid': vmid, 'node': node, 'type': vm_type, **result})
+    except _GuestFirewallError as error:
+        return jsonify({'error': error.code}), error.status
 
 
 @app.route('/api/vms/<int:vmid>/config', methods=['POST'])

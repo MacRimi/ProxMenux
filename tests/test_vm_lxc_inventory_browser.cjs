@@ -22,6 +22,25 @@ const pending = new Map()
 const rejectedWrites = []
 const errors = []
 const lxcRequests = []
+const firewallRequests = []
+const firewallWrites = []
+const firewallSettingsRequests = []
+const firewallSettingsWrites = []
+let wizardSwitchColors
+let firewallEditor = false
+let firewallSettingsEditor = false
+let firewallSettingsEnabled = false
+let firewallAddedInterface = false
+let fixtureFirewallRules = [
+  { pos: 0, action: "ACCEPT", type: "in", enabled: true, proto: "tcp", dport: "443", comment: "Web fixture" },
+  { pos: 1, action: "web-access", type: "group", enabled: false },
+  { pos: 2, action: "DROP", type: "out", enabled: true },
+]
+let firewallLogReply = 200
+let firewallRulesReply = 200
+let fixtureRuleRevision = "fixture-revision"
+let legacyMoveResponse = false
+let firewallHasLogs = false
 const lxcBase = "/api/plain-lxc/v1/"
 const lxcTemplate = "local:vztmpl/debian-13-standard_13_amd64.tar.zst"
 const catalogTemplate = "ubuntu-24.04-standard_24.04_amd64.tar.zst"
@@ -40,7 +59,7 @@ const guests = [
     update_check: { available: true, count: 2, packages: [] } },
   { vmid: 201, type: "qemu", name: "demo-cortendesk-windows-builder-test", status: "stopped", tags: "builder", uptime: 900, netin: 512 * 1024 ** 3 },
   { vmid: 202, type: "qemu", name: "demo-running-vm", status: "running", uptime: 42, netin: 0, netout: 72 * 1024 ** 3, diskread: null, diskwrite: 5 * 1024 ** 3 },
-].map(guest => ({ cpu: 0, mem: 0, maxmem: 1024, disk: 0, maxdisk: 1024, uptime: 0, ...guest }))
+].map(guest => ({ node: "fixture", cpu: 0, mem: 0, maxmem: 1024, disk: 0, maxdisk: 1024, uptime: 0, ...guest }))
 
 function send(method, params = {}, targetSession = sessionId) {
   return new Promise((resolve, reject) => {
@@ -69,7 +88,7 @@ async function respond({ requestId, request }) {
       storages: ["local-lvm"], bridges: { vmbr0: { vlan_supported: true } }, limits: { cores: 8, ram_mib: 8192 },
       capabilities: { mount_points: 256, devices: 32 }, hardware: [], hardware_errors: false,
       defaults: { rootfs: { size_gib: 8 }, cpu: { cores: 1 }, memory: { ram_mib: 512, swap_mib: 512 },
-        nesting: false, onboot: false, start_after_create: false, prepare_system: false },
+        nesting: true, onboot: false, start_after_create: false, prepare_system: false },
     })
     if (action === "plan" && request.method === "POST") return json({
       summary: { ...body.spec, dns: { nameservers: [], search_domains: [] } },
@@ -98,11 +117,92 @@ async function respond({ requestId, request }) {
         phase: "create", task_warnings: false })
     }
   }
+  if (url.origin === origin && url.pathname === "/api/vms/202/firewall/rules" && firewallEditor &&
+      ["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
+    const payload = JSON.parse(request.postData)
+    firewallWrites.push({ method: request.method, payload })
+    const result = { vmid: 202, node: "fixture", type: "qemu" }
+    if (request.method === "POST") {
+      const { direction, action, protocol, dport, comment, log } = payload.rule
+      fixtureFirewallRules = [{ pos: 0, type: direction.toLowerCase(), action, proto: protocol, dport,
+        comment, log, enabled: payload.enabled }, ...fixtureFirewallRules.map(row => ({ ...row, pos: row.pos + 1 }))]
+      return reply(201, JSON.stringify({ ...result, created: true }), "application/json")
+    }
+    if (request.method === "DELETE") {
+      fixtureFirewallRules = fixtureFirewallRules.filter(row => row.pos !== payload.pos)
+        .map((row, pos) => ({ ...row, pos }))
+      return reply(200, JSON.stringify({ ...result, deleted: true }), "application/json")
+    }
+    if (request.method === "PATCH" && Object.hasOwn(payload, "to")) {
+      assert.equal(payload.revision, fixtureRuleRevision)
+      const [rule] = fixtureFirewallRules.splice(payload.pos, 1)
+      fixtureFirewallRules.splice(payload.to, 0, rule)
+      fixtureFirewallRules = fixtureFirewallRules.map((item, pos) => ({ ...item, pos }))
+      fixtureRuleRevision = `fixture-revision-${firewallWrites.length}`
+      await new Promise(resolve => setTimeout(resolve, 450))
+      const rules_snapshot = legacyMoveResponse ? undefined : {
+        rules: fixtureFirewallRules, add_rule_revision: fixtureRuleRevision,
+        editable_rule_positions: [0], writable_rule_positions: fixtureFirewallRules.map(item => item.pos),
+      }
+      return reply(200, JSON.stringify({ ...result, moved: true, rules_snapshot }), "application/json")
+    }
+    if (request.method === "PATCH") fixtureFirewallRules[payload.pos].enabled = payload.enabled
+    else Object.assign(fixtureFirewallRules[payload.pos], { comment: payload.rule.comment, log: payload.rule.log })
+    return reply(200, JSON.stringify({ ...result, updated: true }), "application/json")
+  }
+  if (url.origin === origin && url.pathname === "/api/vms/100/firewall/settings" && firewallSettingsEditor) {
+    const identity = { vmid: 100, node: "fixture", type: "lxc" }
+    const json = data => reply(200, JSON.stringify({ ...identity, ...data }), "application/json")
+    if (request.method === "GET") {
+      firewallSettingsRequests.push(url.searchParams.get("network"))
+      assert.equal(url.searchParams.get("type"), "lxc")
+      assert.equal(url.searchParams.get("node"), identity.node)
+      return json({ revision: "settings-revision", interfaces: [], bridges: ["vmbr0"],
+        settings: { enabled: firewallSettingsEnabled, policy_in: "DROP", policy_out: "ACCEPT",
+          log_level_in: "nolog", log_level_out: "nolog" } })
+    }
+    assert.equal(request.method, "PUT")
+    const payload = JSON.parse(request.postData)
+    firewallSettingsWrites.push(payload)
+    firewallSettingsEnabled = payload.options.enabled ?? firewallSettingsEnabled
+    if (payload.network) firewallAddedInterface = true
+    return json({ saved: true, pending: payload.network ? ["net0"] : [], interface: payload.network ? "net0" : null })
+  }
   if (request.method !== "GET") {
     rejectedWrites.push([request.method, url.pathname])
     return reply(403, "", "text/plain")
   }
   if (url.origin !== origin) return reply(404, "", "text/plain")
+  const firewall = /^\/api\/vms\/(\d+)\/firewall\/(status|rules|log)$/.exec(url.pathname)
+  if (firewall) {
+    const [, vmid, section] = firewall
+    const guest = guests.find(item => String(item.vmid) === vmid)
+    assert.equal(url.searchParams.get("node"), guest.node)
+    assert.equal(url.searchParams.get("type"), guest.type)
+    firewallRequests.push({ vmid, section, method: request.method })
+    const json = (status, data) => reply(status, JSON.stringify(data), "application/json")
+    if (section === "log" && firewallLogReply !== 200) return json(firewallLogReply, { error: "firewall_read_failed" })
+    if (section === "rules" && firewallRulesReply === 403) return json(403, { error: "permission_denied" })
+    const lxc = guest.type === "lxc"
+    const data = {
+      status: { status: lxc ? "disabled" : "partial", cluster_enabled: true, guest_enabled: !lxc,
+        backend: "iptables", service: "running", log_levels: { in: "nolog", out: "nolog" },
+        interfaces: [{ name: "net0", flag: true, coverage: lxc ? "disabled" : "configured", pending: null },
+                     { name: "net1", flag: false, coverage: "disabled", pending: "change", pending_flag: true }] },
+      rules: { rules: lxc ? [] : fixtureFirewallRules,
+        add_rule_revision: firewallEditor && vmid === "202" ? fixtureRuleRevision : null,
+        editable_rule_positions: firewallEditor && vmid === "202" ? [0] : [],
+        writable_rule_positions: firewallEditor && vmid === "202" ? fixtureFirewallRules.map(rule => rule.pos) : [] },
+      log: { logs: firewallHasLogs ? Array.from({ length: 70 }, (_, index) =>
+        ({ n: index + 1, t: `${vmid} ${index % 3 === 0 ? 4 : index % 3 === 1 ? 6 : 3} tap${vmid}i0-IN DROP firewall sample ${index + 1}` })) : [] },
+    }[section]
+    if (section === "status" && lxc && firewallSettingsEditor) Object.assign(data, {
+      can_configure: true, guest_enabled: firewallSettingsEnabled,
+      status: firewallSettingsEnabled ? "noInterfaces" : "disabled",
+      interfaces: firewallAddedInterface ? [{name: "net0", flag: null, coverage: "absent", pending: "add", pending_flag: true}] : [],
+    })
+    return json(200, { vmid: guest.vmid, type: guest.type, node: guest.node, ...data })
+  }
   const guestId = /^\/api\/vms\/(\d+)$/.exec(url.pathname)?.[1]
   const guest = guests.find(item => String(item.vmid) === guestId)
   const data = {
@@ -189,6 +289,412 @@ async function openInventory(tabLabel = "VMs & LXCs", filterLabel = "Filter by g
   await waitFor(`Boolean(${labelled(filterLabel)}?.getClientRects().length)`)
 }
 
+const firewallDialog = "document.querySelector('[role=dialog]')"
+const firewallText = value => `${firewallDialog}?.textContent.includes(${JSON.stringify(value)})`
+const firewallPanel = `${firewallDialog}.querySelector('[role=tabpanel]:not([hidden])')`
+async function guestDetailFrame() {
+  return evaluate(`(() => {
+    const dialog = ${firewallDialog};
+    return [dialog, ...Array.from(dialog.children).slice(0, 4)].map(element => {
+      const { x, y, width, height } = element.getBoundingClientRect();
+      return { x, y, width, height };
+    });
+  })()`)
+}
+
+async function openGuestDetailTab(label) {
+  const tab = `[...${firewallDialog}.children[1].querySelectorAll('button')].find(button =>
+    button.querySelector('span')?.textContent.trim() === ${JSON.stringify(label)})`
+  await click(tab)
+  await waitFor(`!(${tab}).classList.contains('border-transparent')`)
+  await waitFor(`${firewallDialog}.getAnimations().length === 0`)
+}
+
+async function firewallGeometry() {
+  return evaluate(`(() => {
+    const dialog = ${firewallDialog};
+    const tabs = dialog.querySelector('[role=tablist]');
+    const selected = tabs.querySelector('[aria-selected="true"]');
+    const inactive = tabs.querySelector('[aria-selected="false"]');
+    const tabRects = [...tabs.children].map(tab => tab.getBoundingClientRect());
+    const body = dialog.children[2];
+    const padding = getComputedStyle(body);
+    const bodyWidth = body.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
+    return {
+      fullWidth: Math.abs(tabs.getBoundingClientRect().width - bodyWidth) < 1,
+      equalTabs: tabRects.every(rect => Math.abs(rect.width - tabRects[0].width) < 1 && rect.height === tabRects[0].height),
+      tintedActive: getComputedStyle(selected).backgroundColor !== getComputedStyle(inactive).backgroundColor,
+    };
+  })()`)
+}
+async function openFirewallSection(label) {
+  const tab = `[...${firewallDialog}.querySelectorAll('[role=tab]')].find(el=>el.textContent.trim()===${JSON.stringify(label)})`
+  await waitFor(`Boolean(${tab})`)
+  await evaluate(`(${tab}).dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`)
+}
+
+async function verifyGuestFirewall() {
+  const button = label => `[...${firewallDialog}.querySelectorAll('button')].find(el=>el.textContent.trim()===${JSON.stringify(label)})`
+  await click(labelled("View details for demo-running-vm"))
+  await waitFor(`Boolean(${labelled("Firewall")})`)
+  assert.deepEqual(firewallRequests, [], "Firewall must be lazy")
+  await waitFor(`${firewallDialog}.getAnimations().length === 0`)
+  const vmFrame = await guestDetailFrame()
+  await click(labelled("Firewall"))
+  await waitFor(firewallText("Firewall on some interfaces"))
+  await waitFor(firewallText("Pending change · firewall On"))
+  await waitFor(`${firewallDialog}.getAnimations().length === 0`)
+  assert.deepEqual(await guestDetailFrame(), vmFrame, "Opening Firewall must keep the entire VM detail frame")
+  assert.ok(await evaluate(firewallText("Overview")))
+  const geometry = await firewallGeometry()
+  assert.ok(geometry.equalTabs && geometry.fullWidth && geometry.tintedActive)
+  assert.ok(await evaluate(`(() => {
+    const rects = [...(${firewallPanel}).querySelector('dl').children].map(card => card.getBoundingClientRect());
+    return rects.every(rect => Math.abs(rect.width - rects[0].width) < 1 && rect.height === rects[0].height);
+  })()`))
+  assert.equal(await evaluate(firewallText("Firewall on the interface · Off")), false)
+  assert.deepEqual(firewallRequests.map(call => call.section), ["status"])
+  await openFirewallSection("Rules")
+  await waitFor(firewallText("web-access"))
+  assert.deepEqual(await firewallGeometry(), geometry)
+  const rules = await evaluate(`[...${firewallDialog}.querySelectorAll('[role=tabpanel]:not([hidden]) ol li')].map(el=>el.textContent)`)
+  assert.match(rules[0], /Incoming.*Allow.*443/)
+  assert.match(rules[1], /Group.*web-access.*Disabled/)
+  assert.match(rules[2], /Outgoing.*Drop/)
+  assert.equal(await evaluate(`Boolean(${button("Add rule")})`), false)
+  assert.deepEqual(firewallWrites, [])
+  firewallEditor = true
+  await click(button("Refresh"))
+  await waitFor(`Boolean(${button("Add rule")})`)
+  await click(button("Add rule"))
+  await waitFor(firewallText("Proxmox adds an enabled rule"))
+  assert.equal(await evaluate(`${button("Add rule")}.disabled`), true)
+  await click(button("HTTPS"))
+  const chooseRuleLogLevel = async level => {
+    const trigger = labelled("Rule log level")
+    await evaluate(`(${trigger}).dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`)
+    const option = `[...document.querySelectorAll('[role=option]')].find(item => item.textContent.trim() === ${JSON.stringify(level)})`
+    await waitFor(`Boolean(${option})`)
+    await click(option)
+  }
+  await chooseRuleLogLevel("info")
+  await click(button("Add rule"))
+  await waitFor(firewallText("The rule was added and enabled."))
+  assert.equal(firewallWrites.length, 1)
+  const { payload } = firewallWrites[0]
+  assert.deepEqual({ ...payload, rule: { ...payload.rule, comment: "" } }, {
+    node: "fixture", type: "qemu", revision: "fixture-revision", enabled: true,
+    rule: { direction: "IN", action: "ACCEPT", protocol: "tcp", dport: "443", source: "", iface: "", comment: "", log: "info" },
+  })
+  const firstRule = `(${firewallPanel}).querySelector('ol li button[aria-expanded]')`
+  await waitFor(`Boolean(${button("Add rule")})`)
+  await click(firstRule)
+  await waitFor(`Boolean(${button("Edit")})`)
+  await click(button("Edit"))
+  await waitFor(firewallText("The rule stays enabled."))
+  const saveRule = button("Save changes")
+  const comment = `[...(${firstRule}).closest('li').querySelectorAll('input')].at(-1)`
+  const initialComment = await evaluate(`${comment}.value`)
+  const changeComment = value => evaluate(`(() => {
+    const input = [...(${firstRule}).closest('li').querySelectorAll('input')].at(-1);
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value').set.call(input, ${JSON.stringify(value)});
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`)
+  assert.equal(await evaluate(`${saveRule}.disabled`), true)
+  await changeComment("Updated HTTPS")
+  await waitFor(`!${saveRule}.disabled`)
+  await changeComment(` ${initialComment} `)
+  await waitFor(`${saveRule}.disabled`)
+  await click(saveRule)
+  assert.equal(firewallWrites.length, 1, "Saving an unchanged rule must not send a write")
+  await changeComment("Updated HTTPS")
+  await waitFor(`!${saveRule}.disabled`)
+  await chooseRuleLogLevel("warning")
+  await click(saveRule)
+  await waitFor(firewallText("Rule changes were saved."))
+  await waitFor(firewallText("Updated HTTPS"))
+  assert.equal(firewallWrites.length, 2)
+  assert.equal(firewallWrites[1].method, "PUT")
+  assert.equal(firewallWrites[1].payload.pos, 0)
+  assert.equal(firewallWrites[1].payload.rule.dport, "443")
+  assert.equal(firewallWrites[1].payload.rule.comment, "Updated HTTPS")
+  assert.equal(firewallWrites[1].payload.rule.log, "warning")
+  assert.equal("enabled" in firewallWrites[1].payload, false)
+  const confirm = label => `[...Array.from(document.querySelectorAll('[role=dialog]')).at(-1).querySelectorAll('button')].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
+  const expectTemporaryNotice = async message => {
+    const notice = firewallText(message)
+    await waitFor(notice)
+    const shownAt = Date.now()
+    await waitFor(`!(${notice})`)
+    const elapsed = Date.now() - shownAt
+    assert.ok(elapsed >= 2000 && elapsed < 4000, `Expected a 2.5 second confirmation, got ${elapsed} ms: ${message}`)
+  }
+  await waitFor(`Boolean(${button("Disable")})`)
+  await click(button("Disable"))
+  await waitFor(`document.querySelectorAll('[role=dialog]').length === 2`)
+  await click(confirm("Cancel"))
+  await waitFor(`document.querySelectorAll('[role=dialog]').length === 1`)
+  assert.equal(firewallWrites.length, 2)
+  await click(button("Disable"))
+  await waitFor(`document.querySelectorAll('[role=dialog]').length === 2`)
+  await click(confirm("Disable"))
+  await expectTemporaryNotice("The rule was disabled.")
+  await waitFor(`Boolean(${button("Enable")})`)
+  await click(button("Enable"))
+  await waitFor(`document.querySelectorAll('[role=dialog]').length === 2`)
+  await click(confirm("Enable"))
+  await expectTemporaryNotice("The rule was enabled.")
+  await waitFor(`Boolean(${button("Delete")})`)
+  await click(button("Delete"))
+  await waitFor(`document.querySelectorAll('[role=dialog]').length === 2`)
+  await click(confirm("Delete"))
+  await expectTemporaryNotice("The rule was deleted.")
+  await waitFor(`!(${firewallText("Updated HTTPS")})`)
+  assert.deepEqual(firewallWrites.slice(2).map(({ method, payload }) => [method, payload.pos, payload.enabled]),
+    [["PATCH", 0, false], ["PATCH", 0, true], ["DELETE", 0, undefined]])
+  fixtureFirewallRules = [
+    { pos: 0, type: "in", action: "DROP", proto: "tcp", source: "0.0.0.0/0", enabled: true },
+    { pos: 1, type: "in", action: "ACCEPT", proto: "tcp", dport: "22", enabled: true },
+    { pos: 2, type: "in", action: "ACCEPT", proto: "icmp", enabled: true },
+    { pos: 3, type: "in", action: "ACCEPT", proto: "tcp", dport: "443", enabled: true },
+  ]
+  await click(button("Refresh"))
+  await waitFor(firewallText("0.0.0.0/0"))
+  await send("Emulation.setDeviceMetricsOverride", { width: 320, height: 740, deviceScaleFactor: 1, mobile: false })
+  await waitFor("innerWidth === 320")
+  await click(firstRule)
+  const moveMenu = labelled("Move")
+  const option = label => `[...document.querySelectorAll('[role=menuitem]')].find(item => item.textContent.trim() === ${JSON.stringify(label)})`
+  const openMoveMenu = async () => {
+    await evaluate(`(${moveMenu}).focus()`)
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 })
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 })
+  }
+  const chooseMoveOption = async label => {
+    const item = option(label)
+    await waitFor(`Boolean(${item})`)
+    await evaluate(`(${item}).focus()`)
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 })
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 })
+  }
+  assert.ok(await evaluate(`(() => {
+    const bar = (${moveMenu}).parentElement;
+    const items = [...bar.querySelectorAll('button')];
+    return items.length === 4 && items.every(item => item.offsetTop === items[0].offsetTop &&
+      getComputedStyle(item).whiteSpace === 'nowrap' && item.getBoundingClientRect().left >= bar.getBoundingClientRect().left &&
+      item.getBoundingClientRect().right <= bar.getBoundingClientRect().right);
+  })()`))
+  await openMoveMenu()
+  await waitFor(`Boolean(${option("Move to end")})`)
+  assert.ok(await evaluate(`${option("Move to start")}.hasAttribute('data-disabled') &&
+    ${option("Move up")}.hasAttribute('data-disabled') && !${option("Move down")}.hasAttribute('data-disabled')`))
+  await chooseMoveOption("Move to end")
+  await waitFor(`[...document.querySelectorAll('[role=dialog]')].some(dialog => dialog.textContent.includes('Move from position 1 to 4.'))`)
+  assert.equal(firewallWrites.length, 5, "A pending move must not change rules")
+  await click(confirm("Cancel"))
+  await waitFor(`document.querySelectorAll('[role=dialog]').length === 1`)
+  assert.equal(firewallWrites.length, 5)
+  await openMoveMenu()
+  await chooseMoveOption("Move to end")
+  await waitFor(`Boolean(${confirm("Move rule")})`)
+  const ruleReads = () => firewallRequests.filter(request => request.vmid === "202" && request.section === "rules").length
+  const readsBeforeMove = ruleReads()
+  await click(confirm("Move rule"))
+  await waitFor(`${confirm("Moving rule…")}?.disabled === true`)
+  await waitFor(firewallText("Firewall rule was moved."))
+  assert.equal(ruleReads(), readsBeforeMove, "Verified move must render from PATCH without another GET")
+  assert.deepEqual(firewallWrites[5], { method: "PATCH", payload: {
+    node: "fixture", type: "qemu", revision: "fixture-revision", pos: 0, to: 3,
+  } })
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false })
+  await waitFor("innerWidth === 1440")
+  const lastGrip = labelled("Drag rule 4 or open move actions")
+  await waitFor(`Boolean(${lastGrip})`)
+  await click(lastGrip)
+  await openMoveMenu()
+  await waitFor(`Boolean(${option("Move to start")})`)
+  assert.ok(await evaluate(`!${option("Move to start")}.hasAttribute('data-disabled') &&
+    ${option("Move to end")}.hasAttribute('data-disabled')`))
+  await chooseMoveOption("Move to start")
+  await waitFor(`[...document.querySelectorAll('[role=dialog]')].some(dialog => dialog.textContent.includes('Move from position 4 to 1.'))`)
+  await click(confirm("Cancel"))
+  await waitFor(`document.querySelectorAll('[role=dialog]').length === 1`)
+  await evaluate(`(() => {
+    const grip = ${lastGrip};
+    const target = (${firstRule}).parentElement;
+    const dataTransfer = new DataTransfer();
+    const clientY = target.getBoundingClientRect().top + 1;
+    grip.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
+    target.dispatchEvent(new DragEvent("dragover", { bubbles: true, dataTransfer, clientY }));
+    target.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer, clientY }));
+    grip.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer }));
+  })()`)
+  await waitFor(`Boolean(${confirm("Move rule")})`)
+  assert.equal(firewallWrites.length, 6, "Dragging must open confirmation before writing")
+  legacyMoveResponse = true
+  await click(confirm("Move rule"))
+  await waitFor(firewallText("Firewall rule was moved."))
+  assert.deepEqual(firewallWrites[6], { method: "PATCH", payload: {
+    node: "fixture", type: "qemu", revision: "fixture-revision-6", pos: 3, to: 0,
+  } })
+  await waitFor(`Boolean(${lastGrip}) && (${firstRule}).textContent.includes('0.0.0.0/0')`)
+  assert.equal(ruleReads(), readsBeforeMove + 1, "Legacy move response must refresh once")
+  console.log("Guest firewall rules: move with verified response and no extra GET, cancel, drag and legacy refresh")
+  firewallEditor = false
+  firewallRulesReply = 403
+  await click(button("Refresh"))
+  await waitFor(firewallText("You do not have permission"))
+  assert.equal(await evaluate(firewallText("0.0.0.0/0")), false)
+  firewallRulesReply = 200
+  await openFirewallSection("Logs")
+  await waitFor(firewallText("No firewall events recorded yet."))
+  await waitFor(firewallText("Default policies do not log."))
+  assert.deepEqual(await firewallGeometry(), geometry)
+  assert.equal(await evaluate(firewallText("Proxmox matches records by VMID.")), false)
+  firewallLogReply = 502
+  await click(button("Refresh"))
+  await waitFor(firewallText("Could not read firewall data from Proxmox."))
+  await waitFor(firewallText("Showing the last successful reading."))
+  firewallLogReply = 200
+  firewallHasLogs = true
+  await click(button("Refresh"))
+  await waitFor(firewallText("DROP firewall sample 70"))
+  assert.ok(await evaluate(firewallText("Proxmox matches records by VMID.")))
+  const levelFilter = `[...document.querySelectorAll('button[aria-haspopup=menu]')].find(item => item.textContent.startsWith('Filter by log level'))`
+  const logLevelOption = label => `[...document.querySelectorAll('[role=menuitemcheckbox]')].find(item => item.textContent.trim() === ${JSON.stringify(label)})`
+  const logRow = number => `[...(${firewallPanel}).querySelectorAll('pre span')].some(item => item.textContent.trim().endsWith('sample ' + ${number}))`
+  await evaluate(`(${levelFilter}).dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`)
+  await waitFor(`Boolean(${logLevelOption("warning")})`)
+  await click(logLevelOption("warning"))
+  await waitFor(`${logRow(1)} && !${logRow(2)} && !${logRow(3)}`)
+  await click(logLevelOption("info"))
+  await waitFor(`${logRow(1)} && ${logRow(2)} && !${logRow(3)}`)
+  await click(logLevelOption("warning"))
+  await click(logLevelOption("info"))
+  await click(logLevelOption("debug"))
+  await waitFor(firewallText("No records match the selected levels."))
+  const allLevels = `[...document.querySelectorAll('[role=menuitem]')].find(item => item.textContent.trim() === 'All levels')`
+  await click(allLevels)
+  await waitFor(`${logRow(1)} && ${logRow(2)} && ${logRow(3)}`)
+  assert.ok(await evaluate(`(() => {
+    const panel = ${firewallPanel};
+    const list = panel.querySelector('pre');
+    const scroll = panel.parentElement;
+    const tabTop = ${firewallDialog}.querySelector('[role=tablist]').getBoundingClientRect().top;
+    scroll.scrollTop = scroll.scrollHeight;
+    return scroll.scrollTop > 0 && list.scrollHeight === list.clientHeight
+      && ${firewallDialog}.querySelector('[role=tablist]').getBoundingClientRect().top === tabTop;
+  })()`))
+  await openFirewallSection("Overview")
+  await waitFor(firewallText("Firewall on some interfaces"))
+  assert.equal(await evaluate(`(${firewallPanel}).parentElement.scrollTop`), 0)
+  firewallHasLogs = false
+  await openGuestDetailTab("Backups")
+  assert.deepEqual(await guestDetailFrame(), vmFrame)
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await waitFor(`!${firewallDialog}`)
+
+  await send("Emulation.setDeviceMetricsOverride", { width: 1692, height: 1420, deviceScaleFactor: 1, mobile: false })
+  await waitFor("innerWidth === 1692 && innerHeight === 1420")
+  await click(labelled("View details for demo-container-with-a-long-name"))
+  await waitFor(`Boolean(${labelled("Firewall")})`)
+  await waitFor(`${firewallDialog}.getAnimations().length === 0`)
+  const lxcFrame = await guestDetailFrame()
+  for (const tab of ["App", "Updates", "Backups", "Firewall", "Status"]) {
+    await openGuestDetailTab(tab)
+    assert.deepEqual(await guestDetailFrame(), lxcFrame, `LXC detail frame changed on ${tab}`)
+  }
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await waitFor(`!${firewallDialog}`)
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false })
+  console.log("Guest detail: stable dialog, header, main tabs, content and footer across VM and LXC sections")
+}
+
+async function verifyGuestFirewallSettings() {
+  firewallSettingsEditor = true
+  const settings = "[...document.querySelectorAll('[role=dialog]')].at(-1)"
+  const title = label => `${settings}?.querySelector('h2')?.textContent === ${JSON.stringify(label)}`
+  const button = (label, dialog = firewallDialog) =>
+    `[...${dialog}.querySelectorAll('button')].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
+  const switches = `${settings}.querySelectorAll('[role=switch]')`
+  const switchStates = `[...${switches}].map(control => [control.getAttribute('aria-checked'), control.previousElementSibling.textContent.trim()])`
+  await click(labelled("View details for demo-container-with-a-long-name"))
+  await click(labelled("Firewall"))
+  await waitFor(firewallText("No network interfaces are configured."))
+  assert.deepEqual(firewallSettingsRequests, [])
+  await click(button("Configure firewall"))
+  await waitFor(title("Configure firewall"))
+  await waitFor(`Boolean(${settings}?.querySelector('[role=switch]'))`)
+  assert.equal(await evaluate(`${button("Save", settings)}.disabled`), true)
+  await click(`${settings}.querySelector('[role=switch]')`)
+  assert.deepEqual(await evaluate(switchStates), [["true", "On"]])
+  await click(button("Add network interface", settings))
+  await waitFor(title("Add network interface"))
+  await waitFor(`Boolean(${labelled("Network bridge")})`)
+  assert.deepEqual(await evaluate(switchStates), [["true", "On"], ["false", "Off"]])
+  assert.deepEqual(await evaluate(`[...${switches}].map(control => getComputedStyle(control).backgroundColor)`), wizardSwitchColors)
+  assert.ok(await evaluate(`(() => {
+    const bridge = ${labelled("Network bridge")}.getBoundingClientRect();
+    const vlan = ${settings}.querySelector('input[inputmode=numeric]').getBoundingClientRect();
+    return Math.abs(bridge.top - vlan.top) < 1 && Math.abs(bridge.height - vlan.height) < 1;
+  })()`))
+  await click(`${switches}[1]`)
+  await waitFor(`${switches}[1]?.getAttribute('aria-checked') === "true"`)
+  assert.deepEqual(await evaluate(switchStates), [["true", "On"], ["true", "On"]])
+  await click(button("Cancel", settings))
+  await waitFor(title("Configure firewall"))
+  assert.deepEqual(await evaluate(switchStates), [["true", "On"]])
+  assert.deepEqual(firewallSettingsWrites, [], "Opening and cancelling the NIC form must not save either draft")
+  assert.ok(await evaluate(`${button("Save", settings)}.classList.contains("border-green-500/30")`))
+  await click(button("Save", settings))
+  await waitFor(firewallText("Firewall settings saved."))
+  const shownAt = Date.now()
+  const missing = "This guest has no active network interface"
+  await waitFor(firewallText(missing))
+  assert.deepEqual(firewallSettingsWrites[0], { node: "fixture", type: "lxc", revision: "settings-revision",
+    options: { enabled: true }, interfaces: {} })
+  await waitFor(`!(${firewallText("Firewall settings saved.")})`)
+  assert.ok(Date.now() - shownAt < 4000, "Settings confirmation should clear after 2.5 seconds")
+  await openFirewallSection("Rules")
+  await waitFor(firewallText(missing))
+  await openFirewallSection("Logs")
+  await waitFor(firewallText("No firewall events recorded yet."))
+  await waitFor(firewallText(missing))
+  assert.equal(await evaluate(firewallText("Default policies do not log.")), false)
+  await openFirewallSection("Overview")
+
+  await send("Emulation.setDeviceMetricsOverride", { width: 320, height: 740, deviceScaleFactor: 1, mobile: false })
+  await waitFor("innerWidth === 320")
+  await click(button("Add network interface"))
+  await waitFor(title("Add network interface"))
+  await waitFor(`Boolean(${labelled("Network bridge")})`)
+  await waitFor(`${settings}.getAnimations().length === 0`)
+  assert.ok(await evaluate(`(() => {
+    const dialog = ${settings};
+    const box = dialog.getBoundingClientRect();
+    return box.left >= 0 && box.right <= innerWidth && dialog.scrollWidth <= dialog.clientWidth + 1;
+  })()`))
+  assert.equal(await evaluate(`${button("Add network interface", settings)}.disabled`), true)
+  assert.ok(await evaluate(`${button("Add network interface", settings)}.classList.contains("bg-muted")`))
+  await evaluate(`(${labelled("Network bridge")}).dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`)
+  const bridgeOption = "[...document.querySelectorAll('[role=option]')].find(el=>el.textContent==='vmbr0')"
+  await waitFor(`Boolean(${bridgeOption})`)
+  await click(bridgeOption)
+  await waitFor(`!${button("Add network interface", settings)}.disabled`)
+  assert.ok(await evaluate(`${button("Add network interface", settings)}.classList.contains("bg-orange-600")`))
+  await click(button("Add network interface", settings))
+  await waitFor(firewallText("Changes to net0 are pending."))
+  await waitFor(firewallText("Pending addition · firewall On"))
+  assert.deepEqual(firewallSettingsWrites[1], { node: "fixture", type: "lxc", revision: "settings-revision", options: {},
+    network: { bridge: "vmbr0", vlan: null, firewall: true, mode: "dhcp", ip: "", gateway: "" } })
+  assert.deepEqual(firewallSettingsRequests, [null, "1", "1"])
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 })
+  await waitFor(`!${firewallDialog}`)
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 960, deviceScaleFactor: 1, mobile: false })
+  firewallSettingsEditor = false
+  console.log("Guest firewall settings: transient save confirmation, direct NIC form, draft preserved on cancel, visible switch states, DHCP and pending NIC")
+}
+
 async function verifyPlainLxcWizard() {
   const button = (label, scope = "document") =>
     `[...${scope}.querySelectorAll('button')].find(el => el.textContent.trim() === ${JSON.stringify(label)})`
@@ -221,6 +727,11 @@ async function verifyPlainLxcWizard() {
     await click(button("Create LXC"))
     await waitFor(`Boolean(${dialog} && ${control("System template", "select")})`)
     await assertDialogFits()
+    if (!submit) {
+      wizardSwitchColors = await evaluate(`["true", "false"].map(state =>
+        getComputedStyle(${dialog}.querySelector('[role=switch][aria-checked=' + state + ']')).backgroundColor)`)
+      assert.notEqual(...wizardSwitchColors)
+    }
     if (submit) {
       await fill("Container hostname", "input", "chosen-name")
       await advance("Download an official template")
@@ -355,6 +866,8 @@ async function run() {
   await send("Page.navigate", { url: origin + "/" })
   await openInventory()
   await verifyPlainLxcWizard()
+  await verifyGuestFirewall()
+  await verifyGuestFirewallSettings()
   await waitFor("Boolean(localStorage.getItem('proxmenux.vmListLayout.v1'))")
   const initialSettings = await evaluate("JSON.parse(localStorage.getItem('proxmenux.vmListLayout.v1'))")
 
@@ -618,6 +1131,33 @@ async function run() {
   await tap(card(testLxc))
   await waitFor("document.querySelector('[role=dialog] h2')?.textContent.includes('demo-container-with-a-long-name')")
   assert.match(await evaluate("document.querySelector('[role=dialog]').textContent"), /Sieť I\/O/)
+  await waitFor(`${firewallDialog}.getAnimations().length === 0`)
+  const phoneFrame = await guestDetailFrame()
+  await click(labelled("Firewall"))
+  await waitFor(firewallText("Firewall pre tento stroj je vypnutý"))
+  await waitFor(`${firewallDialog}.getAnimations().length === 0`)
+  assert.deepEqual(await guestDetailFrame(), phoneFrame, "Firewall must keep the mobile detail frame")
+  assert.ok(await evaluate(firewallText("Firewall na rozhraní · Zapnutý")))
+  const firewallPhone = await firewallGeometry()
+  assert.ok(firewallPhone.equalTabs && firewallPhone.fullWidth && firewallPhone.tintedActive)
+  assert.equal(await evaluate(firewallText("web-access")), false)
+  await openFirewallSection("Pravidlá")
+  await waitFor(firewallText("Tento stroj nemá vlastné pravidlá firewallu."))
+  assert.deepEqual(await firewallGeometry(), firewallPhone)
+  await openFirewallSection("Záznamy")
+  await waitFor(firewallText("Firewall je vypnutý, nové záznamy nepribúdajú."))
+  assert.deepEqual(await firewallGeometry(), firewallPhone)
+  assert.ok(await evaluate(`(() => {
+    const dialog = ${firewallDialog};
+    const panel = dialog.querySelector('[role=tabpanel]:not([hidden])');
+    const bounds = panel.getBoundingClientRect();
+    return bounds.left >= 0 && bounds.right <= innerWidth && panel.scrollWidth <= panel.clientWidth + 1;
+  })()`))
+  assert.ok(firewallRequests.every(call => call.method === "GET"))
+  assert.deepEqual([...new Set(firewallRequests.map(call => call.vmid))].sort(), ["100", "202"])
+  await openGuestDetailTab("Stav")
+  assert.deepEqual(await guestDetailFrame(), phoneFrame)
+  console.log("Firewall: VM status, rule order, ACL refusal, mocked active add and inline edit, empty logs and Slovak LXC log view")
   console.log("Optional metrics, legacy settings, tag colors, transfer scales, sorting and persisted column settings passed")
   assert.deepEqual(rejectedWrites, [])
   assert.deepEqual(errors, [])
