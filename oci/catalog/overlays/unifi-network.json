@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Manage UniFi access points, switches and gateways from your own network controller."
+    },
+    "description": {
+      "en_US": "UniFi Network Application is Ubiquiti's controller software for UniFi access points, switches and gateways, packaged by LinuxServer.io. It adopts devices, pushes their configuration and shows clients, traffic and alerts in a web dashboard. The application keeps its data in a separate MongoDB database, and devices keep working on their own when the controller is offline."
+    }
+  }
+}

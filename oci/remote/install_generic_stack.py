@@ -1069,7 +1069,10 @@ def main():
                     e['value'] = e['value'].replace('@STACK_LAN_IP@',s['ip'])
                 plan['vmid'] = s['vmid']
                 plan['extra_hosts'] = aliases
-                plan['network'].update(bridge=bridge,ipv4=s['ip']+'/24',gateway=None)
+                # A member without its own LAN leg goes out through the main
+                # container; its start hook enables that route.
+                router = primary['ip'] if primary and not (s['main'] or s.get('frontend')) else None
+                plan['network'].update(bridge=bridge,ipv4=s['ip']+'/24',gateway=router)
                 if exists(s['vmid']):
                     raise RuntimeError(f"{translate('The VMID was taken during the installation:')} {s['vmid']}")
                 msg_info2(f"{translate('Service:')} {s['name']}")

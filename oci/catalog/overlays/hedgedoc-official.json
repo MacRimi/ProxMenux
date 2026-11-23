@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "HedgeDoc is a self-hosted collaborative Markdown editor for notes."
+    },
+    "description": {
+      "en_US": "HedgeDoc is a self-hosted editor for writing Markdown notes together in real time from the browser. Several people can edit the same note at once, and it renders diagrams, math formulas and slide presentations from the same text. Notes can be shared by link, published as read-only pages and protected with per-note permissions."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/hedgedoc/hedgedoc/516dfc467b82079db6830ac8626eb332d274172d/public/screenshot.png"
+    ]
+  }
+}

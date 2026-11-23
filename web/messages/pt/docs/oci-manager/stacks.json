@@ -104,7 +104,7 @@
               },
               {
                 "title": "Rede privada",
-                "body": "São criadas uma ponte e uma sub-rede, e cada membro recebe seu endereço fixo. O membro principal recebe ainda a interface da LAN, tal como qualquer outro membro que publique uma porta ou que a receita da aplicação peça."
+                "body": "São criadas uma ponte e uma sub-rede, e cada membro recebe seu endereço fixo. O membro principal recebe ainda a interface da LAN, tal como qualquer outro membro que publique uma porta ou que a receita da aplicação peça. Um membro sem a interface da LAN chega à internet pelo membro principal, como em uma rede Docker, e nada fora da aplicação pode abrir uma conexão com ele."
               },
               {
                 "title": "Persistência",

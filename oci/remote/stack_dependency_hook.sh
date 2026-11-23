@@ -4,6 +4,7 @@ set -Eeuo pipefail
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 HOOK_NAME=proxmenux-stack-dependencies.sh
+LXC_CONFIGS=/etc/pve/lxc
 COMPOSE_JOB_HELPER=/var/lib/vz/snippets/proxmenux-compose-jobs.py
 # Longest wait for a dependency that is being backed up, and for any other lock.
 BACKUP_LOCK_WAIT=${PROXMENUX_STACK_BACKUP_LOCK_WAIT:-14400}
@@ -17,6 +18,7 @@ PREVIOUS_RELEASES=(
   243b0dca81b1b155ca169a4d0e11cdb8ca55974c65ede6a4a9be8f4d536a141e
   c28b69acd7cc8e66d3aec3e8b2ec86bda0e4f91193ec78549f1965f2c859c0d1
   02c50ef17f2411ef22f4d382c51b34a7a0974a446d4a155ecb63fb1e805a7c59
+  3a62c87eb23e820f2e85b04e7891c861d8695c4b476f9b49e7b37d09cbca4141
 )
 
 die() {
@@ -124,7 +126,7 @@ refresh_hooks() {
       fi
     done
   done < <(sed -n "s/^hookscript:[[:space:]]*\([^[:space:]]*:snippets\/${HOOK_NAME//./\\.}\)[[:space:]]*$/\1/p" \
-             /etc/pve/lxc/*.conf 2>/dev/null | sort -u)
+             "$LXC_CONFIGS"/*.conf 2>/dev/null | sort -u)
 }
 
 is_running() {
@@ -252,6 +254,75 @@ start_dependencies() {
   done < <(jq -r '.dependencies[] | @base64' "$config")
 }
 
+# Current values of a container, without its snapshots.
+current_config() {
+  awk '/^\[/ {exit} {print}' "$LXC_CONFIGS/$1.conf" 2>/dev/null || true
+}
+
+net_option() {
+  local item items
+  IFS=, read -ra items <<<"$1"
+  for item in "${items[@]}"; do
+    if [[ $item == "$2="* ]]; then
+      printf '%s' "${item#*=}"
+      return 0
+    fi
+  done
+}
+
+warn() {
+  printf 'WARNING: %s\n' "$*" >&2
+}
+
+# Members of the private network that use the main container as their router
+# reach outside through its LAN leg, as on a Docker network. Nothing outside
+# can open a connection to them.
+open_private_egress() {
+  local main_id=$1 private lan address bridge subnet inside outside file line pid users=0
+  private=$(current_config "$main_id" | sed -n 's/^net0:[[:space:]]*//p')
+  lan=$(current_config "$main_id" | sed -n 's/^net1:[[:space:]]*//p')
+  [[ -n $private && -n $lan ]] || return 0
+  address=$(net_option "$private" ip)
+  bridge=$(net_option "$private" bridge)
+  [[ $bridge =~ ^vmbr[0-9]+$ ]] || return 0
+  [[ $address =~ ^10\.77\.([0-9]{1,3})\.[0-9]{1,3}/24$ ]] || return 0
+  subnet="10.77.${BASH_REMATCH[1]}.0/24"
+  address=${address%/24}
+  for file in "$LXC_CONFIGS"/*.conf; do
+    [[ ${file##*/} != "$main_id.conf" ]] || continue
+    while IFS= read -r line; do
+      if [[ ,${line#*: }, == *",bridge=$bridge,"* && ,${line#*: }, == *",gw=$address,"* ]]; then
+        users=1
+        break 2
+      fi
+    done < <(awk '/^\[/ {exit} /^net[0-9]+:/' "$file")
+  done
+  (( users )) || return 0
+
+  inside=$(net_option "$private" name)
+  outside=$(net_option "$lan" name)
+  pid=$(lxc-info -n "$main_id" -p -H 2>/dev/null || true)
+  if [[ ! $inside =~ ^[A-Za-z0-9_.-]{1,15}$ || ! $outside =~ ^[A-Za-z0-9_.-]{1,15}$ || ! $pid =~ ^[1-9][0-9]*$ ]]; then
+    warn "Outbound access for the private network of CT $main_id was not enabled: its network is unknown"
+    return 0
+  fi
+  # Forwarding is enabled inside the network namespace of the main container
+  # only; the host keeps its own setting.
+  if ! {
+    nsenter --target "$pid" --net sysctl -qw net.ipv4.ip_forward=1 &&
+    nsenter --target "$pid" --net iptables -w -N PROXMENUX-EGRESS &&
+    nsenter --target "$pid" --net iptables -w -A FORWARD -j PROXMENUX-EGRESS &&
+    nsenter --target "$pid" --net iptables -w -A PROXMENUX-EGRESS -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT &&
+    nsenter --target "$pid" --net iptables -w -A PROXMENUX-EGRESS -i "$inside" -o "$outside" -s "$subnet" -j ACCEPT &&
+    nsenter --target "$pid" --net iptables -w -A PROXMENUX-EGRESS -j DROP &&
+    nsenter --target "$pid" --net iptables -w -t nat -A POSTROUTING -o "$outside" -s "$subnet" -j MASQUERADE
+  } >/dev/null 2>&1; then
+    warn "Outbound access for the private network of CT $main_id could not be enabled"
+    return 0
+  fi
+  printf 'Outbound access enabled for the private network %s through CT %s.\n' "$subnet" "$main_id"
+}
+
 if [[ ${1:-} == "--install" ]]; then
   shift
   install_hook "$@"
@@ -266,6 +337,7 @@ vmid=${1:?missing VMID}
 phase=${2:?missing lifecycle phase}
 case "$phase" in
   pre-start) start_dependencies "$vmid" ;;
-  post-start|pre-stop|post-stop) ;;
+  post-start) open_private_egress "$vmid" ;;
+  pre-stop|post-stop) ;;
   *) die "Unknown lifecycle phase: $phase" ;;
 esac

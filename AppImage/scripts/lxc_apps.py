@@ -6071,8 +6071,26 @@ def _register_oci_installation(vmid) -> bool:
                        if app.get("installed_via") == "oci_image" and not app.get("logo_url")]
             logo = (_oci_instance_meta(vmid) or {}).get("logo") if missing else ""
             if logo:
+                if _read_oci_record(vmid) != record:
+                    return False
                 for app in missing:
                     app["logo_url"] = logo
+                _write_sidecar(vmid, sidecar, copies=True)
+            # The main container of a Compose stack was registered under the
+            # name of its service, such as "web", and without its address. It
+            # takes the name and address of the application once.
+            role = str((record.get("stack_member") or {}).get("name") or "")
+            stale = [app for app in sidecar["apps"] if not secondary and role
+                     and app.get("installed_via") == "oci_image" and app.get("name") == role
+                     and not app.get("ports")]
+            meta = (_oci_instance_meta(vmid) or {}) if stale else {}
+            ports = _oci_registration_ports(meta, secondary) if meta else []
+            if ports and meta.get("name") != role and _NAME_RE.match(str(meta.get("name") or "")):
+                if _read_oci_record(vmid) != record:
+                    return False
+                for app in stale:
+                    app["name"] = meta["name"]
+                    app["ports"] = copy.deepcopy(ports)
                 _write_sidecar(vmid, sidecar, copies=True)
     if registered:
         _follow_adguard_setup(vmid)
@@ -6080,6 +6098,26 @@ def _register_oci_installation(vmid) -> bool:
     meta = _oci_instance_meta(vmid)
     if not meta or not meta.get("name") or not _NAME_RE.match(str(meta["name"])):
         return False
+    payload = {
+        "name": meta["name"],
+        "installed_via": "oci_image",
+        "helper_slug": meta.get("template_id") or "",
+        "logo_url": meta.get("logo") or "",
+        "update_method": "none",
+        "ports": _oci_registration_ports(meta, secondary),
+    }
+    # Registrations made at startup would each announce their update on their
+    # own; the scheduled sweep sends pending updates together instead.
+    if _read_oci_record(vmid) != record:
+        return False
+    ok, result = add_app(vmid, payload, notify=False)
+    if not ok:
+        print(f"[ProxMenux] lxc_apps: automatic OCI registration of CT {vmid} failed: {result}")
+    return ok
+
+
+def _oci_registration_ports(meta: dict, secondary: bool) -> list:
+    """The addresses an OCI application is registered with."""
     category = meta.get("category_label") or meta.get("category") or ""
     endpoints = meta.get("endpoints") or []
     if secondary:
@@ -6104,22 +6142,7 @@ def _register_oci_installation(vmid) -> bool:
         if endpoint.get("logo_url"):
             entry["logo_url"] = endpoint["logo_url"]
         ports.append(entry)
-    payload = {
-        "name": meta["name"],
-        "installed_via": "oci_image",
-        "helper_slug": meta.get("template_id") or "",
-        "logo_url": meta.get("logo") or "",
-        "update_method": "none",
-        "ports": ports,
-    }
-    # Registrations made at startup would each announce their update on their
-    # own; the scheduled sweep sends pending updates together instead.
-    if _read_oci_record(vmid) != record:
-        return False
-    ok, result = add_app(vmid, payload, notify=False)
-    if not ok:
-        print(f"[ProxMenux] lxc_apps: automatic OCI registration of CT {vmid} failed: {result}")
-    return ok
+    return ports
 
 
 def _oci_operation_running(vmid) -> bool:
@@ -6199,10 +6222,13 @@ def _oci_instance_meta(vmid) -> Optional[dict]:
     member = record.get("stack_member") or {}
     is_primary = not stack_template or member.get("primary_vmid") in (None, record.get("vmid"))
     ui = template.get("catalog_ui") or stack_template.get("catalog_ui") or {}
-    if not template.get("catalog_ui") and stack_template and is_primary:
+    if stack_template and is_primary and (stack_template.get("catalog_ui") or not template.get("catalog_ui")):
         # Only the member the stack is reached on inherits the stack endpoint.
         # The cache and the database of a Nextcloud stack do not answer on its
         # web port, and offering it would register a service that is not there.
+        # A Compose stack also gives its main container a sheet of its own,
+        # named after its service; the stack's sheet is the application's.
+        ui = stack_template.get("catalog_ui") or ui
         template = {**stack_template, "id": template.get("id") or stack_template.get("id")}
     elif not template.get("catalog_ui") and stack_template:
         ui = {key: value for key, value in ui.items()

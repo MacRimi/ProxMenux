@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nadresses fixes"
               }
             ],
-            "caption": "Un membre sans adresse sur le réseau local n’est joint que par le réseau privé."
+            "caption": "Un membre sans adresse sur le réseau local n’est joint que par le réseau privé. Il accède à Internet par le LXC principal."
           }
         },
         {

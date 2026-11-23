@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\ndirecciones fijas"
               }
             ],
-            "caption": "Un miembro sin dirección en la LAN solo es accesible a través de la red privada."
+            "caption": "Un miembro sin dirección en la LAN solo es accesible a través de la red privada. Sale a internet a través del LXC principal."
           }
         },
         {

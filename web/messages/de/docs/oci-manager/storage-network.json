@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nfeste Adressen"
               }
             ],
-            "caption": "Ein Mitglied ohne LAN-Adresse ist nur über das private Netzwerk erreichbar."
+            "caption": "Ein Mitglied ohne LAN-Adresse ist nur über das private Netzwerk erreichbar. Ins Internet gelangt es über den Haupt-LXC."
           }
         },
         {

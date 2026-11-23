@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nindirizzi fissi"
               }
             ],
-            "caption": "Un membro senza indirizzo LAN è raggiungibile solo tramite la rete privata."
+            "caption": "Un membro senza indirizzo LAN è raggiungibile solo tramite la rete privata. Raggiunge Internet tramite l’LXC principale."
           }
         },
         {

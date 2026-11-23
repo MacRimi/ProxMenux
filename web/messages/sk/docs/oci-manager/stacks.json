@@ -104,7 +104,7 @@
               },
               {
                 "title": "Súkromná sieť",
-                "body": "Vytvorí sa most a podsieť a každý člen dostane svoju pevnú adresu. Hlavný člen dostane aj rozhranie LAN, rovnako ako každý ďalší člen, ktorý zverejňuje port alebo ktorého o to žiada recept aplikácie."
+                "body": "Vytvorí sa most a podsieť a každý člen dostane svoju pevnú adresu. Hlavný člen dostane aj rozhranie LAN, rovnako ako každý ďalší člen, ktorý zverejňuje port alebo ktorého o to žiada recept aplikácie. Člen bez rozhrania LAN sa do internetu dostane cez hlavného člena, ako v sieti Dockeru, a nič mimo aplikácie k nemu nemôže otvoriť spojenie."
               },
               {
                 "title": "Perzistencia",

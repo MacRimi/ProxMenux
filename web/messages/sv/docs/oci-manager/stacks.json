@@ -104,7 +104,7 @@
               },
               {
                 "title": "Privat nätverk",
-                "body": "En bro och ett undernät skapas och varje medlem får sin fasta adress. Huvudmedlemmen får också LAN-gränssnittet, liksom varje annan medlem som publicerar en port eller som programmets recept kräver."
+                "body": "En bro och ett undernät skapas och varje medlem får sin fasta adress. Huvudmedlemmen får också LAN-gränssnittet, liksom varje annan medlem som publicerar en port eller som programmets recept kräver. En medlem utan LAN-gränssnittet når internet via huvudmedlemmen, som i ett Docker-nätverk, och inget utanför programmet kan öppna en anslutning till den."
               },
               {
                 "title": "Persistens",

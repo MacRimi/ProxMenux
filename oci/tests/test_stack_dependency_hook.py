@@ -53,15 +53,19 @@ class StackDependencyHook(unittest.TestCase):
         self.root = Path(folder.name)
         self.state = self.root / "state"
         bin_dir = self.root / "bin"
-        for directory in (self.state, bin_dir, self.root / "priv", self.root / "lock"):
+        for directory in (self.state, bin_dir, self.root / "priv", self.root / "lock", self.root / "lxc"):
             directory.mkdir()
         (bin_dir / "pct").write_text(PCT)
         (bin_dir / "sleep").write_text("#!/bin/bash\nexit 0\n")
-        for name in ("pct", "sleep"):
+        (bin_dir / "lxc-info").write_text("#!/bin/bash\necho 4242\n")
+        (bin_dir / "nsenter").write_text(
+            '#!/bin/bash\necho "$*" >>"$STUB_STATE/nsenter"\n[[ -z ${STUB_NSENTER_FAILS:-} ]]\n')
+        for name in ("pct", "sleep", "lxc-info", "nsenter"):
             (bin_dir / name).chmod(0o755)
         script = HOOK.read_text()
         for old, new in (("PATH=/usr/sbin:/usr/bin:/sbin:/bin", f"PATH={bin_dir}:{os.environ['PATH']}"),
-                         ("/etc/pve/priv/", f"{self.root}/priv/"), ("/run/lock/", f"{self.root}/lock/")):
+                         ("/etc/pve/priv/", f"{self.root}/priv/"), ("/run/lock/", f"{self.root}/lock/"),
+                         ("LXC_CONFIGS=/etc/pve/lxc", f"LXC_CONFIGS={self.root}/lxc")):
             self.assertIn(old, script)
             script = script.replace(old, new)
         self.hook = self.root / "hook.sh"
@@ -129,6 +133,57 @@ class StackDependencyHook(unittest.TestCase):
         result = self.start()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("waiting", result.stdout)
+
+    def stack_network(self, dependency_gateway):
+        lxc = self.root / "lxc"
+        (lxc / "110.conf").write_text(
+            "hookscript: local:snippets/proxmenux-stack-dependencies.sh\n"
+            "net0: name=eth0,bridge=vmbr15,firewall=1,host-managed=1,ip=10.77.5.30/24,type=veth\n"
+            "net1: name=eth1,bridge=vmbr0,firewall=1,host-managed=1,ip=dhcp,type=veth\n")
+        gateway = f",gw={dependency_gateway}" if dependency_gateway else ""
+        (lxc / "111.conf").write_text(
+            f"net0: name=eth0,bridge=vmbr15,firewall=1{gateway},host-managed=1,ip=10.77.5.31/24,type=veth\n"
+            "\n[before-update]\nnet0: name=eth0,bridge=vmbr15,gw=10.77.5.30,ip=10.77.5.31/24,type=veth\n")
+
+    def post_start(self, **environment):
+        env = dict(os.environ, STUB_STATE=str(self.state), **environment)
+        return subprocess.run(["bash", str(self.hook), "110", "post-start"], capture_output=True, text=True, env=env)
+
+    def namespace_commands(self):
+        path = self.state / "nsenter"
+        return path.read_text().splitlines() if path.exists() else []
+
+    def test_members_routed_through_the_main_container_get_outbound_access(self):
+        self.stack_network("10.77.5.30")
+        result = self.post_start()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Outbound access enabled for the private network 10.77.5.0/24 through CT 110.", result.stdout)
+        commands = self.namespace_commands()
+        self.assertTrue(all(command.startswith("--target 4242 --net ") for command in commands))
+        self.assertIn("--target 4242 --net sysctl -qw net.ipv4.ip_forward=1", commands)
+        self.assertIn("--target 4242 --net iptables -w -A PROXMENUX-EGRESS -i eth0 -o eth1 -s 10.77.5.0/24 -j ACCEPT",
+                      commands)
+        self.assertEqual(commands[-2], "--target 4242 --net iptables -w -A PROXMENUX-EGRESS -j DROP")
+        self.assertIn("-t nat -A POSTROUTING -o eth1 -s 10.77.5.0/24 -j MASQUERADE", commands[-1])
+
+    def test_a_private_network_without_routed_members_is_left_alone(self):
+        # Only the current configuration counts, not a snapshot.
+        self.stack_network(None)
+        result = self.post_start()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.namespace_commands(), [])
+
+    def test_a_gateway_that_only_shares_a_prefix_does_not_count(self):
+        self.stack_network("10.77.5.3")
+        result = self.post_start()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.namespace_commands(), [])
+
+    def test_a_failed_outbound_setup_does_not_fail_the_start(self):
+        self.stack_network("10.77.5.30")
+        result = self.post_start(STUB_NSENTER_FAILS="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("could not be enabled", result.stderr)
 
     def test_updates_replace_only_published_copies_of_the_hook(self):
         script = HOOK.read_text()

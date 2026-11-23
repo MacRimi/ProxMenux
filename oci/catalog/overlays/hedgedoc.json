@@ -1,7 +1,7 @@
 {
   "catalog_ui": {
     "hidden": true,
-    "hidden_reason": "Needs MariaDB or PostgreSQL in its own container; planned as a multi-container application",
+    "hidden_reason": "Replaced by hedgedoc-official, the official image with its own PostgreSQL",
     "tagline": {
       "en_US": "HedgeDoc is a self-hosted collaborative Markdown editor for notes."
     },

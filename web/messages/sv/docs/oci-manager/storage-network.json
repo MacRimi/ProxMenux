@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nfasta adresser"
               }
             ],
-            "caption": "En medlem utan LAN-adress nås bara via det privata nätverket."
+            "caption": "En medlem utan LAN-adress nås bara via det privata nätverket. Den når internet via huvud-LXC:n."
           }
         },
         {

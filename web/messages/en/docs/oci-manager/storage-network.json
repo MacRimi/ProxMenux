@@ -242,7 +242,7 @@
                 "detail": "PostgreSQL · Valkey · ML\nfixed addresses"
               }
             ],
-            "caption": "A member without a LAN address is reached only over the private network."
+            "caption": "A member without a LAN address is reached only over the private network. It reaches the internet through the main LXC."
           }
         },
         {

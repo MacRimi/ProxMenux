@@ -1,0 +1,13 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Kanban boards for projects and teams, with cards, lists, due dates and real-time updates."
+    },
+    "description": {
+      "en_US": "Planka is a self-hosted Kanban board for organizing projects and tasks with a team. Boards hold lists of cards with descriptions, labels, due dates, checklists, attachments and comments, and every change appears in real time for everyone on the board. Projects, members and permissions are managed from the browser, and notifications can be sent by email or through Apprise."
+    },
+    "screenshots": [
+      "https://raw.githubusercontent.com/plankanban/planka/2cf423824a09f84df7dc3acf0ded9a700292d882/assets/demo.gif"
+    ]
+  }
+}

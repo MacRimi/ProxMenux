@@ -1,5 +1,6 @@
 """A secondary container of an OCI stack is registered with the version it
 runs and no version tracking; its application is updated with the stack."""
+from contextlib import nullcontext
 import json
 import sys
 import tempfile
@@ -123,3 +124,84 @@ class StackLogoTests(StackMemberRegistrationTests):
             self.assertFalse(lxc_apps.ensure_oci_registration(115))
         self.assertEqual(written['apps'][0]['logo_url'], self.ICON)
         self.assertEqual(written['apps'][1]['logo_url'], '')
+
+
+class ComposeStackMainTests(StackMemberRegistrationTests):
+    """A Compose stack gives every member a sheet named after its service."""
+
+    def stack(self):
+        folder = self.root / 'instances/152'
+        folder.mkdir(parents=True)
+        (folder / 'oci-compose.json').write_text(json.dumps({
+            'vmid': 152, 'status': 'installed', 'installation_id': 'install-152',
+            'stack_member': {'name': 'web', 'primary_vmid': 152},
+            'stack': {'template': {'id': 'image-sure', 'catalog_ui': {'title': {'en_US': 'Sure'},
+                                                                      'category_label': 'Finance & Budgeting'},
+                                   'first_run': {'endpoints': [{'port': 3000, 'scheme': 'http', 'path': '/'}]}}},
+            'observed': {'image': {'manifest_digest': DIGEST, 'architecture': 'amd64'}},
+            'template': {'id': 'image-web', 'catalog_ui': {'title': {'en_US': 'web'}},
+                         'first_run': {'endpoints': []},
+                         'container_contract': {'image': {'reference': 'ghcr.io/we-promise/sure:stable'},
+                                                'ports': [{'container_port': 3000}]}}}))
+
+    def test_the_main_container_is_registered_as_the_application(self):
+        self.stack()
+        with patch.object(lxc_apps.local_app_icons, 'protect_references', side_effect=lambda *_: nullcontext()), \
+                patch.object(lxc_apps, '_sync_copies') as sync, \
+                patch.object(lxc_apps, 'check_app') as check:
+            self.assertTrue(lxc_apps.ensure_oci_registration(152))
+            self.assertFalse(lxc_apps.ensure_oci_registration(152))
+        stored = json.loads((self.root / 'apps/152.json').read_text())
+        self.assertEqual(len(stored['apps']), 1)
+        app = stored['apps'][0]
+        self.assertEqual(app['name'], 'Sure')
+        self.assertEqual([(p['port'], p['scheme']) for p in app['ports']], [(3000, 'http')])
+        self.assertEqual(lxc_apps.load_sidecar(152)['apps'][0]['id'], app['id'])
+        sync.assert_called_once()
+        check.assert_called_once_with(152, app['id'], force=True, notify=False)
+
+    def test_a_registration_named_after_the_service_takes_the_application(self):
+        self.stack()
+        sidecar = {'vmid': 152, 'apps': [{'id': 'a', 'name': 'web', 'installed_via': 'oci_image',
+                                          'logo_url': 'https://example.com/sure.webp', 'ports': []}]}
+        written = {}
+        with patch.object(lxc_apps, '_read_sidecar', return_value=sidecar), \
+                patch.object(lxc_apps, '_write_sidecar', side_effect=lambda vmid, data, **_: written.update(data)):
+            self.assertFalse(lxc_apps.ensure_oci_registration(152))
+        self.assertEqual(written['apps'][0]['name'], 'Sure')
+        self.assertEqual(written['apps'][0]['ports'][0]['port'], 3000)
+
+    def test_a_registration_the_user_named_is_left_alone(self):
+        self.stack()
+        sidecar = {'vmid': 152, 'apps': [{'id': 'a', 'name': 'Finances', 'installed_via': 'oci_image',
+                                          'logo_url': 'https://example.com/sure.webp', 'ports': []}]}
+        with patch.object(lxc_apps, '_read_sidecar', return_value=sidecar), \
+                patch.object(lxc_apps, '_write_sidecar') as write:
+            self.assertFalse(lxc_apps.ensure_oci_registration(152))
+        write.assert_not_called()
+
+    def test_reused_vmid_stops_registration_and_migration_before_writing(self):
+        self.stack()
+        old_app = {'id': 'a', 'name': 'web', 'installed_via': 'oci_image',
+                   'logo_url': 'https://example.com/sure.webp', 'ports': []}
+        original_ports = lxc_apps._oci_registration_ports
+        for existing in (False, True):
+            with self.subTest(existing=existing), \
+                    patch.object(oci_instance_info, '_installation', return_value='install-152') as identity:
+                sidecar = {'vmid': 152, 'apps': [dict(old_app)]} if existing else None
+
+                def ports_after_reuse(meta, secondary):
+                    ports = original_ports(meta, secondary)
+                    identity.return_value = 'replacement-152'
+                    return ports
+
+                with patch.object(lxc_apps, '_read_sidecar', return_value=sidecar), \
+                        patch.object(lxc_apps, '_oci_registration_ports', side_effect=ports_after_reuse), \
+                        patch.object(lxc_apps, 'add_app', return_value=(True, {})) as add, \
+                        patch.object(lxc_apps, '_write_sidecar') as write:
+                    registered = lxc_apps.ensure_oci_registration(152)
+                add.assert_not_called()
+                write.assert_not_called()
+                self.assertFalse(registered)
+                if existing:
+                    self.assertEqual(sidecar['apps'], [old_app])
