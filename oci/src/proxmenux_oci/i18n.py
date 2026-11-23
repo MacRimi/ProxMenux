@@ -44,7 +44,18 @@ def translate(text: str) -> str:
             _cache = {str(key): str(value) for key, value in data.items()} if isinstance(data, dict) else {}
         except (OSError, ValueError):
             _cache = {}
+        _cache.update(_catalog_translations())
     return _cache.get(text) or text
+
+
+def _catalog_translations() -> dict[str, str]:
+    """The translations of the catalog texts the refreshed catalog brought,
+    newer than the installed language file for the applications it added."""
+    try:
+        from .catalog_refresh import catalog_translations, current_catalog
+        return catalog_translations(current_catalog(Path(__file__).resolve().parents[2]), language())
+    except Exception:
+        return {}
 
 
 def diagnostic(error: Any) -> str:

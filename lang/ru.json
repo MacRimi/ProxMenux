@@ -9887,6 +9887,7 @@
   "Updating pve-enterprise.list (if present) to Trixie...": "Обновление pve-enterprise.list (при наличии) для перехода на Trixie...",
   "Updating release channel configuration...": "Обновление конфигурации канала выпусков...",
   "Updating the copy of the record...": "Обновление копии записи...",
+  "Updating the translations of the catalog...": "Обновление переводов каталога...",
   "Upgrade Ceph to compatible version": "Обновить Ceph до совместимой версии",
   "Upgrade PVE 8 to PVE 9": "Обновить PVE 8 до PVE 9",
   "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)": "Помощник обновления: Proxmox VE 8 → 9 (Trixie)",

@@ -184,7 +184,7 @@ class UpdateWording(unittest.TestCase):
         for key in (CONFIRM, GUARD, PREVIEW):
             self.assertIn(key, found)
         scope = {'json': json, 'Path': Path, 'BASE_DIR': ROOT,
-                 '_language': 'it', '_cache': None}
+                 '_language': 'it', '_cache': None, '_catalog_translations': lambda: {}}
         lookup = extracted(ROOT / 'oci/src/proxmenux_oci/i18n.py', 'translate', scope)
         scope['language'] = lambda: scope['_language']
         for path in sorted((ROOT / 'lang').glob('*.json')):

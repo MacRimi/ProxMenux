@@ -45,6 +45,7 @@ class CatalogRefreshTests(unittest.TestCase):
             file.write_bytes(data)
         self.revision = "a" * 40
         self.requests = []
+        self.langs = {}
 
     def fetch(self, url, etag=None):
         self.requests.append((url, etag))
@@ -57,9 +58,22 @@ class CatalogRefreshTests(unittest.TestCase):
             schema = (self.root / "schemas/oci-template.schema.json").read_bytes()
             entries.append({"path": "oci/schemas/oci-template.schema.json", "type": "blob",
                             "sha": refresh.git_blob(schema)})
+            for language, data in self.langs.items():
+                entries.append({"path": f"lang/{language}.json", "type": "blob", "mode": "100644",
+                                "sha": refresh.git_blob(data), "size": len(data)})
             return json.dumps({"tree": entries, "truncated": False}).encode(), None
+        if "/lang/" in url:
+            return self.langs[url.rsplit("/", 1)[1].removesuffix(".json")], None
         name = url.split("/oci/catalog/", 1)[1]
         return self.files[name], None
+
+    def tagline(self):
+        recipe = json.loads(self.files[self.item["curated_path"].removeprefix("catalog/")])
+        return recipe["catalog_ui"]["tagline"]["en_US"]
+
+    def spanish(self, **extra):
+        self.langs["es"] = json.dumps({self.tagline(): "Frase traducida", "Main menu": "Menú principal",
+                                        **extra}).encode()
 
     def sync(self):
         return refresh.synchronize(self.root, "main", self.fetch)
@@ -235,6 +249,77 @@ class CatalogRefreshTests(unittest.TestCase):
         refresh.fcntl.flock(lock, refresh.fcntl.LOCK_EX)
         catalog = Catalog(self.root)
         self.assertEqual(catalog.compose(self.item["id"])["id"], self.item["template_id"])
+
+    def test_the_translations_of_the_catalog_texts_travel_with_the_snapshot(self):
+        self.spanish()
+        self.assertTrue(self.sync())
+        directory = refresh.current_catalog(self.root, "main")
+        self.assertEqual(refresh.catalog_translations(directory, "es"), {self.tagline(): "Frase traducida"})
+        self.assertEqual(refresh.catalog_translations(directory, "../es"), {})
+        self.assertEqual(refresh.catalog_translations(self.root / "catalog", "es"), {})
+
+    def test_an_unchanged_language_file_is_not_downloaded_again(self):
+        self.spanish()
+        self.sync()
+        self.add_app(); self.revision = "b" * 40; self.requests.clear()
+        self.assertTrue(self.sync())
+        self.assertFalse(any("/lang/" in url for url, _ in self.requests))
+        self.assertEqual(refresh.catalog_translations(refresh.current_catalog(self.root, "main"), "es"),
+                         {self.tagline(): "Frase traducida"})
+
+    def test_a_changed_language_file_brings_its_new_translations(self):
+        self.spanish()
+        self.sync()
+        self.add_app(); self.revision = "b" * 40
+        self.spanish(**{"Added application tagline": "Frase de la app nueva"})
+        recipe = json.loads(self.files["curated/sample-added.json"])
+        recipe["catalog_ui"]["tagline"] = {"en_US": "Added application tagline"}
+        for name in ("apps/sample-added.json", "curated/sample-added.json"):
+            self.files[name] = json.dumps(recipe).encode()
+        self.sync()
+        table = refresh.catalog_translations(refresh.current_catalog(self.root, "main"), "es")
+        self.assertEqual(table["Added application tagline"], "Frase de la app nueva")
+        self.assertNotIn("Main menu", table)
+
+    def test_a_catalog_refreshed_before_translations_gets_them_once(self):
+        self.sync()
+        pointer = refresh.cache_root(self.root) / "main-current.json"
+        previous = json.loads(pointer.read_text()); previous.pop("translations")
+        pointer.write_text(json.dumps(previous))
+        self.spanish(); self.requests.clear()
+        self.sync()
+        self.assertTrue(any("/lang/es.json" in url for url, _ in self.requests))
+        self.assertEqual(refresh.catalog_translations(refresh.current_catalog(self.root, "main"), "es"),
+                         {self.tagline(): "Frase traducida"})
+        self.requests.clear()
+        self.assertFalse(self.sync())
+        self.assertEqual(len(self.requests), 1)
+
+    def test_the_menu_translates_new_catalog_texts_from_the_snapshot(self):
+        from proxmenux_oci import i18n
+        self.spanish()
+        self.sync()
+        base = Path(self.temp.name) / "base"
+        (base / "lang").mkdir(parents=True)
+        (base / "config.json").write_text(json.dumps({"language": "es"}))
+        (base / "lang/es.json").write_text(json.dumps({"Main menu": "Menú principal"}))
+        snapshot = refresh.current_catalog(self.root, "main")
+        with patch.object(i18n, "BASE_DIR", base), patch.object(i18n, "_language", None), \
+                patch.object(i18n, "_cache", None), patch.object(refresh, "current_catalog", lambda root: snapshot):
+            self.assertEqual(i18n.translate(self.tagline()), "Frase traducida")
+            self.assertEqual(i18n.translate("Main menu"), "Menú principal")
+
+    def test_a_damaged_language_file_keeps_the_previous_catalog(self):
+        self.sync()
+        before = refresh.current_catalog(self.root, "main")
+        self.spanish(); self.revision = "b" * 40
+        real = self.fetch
+        def fetch(url, etag=None):
+            data, tag = real(url, etag)
+            return (data + b" " if "/lang/" in url else data), tag
+        with self.assertRaises(ValueError):
+            refresh.synchronize(self.root, "main", fetch)
+        self.assertEqual(refresh.current_catalog(self.root, "main"), before)
 
     def test_complete_catalog_is_selected_atomically_without_redownloading_unchanged_files(self):
         self.assertTrue(self.sync())

@@ -34,6 +34,12 @@ MAX_TOTAL = 40 * 1024 * 1024
 SHA = re.compile(r"[0-9a-f]{40}")
 ROOT_FILES = {"index.json", "categories.json", "volume-policy.json",
               "exclusions.json", "verification.json", "compatibility.json"}
+# The translations of the catalog texts travel with each snapshot, taken from
+# the lang/<language>.json files of the same commit. Raising the version
+# downloads them once on installations whose catalog did not change.
+TRANSLATIONS = 1
+LANGUAGE_FILE = re.compile(r"lang/([a-z]{2}(?:_[A-Z]{2})?)\.json")
+MAX_LANGUAGES = 16
 
 
 def source_settings(root):
@@ -225,6 +231,34 @@ def current_catalog(root, channel=None):
     return root / "catalog"
 
 
+def catalog_texts(directory):
+    """Every text of a catalog snapshot, the keys its translations need."""
+    texts = set()
+
+    def walk(value):
+        if isinstance(value, str):
+            texts.add(value)
+        elif isinstance(value, dict):
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    for path in Path(directory).rglob("*.json"):
+        if path.parent.name != "lang":
+            walk(json.loads(path.read_text()))
+    return texts
+
+
+def catalog_translations(directory, language):
+    """The translations of the catalog texts a snapshot carries, or {}."""
+    if not re.fullmatch(r"[a-z]{2}(?:_[A-Z]{2})?", str(language or "")):
+        return {}
+    value = read_json(Path(directory) / "lang" / f"{language}.json")
+    return {key: item for key, item in value.items() if isinstance(key, str) and isinstance(item, str) and item}
+
+
 def git_blob(data):
     return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 
@@ -317,7 +351,8 @@ def synchronize(root, channel, fetch=request, force=False, progress=None):
     previous = read_json(pointer)
     active = current_catalog(root, channel)
     capabilities = hashlib.sha256(json.dumps(sorted(supported_profile_keys(root))).encode()).hexdigest()
-    force = force or previous.get("profile_capabilities") != capabilities
+    force = (force or previous.get("profile_capabilities") != capabilities
+             or previous.get("translations") != TRANSLATIONS)
     etag = previous.get("etag") if active != root / "catalog" and not force else None
     url = f"https://api.github.com/repos/{REPOSITORY}/commits?sha={channel}&path=oci/catalog&per_page=1"
     report(5, N_("Checking the catalog version..."))
@@ -337,11 +372,18 @@ def synchronize(root, channel, fetch=request, force=False, progress=None):
     if tree.get("truncated"):
         raise ValueError("GitHub returned an incomplete catalog manifest")
     entries = {}
+    languages = {}
     schema = None
     for entry in tree["tree"]:
         name = entry["path"]
         if name == "oci/schemas/oci-template.schema.json":
             schema = entry["sha"]
+        language = LANGUAGE_FILE.fullmatch(name)
+        if language and entry.get("type") == "blob":
+            if (entry.get("mode") != "100644" or not SHA.fullmatch(entry.get("sha", ""))
+                    or type(entry.get("size")) is not int or not 0 <= entry["size"] <= MAX_FILE):
+                raise ValueError("Invalid translation manifest entry")
+            languages[language[1]] = entry
         if not name.startswith("oci/catalog/") or entry.get("type") != "blob":
             continue
         relative = name.removeprefix("oci/catalog/")
@@ -361,6 +403,8 @@ def synchronize(root, channel, fetch=request, force=False, progress=None):
         raise ValueError("Catalog exceeds the size limit")
     if not {"index.json", "categories.json", "volume-policy.json", "verification.json"} <= entries.keys():
         raise ValueError("Catalog manifest is incomplete")
+    if len(languages) > MAX_LANGUAGES:
+        raise ValueError("Too many translation files")
     snapshots = cache / "snapshots"
     snapshots.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".download-", dir=snapshots) as name:
@@ -399,6 +443,8 @@ def synchronize(root, channel, fetch=request, force=False, progress=None):
         validate_snapshot(root, staging)
         filter_compatible_recipes(root, staging, active)
         validate_snapshot(root, staging, allow_empty=True)
+        report(90, N_("Updating the translations of the catalog..."))
+        raw_languages = translations(cache, revision, languages, staging, fetch, deadline)
         destination = (active if previous.get("revision") == revision and active != root / "catalog"
                        else snapshots / revision)
         if destination.exists():
@@ -417,8 +463,41 @@ def synchronize(root, channel, fetch=request, force=False, progress=None):
                 os.replace(staging, destination)
             write_json(pointer, {"revision": revision, "snapshot": destination.name, "etag": etag,
                        "schema_hash": schema_hash(root), "engine_api": CATALOG_API,
-                       "bundle_hash": bundle_hash(root), "profile_capabilities": capabilities})
+                       "bundle_hash": bundle_hash(root), "profile_capabilities": capabilities,
+                       "translations": TRANSLATIONS})
+        # The full language files stay in the cache only to download the
+        # changed ones next time; the snapshot keeps the catalog texts.
+        for language, data in raw_languages.items():
+            target = cache / "lang" / f"{language}.json"
+            target.parent.mkdir(exist_ok=True)
+            temporary = target.with_name(f".{language}.json.tmp")
+            temporary.write_bytes(data)
+            os.replace(temporary, target)
     return destination != active
+
+
+def translations(cache, revision, languages, staging, fetch, deadline):
+    """Write the translations of the staged catalog texts into the snapshot.
+    Returns the full language files that were downloaded."""
+    texts = catalog_texts(staging)
+    downloaded = {}
+    for language, entry in sorted(languages.items()):
+        if time.monotonic() > deadline:
+            raise TimeoutError("Catalog download exceeded its time limit")
+        cached = cache / "lang" / f"{language}.json"
+        data = cached.read_bytes() if cached.is_file() and not cached.is_symlink() else b""
+        if git_blob(data) != entry["sha"]:
+            data, _ = fetch(f"https://raw.githubusercontent.com/{REPOSITORY}/{revision}/lang/{language}.json")
+            if data is None or len(data) != entry["size"] or git_blob(data) != entry["sha"]:
+                raise ValueError("Translation file failed its integrity check")
+            downloaded[language] = data
+        table = json.loads(data)
+        if not isinstance(table, dict):
+            raise ValueError("Invalid translation file")
+        write_json(staging / "lang" / f"{language}.json",
+                   {key: value for key, value in table.items()
+                    if key in texts and isinstance(value, str) and value})
+    return downloaded
 
 
 def worker(root, channel, force=False):

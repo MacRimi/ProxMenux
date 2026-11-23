@@ -60,16 +60,23 @@ _lang_cache: dict[str, tuple[float, dict]] = {}
 def _translations(language: str) -> dict:
     """The translations the ProxMenux menu uses for the catalog texts, so the
     tab shows a tagline in the same words as the menu."""
-    if language == "en":
+    if language == "en" or not re.fullmatch(r"[a-z]{2}(?:_[A-Z]{2})?", str(language or "")):
         return {}
+    # The refreshed catalog carries the translations of its own texts, newer
+    # than the installed language file for the applications it added.
+    catalog = lxc_apps.oci_catalog_dir()
+    key = f"{language}:{catalog}"
     with _lang_lock:
-        cached = _lang_cache.get(language)
+        cached = _lang_cache.get(key)
         if cached and time.time() - cached[0] < 600:
             return cached[1]
     loaded = _read_json(os.path.join(_LANG_DIR, f"{language}.json"))
-    table = loaded if isinstance(loaded, dict) else {}
+    table = dict(loaded) if isinstance(loaded, dict) else {}
+    refreshed = _read_json(os.path.join(catalog, "lang", f"{language}.json"))
+    if isinstance(refreshed, dict):
+        table.update({k: v for k, v in refreshed.items() if isinstance(k, str) and isinstance(v, str) and v})
     with _lang_lock:
-        _lang_cache[language] = (time.time(), table)
+        _lang_cache[key] = (time.time(), table)
     return table
 
 

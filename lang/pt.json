@@ -9917,6 +9917,7 @@
   "Updating pve-enterprise.list (if present) to Trixie...": "Atualizando pve-enterprise.list (se presente) para Trixie...",
   "Updating release channel configuration...": "Atualizando configuração do canal de lançamento...",
   "Updating the copy of the record...": "Atualizando a cópia do registro...",
+  "Updating the translations of the catalog...": "A atualizar as traduções do catálogo...",
   "Upgrade Ceph to compatible version": "Atualize o Ceph para uma versão compatível",
   "Upgrade PVE 8 to PVE 9": "Atualize PVE 8 para PVE 9",
   "Upgrade assistant: Proxmox VE 8 → 9 (Trixie)": "Assistente de atualização: Proxmox VE 8 → 9 (Trixie)",
