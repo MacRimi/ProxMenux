@@ -351,6 +351,22 @@ sub dispatch {
             handle('PUT', "$prefix/lxc/$vmid/config", { protection => 0, digest => $digest });
         });
     }
+    if ($action eq 'notes') {
+        # A container this request created takes its Notes in place of the
+        # request marker, and only while the marker is still all they say.
+        die unless join(',', sort keys %$params) eq 'description,notes,vmid'
+            && $vmid =~ /\A[1-9][0-9]{2,8}\z/ && ($params->{description} // '') =~ $marker
+            && defined($params->{notes}) && !ref($params->{notes}) && length($params->{notes}) <= 8192
+            && $params->{notes} !~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/;
+        require PVE::LXC::Config;
+        return PVE::LXC::Config->lock_config($vmid, sub {
+            my $config = PVE::LXC::Config->load_config($vmid);
+            my $description = $config->{description} // '';
+            return 0 unless $description eq $params->{description} || $description eq $params->{description} . "\n";
+            handle('PUT', "$prefix/lxc/$vmid/config", { description => $params->{notes}, digest => $config->{digest} });
+            return 1;
+        });
+    }
     if ($action eq 'inventory') {
         return inventory($node, $params);
     }

@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from plain_lxc_pve import Proxmox, checked_plan, current_inventory, inventory, local_node, next_id, occupied_ids, storage_for
 from plain_lxc_spec import ARCHIVE, DEFAULTS, LxcError, MAX_BODY, NODE, REQUEST_ID, STORAGE
-from plain_lxc_spec import digest, fields, integer, normalize, pve_params, strict_json, string
+from plain_lxc_spec import digest, fields, integer, normalize, notes_html, pve_params, strict_json, string
 from plain_lxc_state import STATE, installed_directory, private_directory, lock_file, check_uninstall, runtime_lock
 
 
@@ -154,7 +154,7 @@ def task_id(raw, node, kind, identity):
 
 def reply(operation, **changes):
     private = {"fingerprint", "sha512", "deadline", "start_after_create", "prepare_expected", "start_expected",
-               "submission", "admitted_at", "recovery_checked_at", "hardware_preparation"}
+               "submission", "admitted_at", "recovery_checked_at", "hardware_preparation", "notes"}
     merged = {**operation, **changes}
     public = {key: value for key, value in merged.items() if key not in private}
     if merged.get("action") == "create" and "start_after_create" in merged:
@@ -304,6 +304,22 @@ def observe(api, operation):
         return reply(operation, status="unknown", reason="task_status_unavailable")
 
 
+def write_notes(api, operation):
+    """Once a creation is over, its request marker gives way to the Notes of
+    the container. Until then the marker proves which request created it.
+    Notes the user already changed are left alone, and a failure keeps the
+    marker, which does no harm."""
+    if (operation.get("action") != "create" or not operation.get("notes") or not operation.get("created")
+            or operation.get("status") in PENDING):
+        return
+    try:
+        api.dispatch("notes", operation["node"], {
+            "vmid": operation["vmid"], "description": "ProxMenux request " + operation["request_id"],
+            "notes": operation["notes"]})
+    except LxcError:
+        pass
+
+
 def submit(api, store, operation, action, params, kind, identity, on_phase):
     if on_phase is not None:
         on_phase(operation["phase"])
@@ -342,6 +358,7 @@ def run_operation(api, store, operation, action, params, kind, identity, wait_se
         if result["status"] not in PENDING:
             operation.update(result)
             store.save(operation)
+            write_notes(api, operation)
             return result
         if time.monotonic() >= deadline:
             # Give later status calls a chance to observe the original task.
@@ -351,6 +368,7 @@ def run_operation(api, store, operation, action, params, kind, identity, wait_se
             if result["status"] not in PENDING:
                 operation.update(result)
             store.save(operation)
+            write_notes(api, operation)
             return result
         time.sleep(1)
 
@@ -378,6 +396,7 @@ def observed_request(api, store, operation):
         if error.code != 'operation_controller_active':
             raise
         return reply(operation, status='running', reason='controller_active')
+    write_notes(api, {**operation, **result})
     return result
 
 
@@ -537,7 +556,9 @@ def execute(request, api, store, wait_seconds=TASK_WAIT_SECONDS, on_phase=None):
         if plan_hash != request["plan_hash"]:
             raise LxcError("plan_changed")
         phase, kind, identity = "create", "vzcreate", spec["vmid"]
-        details = {"vmid": identity, "start_after_create": spec["start_after_create"]}
+        details = {"vmid": identity, "start_after_create": spec["start_after_create"],
+                   "notes": notes_html(spec, [item["name"] for item in plan["resources"]["attachments"].get("hardware", [])],
+                                       request_id)}
         attachments = plan['resources']['attachments']
         resolved = {**spec, 'devices':[{key:device[key] for key in ('path','uid','gid','mode')}
                                      for device in attachments['devices']]}

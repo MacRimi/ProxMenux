@@ -60,6 +60,7 @@ class FakePVE(Proxmox):
         self.file.write_bytes(ARCHIVE)
         self.calls = []
         self.writes = []
+        self.notes = []
         self.catalog = {
             "template": NAME, "section": "system", "type": "lxc", "architecture": "amd64",
             "source": "http://download.proxmox.com/images",
@@ -167,6 +168,15 @@ class FakePVE(Proxmox):
         raise AssertionError((path, params))
 
     def mutate(self, action, params):
+        if action == "notes":
+            # Like the bridge: the Notes replace the request marker only while
+            # the marker is still all the description says.
+            assert set(params) == {"vmid", "description", "notes"}
+            self.notes.append(params)
+            if self.config.get("description") in (params["description"], params["description"] + "\n"):
+                self.config["description"] = params["notes"] + "\n"
+                return 1
+            return 0
         self.writes.append((action, params))
         if self.reached_write:
             self.reached_write.set()
@@ -371,6 +381,45 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(self.call("create", **payload), result)
         self.assertEqual(self.call("status", request_id=REQUEST_ID), result)
         self.assertEqual(len(self.api.writes), 2)
+
+    def test_a_finished_creation_writes_its_notes_once(self):
+        result = self.call("create", **self.create_body(onboot=True, start_after_create=True))
+        self.assertEqual(result["status"], "succeeded")
+        self.assertNotIn("notes", result)
+        self.assertEqual(len(self.api.notes), 1)
+        written = self.api.notes[0]
+        self.assertEqual(written["description"], "ProxMenux request " + REQUEST_ID)
+        for part in ("Created with ProxMenux", "ko-fi.com/macrimi", "docs/create-vm", "Template: <code>",
+                     f"<!-- proxmenux-lxc-request={REQUEST_ID} -->"):
+            self.assertIn(part, written["notes"])
+        self.assertTrue(self.api.config["description"].startswith('<div align="center">'))
+        self.call("status", request_id=REQUEST_ID)
+        self.assertEqual(len(self.api.notes), 1)
+
+    def test_a_failed_creation_writes_no_notes(self):
+        self.api.create_exit = "command failed"
+        self.assertEqual(self.call("create", **self.create_body())["status"], "failed")
+        self.assertEqual(self.api.notes, [])
+
+    def test_notes_never_replace_what_the_user_wrote(self):
+        import plain_lxc
+        self.api.config = {"description": "My own notes\n"}
+        plain_lxc.write_notes(self.api, {"action": "create", "created": True, "status": "succeeded", "node": NODE,
+                                         "vmid": VMID, "request_id": REQUEST_ID, "notes": "<div>Notes</div>"})
+        self.assertEqual(self.api.config["description"], "My own notes\n")
+
+    def test_the_notes_escape_what_the_user_typed(self):
+        from plain_lxc_spec import notes_html
+        spec = {"hostname": "web", "template": {"volume_id": "local:vztmpl/debian-13.tar.zst"},
+                "cpu": {"cores": 2}, "memory": {"ram_mib": 1024, "swap_mib": 512},
+                "rootfs": {"storage": "local-lvm", "size_gib": 8}, "nesting": True,
+                "mounts": [{"type": "bind", "source": "/srv/<a>&b", "path": "/data"}],
+                "network": {"bridge": "vmbr0", "ipv4": {"cidr": "192.0.2.10/24"}, "vlan_tag": 20}}
+        notes = notes_html(spec, ["Intel <GPU>"], REQUEST_ID)
+        self.assertIn("/srv/&lt;a&gt;&amp;b", notes)
+        self.assertIn("Intel &lt;GPU&gt;", notes)
+        self.assertIn("vmbr0 &middot; 192.0.2.10/24 &middot; VLAN 20", notes)
+        self.assertNotIn("<a>", notes)
 
     def test_a_task_that_warns_keeps_what_proxmox_wrote(self):
         self.api.task_running = True

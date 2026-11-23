@@ -19,6 +19,7 @@
 
 import base64
 import hashlib
+import html
 import ipaddress
 import json
 import re
@@ -296,6 +297,54 @@ def normalize(spec, schema_version=1):
         **({'hardware':normalize_hardware(spec.get('hardware',[]))} if schema_version == 2
            else {'devices':normalize_devices(spec.get('devices',[]))}),
     }
+
+
+NOTES_LOGO = "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logo_desc.png"
+NOTES_BADGES = (
+    ("Docs", "https://macrimi.github.io/ProxMenux/docs/create-vm",
+     "https://img.shields.io/badge/%F0%9F%93%9A_Docs-blue"),
+    ("Code", "https://github.com/MacRimi/ProxMenux/tree/main/scripts/lxc",
+     "https://img.shields.io/badge/%F0%9F%92%BB_Code-green"),
+    ("Ko-fi", "https://ko-fi.com/macrimi", "https://img.shields.io/badge/%E2%98%95_Ko--fi-red"),
+)
+
+
+def notes_html(spec, hardware_names, request_id):
+    """The Proxmox Notes of a container ProxMenux created, like the ones of
+    the VMs and OCI applications it creates."""
+    esc = html.escape
+    template = spec["template"]["volume_id"].split("/", 1)[-1]
+    details = [
+        f"Template: <code>{esc(template)}</code>",
+        f'{spec["cpu"]["cores"]} CPU &middot; {spec["memory"]["ram_mib"]} MB RAM &middot; '
+        f'{spec["memory"]["swap_mib"]} MB swap',
+        f'Disk: {spec["rootfs"]["size_gib"]} GB ({esc(spec["rootfs"]["storage"])})',
+    ]
+    for mount in spec.get("mounts", []):
+        source = (f'{mount["size_gib"]} GB ({mount["storage"]})' if mount["type"] == "volume"
+                  else mount["source"])
+        details.append(f'Mount point: <code>{esc(mount["path"])}</code> &larr; {esc(source)}')
+    network = spec["network"]
+    if network is not None:
+        address = network["ipv4"].get("cidr", "DHCP")
+        vlan = f' &middot; VLAN {network["vlan_tag"]}' if "vlan_tag" in network else ""
+        details.append(f'Network: {esc(network["bridge"])} &middot; {esc(address)}{vlan}')
+    if hardware_names:
+        details.append("Hardware: " + ", ".join(esc(name) for name in hardware_names))
+    details.append("Unprivileged" + (" &middot; nesting" if spec["nesting"] else ""))
+    badges = " ".join(
+        f'<a href="{url}" target="_blank" rel="noopener noreferrer"><img src="{badge}" alt="{label}"></a>'
+        for label, url, badge in NOTES_BADGES)
+    rows = "".join(f"<p>{line}</p>" for line in details)
+    return f"""<div align="center">
+<table style="width: 100%; border-collapse: collapse;"><tr>
+<td style="width: 100px; vertical-align: middle;"><img src="{NOTES_LOGO}" alt="ProxMenux Logo" style="height: 100px;"></td>
+<td style="vertical-align: middle;"><h1 style="margin: 0;">{esc(spec["hostname"])} LXC</h1><p style="margin: 0;">Created with ProxMenux</p></td>
+</tr></table>
+<p>{badges}</p>
+{rows}
+</div>
+<!-- proxmenux-lxc-request={request_id} -->"""
 
 
 def pve_params(spec, password, request_id):
