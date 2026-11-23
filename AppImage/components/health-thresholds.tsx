@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useIsPbs } from "../lib/use-platform"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Input } from "./ui/input"
@@ -294,6 +294,70 @@ function computeVisualRange(
     visMax = Math.min(backendMax, snap(mid + step * 2))
   }
   return { min: visMin, max: visMax }
+}
+
+// Value labels above a dual-handle slider. When the two labels would overlap they are placed side by side around the midpoint of both handles.
+function RangeValueLabels({
+  wPct,
+  cPct,
+  wText,
+  cText,
+  wClass,
+  cClass,
+}: {
+  wPct: number
+  cPct: number
+  wText: string
+  cText: string
+  wClass: string
+  cClass: string
+}) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const wRef = useRef<HTMLSpanElement>(null)
+  const cRef = useRef<HTMLSpanElement>(null)
+  const [close, setClose] = useState(false)
+  const GAP = 6
+
+  useLayoutEffect(() => {
+    const check = () => {
+      const box = boxRef.current
+      const w = wRef.current
+      const c = cRef.current
+      if (!box || !w || !c) return
+      const distance = ((cPct - wPct) / 100) * box.clientWidth
+      setClose(distance < (w.offsetWidth + c.offsetWidth) / 2 + GAP)
+    }
+    check()
+    if (typeof ResizeObserver === "undefined" || !boxRef.current) return
+    const ro = new ResizeObserver(check)
+    ro.observe(boxRef.current)
+    return () => ro.disconnect()
+  }, [wPct, cPct, wText, cText])
+
+  const mid = (wPct + cPct) / 2
+  const base = "absolute text-xs font-semibold tabular-nums whitespace-nowrap"
+  return (
+    <div ref={boxRef} className="relative h-6 sm:h-5 mb-1 select-none">
+      <span
+        ref={wRef}
+        className={`${base} ${wClass}`}
+        style={close
+          ? { left: `${mid}%`, transform: `translateX(calc(-100% - ${GAP / 2}px))` }
+          : { left: `${wPct}%`, transform: "translateX(-50%)" }}
+      >
+        {wText}
+      </span>
+      <span
+        ref={cRef}
+        className={`${base} ${cClass}`}
+        style={close
+          ? { left: `${mid}%`, transform: `translateX(${GAP / 2}px)` }
+          : { left: `${cPct}%`, transform: "translateX(-50%)" }}
+      >
+        {cText}
+      </span>
+    </div>
+  )
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -623,22 +687,15 @@ export function HealthThresholds() {
       <div className="px-1 py-3">
         {/* Numeric labels above each handle, positioned absolutely so
             they ride above the corresponding thumb regardless of the
-            slider width. Pointer events disabled so they don't steal
-            clicks from the underlying range inputs. */}
-        <div className="relative h-6 sm:h-5 mb-1 select-none">
-          <span
-            className={`absolute -translate-x-1/2 text-xs font-semibold tabular-nums ${wCustom ? "text-blue-400" : "text-amber-500"}`}
-            style={{ left: `${wPct}%` }}
-          >
-            {wVal}{unit}
-          </span>
-          <span
-            className={`absolute -translate-x-1/2 text-xs font-semibold tabular-nums ${cCustom ? "text-blue-400" : "text-red-500"}`}
-            style={{ left: `${cPct}%` }}
-          >
-            {cVal}{unit}
-          </span>
-        </div>
+            slider width. */}
+        <RangeValueLabels
+          wPct={wPct}
+          cPct={cPct}
+          wText={`${wVal}${unit}`}
+          cText={`${cVal}${unit}`}
+          wClass={wCustom ? "text-blue-400" : "text-amber-500"}
+          cClass={cCustom ? "text-blue-400" : "text-red-500"}
+        />
 
         {/* Two range inputs stacked. Mobile track box is taller so the
             enlarged thumbs (h-7) have room to sit without clipping. */}

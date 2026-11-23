@@ -1002,12 +1002,12 @@ export function HealthStatusModal({ open, onOpenChange, getApiUrl }: HealthStatu
                         <CatIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <div className="min-w-0 flex-1 overflow-hidden">
+                        <div className="flex flex-col-reverse items-start gap-1 sm:flex-row sm:justify-between sm:gap-2 mb-1">
+                          <div className="min-w-0 w-full sm:w-auto sm:flex-1 overflow-hidden">
                             <p className="font-medium text-xs sm:text-sm text-muted-foreground truncate">{catLabel}</p>
                             <p className="text-[10px] sm:text-xs text-muted-foreground/70 break-words line-clamp-2">{translateHealthText(item.reason)}</p>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:shrink-0">
                             {isPermanent ? (
                               <Badge variant="outline" className="text-[9px] sm:text-xs border-amber-500/50 text-amber-500/70 bg-transparent whitespace-nowrap">
                                 {t("healthStatus.permanent")}

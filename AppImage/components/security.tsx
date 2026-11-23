@@ -73,6 +73,8 @@ function validatePasswordStrength(pw: string, t: (key: string) => string): strin
   return null
 }
 
+type FirewallRule = { raw: string; direction?: string; action?: string; dport?: string; p?: string; source?: string; source_file?: string; section?: string; rule_index: number; disabled?: boolean }
+
 export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}) {
   // Everyone keeps their own account here; the rest follows the profile.
   const { capabilities } = useAccess()
@@ -163,7 +165,7 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
     cluster_fw_enabled: boolean
     host_fw_enabled: boolean
     rules_count: number
-    rules: Array<{ raw: string; direction?: string; action?: string; dport?: string; p?: string; source?: string; source_file?: string; section?: string; rule_index: number }>
+    rules: FirewallRule[]
     monitor_port_open: boolean
   } | null>(null)
   const [firewallAction, setFirewallAction] = useState(false)
@@ -1358,7 +1360,7 @@ export function Security({ hostType = "pve" }: { hostType?: "pve" | "pbs" } = {}
       : displayScore >= 70 ? st("lynis.report.scoreGood")
       : displayScore >= 50 ? st("lynis.report.scoreModerate")
       : st("lynis.report.scoreCritical")
-    const now = new Date().toLocaleString()
+    const now = new Date().toLocaleString(document.documentElement.lang)
     const logoUrl = `${window.location.origin}/images/proxmenux-logo.png`
     const reportLang = document.documentElement.lang || "en"
 
@@ -1915,7 +1917,7 @@ ${(report.sections && report.sections.length > 0) ? `
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">{st("title")}</h1>
+        <h1 className="text-xl lg:text-3xl font-bold">{st("title")}</h1>
         <p className="text-muted-foreground mt-2">{st("description")}</p>
       </div>
 
@@ -1961,10 +1963,10 @@ ${(report.sections && report.sections.length > 0) ? `
             </div>
           )}
 
-          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${authEnabled ? "bg-green-500/10" : "bg-gray-500/10"}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${authEnabled ? "bg-green-500/10" : "bg-gray-500/10"}`}
               >
                 <Lock className={`h-5 w-5 ${authEnabled ? "text-green-500" : "text-gray-500"}`} />
               </div>
@@ -1979,7 +1981,7 @@ ${(report.sections && report.sections.length > 0) ? `
               </div>
             </div>
             <div
-              className={`px-3 py-1 rounded-full text-sm font-medium ${authEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}
+              className={`px-3 py-1 rounded-full text-sm font-medium ml-[3.25rem] sm:ml-0 whitespace-nowrap ${authEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}
             >
               {authEnabled ? st("values.enabled") : accessMode === "read_only" ? st("values.readOnly") : st("values.disabled")}
             </div>
@@ -2384,9 +2386,9 @@ ${(report.sections && report.sections.length > 0) ? `
           ) : (
             <>
               {/* Current Status */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${sslEnabled ? "bg-green-500/10" : "bg-gray-500/10"}`}>
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${sslEnabled ? "bg-green-500/10" : "bg-gray-500/10"}`}>
                     <Globe className={`h-5 w-5 ${sslEnabled ? "text-green-500" : "text-gray-500"}`} />
                   </div>
                   <div>
@@ -2400,7 +2402,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     </p>
                   </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${sslEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ml-[3.25rem] sm:ml-0 whitespace-nowrap ${sslEnabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}>
                   {sslEnabled ? "HTTPS" : "HTTP"}
                 </div>
               </div>
@@ -2909,7 +2911,7 @@ ${(report.sections && report.sections.length > 0) ? `
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {token.created_at
-                                ? new Date(token.created_at).toLocaleDateString()
+                                ? new Date(token.created_at).toLocaleDateString(language)
                                 : t("common.unknown")}
                             </span>
                           </div>
@@ -3084,10 +3086,10 @@ ${(report.sections && report.sections.length > 0) ? `
                 <h3 className="text-sm font-semibold text-muted-foreground">{st("firewall.quickAccessRules")}</h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {/* Monitor Port 8008 */}
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-2.5 h-2.5 rounded-full ${firewallData.monitor_port_open ? "bg-green-500" : "bg-yellow-500"}`} />
-                      <div>
+                  <div className="flex items-center justify-between gap-2 p-3 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${firewallData.monitor_port_open ? "bg-green-500" : "bg-yellow-500"}`} />
+                      <div className="min-w-0">
                         <p className="text-sm font-medium">ProxMenux Monitor</p>
                         <p className="text-xs text-muted-foreground">{st("firewall.port8008")}</p>
                       </div>
@@ -3097,7 +3099,7 @@ ${(report.sections && report.sections.length > 0) ? `
                       size="sm"
                       disabled={firewallAction}
                       onClick={() => handleMonitorPortToggle(!firewallData.monitor_port_open)}
-                      className={`h-7 text-xs ${firewallData.monitor_port_open
+                      className={`h-7 text-xs shrink-0 whitespace-nowrap ${firewallData.monitor_port_open
                         ? "text-red-500 border-red-500/30 hover:bg-red-500/10 bg-transparent"
                         : "text-green-500 border-green-500/30 hover:bg-green-500/10 bg-transparent"
                       }`}
@@ -3107,15 +3109,15 @@ ${(report.sections && report.sections.length > 0) ? `
                   </div>
 
                   {/* Proxmox Web UI hint */}
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                      <div>
+                  <div className="flex items-center justify-between gap-2 p-3 bg-muted/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-green-500" />
+                      <div className="min-w-0">
                         <p className="text-sm font-medium">Proxmox Web UI</p>
                         <p className="text-xs text-muted-foreground">{st("firewall.port8006AlwaysAllowed")}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted/50 rounded">{st("firewall.builtIn")}</span>
+                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted/50 rounded shrink-0 whitespace-nowrap">{st("firewall.builtIn")}</span>
                   </div>
                 </div>
 
@@ -3131,9 +3133,9 @@ ${(report.sections && report.sections.length > 0) ? `
 
               {/* Rules Summary Dashboard */}
               {firewallData.rules.length > 0 && (() => {
-                const acceptCount = firewallData.rules.filter(r => r.action === "ACCEPT").length
-                const dropCount = firewallData.rules.filter(r => r.action === "DROP").length
-                const rejectCount = firewallData.rules.filter(r => r.action === "REJECT").length
+                const acceptCount = firewallData.rules.filter(r => !r.disabled && r.action === "ACCEPT").length
+                const dropCount = firewallData.rules.filter(r => !r.disabled && r.action === "DROP").length
+                const rejectCount = firewallData.rules.filter(r => !r.disabled && r.action === "REJECT").length
                 const blockCount = dropCount + rejectCount
                 const total = firewallData.rules.length
                 const clusterCount = firewallData.rules.filter(r => r.source_file === "cluster").length
@@ -3143,7 +3145,7 @@ ${(report.sections && report.sections.length > 0) ? `
                 // Collect unique protected ports
                 const protectedPorts = new Set<string>()
                 firewallData.rules.forEach(r => {
-                  if (r.dport) r.dport.split(",").forEach(p => protectedPorts.add(p.trim()))
+                  if (r.dport && !r.disabled) r.dport.split(",").forEach(p => protectedPorts.add(p.trim()))
                 })
 
                 return (
@@ -3217,7 +3219,7 @@ ${(report.sections && report.sections.length > 0) ? `
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-muted-foreground">
-                    {st("firewall.rules", { count: firewallData.rules_count })}
+                    {st(firewallData.rules_count === 1 ? "firewall.rulesOne" : "firewall.rules", { count: firewallData.rules_count })}
                   </h3>
                   {capabilities.admin && (<Button
                     variant="outline"
@@ -3401,7 +3403,7 @@ ${(report.sections && report.sections.length > 0) ? `
                           <div key={ruleKey}>
                             {/* Main row */}
                             <div
-                              className="grid grid-cols-[2rem_4.5rem_1fr_2rem] sm:grid-cols-[2rem_4.5rem_2rem_3rem_5rem_1fr_3.5rem_2rem] gap-2 px-3 py-2.5 items-center hover:bg-white/5 transition-colors cursor-pointer"
+                              className={`grid grid-cols-[2rem_4.5rem_1fr_2rem] sm:grid-cols-[2rem_4.5rem_2rem_3rem_5rem_1fr_3.5rem_2rem] gap-2 px-3 py-2.5 items-center hover:bg-white/5 transition-colors cursor-pointer ${rule.disabled ? "opacity-60" : ""}`}
                               onClick={() => setExpandedRuleKey(isExpanded ? null : ruleKey)}
                             >
                               {/* Direction icon */}
@@ -3430,6 +3432,9 @@ ${(report.sections && report.sections.length > 0) ? `
                                   <span className={`text-[10px] px-1 py-0 rounded flex-shrink-0 ${
                                     rule.source_file === "cluster" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
                                   }`}>{rule.source_file === "cluster" ? st("firewall.cluster") : st("firewall.host")}</span>
+                                  {rule.disabled && (
+                                    <span className="text-[10px] px-1 py-0 rounded flex-shrink-0 bg-muted text-muted-foreground">{st("values.disabled")}</span>
+                                  )}
                                 </div>
                                 {comment && (
                                   <p className="text-[10px] text-muted-foreground truncate mt-0.5">{comment}</p>
@@ -3442,7 +3447,12 @@ ${(report.sections && report.sections.length > 0) ? `
                               {/* Port */}
                               <span className="hidden sm:block text-xs text-foreground font-mono font-medium">{rule.dport || "*"}</span>
                               {/* Source */}
-                              <span className="hidden sm:block text-xs text-muted-foreground font-mono truncate">{rule.source || "any"}</span>
+                              <span className="hidden sm:flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground font-mono">
+                                <span className="truncate">{rule.source || "any"}</span>
+                                {rule.disabled && (
+                                  <span className="text-[10px] px-1 py-0 rounded flex-shrink-0 bg-muted font-sans">{st("values.disabled")}</span>
+                                )}
+                              </span>
                               {/* Level badge */}
                               <span className={`hidden sm:block text-[10px] px-1.5 py-0.5 rounded text-center ${
                                 rule.source_file === "cluster" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"
@@ -3709,9 +3719,9 @@ ${(report.sections && report.sections.length > 0) ? `
             /* --- INSTALLED --- */
             <div className="space-y-4">
               {/* Status bar */}
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${fail2banInfo.active ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${fail2banInfo.active ? "bg-green-500/10" : "bg-yellow-500/10"}`}>
                     <Bug className={`h-5 w-5 ${fail2banInfo.active ? "text-green-500" : "text-yellow-500"}`} />
                   </div>
                   <div>
@@ -3721,7 +3731,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     </p>
                   </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${fail2banInfo.active ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}`}>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ml-[3.25rem] sm:ml-0 whitespace-nowrap ${fail2banInfo.active ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}`}>
                   {fail2banInfo.active ? st("values.active") : st("values.inactive")}
                 </div>
               </div>
@@ -4284,9 +4294,9 @@ ${(report.sections && report.sections.length > 0) ? `
           ) : (
             <div className="space-y-4">
               {/* Status bar */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
                     <Search className="h-5 w-5 text-green-500" />
                   </div>
                   <div>
@@ -4294,7 +4304,7 @@ ${(report.sections && report.sections.length > 0) ? `
                     <p className="text-sm text-muted-foreground">{st(lynisInfo.managed === false ? "lynis.installedOutside" : "lynis.installedDescription")}</p>
                   </div>
                 </div>
-                <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-500/10 text-green-500">
+                <div className="px-3 py-1 rounded-full text-sm font-medium ml-[3.25rem] sm:ml-0 whitespace-nowrap bg-green-500/10 text-green-500">
                   {st("values.installed")}
                 </div>
               </div>

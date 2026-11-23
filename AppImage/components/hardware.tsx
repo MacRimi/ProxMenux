@@ -651,6 +651,13 @@ export default function Hardware() {
     }
   }
 
+  const networkInterfaceCount =
+    hardwareData?.pci_devices?.filter((d) => d.type.toLowerCase().includes("network")).length ?? 0
+  const storageDiskCount =
+    hardwareData?.storage_devices?.filter(
+      (device) => device.type === "disk" && !device.name.startsWith("zd") && !device.name.startsWith("loop"),
+    ).length ?? 0
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -673,10 +680,10 @@ export default function Hardware() {
       {hardwareData?.memory_modules && hardwareData.memory_modules.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <MemoryStick className="h-5 w-5 text-primary" />
+            <MemoryStick className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.memoryModules")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.installed", { count: hardwareData.memory_modules.length })}
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(hardwareData.memory_modules.length === 1 ? "hardware.counts.installedOne" : "hardware.counts.installed", { count: hardwareData.memory_modules.length })}
             </Badge>
           </div>
 
@@ -731,10 +738,10 @@ export default function Hardware() {
       {hardwareData?.temperatures && hardwareData.temperatures.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Thermometer className="h-5 w-5 text-primary" />
+            <Thermometer className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.thermalMonitoring")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.sensors", { count: hardwareData.temperatures.length })}
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(hardwareData.temperatures.length === 1 ? "hardware.counts.sensorsOne" : "hardware.counts.sensors", { count: hardwareData.temperatures.length })}
             </Badge>
           </div>
 
@@ -937,9 +944,9 @@ export default function Hardware() {
       {hardwareData?.gpus && hardwareData.gpus.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Gpu className="h-5 w-5 text-primary" />
+            <Gpu className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.graphicsCards")}</h2>
-            <Badge variant="outline" className="ml-auto">
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
               {t("hardware.counts.gpu", { count: hardwareData.gpus.length })}
             </Badge>
           </div>
@@ -1632,10 +1639,10 @@ return (
       {hardwareData?.coral_tpus && hardwareData.coral_tpus.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <BrainCircuit className="h-5 w-5 text-primary" />
+            <BrainCircuit className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.coralTpu")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.devices", { count: hardwareData.coral_tpus.length })}
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(hardwareData.coral_tpus.length === 1 ? "hardware.counts.devicesOne" : "hardware.counts.devices", { count: hardwareData.coral_tpus.length })}
             </Badge>
           </div>
 
@@ -1904,7 +1911,7 @@ return (
       {hardwareData?.power_meter && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-blue-500" />
+            <Zap className="h-5 w-5 shrink-0 text-blue-500" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.powerConsumption")}</h2>
           </div>
 
@@ -1929,10 +1936,10 @@ return (
       {hardwareData?.power_supplies && hardwareData.power_supplies.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <PowerIcon className="h-5 w-5 text-green-500" />
+            <PowerIcon className="h-5 w-5 shrink-0 text-green-500" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.powerSupplies")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.psus", { count: hardwareData.power_supplies.length })}
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(hardwareData.power_supplies.length === 1 ? "hardware.counts.psusOne" : "hardware.counts.psus", { count: hardwareData.power_supplies.length })}
             </Badge>
           </div>
 
@@ -1957,10 +1964,10 @@ return (
       {hardwareData?.fans && hardwareData.fans.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <FanIcon className="h-5 w-5 text-primary" />
+            <FanIcon className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.systemFans")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.fans", { count: hardwareData.fans.length })}
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(hardwareData.fans.length === 1 ? "hardware.counts.fansOne" : "hardware.counts.fans", { count: hardwareData.fans.length })}
             </Badge>
           </div>
 
@@ -1992,9 +1999,9 @@ return (
       {hardwareData?.ups && Array.isArray(hardwareData.ups) && hardwareData.ups.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Battery className="h-5 w-5 text-primary" />
+            <Battery className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.upsStatus")}</h2>
-            <Badge variant="outline" className="ml-auto">
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
               {t("hardware.counts.ups", { count: hardwareData.ups.length })}
             </Badge>
           </div>
@@ -2274,10 +2281,10 @@ return (
       {hardwareData?.pci_devices && hardwareData.pci_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <CpuIcon className="h-5 w-5 text-primary" />
+            <CpuIcon className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.pciDevices")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.devices", { count: hardwareData.pci_devices.length })}
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(hardwareData.pci_devices.length === 1 ? "hardware.counts.devicesOne" : "hardware.counts.devices", { count: hardwareData.pci_devices.length })}
             </Badge>
           </div>
 
@@ -2290,16 +2297,15 @@ return (
                 onClick={() => setSelectedPCIDevice(device)}
                 className="cursor-pointer rounded-lg border border-white/10 sm:border-border bg-white/5 sm:bg-card sm:hover:bg-white/5 p-3 transition-colors"
               >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{translateDeviceType(device.type, t)}</Badge>
-                    {diskCount > 0 && (
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {t("hardware.counts.devices", { count: diskCount })}
-                      </Badge>
-                    )}
-                  </div>
-                  <span className="font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
+                {/* Badges and slot share one wrapping row so a long type label pushes the slot down instead of overlapping it */}
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mb-2">
+                  <Badge className={`${getDeviceTypeColor(device.type)} text-xs shrink-0`}>{translateDeviceType(device.type, t)}</Badge>
+                  {diskCount > 0 && (
+                    <Badge variant="outline" className="text-xs shrink-0 whitespace-nowrap">
+                      {t(diskCount === 1 ? "hardware.counts.devicesOne" : "hardware.counts.devices", { count: diskCount })}
+                    </Badge>
+                  )}
+                  <span className="ml-auto pl-0.5 font-mono text-xs text-muted-foreground shrink-0">{device.slot}</span>
                 </div>
                 <p className="font-medium text-sm line-clamp-2 break-words">{device.device}</p>
                 <p className="text-xs text-muted-foreground truncate">{device.vendor}</p>
@@ -2409,11 +2415,11 @@ return (
         hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length > 0 && (
           <Card className="border-border/50 bg-card/50 p-6">
             <div className="mb-4 flex items-center gap-2">
-              <Network className="h-5 w-5 text-primary" />
+              <Network className="h-5 w-5 shrink-0 text-primary" />
               <h2 className="text-lg font-semibold">{t("hardware.sections.networkSummary")}</h2>
-              <Badge variant="outline" className="ml-auto">
-                {t("hardware.counts.interfaces", {
-                  count: hardwareData.pci_devices.filter((d) => d.type.toLowerCase().includes("network")).length,
+              <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+                {t(networkInterfaceCount === 1 ? "hardware.counts.interfacesOne" : "hardware.counts.interfaces", {
+                  count: networkInterfaceCount,
                 })}
               </Badge>
             </div>
@@ -2501,14 +2507,11 @@ return (
       {hardwareData?.storage_devices && hardwareData.storage_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <HardDrive className="h-5 w-5 text-primary" />
+            <HardDrive className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.storageSummary")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.devices", {
-                count: hardwareData.storage_devices.filter(
-                  (device) =>
-                    device.type === "disk" && !device.name.startsWith("zd") && !device.name.startsWith("loop"),
-                ).length,
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(storageDiskCount === 1 ? "hardware.counts.devicesOne" : "hardware.counts.devices", {
+                count: storageDiskCount,
               })}
             </Badge>
           </div>
@@ -2852,10 +2855,10 @@ return (
       {hardwareData?.usb_devices && hardwareData.usb_devices.length > 0 && (
         <Card className="border-border/50 bg-card/50 p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Usb className="h-5 w-5 text-primary" />
+            <Usb className="h-5 w-5 shrink-0 text-primary" />
             <h2 className="text-lg font-semibold">{t("hardware.sections.usbDevices")}</h2>
-            <Badge variant="outline" className="ml-auto">
-              {t("hardware.counts.devices", { count: hardwareData.usb_devices.length })}
+            <Badge variant="outline" className="ml-auto shrink-0 whitespace-nowrap">
+              {t(hardwareData.usb_devices.length === 1 ? "hardware.counts.devicesOne" : "hardware.counts.devices", { count: hardwareData.usb_devices.length })}
             </Badge>
           </div>
 

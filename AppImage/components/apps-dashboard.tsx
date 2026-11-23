@@ -425,9 +425,9 @@ export function AppsDashboard() {
           </div>
         </div>
 
-        {/* Category filter */}
+        {/* Category filter — its own full-width row on mobile so the label is not cut */}
         <OptionSelect value={currentCat} onChange={setCurrentCat} ariaLabel={t("apps.filterAriaLabel")}
-          className="w-auto max-w-[9.5rem] sm:max-w-none bg-card border-border text-foreground gap-2"
+          className="w-full max-sm:order-last sm:w-auto bg-card border-border text-foreground gap-2"
           options={[{ value: ALL_CATEGORIES, label: t("apps.filterAll") },
                     ...sortedCategoryEntries.map(([cat, n]) => ({ value: cat, label: `${getCategoryLabel(t, cat)} · ${n}` }))]} />
 
@@ -439,7 +439,7 @@ export function AppsDashboard() {
                     { value: "category", label: t("apps.sortCategory") }]} />
 
         {/* Count — desktop only. Mobile gives the horizontal room to
-            the + button instead so everything stays on one line. */}
+            the + button instead. */}
         <span className="ml-auto hidden sm:inline-flex items-center h-9 px-3 text-xs text-muted-foreground rounded-md bg-card border border-border font-mono tabular-nums">
           {countLabel}
         </span>

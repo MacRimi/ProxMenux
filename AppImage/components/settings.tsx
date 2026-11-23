@@ -1113,7 +1113,7 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
+        <h1 className="text-xl lg:text-3xl font-bold">{t("settings.title")}</h1>
         <p className="text-muted-foreground mt-2">{t("settings.description")}</p>
       </div>
 
@@ -1812,8 +1812,8 @@ export function Settings() {
                           isDown ? 'bg-red-500' : 'bg-green-500'
                         }`} />
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-medium truncate ${isExcluded ? 'text-muted-foreground' : ''}`}>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
+                            <span className={`font-medium break-all sm:break-normal sm:truncate ${isExcluded ? 'text-muted-foreground' : ''}`}>
                               {iface.name}
                             </span>
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
@@ -2098,10 +2098,11 @@ export function Settings() {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-muted-foreground">{t("settings.optimizations.installedTools")}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-orange-500">{t("settings.optimizations.activeCount", { count: proxmenuxTools.length })}</span>
+              <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap sm:justify-between mb-4 pb-2 border-b border-border">
+                <span className="mr-auto text-sm font-medium text-muted-foreground">{t("settings.optimizations.installedTools")}</span>
+                {/* contents on mobile so the updates pill can wrap to its own line */}
+                <div className="contents sm:flex sm:items-center sm:gap-2">
+                  <span className="text-sm font-semibold text-orange-500 whitespace-nowrap">{t(proxmenuxTools.length === 1 ? "settings.optimizations.activeCountOne" : "settings.optimizations.activeCount", { count: proxmenuxTools.length })}</span>
                   {/* Sprint 12B: count badge that doubles as the trigger
                       for the multi-select update modal. Only shown when
                       at least one tool has an available update. */}
@@ -2119,11 +2120,11 @@ export function Settings() {
                         setSelectedUpdates(initial)
                         setUpdateModalOpen(true)
                       }}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-purple-300 bg-purple-500/15 border border-purple-500/40 hover:bg-purple-500/25 transition-colors rounded-full px-3 py-1"
+                      className="flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-purple-300 bg-purple-500/15 border border-purple-500/40 hover:bg-purple-500/25 transition-colors rounded-full px-3 py-1"
                       title={t("settings.optimizations.viewUpdates")}
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      {t("settings.optimizations.updateCount", { count: updatesAvailableCount })}
+                      <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+                      {t(updatesAvailableCount === 1 ? "settings.optimizations.updateCountOne" : "settings.optimizations.updateCount", { count: updatesAvailableCount })}
                     </button>
                   )}
                 </div>
@@ -2153,7 +2154,7 @@ export function Settings() {
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                           hasUpdate ? 'bg-purple-400' : (isDeprecated ? 'bg-amber-500' : 'bg-green-500')
                         }`} />
-                        <span className="text-sm font-medium truncate">{optimizationToolName(tool.key, tool.name, t)}</span>
+                        <span className="text-sm font-medium break-words line-clamp-2 sm:line-clamp-none sm:truncate">{optimizationToolName(tool.key, tool.name, t)}</span>
                         {isDeprecated && (
                           <span className="text-[9px] uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded flex-shrink-0">
                             {t("settings.optimizations.legacy")}
@@ -2163,7 +2164,7 @@ export function Settings() {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {hasUpdate ? (
                           <>
-                            <span className="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
+                            <span className="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
                               v{tool.version || '1.0'} → v{tool.available_version || '?'}
                             </span>
                             {capabilities.update && (<button

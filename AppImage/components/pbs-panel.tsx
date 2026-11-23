@@ -140,7 +140,7 @@ export function PBSPanel({ localOnly = false, view = "all" }: { localOnly?: bool
 
   return <div className="space-y-4 md:space-y-6">
     {!localOnly && <div className="flex flex-wrap items-center gap-3">
-      <h2 className="flex items-center text-2xl font-semibold text-foreground"><Server className="mr-2 h-5 w-5" />{t("pbs.title")}</h2>
+      <h2 className="flex items-center text-lg lg:text-2xl font-semibold text-foreground"><Server className="mr-2 h-5 w-5" />{t("pbs.title")}</h2>
       <Select value={selected || undefined} onValueChange={setSelected}>
         <SelectTrigger aria-label={t("pbs.server")} className="w-full sm:ml-auto sm:w-56"><SelectValue placeholder={t("pbs.chooseServer")} /></SelectTrigger>
         <SelectContent>

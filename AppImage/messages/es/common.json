@@ -415,9 +415,9 @@
     "networkInterfaces": "Interfaces de red:",
     "timeframes": {
       "hour": "1 hora",
-      "day": "24 Horas",
-      "week": "7 dias",
-      "month": "30 dias",
+      "day": "24 horas",
+      "week": "7 días",
+      "month": "30 días",
       "year": "1 año"
     },
     "stats": {
@@ -1165,9 +1165,9 @@
       "sampleInterval": "Las muestras se recogen cada 60 segundos.",
       "timeframes": {
         "hour": "1 hora",
-        "day": "24 Horas",
-        "week": "7 dias",
-        "month": "30 dias"
+        "day": "24 horas",
+        "week": "7 días",
+        "month": "30 días"
       },
       "status": {
         "hot": "Caliente",
@@ -1183,7 +1183,7 @@
       "filterPlaceholder": "Filtrar por línea de comando, usuario o PID...",
       "pid": "PID",
       "user": "Usuario",
-      "command": "Dominio",
+      "command": "Comando",
       "cpuPercent": "CPU %",
       "memory": "Memoria",
       "memPercent": "% memoria",
@@ -1209,7 +1209,7 @@
       "sections": {
         "overview": "Descripción general",
         "resources": "Recursos",
-        "command": "Dominio",
+        "command": "Comando",
         "lifetime": "Vida"
       },
       "labels": {
@@ -1347,7 +1347,7 @@
       "network": "Red",
       "networkInterface": "Interfaz de red {index}",
       "hostInterface": "Host: {interface}",
-      "gateway": "Puerta",
+      "gateway": "Puerta de enlace",
       "gatewayV6": "Puerta de enlace v6",
       "type": "Tipo",
       "rateLimit": "Límite de tarifa",
@@ -1917,10 +1917,10 @@
       "pipDistPlaceholder": "por ejemplo, <tu-paquete-pip>",
       "upstreamSourceLabel": "Fuente de la versión disponible (opcional)",
       "upstreamNone": "ninguna (no comprobar la versión disponible)",
-      "upstreamGithub": "repositorio de GitHub",
+      "upstreamGithub": "Repositorio de GitHub",
       "upstreamHttp": "Punto final HTTP JSON",
       "upstreamDocker": "Imagen de Docker Hub",
-      "githubRepoLabel": "repositorio de GitHub",
+      "githubRepoLabel": "Repositorio de GitHub",
       "githubRepoPlaceholder": "por ejemplo, propietario/nombre",
       "githubRepoAlt": "propietario/nombre",
       "githubSourceLabel": "fuente de GitHub",
@@ -2364,8 +2364,8 @@
     },
     "networkUnits": {
       "title": "Unidades de red",
-      "description": "Cambiar cómo se muestra el tráfico de red",
-      "label": "Pantalla de unidad de red",
+      "description": "Cambia cómo se muestra el tráfico de red",
+      "label": "Unidad del tráfico de red",
       "bytes": "bytes",
       "bits": "bits"
     },
@@ -2380,12 +2380,12 @@
       "longSuppressionNotice": "Largo período de supresión. Las alertas descartadas en esta categoría permanecerán ocultas durante mucho tiempo.",
       "footerNote": "Esta configuración se aplica al descartar una advertencia del Monitor de salud. Las alertas de temperatura crítica de la CPU siempre aparecen para proteger el hardware.",
       "activeSuppressions": "Supresiones activas",
-      "activeSuppressionsDescription": "Alertas que ha ocultado del Health Monitor. Los despidos definitivos sólo podrán revertirse aquí. La edición requiere el Monitor de salud",
-      "noActiveSuppressions": "Sin supresiones activas. Las alertas descartadas del Health Monitor aparecerán aquí.",
+      "activeSuppressionsDescription": "Alertas que has ocultado en el Monitor de salud. Los descartes permanentes solo se pueden revertir aquí. Para cambiarlas, pulsa en el Monitor de salud el botón",
+      "noActiveSuppressions": "No hay supresiones activas. Aquí aparecerán las alertas descartadas del Monitor de salud.",
       "permanent": "Permanente",
       "daysRemaining": "{count}d restantes",
       "hoursRemaining": "{count}h restantes",
-      "reEnableDisabledTitle": "Activa el modo de edición de Health Monitor para volver a activarlo",
+      "reEnableDisabledTitle": "Activa el modo de edición del Monitor de salud para volver a activarla",
       "reEnableQueuedTitle": "Cancelar volver a activar; no se aplicará al guardar",
       "reEnableTitle": "Poner en cola esta alerta para volver a activarla al guardar",
       "reEnable": "Volver a activar",
@@ -2399,7 +2399,7 @@
       },
       "options": {
         "24h": "24 horas",
-        "3d": "3 dias",
+        "3d": "3 días",
         "1w": "1 semana",
         "1m": "1 mes",
         "1y": "1 año",
@@ -2429,7 +2429,7 @@
       "storage": "Almacenamiento",
       "offline": "Sin conexión o no disponible",
       "namespaceRestricted": "Accesible; tamaño del almacén de datos oculto por ACL",
-      "healthHelp": "Cuando está APAGADO, este almacenamiento no activará advertencias ni alertas críticas en Health Monitor.",
+      "healthHelp": "Cuando está APAGADO, este almacenamiento no activará advertencias ni alertas críticas en el Monitor de salud.",
       "alertsHelp": "Cuando esté APAGADO, no se enviarán notificaciones para este almacenamiento."
     },
     "networkInterfaces": {
@@ -2440,7 +2440,7 @@
       "down": "DOWN",
       "excluded": "excluido",
       "noIp": "Sin IP",
-      "healthHelp": "Cuando está APAGADA, esta interfaz no activará advertencias ni alertas críticas en Health Monitor.",
+      "healthHelp": "Cuando está APAGADA, esta interfaz no activará advertencias ni alertas críticas en el Monitor de salud.",
       "alertsHelp": "Cuando esté APAGADO, no se enviarán notificaciones para esta interfaz."
     },
     "snippets": {
@@ -2502,7 +2502,7 @@
       },
       "categories": {
         "vm_ct": {
-          "label": "VM / TC"
+          "label": "VM / CT"
         },
         "backup": {
           "label": "Backups"
@@ -2663,7 +2663,7 @@
         "dailyDigestDescription": "Los eventos INFO se acumulan durante el día y llegan una vez como resumen. Los eventos CRÍTICOS y de ADVERTENCIA nunca se retrasan.",
         "sendAt": "Enviar a",
         "notificationCategories": "Categorías de notificación",
-        "enableTelegram": "Habilitar telegrama",
+        "enableTelegram": "Habilitar Telegram",
         "setupGuide": "+guía de configuración",
         "botToken": "Token del bot",
         "chatId": "ID de chat",
@@ -2724,7 +2724,7 @@
         "botTokenHelp": "El token puede incluir el prefijo 'bot' o introducirse sin él."
       },
       "ai": {
-        "title": "mejora de la IA",
+        "title": "Mejora con IA",
         "enhancedMessages": "Mensajes mejorados por IA",
         "enhancedMessagesDescription": "Utiliza IA para generar mensajes de notificación contextuales",
         "provider": "Proveedor",
@@ -2739,8 +2739,8 @@
         "language": "Idioma",
         "selectLanguage": "Seleccionar idioma",
         "detailLevel": "Nivel de detalle por canal",
-        "suggestions": "sugerencias de IA",
-        "suggestionsDescription": "Permitir que AI añada breves consejos para la solución de problemas según el contexto del registro",
+        "suggestions": "Sugerencias de IA",
+        "suggestionsDescription": "Permite que la IA añada consejos breves para resolver problemas según el contexto del registro",
         "customPromptPlaceholder": "Introduce tus instrucciones personalizadas para la IA...",
         "testing": "Pruebas…",
         "testConnection": "Conexión de prueba",
@@ -2751,7 +2751,7 @@
         "selectModel": "Seleccionar modelo",
         "noModelsLoaded": "No hay modelos cargados: haz clic en Cargar",
         "noModelSelected": "Selecciona un modelo primero. Haz clic en Cargar para buscar los modelos disponibles.",
-        "load": "Carga",
+        "load": "Cargar",
         "modelsAvailable": "{count} modelos disponibles",
         "detailHint": "La IA traduce y formatea las notificaciones en el idioma seleccionado. Cada canal puede utilizar un nivel de detalle diferente.",
         "beta": "BETA",
@@ -2850,9 +2850,11 @@
       "emptyTitle": "Aún no se han instalado optimizaciones de ProxMenux",
       "emptyDescription": "Ejecuta ProxMenux para configurar optimizaciones del sistema",
       "installedTools": "Herramientas instaladas",
-      "activeCount": "{count} activo",
+      "activeCount": "{count} activos",
+      "activeCountOne": "{count} activo",
       "viewUpdates": "Ver actualizaciones disponibles",
       "updateCount": "{count} actualizaciones",
+      "updateCountOne": "{count} actualización",
       "updateOneTitle": "Actualización: {name}",
       "updateManyTitle": "Actualizar {count} optimizaciones",
       "updateOneDescription": "Volver a ejecutar {functionName} desde el flujo {source}.",
@@ -2899,8 +2901,8 @@
       "updateToolTitle": "Actualizar {name} a v{version}",
       "availableUpdates": "Actualizaciones disponibles",
       "availableUpdatesDescription": "Las {count} optimizaciones se pueden actualizar a una versión más reciente.",
-      "selectedCount": "{selected} de {total} seleccionado",
-      "updateSelected": "Actualización seleccionada",
+      "selectedCount": "{selected} de {total} seleccionados",
+      "updateSelected": "Actualizar",
       "toolDescriptions": {
         "subscriptionAuto": "Parchea la interfaz web de Proxmox para suprimir el diálogo de suscripción y registra el parche aplicado correctamente.",
         "timeSync": "Detecta la zona horaria a partir de la IP pública y activa la sincronización horaria de systemd (NTP).",
@@ -2970,7 +2972,7 @@
     },
     "healthThresholds": {
       "title": "Umbrales del monitor de salud",
-      "description": "Health Monitor y las notificaciones reaccionan cuando se cruzan estos límites. Arrastra el controlador ámbar para el nivel de advertencia y el controlador rojo para el nivel crítico. Los valores diferentes a la recomendación aparecen en azul; Coloca el cursor sobre un controlador para ver la recomendación o usa Restablecer para restaurarla.",
+      "description": "El Monitor de salud y las notificaciones reaccionan cuando se superan estos límites. Arrastra el control ámbar para el nivel de advertencia y el rojo para el nivel crítico. Los valores distintos del recomendado aparecen en azul; pasa el cursor sobre un control para ver el recomendado o usa Restablecer para volver a él.",
       "loadFailed": "No se pudieron cargar los umbrales.",
       "invalidValue": "Valor no válido para {key}: debe ser un número",
       "resetFailed": "Error al restablecer",
@@ -2989,13 +2991,13 @@
       "swapCriticalOnly": "Swap (solo nivel crítico)",
       "sections": {
         "cpu": {
-          "title": "uso de CPU"
+          "title": "Uso de CPU"
         },
         "memory": {
           "title": "Memoria y swap"
         },
         "cpu_temperature": {
-          "title": "temperatura de la CPU"
+          "title": "Temperatura de la CPU"
         },
         "disk_temperature": {
           "title": "Temperatura del disco",
@@ -3050,9 +3052,9 @@
       "help": "Un disco excluido no recibe lecturas periódicas de temperatura ni de SMART —ni siquiera la consulta de su estado de energía—, así que el Monitor no lo consulta en absoluto. Abrir sus detalles SMART sí lo lee."
     },
     "storageDisplay": {
-      "title": "Pantalla de almacenamiento",
-      "description": "cambie la distribución de los discos en la página Almacenamiento",
-      "groupByController": "agrupar discos físicos por controlador de almacenamiento"
+      "title": "Vista de almacenamiento",
+      "description": "Cambia cómo se distribuyen los discos en la página Almacenamiento",
+      "groupByController": "Agrupar los discos físicos por controlador de almacenamiento"
     }
   },
   "login": {
@@ -3138,7 +3140,7 @@
     "description": "Inicia sesión con los usuarios y realms de {product}, incluido su segundo factor.",
     "enable": "Permitir el inicio de sesión con cuentas de {product}",
     "onlyWay": "Las cuentas de {product} son la forma de entrar al panel. Para dejar de usarlas, añade una contraseña local o elige el acceso de solo lectura o abierto más arriba.",
-    "whoGetsIn": "Los usuarios con el privilegio Sys.Modify en / tienen acceso completo; los que solo tienen Sys.Audit en /, acceso de solo lectura. El resto no puede iniciar sesión.",
+    "whoGetsIn": "Para iniciar sesión necesitas Sys.Modify o Sys.Audit en /. Sin una regla de perfil del Monitor, Sys.Modify da el perfil Administrador y Sys.Audit por sí solo, el perfil Observador.",
     "sharedSession": "¿Has iniciado sesión en la interfaz web de {product}? Abre el panel por HTTPS en la misma dirección y esa sesión también te da acceso aquí.",
     "saveFailed": "No se ha podido guardar el cambio.",
     "rulesTitle": "Perfiles de las cuentas de {product}",
@@ -3380,7 +3382,7 @@
     },
     "auth": {
       "title": "Acceso y autenticación",
-      "description": "Controle quién puede abrir el panel de Monitor.",
+      "description": "Controla quién puede abrir el Monitor.",
       "statusTitle": "Protección con contraseña",
       "passwordEnabled": "El inicio de sesión con contraseña está habilitado.",
       "noPasswordProtection": "El panel está actualmente abierto sin contraseña.",
@@ -3515,25 +3517,26 @@
       "hostActive": "El cortafuegos del host está activo para este nodo.",
       "clusterRequiredHint": "Activa primero el cortafuegos del clúster y después el del host.",
       "quickAccessRules": "Reglas de acceso rápido",
-      "port8008": "Monitorizar el puerto 8008",
-      "port8006AlwaysAllowed": "El puerto Proxmox 8006 siempre está permitido.",
-      "builtIn": "Construido en",
-      "monitorPortWarning": "Mantén el puerto 8008 permitido si accedes al monitor desde otro dispositivo.",
-      "rulesOverview": "Descripción general de las reglas",
-      "totalRules": "reglas totales",
+      "port8008": "Puerto 8008 del Monitor",
+      "port8006AlwaysAllowed": "El puerto 8006 de Proxmox siempre está permitido.",
+      "builtIn": "Integrado",
+      "monitorPortWarning": "Mantén el puerto 8008 permitido si accedes al Monitor desde otro dispositivo.",
+      "rulesOverview": "Resumen de las reglas",
+      "totalRules": "Reglas totales",
       "accept": "Aceptar",
-      "blockReject": "Bloquear/rechazar",
+      "blockReject": "Descartar/rechazar",
       "portsCovered": "Puertos cubiertos",
       "drop": "Descartar",
       "reject": "Rechazar",
       "cluster": "Clúster",
       "host": "Host",
       "rules": "{count} reglas",
+      "rulesOne": "{count} regla",
       "addRule": "Añadir regla",
       "newRule": "Nueva regla",
       "quickPresets": "Preajustes rápidos",
       "incomingLower": "entrante",
-      "outgoingLower": "extrovertido",
+      "outgoingLower": "saliente",
       "allowLower": "permitir",
       "blockSilentlyLower": "bloquear silenciosamente",
       "blockWithResponseLower": "bloquear con respuesta",
@@ -3542,25 +3545,25 @@
       "anyInterface": "Cualquier interfaz",
       "hostFirewallThisNode": "Cortafuegos del host para este nodo",
       "clusterFirewallAllNodes": "Cortafuegos del clúster para todos los nodos",
-      "any": "Cualquier",
-      "anyLower": "cualquier",
+      "any": "Cualquiera",
+      "anyLower": "cualquiera",
       "incoming": "Entrante",
-      "outgoing": "Extrovertido",
+      "outgoing": "Saliente",
       "saveChanges": "Guardar cambios",
       "noRules": "Aún no hay reglas del cortafuegos.",
-      "noRulesHint": "Añade una regla o usa un ajuste preestablecido arriba.",
+      "noRulesHint": "Añade una regla o usa uno de los preajustes de arriba.",
       "fields": {
         "direction": "Dirección",
         "action": "Acción",
         "protocol": "Protocolo",
-        "proto": "prototipo",
+        "proto": "Proto",
         "destinationPort": "Puerto de destino",
         "sourceAddress": "Dirección de origen",
         "interfaceOptional": "Interfaz (opcional)",
-        "applyTo": "Referirse a",
+        "applyTo": "Aplicar a",
         "commentOptional": "Comentario (opcional)",
         "port": "Puerto",
-        "source": "Fuente",
+        "source": "Origen",
         "level": "Nivel",
         "interface": "Interfaz",
         "comment": "Comentario",
@@ -3575,11 +3578,11 @@
         "description": "Descripción"
       },
       "presets": {
-        "httpWeb": "red HTTP",
+        "httpWeb": "Web HTTP",
         "httpsWeb": "Web HTTPS",
         "sshRemoteAccess": "Acceso remoto SSH",
-        "smtpMail": "correo SMTP",
-        "icmpPing": "ping ICMP"
+        "smtpMail": "Correo SMTP",
+        "icmpPing": "Ping ICMP"
       }
     },
     "fail2ban": {
@@ -4100,7 +4103,7 @@
     },
     "links": {
       "repository": {
-        "label": "repositorio de GitHub",
+        "label": "Repositorio de GitHub",
         "description": "Código fuente, lanzamientos y seguimiento de problemas."
       },
       "documentation": {
@@ -4156,7 +4159,7 @@
       "twoWeeks": "hace 2 semanas",
       "oneMonth": "hace 1 mes",
       "customDays": "Número de días personalizado",
-      "daysAgoPlaceholder": "Hace dias",
+      "daysAgoPlaceholder": "Hace días",
       "byLevel": "Filtrar por nivel",
       "allLevels": "Todos los niveles",
       "byService": "Filtrar por servicio",
@@ -4195,7 +4198,7 @@
       "host": "Host",
       "timestamp": "Marca de tiempo",
       "type": "Tipo",
-      "systemdUnit": "unidad del sistema",
+      "systemdUnit": "Unidad de systemd",
       "processId": "ID de proceso",
       "duration": "Duración",
       "startTime": "Hora de inicio",
@@ -4419,7 +4422,7 @@
       "interfaceName": "Nombre de la interfaz",
       "ipAddress": "Dirección IP",
       "latency": "Estado latente",
-      "macAddress": "dirección MAC",
+      "macAddress": "Dirección MAC",
       "max": "máx.",
       "maximum": "Máximo",
       "maxSpeed": "máximo {speed}",
@@ -4454,23 +4457,23 @@
     },
     "timeframes": {
       "hour": "1 hora",
-      "day": "24 Horas",
-      "week": "7 dias",
-      "month": "30 dias",
+      "day": "24 horas",
+      "week": "7 días",
+      "month": "30 días",
       "year": "1 año",
       "short": {
-        "hour": "Pasada 1 hora",
-        "day": "Pasadas 24h",
-        "week": "Pasados los 7 días",
-        "month": "Pasados los 30 días",
-        "year": "Último 1 año"
+        "hour": "Última hora",
+        "day": "Últimas 24 h",
+        "week": "Últimos 7 días",
+        "month": "Últimos 30 días",
+        "year": "Último año"
       },
       "last": {
-        "hour": "Última Hora",
+        "hour": "Última hora",
         "day": "Últimas 24 horas",
         "week": "Últimos 7 días",
         "month": "Últimos 30 días",
-        "year": "El año pasado"
+        "year": "Último año"
       }
     },
     "interfaceDetails": {
@@ -4478,7 +4481,7 @@
       "description": "Ver información detallada y estadísticas de tráfico de red para esta interfaz",
       "basicInformation": "Información básica",
       "ipAddresses": "Direcciones IP",
-      "trafficStatistics": "Estadísticas de tráfico de red ({timeframe})",
+      "trafficStatistics": "Tráfico de red · {timeframe}",
       "trafficSinceBoot": "Tráfico desde el último arranque",
       "inactiveTitle": "Interfaz inactiva",
       "inactiveDescription": "Esta interfaz está actualmente inactiva. Las estadísticas de tráfico de red no están disponibles.",
@@ -4502,13 +4505,13 @@
       "timeframes": {
         "hour": "1 hora",
         "sixHours": "6 horas",
-        "day": "24 Horas",
-        "threeDays": "3 dias",
-        "week": "7 dias"
+        "day": "24 horas",
+        "threeDays": "3 días",
+        "week": "7 días"
       },
       "targets": {
         "gateway": "Puerta de enlace (enrutador)",
-        "gatewayShort": "Puerta",
+        "gatewayShort": "Puerta de enlace",
         "cloudflare": "Llamarada de nube (1.1.1.1)",
         "cloudflareShort": "Llamarada de nube",
         "google": "DNS de Google (8.8.8.8)",
@@ -4631,14 +4634,20 @@
       "schematic": "Esquema de la placa base"
     },
     "counts": {
-      "installed": "{count} instalado",
+      "installed": "{count} instalados",
+      "installedOne": "{count} instalado",
       "sensors": "{count} sensores",
+      "sensorsOne": "{count} sensor",
       "gpu": "{count} GPU",
       "devices": "{count} dispositivos",
-      "psus": "{count} PSU",
-      "fans": "{count} fans",
+      "devicesOne": "{count} dispositivo",
+      "psus": "{count} fuentes de alimentación",
+      "psusOne": "{count} fuente de alimentación",
+      "fans": "{count} ventiladores",
+      "fansOne": "{count} ventilador",
       "ups": "{count} SAI",
-      "interfaces": "{count} interfaces"
+      "interfaces": "{count} interfaces",
+      "interfacesOne": "{count} interfaz"
     },
     "labels": {
       "model": "Modelo",
@@ -4987,8 +4996,8 @@
       "appendAuthorizedKeyBefore": "Añade la clave pública generada a",
       "backupsKeptBefore": "Los backups existentes se conservan en",
       "borgEncryptionInherited": "El cifrado Borg está controlado por el repositorio.",
-      "builtIn": "Incorporado",
-      "builtInDefault": "Valor predeterminado incorporado",
+      "builtIn": "Integrado",
+      "builtInDefault": "Valor integrado por defecto",
       "capacityUnavailable": "Capacidad no disponible",
       "configureDescription": "Elige dónde se deben almacenar los backups del host.",
       "configureDestination": "Configurar destino",
@@ -5133,7 +5142,7 @@
       "createdLabel": "Creado",
       "datastore": "almacén de datos",
       "dayOfMonth": "Día del mes",
-      "daysOfWeek": "dias de la semana",
+      "daysOfWeek": "días de la semana",
       "destinationDirectory": "Directorio de destino",
       "detectedViaLabel": "Detectado mediante",
       "directoryPath": "Ruta del directorio",
@@ -5270,7 +5279,7 @@
       "downloadTitle": "Descargar archivo clave",
       "fingerprintTitle": "Mostrar huella digital clave",
       "installed": "Instalado",
-      "keyfileLabel": "archivo de claves PBS",
+      "keyfileLabel": "Archivo de claves PBS",
       "notInstalled": "No instalado",
       "orUploadFromMachine": "o cargar uno desde esta máquina.",
       "orUploadOwn": "o sube tu propio archivo de claves.",
@@ -5838,7 +5847,7 @@
       "security": "Seguridad y certificados"
     },
     "checks": {
-      "cpu_usage": "uso de CPU",
+      "cpu_usage": "Uso de CPU",
       "cpu_temperature": "Temperatura",
       "ram_usage": "Uso de RAM",
       "swap_usage": "Uso de swap",
@@ -5965,11 +5974,11 @@
     },
     "noIssues": "No se detectaron problemas",
     "updateNow": "Actualizar ahora",
-    "dismissedItems": "Artículos descartados ({count})",
+    "dismissedItems": "Elementos descartados ({count})",
     "permanent": "Permanente",
     "dismissed": "Descartado",
     "wasStatus": "era {status}",
-    "permanentlySuppressed": "Permanentemente suprimido",
+    "permanentlySuppressed": "Descartado de forma permanente",
     "suppressedForMore": "Suprimido por {duration} más",
     "customSuppressionSettings": "Configuración de supresión personalizada",
     "autoSuppressedHint": "Las alertas en estas categorías se suprimen automáticamente cuando se detectan.",
@@ -5986,7 +5995,7 @@
       "months": "{count} meses",
       "years": "{count} años",
       "24hours": "24 horas",
-      "7days": "7 dias"
+      "7days": "7 días"
     },
     "restart": {
       "button": "reiniciar el servidor",
@@ -6109,12 +6118,12 @@
     "timeframes": {
       "hour": "1 hora",
       "day": "24 horas",
-      "week": "7 dias",
-      "month": "30 dias",
+      "week": "7 días",
+      "month": "30 días",
       "year": "1 año"
     },
     "charts": {
-      "cpu": "uso de CPU",
+      "cpu": "Uso de CPU",
       "memory": "Uso de memoria",
       "diskIo": "E/S de disco",
       "networkIo": "E/S de red"
@@ -7460,6 +7469,7 @@
       "since": "Registrando desde el {date}.",
       "byFunction": "Por función",
       "count": "{count} cambios",
+      "countOne": "{count} cambio",
       "function": "Función",
       "source": "Script",
       "reversibility": "Deshacer esto",

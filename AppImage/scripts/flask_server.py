@@ -10415,7 +10415,7 @@ def api_processes():
                     'command': comm,
                     'cmdline': cmdline or comm,
                 })
-            results.sort(key=lambda r: r['mem'], reverse=True)
+            results.sort(key=lambda r: r['rss_kb'], reverse=True)
             processes = results[:limit]
 
         if not has_full_access():

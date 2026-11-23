@@ -261,11 +261,11 @@ export function VmBackupJobs() {
   return (
     <>
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0 pb-3">
           <div className="flex items-center gap-2 min-w-0">
             <CalendarClock className="h-5 w-5 text-blue-500 shrink-0" />
-            <CardTitle className="text-base font-semibold truncate">{t("backup.vmJobs.title")}</CardTitle>
-            <Badge variant="outline" className="ml-1">{jobs.length}</Badge>
+            <CardTitle className="text-base font-semibold max-sm:break-words sm:truncate">{t("backup.vmJobs.title")}</CardTitle>
+            <Badge variant="outline" className="ml-1 shrink-0">{jobs.length}</Badge>
           </div>
           {capabilities.backup && (<Button
             size="sm"

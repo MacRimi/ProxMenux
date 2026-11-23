@@ -13,9 +13,16 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 )
 CardHeader.displayName = "CardHeader"
 
+// A title without its own size reads smaller on a phone.
+const TITLE_SIZE = /(^|\s)([a-z0-9-]+:)*text-(xs|sm|base|lg|xl|[2-9]xl)(?=\s|$)/
+
 const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
+    <h3
+      ref={ref}
+      className={cn(TITLE_SIZE.test(className ?? "") ? "" : "text-lg sm:text-2xl", "font-semibold leading-none tracking-tight", className)}
+      {...props}
+    />
   ),
 )
 CardTitle.displayName = "CardTitle"

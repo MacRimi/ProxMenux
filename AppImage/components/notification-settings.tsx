@@ -227,7 +227,7 @@ function normalizeNotificationLanguage(notificationLanguage?: string, legacyAiLa
 const AI_LANGUAGES = [
   { value: "en", label: "English" },
   { value: "sk", label: "Slovenčina" },
-  { value: "es", label: "Espanol" },
+  { value: "es", label: "Español" },
   { value: "fr", label: "Francais" },
   { value: "de", label: "Deutsch" },
   { value: "pt", label: "Portugues" },
@@ -2576,11 +2576,11 @@ export function NotificationSettings() {
                           </div>
                           
                           {/* Experimental: AI Suggestions toggle */}
-                          <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                            <div className="flex items-start gap-3">
+                          <div className="flex items-center justify-between gap-3 pt-3 border-t border-border/50">
+                            <div className="flex items-start gap-3 min-w-0">
                               <Lightbulb className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
-                              <div>
-                                <div className="flex items-center gap-2">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-sm font-medium">{t("settings.notifications.ai.suggestions")}</span>
                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">{t("settings.notifications.ai.beta")}</span>
                                 </div>
@@ -2590,7 +2590,7 @@ export function NotificationSettings() {
                               </div>
                             </div>
                             <button
-                              className={`relative w-9 h-[18px] rounded-full transition-colors ${
+                              className={`relative shrink-0 w-9 h-[18px] rounded-full transition-colors ${
                                 config.ai_allow_suggestions === "true" || config.ai_allow_suggestions === true
                                   ? "bg-purple-600"
                                   : "bg-muted-foreground/20 border border-muted-foreground/40"

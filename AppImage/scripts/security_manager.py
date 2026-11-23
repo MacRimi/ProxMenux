@@ -57,14 +57,15 @@ _state_lock = threading.Lock()
 
 
 # Match a real pve-firewall rule line: `<DIR> <ACTION> ...` where DIR is
-# IN/OUT/GROUP and ACTION is ACCEPT/DROP/REJECT/<group-name>. We don't
+# IN/OUT/GROUP and ACTION is ACCEPT/DROP/REJECT/<group-name>. A leading `|`
+# marks a rule that is disabled in Proxmox; it still counts as a rule. We don't
 # enforce the full grammar — just enough that comments, blank lines, and
 # random malformed text don't get counted as rules when computing
 # rule_index. PVE itself rejects malformed rules, so they exist on disk
 # but never appear in `pve-firewall list` output → keeping our internal
 # index in sync with that list means skipping them here too.
 _PVE_RULE_LINE_RE = re.compile(
-    r'^(?:IN|OUT|GROUP)\s+\S+',
+    r'^\|?\s*(?:IN|OUT|GROUP)\s+\S+',
     re.IGNORECASE,
 )
 
@@ -260,7 +261,7 @@ def _parse_firewall_rules():
                         in_rules = section in ("RULES", "IN", "OUT")
                     continue
 
-                if in_rules or section in ("RULES", "IN", "OUT"):
+                if (in_rules or section in ("RULES", "IN", "OUT")) and _is_pve_rule_line(line):
                     rule = _parse_rule_line(line, source, section)
                     if rule:
                         rule["rule_index"] = rule_idx_by_file[source]
@@ -279,7 +280,8 @@ def _parse_rule_line(line, source, section):
     """Parse a single firewall rule line"""
     # Proxmox rule format: |ACTION MACRO(params) -option value ...
     # or: IN/OUT ACTION -p proto -dport port -source addr
-    parts = line.split()
+    disabled = line.startswith("|")
+    parts = line[1:].split() if disabled else line.split()
     if len(parts) < 2:
         return None
 
@@ -287,6 +289,7 @@ def _parse_rule_line(line, source, section):
         "raw": line,
         "source_file": source,
         "section": section,
+        "disabled": disabled,
     }
 
     idx = 0
@@ -520,7 +523,7 @@ def edit_firewall_rule(rule_index, level="host", direction="IN", action="ACCEPT"
                 # delete/edit_firewall_rule desync de índices.
                 if in_rules and stripped and _is_pve_rule_line(stripped):
                     if current_rule_idx == rule_index:
-                        new_lines.append(new_rule_line)
+                        new_lines.append(("|" if stripped.startswith("|") else "") + new_rule_line)
                         replaced = True
                         current_rule_idx += 1
                         continue

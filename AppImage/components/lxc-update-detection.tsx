@@ -109,13 +109,12 @@ export function LxcUpdateDetection() {
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
-          {/* Title row — flex-wrap so on narrow screens the badge can drop
-              under the title without dragging the icon along with it. The
-              icon stays on the same baseline as the title text on every
-              breakpoint thanks to `items-center` + leading-tight title. */}
+          {/* Icon and title stay together; on narrow screens only the badge wraps below. */}
           <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <Boxes className="h-5 w-5 text-purple-500 shrink-0" />
-            <CardTitle className="leading-tight">{t("settings.lxcUpdateDetection.title")}</CardTitle>
+            <div className="flex items-center gap-2 min-w-0">
+              <Boxes className="h-5 w-5 text-purple-500 shrink-0" />
+              <CardTitle className="leading-tight">{t("settings.lxcUpdateDetection.title")}</CardTitle>
+            </div>
             {enabled ? (
               <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">
                 {t("status.active")}
@@ -194,7 +193,7 @@ export function LxcUpdateDetection() {
             <Boxes
               className={`h-4 w-4 shrink-0 ${pending ? "text-purple-500" : "text-muted-foreground"}`}
             />
-            <span className="text-sm font-medium truncate">{t("settings.lxcUpdateDetection.enableLabel")}</span>
+            <span className="text-sm font-medium min-w-0 sm:truncate">{t("settings.lxcUpdateDetection.enableLabel")}</span>
           </div>
           <button
             className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${

@@ -442,7 +442,7 @@ function Featured({ items, onOpen }: { items: CatalogItem[]; onOpen: (item: Cata
   const show = (n: number) => setI((n + items.length) % items.length)
   return (
     <section aria-label={t("catalog.featured")} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
-      className="relative h-[240px] overflow-hidden rounded-2xl border border-border text-white sm:h-[260px]"
+      className="relative h-[272px] overflow-hidden rounded-2xl border border-border text-white sm:h-[260px]"
       style={{ background: `linear-gradient(120deg, hsl(${hue} 55% 28%), hsl(${hue} 45% 11%) 75%)` }}>
       {/* The application's screenshot, like a window rising from the bottom;
           without one, its logo in large. The shadow follows what it draws:
@@ -940,7 +940,7 @@ function Tile({ icon, label, hint, onClick, disabled }: { icon: string; label: s
       className="flex w-full min-w-0 items-center gap-3.5 rounded-xl border border-border bg-card p-3.5 text-left hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-55 disabled:hover:bg-card">
       <CategoryTile category={icon} />
       <span className="grid min-w-0">
-        <b className="truncate font-semibold">{label}</b>
+        <b className="font-semibold max-sm:line-clamp-2 max-sm:break-words sm:truncate">{label}</b>
         {hint && <span className="text-sm text-muted-foreground">{hint}</span>}
       </span>
     </button>

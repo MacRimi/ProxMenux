@@ -316,7 +316,7 @@ function GroupSection({ title, icon: Icon, iconClass, groups, openFn, toggleFn, 
     <div className="space-y-2 pt-2">
       {/* Same type and icon size as CardTitle, so a block heading here reads
           exactly like a card heading on the Settings page. */}
-      <h3 className="px-1 flex items-center gap-2 text-2xl font-semibold
+      <h3 className="px-1 flex items-center gap-2 text-lg sm:text-2xl font-semibold
                      leading-none tracking-tight text-foreground">
         <Icon className={`h-5 w-5 shrink-0 ${iconClass}`} />
         {title}
@@ -343,7 +343,7 @@ function GroupSection({ title, icon: Icon, iconClass, groups, openFn, toggleFn, 
                 <Badge variant="outline" className="text-xs shrink-0">v{g.version}</Badge>
               )}
               <Badge variant="outline" className="text-xs tabular-nums shrink-0">
-                {t("audit.changes.count", { count: String(g.items.length) })}
+                {t(g.items.length === 1 ? "audit.changes.countOne" : "audit.changes.count", { count: String(g.items.length) })}
               </Badge>
               <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                 {when(g.last)}

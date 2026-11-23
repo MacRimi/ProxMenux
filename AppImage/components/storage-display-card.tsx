@@ -32,9 +32,9 @@ export function StorageDisplayCard() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <HardDrive className="h-5 w-5 text-blue-500" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <HardDrive className="h-5 w-5 shrink-0 text-blue-500" />
             <CardTitle>{t("settings.storageDisplay.title")}</CardTitle>
           </div>
           <div className="flex items-center gap-2">

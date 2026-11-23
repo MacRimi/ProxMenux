@@ -163,6 +163,13 @@ function fmt(v: number, unit: NetworkUnit = "Bytes"): string {
   if (v < 1) return `${(v * 1024).toFixed(0)} KB/s`
   return `${v.toFixed(1)} MB/s`
 }
+
+// Shortens a label in the middle so both its start and its end stay readable.
+function fitLabel(label: string, max: number): string {
+  if (label.length <= max) return label
+  const keep = max - 1
+  return `${label.slice(0, Math.ceil(keep / 2))}…${label.slice(label.length - Math.floor(keep / 2))}`
+}
 // "Active" = running guest, regardless of current rate. Lab hosts can
 // have idle guests we still want to see in the topology. The previous
 // 50 KB/s threshold hid everything on a quiet host like .1.10.
@@ -639,6 +646,8 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: Network
   const BRIDGE_X     = HOST_X + COL_STEP
   const SUB_TRUNK_X  = HOST_X + COL_STEP * 2
   const GUEST_X      = Math.round((SUB_TRUNK_X + W) / 2)
+  // Guest labels are centred on GUEST_X in a 12.5px monospace font (about 7.5 units per character); longer names are shortened so they stay inside the canvas.
+  const GUEST_LABEL_MAX = Math.floor((2 * (W - GUEST_X - 4)) / 7.5)
   const RAD_HOST = 26
   const RAD_NIC = 22
   const RAD_BRIDGE = 24
@@ -919,11 +928,13 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: Network
       const haloSVG = gRate >= 5
         ? `<circle class="nf-guest-halo" cx="${gCx}" cy="${gCy}" r="${gR}" stroke="${stroke}" style="--halo-r0:${gR}px;--halo-r1:${gR + 12}px" />`
         : ""
+      const shownLabel = fitLabel(g.label, GUEST_LABEL_MAX)
       nodes.push(`<g data-node-id="${g.id}" data-node-kind="${g.kind}" style="cursor:pointer">
+        ${shownLabel !== g.label ? `<title>${g.label}</title>` : ""}
         ${haloSVG}
         <circle class="nf-circle" cx="${gCx}" cy="${gCy}" r="${gR}" stroke="${stroke}" />
         ${svgIcon(g.kind, gCx, gCy, 13, stroke)}
-        <text class="nf-label" x="${gCx}" y="${gCy + gR + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${g.label}</text>
+        <text class="nf-label" x="${gCx}" y="${gCy + gR + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${shownLabel}</text>
         <text class="nf-sub"   x="${gCx}" y="${gCy + gR + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt(gRate, unit)}</text>
       </g>`)
     })

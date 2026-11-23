@@ -650,12 +650,12 @@ export function SystemLogs() {
       {/* Main Content with Tabs */}
       <Card className="bg-card border-border w-full max-w-full overflow-hidden">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-foreground flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
+              <Activity className="h-5 w-5 mr-2 shrink-0" />
               {t("systemLogs.title")}
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={refreshData} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={refreshData} disabled={loading} className="self-start sm:self-auto">
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               {t("actions.refresh")}
             </Button>
@@ -826,7 +826,7 @@ export function SystemLogs() {
                 </Button>
               </div>
 
-              <ScrollArea className="h-[600px] w-full rounded-md border border-border overflow-hidden [&>div]:!max-w-full [&>div>div]:!max-w-full">
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border overflow-hidden [&>[data-radix-scroll-area-viewport]>div]:!block">
                 <div className="space-y-2 p-4 w-full min-w-0">
                   {displayedLogs.map((log, index) => {
                     // Generate a more stable unique key
@@ -872,7 +872,7 @@ export function SystemLogs() {
                           <div className="text-sm text-foreground mb-1 line-clamp-2 break-words overflow-hidden">
                             {log.message}
                           </div>
-                          <div className="text-xs text-muted-foreground truncate overflow-hidden">
+                          <div className="text-xs text-muted-foreground break-words overflow-hidden sm:truncate">
                             {log.source}
                             {log.unit && log.unit !== log.service && ` • ${t("systemLogs.fields.unit")}: ${log.unit}`}
                             {log.pid && ` • PID: ${log.pid}`}
@@ -940,7 +940,7 @@ export function SystemLogs() {
                 </Card>
               </div>
 
-              <ScrollArea className="h-[500px] w-full rounded-md border border-border">
+              <ScrollArea className="h-[500px] w-full rounded-md border border-border [&>[data-radix-scroll-area-viewport]>div]:!block">
                 <div className="space-y-2 p-4">
                   {backups.map((backup, index) => {
                     const uniqueKey = `backup-${backup.volid.replace(/[/:]/g, "-")}-${backup.timestamp || index}`
@@ -997,7 +997,7 @@ export function SystemLogs() {
 
             {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-4">
-              <ScrollArea className="h-[600px] w-full rounded-md border border-border">
+              <ScrollArea className="h-[600px] w-full rounded-md border border-border [&>[data-radix-scroll-area-viewport]>div]:!block">
                 <div className="space-y-2 p-4">
                   {notifications.map((notification, index) => {
                     const timestampMs = new Date(notification.timestamp).getTime()

@@ -523,7 +523,7 @@ export function AuditReport() {
               <p className={`text-sm ${stale ? "text-amber-500" : "text-muted-foreground"}`}>
                 {t("audit.lastRun", {
                   when: new Date((latest.finished_at || latest.started_at) * 1000)
-                    .toLocaleString(),
+                    .toLocaleString(language),
                 })}
                 {stale && ` — ${t("audit.stale", { days: String(ageDays) })}`}
               </p>
@@ -671,7 +671,7 @@ export function AuditReport() {
                 type="button"
                 onClick={() => toggle(f.check_id)}
                 aria-expanded={open}
-                className="w-full text-left p-4 flex max-[359px]:flex-wrap items-start gap-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                className="w-full text-left p-4 flex flex-wrap sm:flex-nowrap items-start gap-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
               >
                 {open
                   ? <ChevronDown className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />
@@ -680,7 +680,7 @@ export function AuditReport() {
                   <Icon className="h-3.5 w-3.5" />
                   {t(`audit.classifications.${shown}`)}
                 </Badge>
-                <div className="min-w-0 flex-1 max-[359px]:basis-full">
+                <div className="min-w-0 flex-1 basis-full sm:basis-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-foreground">
                       {t(`audit.checks.${f.check_id}.title`)}
@@ -716,7 +716,7 @@ export function AuditReport() {
               </button>
 
               {open && (
-                <CardContent className="pt-0 pl-11 space-y-4">
+                <CardContent className="pt-0 pl-4 sm:pl-11 space-y-4">
                   {optional(`audit.checks.${f.check_id}.explanation`) && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">
@@ -754,12 +754,12 @@ export function AuditReport() {
                       <p className="text-sm text-foreground">{f.exception.reason}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {f.exception.accepted_by} ·{" "}
-                        {new Date(f.exception.accepted_at * 1000).toLocaleDateString()}
+                        {new Date(f.exception.accepted_at * 1000).toLocaleDateString(language)}
                         {f.exception.expires_at && <> · {t("audit.expires", {
-                          when: new Date(f.exception.expires_at * 1000).toLocaleString(),
+                          when: new Date(f.exception.expires_at * 1000).toLocaleString(language),
                         })}</>}
                         {f.exception.review_at && <> · {t("audit.reviewOn", {
-                          when: new Date(f.exception.review_at * 1000).toLocaleDateString(),
+                          when: new Date(f.exception.review_at * 1000).toLocaleDateString(language),
                         })}</>}
                       </p>
                       {!!f.exception.review_at && f.exception.review_at * 1000 <= Date.now() && (
@@ -787,7 +787,7 @@ export function AuditReport() {
                     <summary className="cursor-pointer">{t("audit.detail.sources")}</summary>
                     <ul className="mt-2 space-y-1">
                       {f.sources.map((source) => <li key={source.source} className="break-all">
-                        {source.source} · {new Date(source.collected_at * 1000).toLocaleString()}
+                        {source.source} · {new Date(source.collected_at * 1000).toLocaleString(language)}
                         {source.error && <span className="text-amber-500"> · {source.error}</span>}
                       </li>)}
                     </ul>

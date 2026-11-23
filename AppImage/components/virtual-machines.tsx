@@ -3489,7 +3489,7 @@ export function VirtualMachines() {
                 onTogglePicker={() => setColumnPickerOpen((current) => !current)} />
             }
             search={
-              <div key="search" className="relative min-w-0 flex-[1_1_10rem] max-sm:basis-24">
+              <div key="search" className="relative min-w-0 flex-[1_1_10rem] max-sm:basis-full">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
@@ -4254,11 +4254,11 @@ export function VirtualMachines() {
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                               {/* CPU Usage */}
                               <div>
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                                  <Cpu className="h-3.5 w-3.5" />
+                                <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground mb-2">
+                                  <Cpu className="h-3.5 w-3.5 shrink-0" />
                                   <span>{t("vmLxc.cpuUsage")}</span>
                                   {vmDetails?.config?.cores && (
-                                    <span className="text-muted-foreground/60">
+                                    <span className="whitespace-nowrap text-muted-foreground/60">
                                       ({formatCoreCount(Number(vmDetails.config.cores))})
                                     </span>
                                   )}
@@ -7832,6 +7832,7 @@ export function VirtualMachines() {
                       {hasTerminal && (
                         <Button
                           className="w-full bg-zinc-600/20 border border-zinc-600/50 text-zinc-300 hover:bg-zinc-600/30"
+                          aria-label={t("navigation.terminal")}
                           onClick={() => selectedVM && openLxcTerminal(selectedVM.vmid, selectedVM.name)}
                         >
                           <Terminal className="size-4 shrink-0" aria-hidden="true" />
@@ -7888,10 +7889,12 @@ export function VirtualMachines() {
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full border-red-600/50 text-red-400 hover:text-red-300"
+                          className="w-full border-red-600/50 text-red-400 hover:text-red-300 disabled:pointer-events-auto disabled:cursor-not-allowed"
                           disabled={selectedVM?.status !== "stopped" || controlLoading}
                           aria-describedby={showRemovalHint ? removalHintId : undefined}
                           onClick={() => setRemoveLxcOpen(true)}
+                          aria-label={t("actions.remove")}
+                          title={showRemovalHint ? t("vmLxc.remove.reasons.container_running") : undefined}
                         >
                           <Trash2 className="size-4 shrink-0" aria-hidden="true" />
                           <span>{t("actions.remove")}</span>
@@ -7899,7 +7902,7 @@ export function VirtualMachines() {
                       )}
                     </div>
                     {showRemovalHint && (
-                      <p id={removalHintId} className="mt-2 text-right text-xs text-muted-foreground">
+                      <p id={removalHintId} className="sr-only">
                         {t("vmLxc.remove.reasons.container_running")}
                       </p>
                     )}
