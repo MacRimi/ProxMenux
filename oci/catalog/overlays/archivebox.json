@@ -5,6 +5,10 @@
     },
     "description": {
       "en_US": "ArchiveBox is a self-hosted web archive that saves complete copies of the pages you give it. For each URL it can store the HTML, a PDF, a screenshot, the readable text, media and a WARC file, so the content stays available after the original site changes or disappears. Links are added from the web interface, the browser extension, bookmark exports or RSS feeds, and the archive can be searched by full text."
-    }
+    },
+    "screenshots": [
+      "https://github.com/ArchiveBox/ArchiveBox/assets/511499/e8e0b6f8-8fdf-4b7f-8124-c10d8699bdb2",
+      "https://github.com/ArchiveBox/ArchiveBox/assets/511499/90f1ce3c-75bb-401d-88ed-6297694b76ae"
+    ]
   }
 }
