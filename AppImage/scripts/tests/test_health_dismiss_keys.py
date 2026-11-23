@@ -66,17 +66,19 @@ class StorageDismissKey(unittest.TestCase):
 class MemoryDismissKey(unittest.TestCase):
     def test_ram_and_swap_carry_their_keys_and_dismiss_marks_them(self):
         gib = 1024 ** 3
-        fake = SimpleNamespace(
-            virtual_memory=lambda: SimpleNamespace(percent=97.0, total=16 * gib, available=gib // 2, used=15 * gib),
-            swap_memory=lambda: SimpleNamespace(percent=95.0, total=4 * gib, used=3 * gib, free=gib))
+        reading = (SimpleNamespace(percent=97.0, total=16 * gib, available=gib // 2, used=15 * gib),
+                   SimpleNamespace(percent=95.0, total=4 * gib, used=3 * gib, free=gib))
         monitor = health_monitor.HealthMonitor.__new__(health_monitor.HealthMonitor)
-        monitor.state_history = {'memory_usage': []}
-        monitor.MEMORY_CRITICAL, monitor.MEMORY_WARNING, monitor.MEMORY_DURATION = 95, 85, 60
+        # What the vital-signs sampler recorded over the last 5 minutes.
+        now = health_monitor.time.time()
+        monitor.state_history = {'memory_usage': [
+            {'mem_percent': 97.0, 'swap_percent': 95.0, 'available_percent': 3.1, 'time': now - age}
+            for age in range(270, -1, -30)]}
+        monitor.MEMORY_CRITICAL, monitor.MEMORY_WARNING, monitor.MEMORY_DURATION = 95, 85, 300
         for name in ('cached_results', 'last_check_times'):
             setattr(monitor, name, {})
-        with mock.patch.object(health_monitor, 'psutil', fake, create=True):
-            for _ in range(4):
-                result = monitor._check_memory_comprehensive()
+        with mock.patch.object(health_monitor.vital_signs, 'memory', return_value=reading):
+            result = monitor._check_memory_comprehensive()
         checks = result['checks']
         self.assertEqual(checks['ram_usage']['error_key'], 'memory_ram_usage')
         self.assertEqual(checks['swap_usage']['error_key'], 'memory_swap_usage')

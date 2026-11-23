@@ -78,6 +78,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 import pve_mirror  # noqa: E402
+import vital_signs  # noqa: E402
 
 from smartctl_resolver import (  # noqa: E402
     is_usb_disk as resolver_is_usb_disk,
@@ -916,36 +917,11 @@ def format_bytes(size_in_bytes):
 
 # Helper functions for system info
 def get_cpu_temperature():
-    """Get CPU temperature using psutil if available, otherwise return 0."""
-    temp = 0
+    """The CPU's temperature from the shared sensor reading, or 0."""
     try:
-        if hasattr(psutil, "sensors_temperatures"):
-            temps = psutil.sensors_temperatures()
-            if temps:
-                # Priority order for temperature sensors:
-                # - coretemp: Intel CPU sensor
-                # - k10temp: AMD CPU sensor (Ryzen, EPYC, etc.)
-                # - cpu_thermal: Generic CPU thermal sensor
-                # - zenpower: Alternative AMD sensor (if zenpower driver is used)
-                # - acpitz: ACPI thermal zone (fallback, usually motherboard)
-                sensor_priority = ['coretemp', 'k10temp', 'cpu_thermal', 'zenpower', 'acpitz']
-                for sensor_name in sensor_priority:
-                    if sensor_name in temps and temps[sensor_name]:
-                        temp = temps[sensor_name][0].current
-
-                        break
-                
-                # If no priority sensor found, use first available
-                if temp == 0:
-                    for name, entries in temps.items():
-                        if entries:
-                            temp = entries[0].current
-
-                            break
-    except Exception as e:
-        # print(f"Warning: Error reading temperature sensors: {e}")
-        pass
-    return temp
+        return vital_signs.cpu_temperature()
+    except Exception:
+        return 0
 
 # ── Temperature History (SQLite) ──────────────────────────────────────────────
 # Stores CPU temperature readings every 60s in a lightweight SQLite database.
@@ -988,7 +964,7 @@ def init_temperature_db():
 def _record_temperature():
     """Insert a single temperature reading into the DB."""
     try:
-        temp = get_cpu_temperature()
+        temp = vital_signs.cpu_temperature(vital_signs.temperatures(max_age=vital_signs.TEMPERATURE_INTERVAL))
         if temp and temp > 0:
             conn = _get_temp_db()
             conn.execute(
@@ -1692,14 +1668,13 @@ def _health_collector_loop():
 
 
 def _vital_signs_sampler():
-    """Dedicated thread for rapid CPU, memory & temperature sampling.
+    """Dedicated thread that reads CPU, memory and temperature for the whole Monitor.
 
-    Runs independently of the 5-min health collector loop.
-    - CPU usage:   sampled every 5s   (matches dashboard refresh; also feeds /api/system + /api/prometheus
-                                       through state_history cache to avoid gevent races with psutil.cpu_percent)
-    - Memory:      sampled every 30s  (10 samples in 5 min for sustained detection)
-    - Temperature: sampled every 15s  (12 samples in 3 min for temporal logic)
-    Uses time.monotonic() to avoid drift.
+    Runs independently of the 5-min health collector loop. Its readings,
+    kept in vital_signs and in the health monitor's history, are the only
+    source of these values: the dashboard, the health checks and the
+    exporters read them instead of reading the host again. The intervals
+    are in vital_signs. Uses time.monotonic() to avoid drift.
 
     Staggered intervals to avoid collision: CPU at 0, Temp at +7s, Mem at +15s.
     """
@@ -1708,17 +1683,16 @@ def _vital_signs_sampler():
     # Wait 15s after startup for sensors to be ready
     time.sleep(15)
 
-    TEMP_INTERVAL = 15   # seconds (was 10s - reduced frequency by 33%)
-    CPU_INTERVAL  = 5    # seconds — exclusive owner of psutil.cpu_percent baseline;
-                         # API handlers read the cached value to avoid 0% reads under gevent.
-    MEM_INTERVAL  = 30   # seconds (aligned with original CPU cadence for sustained-RAM detection)
+    TEMP_INTERVAL = vital_signs.TEMPERATURE_INTERVAL
+    CPU_INTERVAL = vital_signs.CPU_INTERVAL
+    MEM_INTERVAL = vital_signs.MEMORY_INTERVAL
 
     # Stagger: CPU starts immediately, Temp after 7s, Mem after 15s
     next_cpu  = time.monotonic()
     next_temp = time.monotonic() + 7
     next_mem  = time.monotonic() + 15
 
-    print("[ProxMenux] Vital signs sampler started (CPU: 5s, Mem: 30s, Temp: 15s)")
+    print(f"[ProxMenux] Vital signs sampler started (CPU: {CPU_INTERVAL}s, Mem: {MEM_INTERVAL}s, Temp: {TEMP_INTERVAL}s)")
 
     while True:
         try:
@@ -9992,27 +9966,7 @@ def _get_hardware_info_uncached():
             # print(f"[v0] Error getting PCI devices: {e}")
             pass
         
-        # Sensors (Temperature and Fans)
-        try:
-            if hasattr(psutil, "sensors_temperatures"):
-                temps = psutil.sensors_temperatures()
-                if temps:
-                    for sensor_name, entries in temps.items():
-                        for entry in entries:
-                            # Use identify_temperature_sensor to make names more user-friendly
-                            identified_name = identify_temperature_sensor(entry.label if entry.label else sensor_name, sensor_name)
-                            
-                            hardware_data['sensors']['temperatures'].append({
-                                'name': identified_name,
-                                'original_name': entry.label if entry.label else sensor_name,
-                                'current': entry.current,
-                                'high': entry.high if entry.high else 0,
-                                'critical': entry.critical if entry.critical else 0
-                            })
-        except Exception as e:
-            # print(f"[v0] Error getting temperature sensors: {e}")
-            pass
-        
+        # Fans; the temperatures come from get_temperature_info() below.
         try:
             hardware_data['sensors']['fans'] = _parse_sensor_fans(get_cached_sensors_output())
         except Exception:
@@ -10098,93 +10052,18 @@ def _get_hardware_info_uncached():
         return {}
 
 
-_LIVE_CPU_MIN_WINDOW = 0.5
-_LIVE_CPU_MAX_WINDOW = 10
-_live_cpu_lock = threading.Lock()
-_live_cpu_state = {'times': None, 'at': 0.0, 'usage': None}
-
-
-def _live_cpu_usage():
-    """CPU use since the previous call, from the /proc/stat counters.
-
-    psutil.cpu_times() keeps no baseline of its own, so this never disturbs
-    the vital-signs sampler's psutil.cpu_percent. Calls closer together than
-    the minimum window share the last result. Returns None when there is no
-    recent snapshot to compare with; the caller then uses the sampler.
-    """
-    now = time.monotonic()
-    with _live_cpu_lock:
-        state = _live_cpu_state
-        age = now - state['at']
-        if state['times'] is not None and age < _LIVE_CPU_MIN_WINDOW:
-            return state['usage']
-        times = psutil.cpu_times()
-        previous = state['times']
-        state['times'], state['at'], state['usage'] = times, now, None
-        if previous is None or age > _LIVE_CPU_MAX_WINDOW:
-            return None
-
-        def field(sample, name):
-            return getattr(sample, name, 0) or 0
-
-        def total(sample):
-            # guest time is already counted in user and nice
-            return sum(sample) - field(sample, 'guest') - field(sample, 'guest_nice')
-
-        elapsed = total(times) - total(previous)
-        if elapsed <= 0:
-            return None
-
-        def share(*names):
-            spent = sum(field(times, n) - field(previous, n) for n in names)
-            return round(min(100.0, max(0.0, spent * 100.0 / elapsed)), 1)
-
-        idle = share('idle', 'iowait')
-        state['usage'] = {
-            'value': round(100.0 - idle, 1),
-            'user': share('user', 'nice'),
-            'system': share('system', 'irq', 'softirq'),
-        }
-        return state['usage']
-
-
 @app.route('/api/system', methods=['GET'])
 @require_auth
 def api_system():
     """Get system information including CPU, memory, and temperature"""
     try:
-        # CPU comes from a /proc/stat delta since the previous request, so a
-        # page polling every few seconds sees that interval. Without a recent
-        # request, fall back to the vital-signs sampler cache: the sampler is
-        # the only consumer of psutil.cpu_percent, because concurrent calls to
-        # it under gevent return 0%.
-        try:
-            live = _live_cpu_usage()
-        except Exception:
-            live = None
-        try:
-            if live:
-                cpu_usage = live['value']
-                cpu_user_pct = live['user']
-                cpu_system_pct = live['system']
-            else:
-                from health_monitor import health_monitor
-                _hist = health_monitor.state_history.get('cpu_usage') or []
-                if _hist:
-                    _last = _hist[-1]
-                    cpu_usage = _last['value']
-                    cpu_user_pct = _last.get('user', 0)
-                    cpu_system_pct = _last.get('system', 0)
-                else:
-                    cpu_usage = psutil.cpu_percent(interval=0.1)
-                    cpu_user_pct = 0
-                    cpu_system_pct = 0
-        except Exception:
-            cpu_usage = psutil.cpu_percent(interval=0.1)
-            cpu_user_pct = 0
-            cpu_system_pct = 0
+        # The vital-signs sampler's readings, shared by the whole Monitor.
+        cpu = vital_signs.cpu()
+        cpu_usage = cpu['value']
+        cpu_user_pct = cpu['user']
+        cpu_system_pct = cpu['system']
 
-        memory = psutil.virtual_memory()
+        memory, _swap = vital_signs.memory()
         memory_used_gb = memory.used / (1024 ** 3)
         memory_total_gb = memory.total / (1024 ** 3)
         memory_usage_percent = memory.percent
@@ -15505,16 +15384,9 @@ def api_prometheus():
         timestamp = int(datetime.now().timestamp() * 1000)
         node = socket.gethostname()
 
-        # Read from the vital-signs sampler cache to avoid the gevent race
-        # that turns concurrent psutil.cpu_percent(interval=0) calls into 0%.
-        # Falls back to a 100ms sample only if the cache is empty (cold start).
-        try:
-            from health_monitor import health_monitor
-            _hist = health_monitor.state_history.get('cpu_usage') or []
-            cpu_usage = _hist[-1]['value'] if _hist else psutil.cpu_percent(interval=0.1)
-        except Exception:
-            cpu_usage = psutil.cpu_percent(interval=0.1)
-        memory = psutil.virtual_memory()
+        # The vital-signs sampler's readings, shared by the whole Monitor.
+        cpu_usage = vital_signs.cpu()['value']
+        memory, _swap = vital_signs.memory()
         load_avg = os.getloadavg()
         uptime_seconds = time.time() - psutil.boot_time()
         

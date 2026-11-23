@@ -1379,13 +1379,13 @@ class HealthPersistence:
         
             # ── SMART AUTO-RESOLVE: Based on system state ──
             try:
-                import psutil
+                import vital_signs
                 with open('/proc/uptime', 'r') as f:
                     uptime_seconds = float(f.read().split()[0])
 
                 if uptime_seconds > 600:
-                    current_cpu = psutil.cpu_percent(interval=0.1)
-                    current_mem = psutil.virtual_memory().percent
+                    current_cpu = vital_signs.cpu()['value']
+                    current_mem = vital_signs.memory(max_age=vital_signs.MEMORY_INTERVAL)[0].percent
 
                     # 1. LOGS: Auto-resolve if not seen in 15 minutes
                     stale_logs_cutoff = (now - timedelta(minutes=15)).isoformat()
