@@ -459,6 +459,7 @@
       "status": "laboratory-validated"
     },
     "omada-controller": {
+      "status": "laboratory-validated",
       "community_tested": {
         "by": "danibauti94",
         "date": "2026-11-23",

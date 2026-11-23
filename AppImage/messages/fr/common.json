@@ -1323,7 +1323,7 @@
       "removeCustomCommandFailed": "Impossible de supprimer la commande de mise à jour personnalisée : {message}",
       "hideNoticeFailed": "Impossible de masquer cet avis : {message}",
       "controlNotConfirmed": "La fin de l'opération n'a pas été confirmée. Vérifiez l'état de l'invité avant de réessayer.",
-      "controlWarning": "Proxmox a terminé l'action avec des avertissements ({count}).Consultez le journal des tâches dans Proxmox pour plus de détails."
+      "controlWarning": "Proxmox a terminé l'action avec des avertissements ({count}). Consultez le journal des tâches dans Proxmox pour plus de détails."
     },
     "backupModal": {
       "title": "Sauvegarde : {type} {vmid} ({name})",
@@ -2129,18 +2129,18 @@
     },
     "remove": {
       "reasons": {
-        "container_running": "Le conteneur est en cours d’exécution.Arrêtez-le avant de le retirer.",
+        "container_running": "Le conteneur est en cours d’exécution. Arrêtez-le avant de le retirer.",
         "container_protected": "La protection contre la suppression Proxmox est activée.",
         "container_locked": "Le conteneur est verrouillé par une autre opération.",
-        "container_template": "Il s'agit d'un modèle LXC.Les modèles ne peuvent pas être supprimés ici.",
+        "container_template": "Il s'agit d'un modèle LXC. Les modèles ne peuvent pas être supprimés ici.",
         "attached_or_unassigned_disk": "Le conteneur dispose d’un disque supplémentaire ou non attribué.",
-        "bound_directory": "le conteneur a un répertoire hôte ou un hook configuré.",
+        "bound_directory": "Le conteneur a un répertoire hôte ou un hook configuré.",
         "custom_lxc_configuration": "Le conteneur a une configuration LXC personnalisée.",
-        "oci_managed": "Le conteneur est géré par OCI.Utilisez le flux de gestion d'application OCI.",
+        "oci_managed": "Le conteneur est géré par OCI. Utilisez le flux de gestion d'application OCI.",
         "rootfs_ambiguous": "Le disque racine n’est pas un volume LXC local sans ambiguïté.",
         "ha_managed": "Le conteneur est géré par Proxmox HA.",
         "replication_configured": "La réplication Proxmox est configurée pour le conteneur.",
-        "pending_changes": "le conteneur a des modifications de configuration en attente."
+        "pending_changes": "Le conteneur a des modifications de configuration en attente."
       },
       "result": {
         "running": "La suppression est en cours",
@@ -2150,23 +2150,23 @@
         "unknown": "Le résultat de la suppression n’est pas encore connu"
       },
       "resultReason": {
-        "running": "Proxmox a accepté la tâche native.Vous pouvez fermer cette boîte de dialogue et revenir à la même tâche ultérieurement.",
+        "running": "Proxmox a accepté la tâche native. Vous pouvez fermer cette boîte de dialogue et revenir à la même tâche ultérieurement.",
         "succeeded": "Le conteneur et le volume racine d'origine sont absents de l'inventaire Proxmox.",
-        "warning": "Ne soumettez plus la suppression.Inspectez la tâche et le stockage Proxmox d'origine avant d'entreprendre une autre action.",
-        "unknown": "Ne soumettez plus la suppression.Vérifiez la tâche Proxmox d'origine dans Proxmox une fois la connexion rétablie.",
-        "submission_unconfirmed": "le résultat de la demande n'a pas été reçu.Vérifiez l'état de cette opération avant d'entreprendre une autre action.",
-        "task_status_unavailable": "La tâche d'origine ne peut pas être lue pour le moment.Vérifiez à nouveau son état après le retour de la connexion.",
+        "warning": "Ne soumettez plus la suppression. Inspectez la tâche et le stockage Proxmox d'origine avant d'entreprendre une autre action.",
+        "unknown": "Ne soumettez plus la suppression. Vérifiez la tâche Proxmox d'origine dans Proxmox une fois la connexion rétablie.",
+        "submission_unconfirmed": "Le résultat de la demande n'a pas été reçu. Vérifiez l'état de cette opération avant d'entreprendre une autre action.",
+        "task_status_unavailable": "La tâche d'origine ne peut pas être lue pour le moment. Vérifiez à nouveau son état après le retour de la connexion.",
         "dispatch_pending": "En attente de la tâche Proxmox d'origine.",
         "checking_task": "Vérification de l'opération de suppression d'origine.",
-        "task_still_running": "La tâche Proxmox est toujours en cours d'exécution.Vérifiez à nouveau son état plus tard.",
+        "task_still_running": "La tâche Proxmox est toujours en cours d'exécution. Vérifiez à nouveau son état plus tard.",
         "not_started": "La suppression n'a pas démarré.",
-        "vmid_still_present": "Le VMID est toujours dans l’inventaire.Inspectez la tâche d'origine avant une autre action.",
-        "configuration_still_present": "La configuration LXC est toujours présente.Inspectez la tâche d'origine avant une autre action.",
+        "vmid_still_present": "Le VMID est toujours dans l’inventaire. Inspectez la tâche d'origine avant une autre action.",
+        "configuration_still_present": "La configuration LXC est toujours présente. Inspectez la tâche d'origine avant une autre action.",
         "root_volume_still_present": "Le volume racine d’origine est toujours présent sur le stockage.",
         "result_verification_unavailable": "L'état final du conteneur ou du volume racine n'a pas pu être vérifié.",
-        "failed": "Proxmox a signalé un échec.Vérifiez le LXC et son disque racine avant une autre action."
+        "failed": "Proxmox a signalé un échec. Vérifiez le LXC et son disque racine avant une autre action."
       },
-      "moreActions": "actions supplémentaires",
+      "moreActions": "Actions supplémentaires",
       "action": "Supprimer LXC",
       "title": "Supprimer LXC",
       "description": "Tâche de suppression Proxmox",
@@ -2176,21 +2176,21 @@
       "reviewProtection": "Désactiver la protection…",
       "disableProtection": "Désactiver la protection",
       "disableProtectionHint": "Désactiver la protection contre la suppression pour {name} (LXC {vmid}) ?Ce paramètre reste désactivé si vous fermez cette boîte de dialogue.",
-      "disableProtectionUnconfirmed": "Le changement de protection n'a pas pu être confirmé.Vérifiez l'état actuel avant de continuer.",
+      "disableProtectionUnconfirmed": "Le changement de protection n'a pas pu être confirmé. Vérifiez l'état actuel avant de continuer.",
       "purge": "Purger des configurations de tâches",
       "purgeHint": "Supprimer des tâches de réplication, de haute disponibilité et de sauvegarde.",
       "destroyUnreferenced": "Détruire les disques non référencés appartenant au conteneur",
-      "destroyUnreferencedHint": "recherchez tous les stockages activés pour ces disques.",
+      "destroyUnreferencedHint": "Recherchez tous les stockages activés pour ces disques.",
       "referencedDisks": "Les disques référencés seront toujours détruits.",
-      "typeVmid": "saisissez l'ID du conteneur {vmid} pour confirmer :",
+      "typeVmid": "Saisissez l'ID du conteneur {vmid} pour confirmer :",
       "checkAgain": "Vérifiez à nouveau",
       "checkTask": "Vérifier l'état de la suppression",
       "reviewAgain": "Vérifier le LXC actuel",
       "cancel": "Annuler",
       "confirm": "Supprimer LXC",
-      "previewUnavailable": "L'état de sécurité actuel du LXC n'a pas pu être vérifié.Rien n'a été supprimé.",
-      "receiptUnavailable": "Le navigateur n'a pas pu enregistrer le reçu de récupération.Le retrait n'a pas été envoyé.",
-      "targetChanged": "Le LXC a changé depuis l'examen.Rien n'a été supprimé ;vérifiez-le à nouveau avant de continuer."
+      "previewUnavailable": "L'état de sécurité actuel du LXC n'a pas pu être vérifié. Rien n'a été supprimé.",
+      "receiptUnavailable": "Le navigateur n'a pas pu enregistrer le reçu de récupération. Le retrait n'a pas été envoyé.",
+      "targetChanged": "Le LXC a changé depuis l'examen. Rien n'a été supprimé ; vérifiez-le à nouveau avant de continuer."
     }
   },
   "settings": {

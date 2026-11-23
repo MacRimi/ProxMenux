@@ -1323,7 +1323,7 @@
       "removeCustomCommandFailed": "Kunde inte ta bort det anpassade uppdateringskommandot: {message}",
       "hideNoticeFailed": "Kunde inte dölja detta meddelande: {message}",
       "controlNotConfirmed": "Det har inte bekräftats att åtgärden är slutförd. Kontrollera gästens status innan du försöker igen.",
-      "controlWarning": "Proxmox slutförde åtgärden med varningar ({count}).Se uppgiftsloggen i Proxmox för detaljer."
+      "controlWarning": "Proxmox slutförde åtgärden med varningar ({count}). Se uppgiftsloggen i Proxmox för detaljer."
     },
     "backupModal": {
       "title": "Säkerhetskopiera {type} {vmid} ({name})",
@@ -2129,14 +2129,14 @@
     },
     "remove": {
       "reasons": {
-        "container_running": "Behållaren körs.Stäng av den innan du tar bort den.",
+        "container_running": "Behållaren körs. Stäng av den innan du tar bort den.",
         "container_protected": "Proxmox borttagningsskydd är aktiverat.",
         "container_locked": "Behållaren är låst av en annan operation.",
-        "container_template": "Detta är en LXC-mall.Mallar kan inte tas bort här.",
+        "container_template": "Detta är en LXC-mall. Mallar kan inte tas bort här.",
         "attached_or_unassigned_disk": "Behållaren har en extra eller otilldelad disk.",
         "bound_directory": "Behållaren har en värdkatalog eller hook konfigurerad.",
         "custom_lxc_configuration": "Behållaren har anpassad LXC-konfiguration.",
-        "oci_managed": "Behållaren hanteras av OCI.Använd applikationshanteringsflödet OCI.",
+        "oci_managed": "Behållaren hanteras av OCI. Använd applikationshanteringsflödet OCI.",
         "rootfs_ambiguous": "Rotdisken är inte en entydig lokal LXC-volym.",
         "ha_managed": "Behållaren hanteras av Proxmox HA.",
         "replication_configured": "Behållaren har Proxmox-replikering konfigurerad.",
@@ -2150,21 +2150,21 @@
         "unknown": "Borttagningsresultatet är inte känt ännu"
       },
       "resultReason": {
-        "running": "Proxmox accepterade den ursprungliga uppgiften.Du kan stänga den här dialogrutan och återgå till samma uppgift senare.",
+        "running": "Proxmox accepterade den ursprungliga uppgiften. Du kan stänga den här dialogrutan och återgå till samma uppgift senare.",
         "succeeded": "Behållaren och den ursprungliga rotvolymen saknas i Proxmox-inventeringen.",
-        "warning": "Skicka inte borttagning igen.Inspektera den ursprungliga Proxmox-uppgiften och lagringen innan du vidtar ytterligare åtgärder.",
-        "unknown": "Skicka inte borttagning igen.Kontrollera den ursprungliga Proxmox-uppgiften i Proxmox efter att anslutningen har återställts.",
-        "submission_unconfirmed": "Resultatet av begäran mottogs inte.Kontrollera denna operations status innan du vidtar en annan åtgärd.",
-        "task_status_unavailable": "Den ursprungliga uppgiften kan inte läsas just nu.Kontrollera dess status igen när anslutningen återgår.",
+        "warning": "Skicka inte borttagning igen. Inspektera den ursprungliga Proxmox-uppgiften och lagringen innan du vidtar ytterligare åtgärder.",
+        "unknown": "Skicka inte borttagning igen. Kontrollera den ursprungliga Proxmox-uppgiften i Proxmox efter att anslutningen har återställts.",
+        "submission_unconfirmed": "Resultatet av begäran mottogs inte. Kontrollera denna operations status innan du vidtar en annan åtgärd.",
+        "task_status_unavailable": "Den ursprungliga uppgiften kan inte läsas just nu. Kontrollera dess status igen när anslutningen återgår.",
         "dispatch_pending": "Väntar på den ursprungliga Proxmox-uppgiften.",
         "checking_task": "Kontrollerar den ursprungliga borttagningen.",
-        "task_still_running": "Proxmox-uppgiften körs fortfarande.Kontrollera dess status igen senare.",
+        "task_still_running": "Proxmox-uppgiften körs fortfarande. Kontrollera dess status igen senare.",
         "not_started": "Borttagningen startade inte.",
-        "vmid_still_present": "VMID finns fortfarande i inventeringen.Inspektera den ursprungliga uppgiften före en annan åtgärd.",
-        "configuration_still_present": "LXC-konfigurationen finns fortfarande.Inspektera den ursprungliga uppgiften före en annan åtgärd.",
+        "vmid_still_present": "VMID finns fortfarande i inventeringen. Inspektera den ursprungliga uppgiften före en annan åtgärd.",
+        "configuration_still_present": "LXC-konfigurationen finns fortfarande. Inspektera den ursprungliga uppgiften före en annan åtgärd.",
         "root_volume_still_present": "Den ursprungliga rotvolymen finns fortfarande kvar på lagringen.",
         "result_verification_unavailable": "Det slutliga tillståndet för behållaren eller rotvolymen kunde inte kontrolleras.",
-        "failed": "Proxmox rapporterade ett fel.Kontrollera LXC och dess rotdisk innan en annan åtgärd."
+        "failed": "Proxmox rapporterade ett fel. Kontrollera LXC och dess rotdisk innan en annan åtgärd."
       },
       "moreActions": "Ytterligare åtgärder",
       "action": "Ta bort LXC",
@@ -2176,7 +2176,7 @@
       "reviewProtection": "Inaktivera skydd...",
       "disableProtection": "Inaktivera skydd",
       "disableProtectionHint": "Inaktivera borttagningsskydd för {name} (LXC {vmid})?Den här inställningen förblir avstängd om du stänger den här dialogrutan.",
-      "disableProtectionUnconfirmed": "Skyddsändringen kunde inte bekräftas.Kontrollera det aktuella läget innan du fortsätter.",
+      "disableProtectionUnconfirmed": "Skyddsändringen kunde inte bekräftas. Kontrollera det aktuella läget innan du fortsätter.",
       "purge": "Rensa från jobbkonfigurationer",
       "purgeHint": "Ta bort från replikerings-, HA- och säkerhetskopieringsjobb.",
       "destroyUnreferenced": "Förstör icke-refererade diskar som ägs av behållaren",
@@ -2188,9 +2188,9 @@
       "reviewAgain": "Granska nuvarande LXC",
       "cancel": "Avbryt",
       "confirm": "Ta bort LXC",
-      "previewUnavailable": "Det nuvarande säkerhetstillståndet för LXC kunde inte verifieras.Ingenting togs bort.",
-      "receiptUnavailable": "Webbläsaren kunde inte spara återställningskvittot.Borttagning skickades inte.",
-      "targetChanged": "LXC har ändrats sedan granskningen.Ingenting togs bort;kontrollera det igen innan du fortsätter."
+      "previewUnavailable": "Det nuvarande säkerhetstillståndet för LXC kunde inte verifieras. Ingenting togs bort.",
+      "receiptUnavailable": "Webbläsaren kunde inte spara återställningskvittot. Borttagning skickades inte.",
+      "targetChanged": "LXC har ändrats sedan granskningen. Ingenting togs bort; kontrollera det igen innan du fortsätter."
     }
   },
   "settings": {
