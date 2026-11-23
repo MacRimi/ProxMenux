@@ -20,6 +20,7 @@ import {
   Database,
   Waves,
   Monitor,
+  Timer,
 } from "lucide-react"
 import { getApiUrl, getAuthToken } from "../lib/api-config"
 import { useT } from "../lib/i18n/provider"
@@ -98,6 +99,11 @@ interface ThresholdsTree {
   lxc_mount: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   pve_storage: { warning: ThresholdLeaf; critical: ThresholdLeaf }
   zfs_pool: { warning: ThresholdLeaf; critical: ThresholdLeaf }
+  sampling_intervals?: {
+    cpu: ThresholdLeaf
+    temperature: ThresholdLeaf
+    memory: ThresholdLeaf
+  }
 }
 
 // Pending edits: { "section/key" : "76" } — kept as raw strings while
@@ -246,6 +252,19 @@ const SECTIONS: SectionDef[] = [
     fields: [
       { path: ["zfs_pool", "warning"], label: "Warning" },
       { path: ["zfs_pool", "critical"], label: "Critical" },
+    ],
+  },
+  // ── Telemetry & Performance ────────────────────────────────────
+  {
+    id: "sampling_intervals",
+    title: "Sampling intervals",
+    icon: Timer,
+    description:
+      "Cadence for the background Vital Signs sampler. Higher values reduce CPU usage and database disk writes; lower values provide faster real-time updates.",
+    fields: [
+      { path: ["sampling_intervals", "cpu"], label: "CPU sampling interval" },
+      { path: ["sampling_intervals", "temperature"], label: "Temperature sampling interval" },
+      { path: ["sampling_intervals", "memory"], label: "Memory sampling interval" },
     ],
   },
 ]

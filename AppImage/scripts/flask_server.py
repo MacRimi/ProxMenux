@@ -1699,37 +1699,44 @@ def _vital_signs_sampler():
     Staggered intervals to avoid collision: CPU at 0, Temp at +7s, Mem at +15s.
     """
     from health_monitor import health_monitor
+    try:
+        import health_thresholds as _ht
+    except Exception:
+        _ht = None
 
     # Wait 15s after startup for sensors to be ready
     time.sleep(15)
 
-    TEMP_INTERVAL = 15   # seconds (was 10s - reduced frequency by 33%)
-    CPU_INTERVAL  = 5    # seconds — exclusive owner of psutil.cpu_percent baseline;
-                         # API handlers read the cached value to avoid 0% reads under gevent.
-    MEM_INTERVAL  = 30   # seconds (aligned with original CPU cadence for sustained-RAM detection)
+    init_cpu = int(_ht.get("sampling_intervals", "cpu", default=5)) if _ht else 5
+    init_temp = int(_ht.get("sampling_intervals", "temperature", default=15)) if _ht else 15
+    init_mem = int(_ht.get("sampling_intervals", "memory", default=30)) if _ht else 30
 
     # Stagger: CPU starts immediately, Temp after 7s, Mem after 15s
     next_cpu  = time.monotonic()
     next_temp = time.monotonic() + 7
     next_mem  = time.monotonic() + 15
 
-    print("[ProxMenux] Vital signs sampler started (CPU: 5s, Mem: 30s, Temp: 15s)")
+    print(f"[ProxMenux] Vital signs sampler started (CPU: {init_cpu}s, Mem: {init_mem}s, Temp: {init_temp}s)")
 
     while True:
         try:
             now = time.monotonic()
 
+            cpu_interval = _ht.get("sampling_intervals", "cpu", default=5) if _ht else 5
+            temp_interval = _ht.get("sampling_intervals", "temperature", default=15) if _ht else 15
+            mem_interval = _ht.get("sampling_intervals", "memory", default=30) if _ht else 30
+
             if now >= next_temp:
                 health_monitor._sample_cpu_temperature()
-                next_temp = now + TEMP_INTERVAL
+                next_temp = now + temp_interval
 
             if now >= next_cpu:
                 health_monitor._sample_cpu_usage()
-                next_cpu = now + CPU_INTERVAL
+                next_cpu = now + cpu_interval
 
             if now >= next_mem:
                 health_monitor._sample_memory_usage()
-                next_mem = now + MEM_INTERVAL
+                next_mem = now + mem_interval
 
             # Sleep until the next earliest event (with 0.5s min to avoid busy-loop)
             sleep_until = min(next_temp, next_cpu, next_mem) - time.monotonic()

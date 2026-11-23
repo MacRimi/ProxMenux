@@ -139,6 +139,14 @@ DEFAULTS: dict[str, Any] = {
         "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
         "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
     },
+    "sampling_intervals": {
+        # Background sampling cadence for the Vital Signs collector.
+        # Lower values provide near real-time metrics and graphs;
+        # higher values reduce background CPU usage and database writes.
+        "cpu": {"value": 5, "unit": "s", "min": 1, "max": 300, "step": 1},
+        "temperature": {"value": 15, "unit": "s", "min": 5, "max": 300, "step": 1},
+        "memory": {"value": 30, "unit": "s", "min": 5, "max": 600, "step": 5},
+    },
 }
 
 
