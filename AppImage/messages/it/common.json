@@ -3189,7 +3189,8 @@
       "readOnlyMode": "La dashboard è in sola lettura senza password: può essere visualizzata, ma non è possibile eseguire né modificare nulla.",
       "useReadOnly": "Passa a sola lettura",
       "disableChoose": "Senza password, come deve essere raggiungibile la dashboard?",
-      "pveMode": "L'accesso alla dashboard avviene con gli account di Proxmox VE."
+      "pveMode": "L'accesso alla dashboard avviene con gli account di Proxmox VE.",
+      "pbsMode": "accedi al Monitor con un account Proxmox Backup Server."
     },
     "twoFactor": {
       "title": "Autenticazione a due fattori",

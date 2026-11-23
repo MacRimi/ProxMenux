@@ -3189,7 +3189,8 @@
       "readOnlyMode": "Instrumentpanelen är skrivskyddad utan lösenord: den kan visas, men inget kan köras eller ändras.",
       "useReadOnly": "Växla till endast läsning",
       "disableChoose": "Hur ska instrumentpanelen nås utan lösenord?",
-      "pveMode": "Instrumentpanelen loggar in med kontona från Proxmox VE."
+      "pveMode": "Instrumentpanelen loggar in med kontona från Proxmox VE.",
+      "pbsMode": "Logga in på monitorn med ett Proxmox Backup Server-konto."
     },
     "twoFactor": {
       "title": "Tvåfaktorsautentisering",

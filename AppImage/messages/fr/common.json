@@ -3189,7 +3189,8 @@
       "readOnlyMode": "Le tableau de bord est en lecture seule sans mot de passe : il peut être consulté, mais rien ne peut être exécuté ni modifié.",
       "useReadOnly": "Passer en lecture seule",
       "disableChoose": "Sans mot de passe, comment le tableau de bord doit-il être accessible ?",
-      "pveMode": "Le tableau de bord utilise les comptes de Proxmox VE pour la connexion."
+      "pveMode": "Le tableau de bord utilise les comptes de Proxmox VE pour la connexion.",
+      "pbsMode": "Connectez-vous au moniteur avec un compte Proxmox Backup Server."
     },
     "twoFactor": {
       "title": "Authentification à deux facteurs",

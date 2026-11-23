@@ -3189,7 +3189,8 @@
       "readOnlyMode": "O painel é somente leitura sem senha: ele pode ser visualizado, mas nada pode ser executado ou alterado.",
       "useReadOnly": "Mudar para somente leitura",
       "disableChoose": "Sem uma senha, como o painel deve ser acessado?",
-      "pveMode": "O painel faz login com as contas do Proxmox VE."
+      "pveMode": "O painel faz login com as contas do Proxmox VE.",
+      "pbsMode": "Faça login no Monitor com uma conta Proxmox Backup Server."
     },
     "twoFactor": {
       "title": "Autenticação de dois fatores",

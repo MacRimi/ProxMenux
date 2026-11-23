@@ -3189,7 +3189,8 @@
       "readOnlyMode": "Das Dashboard ist ohne Passwort schreibgeschützt: Es kann eingesehen werden, aber es kann nichts ausgeführt oder geändert werden.",
       "useReadOnly": "Zu schreibgeschützt wechseln",
       "disableChoose": "Wie soll das Dashboard ohne Passwort erreichbar sein?",
-      "pveMode": "Das Dashboard nutzt zur Anmeldung die Konten von Proxmox VE."
+      "pveMode": "Das Dashboard nutzt zur Anmeldung die Konten von Proxmox VE.",
+      "pbsMode": "Melden Sie sich mit einem Proxmox Backup Server-Konto beim Monitor an."
     },
     "twoFactor": {
       "title": "Zwei-Faktor-Authentifizierung",
