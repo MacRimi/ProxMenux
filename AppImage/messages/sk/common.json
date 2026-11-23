@@ -2965,8 +2965,8 @@
         "proxmox_repos": "Repozitáre APT pre Proxmox",
         "entropy": "Generovanie entropie (haveged)"
       },
-      "activeCountOne": "{count} aktívny",
-      "updateCountOne": "aktualizácia {count}"
+      "activeCountOne": "Aktívne: {count}",
+      "updateCountOne": "Aktualizácie: {count}"
     },
     "healthThresholds": {
       "title": "Hranice kontroly stavu",
@@ -3581,7 +3581,7 @@
         "smtpMail": "SMTP pošta",
         "icmpPing": "ICMP ping"
       },
-      "rulesOne": "pravidlo {count}"
+      "rulesOne": "{count} pravidlo"
     },
     "fail2ban": {
       "description": "Blokuje opakované neúspešné prihlásenia do SSH, Proxmoxu a Monitora.",
@@ -4625,12 +4625,12 @@
       "fans": "ventilátory: {count}",
       "ups": "UPS: {count}",
       "interfaces": "rozhrania: {count}",
-      "installedOne": "{count} nainštalovaný",
-      "sensorsOne": "snímač {count}",
-      "devicesOne": "zariadenie {count}",
-      "psusOne": "{count} PSU",
-      "fansOne": "Ventilátor {count}",
-      "interfacesOne": "rozhranie {count}"
+      "installedOne": "osadené: {count}",
+      "sensorsOne": "senzory: {count}",
+      "devicesOne": "zariadenia: {count}",
+      "psusOne": "PSU: {count}",
+      "fansOne": "ventilátory: {count}",
+      "interfacesOne": "rozhrania: {count}"
     },
     "labels": {
       "model": "Model",
@@ -7522,7 +7522,7 @@
         "install_proxmenux": "Inštalátor ProxMenux",
         "monitor": "ProxMenux Monitor"
       },
-      "countOne": "zmena {count}"
+      "countOne": "{count} zmena"
     },
     "comparison": {
       "loading": "Porovnáva sa s referenčným behom…",

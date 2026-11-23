@@ -4471,7 +4471,7 @@
       "gpu": "{count} GPU",
       "devices": "{count} enheter",
       "psus": "{count} nätaggregat",
-      "fans": "{count} fans",
+      "fans": "{count} fläktar",
       "ups": "{count} UPS",
       "interfaces": "{count} gränssnitt",
       "installedOne": "{count} installerad",
@@ -4479,7 +4479,7 @@
       "devicesOne": "{count} enhet",
       "psusOne": "{count} PSU",
       "fansOne": "{count} fläkt",
-      "interfacesOne": "{count}-gränssnitt"
+      "interfacesOne": "{count} gränssnitt"
     },
     "labels": {
       "model": "Modell",
@@ -7366,7 +7366,7 @@
         "install_proxmenux": "ProxMenux-installerare",
         "monitor": "ProxMenux-övervakning"
       },
-      "countOne": "{count} förändring"
+      "countOne": "{count} ändring"
     },
     "comparison": {
       "loading": "Jämför med referenskörningen…",

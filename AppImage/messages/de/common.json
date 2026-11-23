@@ -2815,7 +2815,7 @@
         "entropy": "Entropie-Erzeugung (haveged)"
       },
       "activeCountOne": "{count} aktiv",
-      "updateCountOne": "{count}-Update"
+      "updateCountOne": "{count} Update"
     },
     "healthThresholds": {
       "title": "Schwellenwerte für den Health-Monitor",
@@ -3430,7 +3430,7 @@
         "smtpMail": "SMTP-Mail",
         "icmpPing": "ICMP-Ping"
       },
-      "rulesOne": "{count}-Regel"
+      "rulesOne": "{count} Regel"
     },
     "fail2ban": {
       "description": "Blockieren Sie wiederholte fehlgeschlagene Anmeldeversuche gegen SSH, Proxmox und den Monitor.",
@@ -4475,11 +4475,11 @@
       "ups": "{count} USV",
       "interfaces": "{count} Schnittstellen",
       "installedOne": "{count} installiert",
-      "sensorsOne": "{count}-Sensor",
-      "devicesOne": "{count}-Gerät",
+      "sensorsOne": "{count} Sensor",
+      "devicesOne": "{count} Gerät",
       "psusOne": "{count} Netzteil",
-      "fansOne": "{count}-Lüfter",
-      "interfacesOne": "{count}-Schnittstelle"
+      "fansOne": "{count} Lüfter",
+      "interfacesOne": "{count} Schnittstelle"
     },
     "labels": {
       "model": "Modell",
@@ -7366,7 +7366,7 @@
         "install_proxmenux": "ProxMenux-Installer",
         "monitor": "ProxMenux-Monitor"
       },
-      "countOne": "{count}-Änderung"
+      "countOne": "{count} Änderung"
     },
     "comparison": {
       "loading": "Vergleich mit dem Referenzlauf…",

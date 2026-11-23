@@ -2814,8 +2814,8 @@
         "proxmox_repos": "Repository APT di Proxmox",
         "entropy": "Generazione di entropia (haveged)"
       },
-      "activeCountOne": "{count} attivo",
-      "updateCountOne": "aggiornamento {count}"
+      "activeCountOne": "Attivi: {count}",
+      "updateCountOne": "Aggiornamenti: {count}"
     },
     "healthThresholds": {
       "title": "Soglie monitoraggio integrità",
@@ -3430,7 +3430,7 @@
         "smtpMail": "Posta SMTP",
         "icmpPing": "Ping ICMP"
       },
-      "rulesOne": "regola {count}"
+      "rulesOne": "Regole: {count}"
     },
     "fail2ban": {
       "description": "Blocca i ripetuti tentativi di accesso non riusciti a SSH, Proxmox e Monitor.",
@@ -4474,12 +4474,12 @@
       "fans": "Ventole: {count}",
       "ups": "{count} UPS",
       "interfaces": "Interfacce: {count}",
-      "installedOne": "{count} installato",
-      "sensorsOne": "sensore {count}",
-      "devicesOne": "dispositivo {count}",
-      "psusOne": "PSU {count}",
-      "fansOne": "ventola {count}",
-      "interfacesOne": "interfaccia {count}"
+      "installedOne": "Installati: {count}",
+      "sensorsOne": "Sensori: {count}",
+      "devicesOne": "Dispositivi: {count}",
+      "psusOne": "Alimentatori: {count}",
+      "fansOne": "Ventole: {count}",
+      "interfacesOne": "Interfacce: {count}"
     },
     "labels": {
       "model": "Modello",
@@ -7366,7 +7366,7 @@
         "install_proxmenux": "Installer di ProxMenux",
         "monitor": "Monitor di ProxMenux"
       },
-      "countOne": "modifica {count}"
+      "countOne": "{count} modifica"
     },
     "comparison": {
       "loading": "Confronto con l'esecuzione di riferimento…",

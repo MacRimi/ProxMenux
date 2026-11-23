@@ -2815,7 +2815,7 @@
         "entropy": "Geração de entropia (haveged)"
       },
       "activeCountOne": "{count} ativo",
-      "updateCountOne": "atualização {count}"
+      "updateCountOne": "{count} atualização"
     },
     "healthThresholds": {
       "title": "Limites do Monitor de Integridade",
@@ -3430,7 +3430,7 @@
         "smtpMail": "Correio SMTP",
         "icmpPing": "Ping ICMP"
       },
-      "rulesOne": "regra {count}"
+      "rulesOne": "{count} regra"
     },
     "fail2ban": {
       "description": "Bloqueie tentativas repetidas de login com falha no SSH, Proxmox e Monitor.",
@@ -4471,15 +4471,15 @@
       "gpu": "{count} GPU",
       "devices": "{count} dispositivos",
       "psus": "{count} PSUs",
-      "fans": "{count} fãs",
+      "fans": "{count} ventoinhas",
       "ups": "{count} UPS",
       "interfaces": "{count} interfaces",
       "installedOne": "{count} instalado",
-      "sensorsOne": "sensor {count}",
-      "devicesOne": "dispositivo {count}",
-      "psusOne": "Fonte de alimentação {count}",
-      "fansOne": "ventilador {count}",
-      "interfacesOne": "interface {count}"
+      "sensorsOne": "{count} sensor",
+      "devicesOne": "{count} dispositivo",
+      "psusOne": "{count} PSU",
+      "fansOne": "{count} ventoinha",
+      "interfacesOne": "{count} interface"
     },
     "labels": {
       "model": "Modelo",
@@ -7366,7 +7366,7 @@
         "install_proxmenux": "Instalador do ProxMenux",
         "monitor": "Monitor do ProxMenux"
       },
-      "countOne": "alteração {count}"
+      "countOne": "{count} alteração"
     },
     "comparison": {
       "loading": "Comparando com a execução de referência…",
