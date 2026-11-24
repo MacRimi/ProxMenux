@@ -20983,6 +20983,38 @@
       "optional_relaxed_confinement": false,
       "requires_security_confirmation": false,
       "multi_container": false
+    },
+    {
+      "id": "idrac-fan",
+      "provider": "tigerblue77",
+      "template_family": "curated-profile",
+      "title": "Dell iDRAC Fan Controller",
+      "repository": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
+      "description": "Hold Dell PowerEdge fans at a fixed duty cycle from CPU temperature over IPMI.",
+      "website": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dell.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "tigerblue77/dell_idrac_fan_controller:v1.108",
+      "category": "monitoring",
+      "category_label": "Monitoring & Analytics",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/idrac-fan.json",
+      "template": "apps/idrac-fan.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
     }
   ],
   "discovery": {
