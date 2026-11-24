@@ -862,10 +862,13 @@ async function run() {
           const icon = button.querySelector('svg').getBoundingClientRect();
           const bounds = button.getBoundingClientRect();
           const line = label.getBoundingClientRect();
-          return { text: button.textContent.trim(), width: button.offsetWidth, height: button.offsetHeight,
-            fits: label.getClientRects().length === 1 && icon.width >= 11.5
-              && text.scrollWidth <= text.clientWidth + 1
-              && icon.left >= bounds.left - 0.5 && line.left >= icon.right - 0.5 && line.right <= bounds.right + 0.5 };
+          const shown = text.getClientRects().length > 0;
+          return { text: button.textContent.trim(), width: button.offsetWidth, height: button.offsetHeight, shown,
+            fits: icon.width >= 11.5 && icon.left >= bounds.left - 0.5 && icon.right <= bounds.right + 0.5
+              && (shown
+                ? label.getClientRects().length === 1 && text.scrollWidth <= text.clientWidth + 1
+                  && line.left >= icon.right - 0.5 && line.right <= bounds.right + 0.5
+                : Boolean(button.getAttribute('aria-label') || button.getAttribute('title'))) };
         }),
       };
     })()`)
@@ -876,8 +879,11 @@ async function run() {
     const widths = layout.controls.map(control => control.width)
     assert.ok(Math.max(...widths) - Math.min(...widths) <= 1, `Equal button widths at ${width}px`)
     assert.ok(layout.controls.every(control => control.fits && control.height === 40),
-      `One line with a visible icon at ${width}px: ${JSON.stringify(layout)}`)
-    assert.equal(layout.rows, width >= 768 ? 1 : width < 640 ? 3 : 2)
+      `A visible icon and a named button at ${width}px: ${JSON.stringify(layout)}`)
+    // One row everywhere: icons only on a phone, icon and label on a wide window.
+    assert.equal(layout.rows, 1, `One row of buttons at ${width}px`)
+    if (mobile) assert.ok(layout.controls.every(control => !control.shown), `Icons only at ${width}px`)
+    if (width >= 1440) assert.ok(layout.controls.every(control => control.shown), `Labels shown at ${width}px`)
   }
   const forceStop = "document.querySelector('[role=dialog] button[title=\"Vynútiť vypnutie\"]')"
   const forceDialog = "[...document.querySelectorAll('[role=dialog]')].find(el => el.querySelector('h2')?.textContent.trim() === 'Vynútiť vypnutie VMID 100')"
