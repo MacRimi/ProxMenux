@@ -191,7 +191,7 @@
           "skip"
         ],
         "managed_volume": {
-          "backup": false,
+          "backup": true,
           "default_size_gb": 2
         },
         "read_only": false,
@@ -208,7 +208,7 @@
           "skip"
         ],
         "managed_volume": {
-          "backup": false,
+          "backup": true,
           "default_size_gb": 1
         },
         "read_only": false,
@@ -414,10 +414,10 @@
           "id": "ups-usb",
           "kind": "character-device",
           "purpose": "ups",
-          "enable_prompt": "Pass the USB device of the UPS to the LXC",
+          "enable_prompt": "Pass the UPS to the LXC",
           "enabled_default": false,
           "required_by_compose": false,
-          "path_prompt": "USB device node of the UPS, as listed in the LXC configuration of the host",
+          "path_prompt": "USB device of the UPS",
           "host_path_default": "",
           "container_path_strategy": "same-as-host",
           "mode": "preserve-host",
