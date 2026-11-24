@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "ZFS-Poolkapazität",
           "description": "ZFS-Pools auf Host-Ebene, unabhängig von der PVE-Registrierung, sodass auch Rpool- und dedizierte Backup-Pools überwacht werden."
+        },
+        "sampling_intervals": {
+          "title": "Abtastintervalle",
+          "description": "Wie oft der Monitor CPU, Temperatur und Speicher des Hosts liest.Längere Intervalle verbrauchen weniger CPU;kürzere aktualisieren die Zahlen früher.",
+          "cpu": "CPU-Intervall",
+          "temperature": "Temperaturintervall",
+          "memory": "Speicherintervall"
         }
       },
       "swapPressure": "Speicherdruck",

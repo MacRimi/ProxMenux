@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "Capacità pool ZFS",
           "description": "Pool ZFS a livello di host, indipendenti dalla registrazione PVE, quindi vengono monitorati anche rpool e pool di backup dedicati."
+        },
+        "sampling_intervals": {
+          "title": "Intervalli di campionamento",
+          "description": "la frequenza con cui il monitor legge CPU, la temperatura e la memoria dell'host.Intervalli più lunghi utilizzano meno CPU;quelli più brevi aggiornano le cifre prima.",
+          "cpu": "intervallo CPU",
+          "temperature": "Intervallo di temperatura",
+          "memory": "Intervallo di memoria"
         }
       },
       "swapPressure": "Pressione swap",

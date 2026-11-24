@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "ZFS poolkapacitet",
           "description": "ZFS-pooler på värdnivå, oberoende av PVE-registrering, så rpool och dedikerade backuppooler övervakas också."
+        },
+        "sampling_intervals": {
+          "title": "Samplingsintervall",
+          "description": "Hur ofta monitorn läser CPU, temperatur och minne för värden.Längre intervaller använder mindre CPU;kortare uppdaterar figurerna tidigare.",
+          "cpu": "CPU intervall",
+          "temperature": "Temperaturintervall",
+          "memory": "Minnesintervall"
         }
       },
       "swapPressure": "Minnestryck",

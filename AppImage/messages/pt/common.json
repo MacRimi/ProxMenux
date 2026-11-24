@@ -2568,7 +2568,7 @@
         "appriseMatrixDocs": "Formatos de URL e configuração do Matrix",
         "appriseServiceFinish": "Ative o Apprise, insira seu URL, escolha as categorias de notificação ou os eventos individuais, salve e utilize Enviar teste. Estes exemplos não alteram o URL salvo. Este canal do Apprise tem um destino; utilize a API do Apprise para vários serviços em simultâneo.",
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
-"botTokenHelp": "O token pode incluir o prefixo 'bot' ou ser inserido sem ele.",
+        "botTokenHelp": "O token pode incluir o prefixo 'bot' ou ser inserido sem ele.",
         "richCards": "Cartões avançados (Telegram)",
         "richCardsDescription": "Formatar alertas como cartões nativos com tabelas, emblemas e seções expansíveis"
       },
@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "Capacidade do pool ZFS",
           "description": "Os pools ZFS no nível do host, independentemente do registro do PVE, portanto, o rpool e os pools de backup dedicados também são monitorados."
+        },
+        "sampling_intervals": {
+          "title": "intervalos de amostragem",
+          "description": "Com que frequência o Monitor lê o CPU, temperatura e memória do host.Intervalos mais longos usam menos CPU;os mais curtos atualizam os números mais cedo.",
+          "cpu": "intervalo CPU",
+          "temperature": "Intervalo de temperatura",
+          "memory": "intervalo de memória"
         }
       },
       "swapPressure": "Pressão de memória",

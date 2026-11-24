@@ -3026,6 +3026,13 @@
         "zfs_pool": {
           "title": "Kapacita ZFS poolov",
           "description": "ZFS pooly na úrovni servera, nezávisle od registrácie v PVE. Sleduje sa teda aj rpool a samostatné zálohovacie pooly."
+        },
+        "sampling_intervals": {
+          "title": "Intervaly odberu vzoriek",
+          "description": "Ako často monitor číta CPU, teplotu a pamäť hostiteľa.Dlhšie intervaly používajú menej CPU;kratšie osviežujú postavy skôr.",
+          "cpu": "interval CPU",
+          "temperature": "Teplotný interval",
+          "memory": "Interval pamäte"
         }
       },
       "swapPressure": "Tlak na pamäť",
