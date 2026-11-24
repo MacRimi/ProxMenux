@@ -261,7 +261,7 @@ const SECTIONS: SectionDef[] = [
     title: "Sampling intervals",
     icon: Timer,
     description:
-      "How often the Vital Signs sampler reads CPU, temperature, and memory for the Monitor. Higher values reduce host CPU usage; lower values refresh metrics faster.",
+      "How often the Monitor reads the CPU, temperature and memory of the host. Longer intervals use less CPU; shorter ones refresh the figures sooner.",
     fields: [
       { path: ["sampling_intervals", "cpu"], label: "CPU interval" },
       { path: ["sampling_intervals", "temperature"], label: "Temperature interval" },

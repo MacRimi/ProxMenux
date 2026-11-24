@@ -79,13 +79,13 @@ class TestSamplingIntervals(unittest.TestCase):
         specs = self._specs()
         res = self.ht.save({
             "cpu": {"warning": 80},
-            "sampling_intervals": {"cpu": 15, "temperature": 45, "memory": 60},
+            "sampling_intervals": {"cpu": 15, "temperature": 45, "memory": 40},
         })
         self.assertTrue(res["sampling_intervals"]["cpu"]["customised"])
         self.ht.invalidate_cache()
         self.assertEqual(self.ht.get("sampling_intervals", "cpu"), 15.0)
         self.assertEqual(self.ht.get("sampling_intervals", "temperature"), 45.0)
-        self.assertEqual(self.ht.get("sampling_intervals", "memory"), 60.0)
+        self.assertEqual(self.ht.get("sampling_intervals", "memory"), 40.0)
 
         invalid = [
             *(({"sampling_intervals": {n: s.min - 1}}) for n, s in specs),
@@ -114,13 +114,13 @@ class TestSamplingIntervals(unittest.TestCase):
         self.assertEqual(self.vs.refresh_intervals(self.ht), defaults)
         self.assertFalse(self.vs.wake_event.is_set())
 
-        self.ht.save({"sampling_intervals": {"cpu": 20, "temperature": 45, "memory": 60}})
-        self.assertEqual(self.vs.refresh_intervals(self.ht), (20, 45, 60))
-        self.assertEqual((self.vs.CPU_INTERVAL, self.vs.TEMPERATURE_INTERVAL, self.vs.MEMORY_INTERVAL), (20, 45, 60))
+        self.ht.save({"sampling_intervals": {"cpu": 20, "temperature": 45, "memory": 40}})
+        self.assertEqual(self.vs.refresh_intervals(self.ht), (20, 45, 40))
+        self.assertEqual((self.vs.CPU_INTERVAL, self.vs.TEMPERATURE_INTERVAL, self.vs.MEMORY_INTERVAL), (20, 45, 40))
         self.assertTrue(self.vs.wake_event.is_set())
 
         self.vs.wake_event.clear()
-        self.assertEqual(self.vs.refresh_intervals(self.ht), (20, 45, 60))
+        self.assertEqual(self.vs.refresh_intervals(self.ht), (20, 45, 40))
         self.assertFalse(self.vs.wake_event.is_set())
 
         with open(self.ht._CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -196,7 +196,8 @@ class TestSamplingIntervals(unittest.TestCase):
         self.assertIn(("temp", 1010.0), events)
         self.assertAlmostEqual(sleeps[1], 5.0)
         self.assertIn(("cpu", 1015.0), events)
-        self.assertAlmostEqual(sleeps[2], 60.0)
+        temp_max, mem_max = self.ht.TEMPERATURE_INTERVAL_SPEC.max, self.ht.MEMORY_INTERVAL_SPEC.max
+        self.assertAlmostEqual(sleeps[2], min(1010.0 + temp_max, 1015.0 + mem_max, 1015.0 + 60) - 1015.0)
 
     def test_max_intervals_fit_health_monitor_windows(self):
         hm, _, _ = load_health_modules(self.temporary.name)
@@ -233,6 +234,35 @@ class TestSamplingIntervals(unittest.TestCase):
             self.assertEqual(monitor._check_cpu_temperature()["status"], "WARNING")
             self.assertEqual(monitor._check_cpu_with_hysteresis()["status"], "CRITICAL")
             self.assertEqual(monitor._check_memory_comprehensive()["status"], "CRITICAL")
+
+    def test_one_reading_at_max_intervals_is_not_a_sustained_alert(self):
+        hm, _, _ = load_health_modules(self.temporary.name)
+        monitor = hm.HealthMonitor.__new__(hm.HealthMonitor)
+        monitor.cached_results, monitor.last_check_times = {}, {}
+        now = hm.time.time()
+        cpu_max = self.ht.CPU_INTERVAL_SPEC.max
+        temp_max = self.ht.TEMPERATURE_INTERVAL_SPEC.max
+        mem_max = self.ht.MEMORY_INTERVAL_SPEC.max
+        monitor.state_history = {
+            "cpu_usage": [{"value": 97.0, "time": now - 1}],
+            "cpu_temp_history": [{"value": 86.0, "time": now - 1}],
+            "memory_usage": [{"mem_percent": 96.0, "swap_percent": 90.0, "available_percent": 5.0, "time": now - 1}],
+        }
+        mem = types.SimpleNamespace(percent=96.0, available=1 * 1024**3, total=16 * 1024**3)
+        swap = types.SimpleNamespace(percent=90.0, used=9 * 1024**3, total=10 * 1024**3)
+
+        with mock.patch.object(hm.vital_signs, "CPU_INTERVAL", cpu_max), \
+                mock.patch.object(hm.vital_signs, "TEMPERATURE_INTERVAL", temp_max), \
+                mock.patch.object(hm.vital_signs, "MEMORY_INTERVAL", mem_max), \
+                mock.patch.object(hm.vital_signs, "cpu", return_value={"value": 97.0}), \
+                mock.patch.object(hm.vital_signs, "memory", return_value=(mem, swap)), \
+                mock.patch.object(hm, "psutil", types.SimpleNamespace(cpu_count=lambda *a, **k: 4), create=True), \
+                mock.patch.object(hm.health_persistence, "record_error"), \
+                mock.patch.object(hm.health_persistence, "resolve_error"), \
+                mock.patch.object(hm.health_persistence, "is_error_active", return_value=False):
+            self.assertEqual(monitor._check_cpu_temperature()["status"], "OK")
+            self.assertEqual(monitor._check_cpu_with_hysteresis()["status"], "OK")
+            self.assertEqual(monitor._check_memory_comprehensive()["status"], "OK")
 
 
 if __name__ == "__main__":

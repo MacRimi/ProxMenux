@@ -66,11 +66,13 @@ class SamplingIntervalSpec(NamedTuple):
         return {"value": self.default, "unit": "s", "min": self.min, "max": self.max, "step": 1}
 
 
-# Single source of truth for Vital Signs sampling intervals; upper bounds stay
-# within health_monitor.py's existing evaluation windows.
+# Single source of truth for Vital Signs sampling intervals. Each maximum keeps
+# at least two readings inside the sustained window of its health check, so a
+# single reading never raises an alert: temperature needs 180 s above the limit
+# and swap pressure 60 s.
 CPU_INTERVAL_SPEC = SamplingIntervalSpec(default=5, min=1, max=90)
-TEMPERATURE_INTERVAL_SPEC = SamplingIntervalSpec(default=15, min=5, max=120)
-MEMORY_INTERVAL_SPEC = SamplingIntervalSpec(default=30, min=5, max=60)
+TEMPERATURE_INTERVAL_SPEC = SamplingIntervalSpec(default=15, min=5, max=60)
+MEMORY_INTERVAL_SPEC = SamplingIntervalSpec(default=30, min=5, max=45)
 
 DEFAULTS: dict[str, Any] = {
     "cpu": {
