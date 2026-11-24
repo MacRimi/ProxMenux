@@ -3028,6 +3028,13 @@
         "zfs_pool": {
           "title": "Capacidad del grupo ZFS",
           "description": "Pools ZFS a nivel de host, independientes del registro en PVE, por lo que también se monitorizan rpool y los pools dedicados a backup."
+        },
+        "sampling_intervals": {
+          "title": "Intervalos de lectura",
+          "description": "Cada cuánto lee el Monitor la CPU, la temperatura y la memoria del host. Con intervalos más largos usa menos CPU; con más cortos, las cifras se actualizan antes.",
+          "cpu": "Intervalo de CPU",
+          "temperature": "Intervalo de temperatura",
+          "memory": "Intervalo de memoria"
         }
       },
       "swapPressure": "Presión de memoria",
