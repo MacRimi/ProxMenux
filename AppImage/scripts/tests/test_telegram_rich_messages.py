@@ -306,6 +306,25 @@ class TestTelegramRichMessages(unittest.TestCase):
         self.assertIn("Estado", html_bk)
         self.assertNotIn("ct/100/2026-11-23T07:00:04Z", html_bk)
 
+    def test_backup_card_labels_follow_language_and_unknown_status_is_neutral(self):
+        """Backup labels come from the catalog in every language, and a guest without a result shows no tick."""
+        pve_msg = (
+            "INFO: Starting Backup of VM 100 (lxc)\n"
+            "INFO: CT Name: adguard\n"
+            "INFO: Finished Backup of VM 100 (00:01:23)\n"
+            "INFO: Starting Backup of VM 101 (qemu)\n"
+            "INFO: VM Name: web\n"
+        )
+        data = {'_event_type': 'backup_complete', '_group': 'backup', '_notification_language': 'fr',
+                'storage': 'local', 'pve_message': pve_msg}
+        html_bk, _ = self.channel._build_rich_content("Backup", "Backup", "INFO", data)
+        for fixed in ("Backups", "processed", "Respaldos", "procesados", "Desglose"):
+            self.assertNotIn(fixed, html_bk)
+        self.assertIn("Sauvegarde", html_bk)
+        rows = [line for line in html_bk.splitlines() if "<td" in line and ">10" in line]
+        self.assertTrue(any("✅" in r and ">100<" in r for r in rows))
+        self.assertTrue(any(">101<" in r and "✅" not in r and "❌" not in r for r in rows))
+
     def test_backup_card_unparseable_fallback(self):
         """Verify that when vzdump format cannot be parsed, card falls back cleanly to details text."""
         data = {

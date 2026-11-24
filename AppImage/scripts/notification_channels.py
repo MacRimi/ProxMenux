@@ -431,7 +431,13 @@ class TelegramChannel(NotificationChannel):
                         name = str(vm.get('name') or '-')
                         sz = str(vm.get('size') or '-')
                         dur = str(vm.get('time') or '-')
-                        st_icon = '❌' if vm.get('status', '').lower() in ('err', 'error') or gid in failed_ids else '✅'
+                        status = str(vm.get('status') or '').lower()
+                        if status in ('err', 'error') or gid in failed_ids:
+                            st_icon = '❌'
+                        elif status == 'ok':
+                            st_icon = '✅'
+                        else:
+                            st_icon = '-'
                         guest_rows.append((st_icon, gid, name, sz, dur))
                     if not storage_name and parsed_backup.get('storage_name'):
                         storage_name = str(parsed_backup.get('storage_name'))
@@ -456,9 +462,8 @@ class TelegramChannel(NotificationChannel):
                               for st, gid, name, sz, dur in guest_rows)
                     + "  </table>\n"
                 )
-                breakdown_title = 'Desglose de Contenedores' if data.get('_notification_language', 'en') == 'es' else details_lbl
                 details_sec = f"""{tag_bk}
-  <summary>📋 {_html.escape(breakdown_title)} ({total_guests})</summary>
+  <summary>📋 {_html.escape(details_lbl)} ({total_guests})</summary>
 {table_guests}</details>"""
             else:
                 details_sec = f"""<details open>
@@ -467,14 +472,13 @@ class TelegramChannel(NotificationChannel):
 </details>"""
 
             node_lbl = _runtime_notification_text('channels.email.fields.node', data) or host_lbl or 'Node'
-            backups_lbl = 'Respaldos' if data.get('_notification_language', 'en') == 'es' else 'Backups'
+            backups_lbl = _runtime_notification_text('digest.groups.backup', data) or 'Backup'
             
             summary_rows = [
                 f"  <tr><td><b>🖥️ {_html.escape(node_lbl)}</b></td><td>{hostname}</td></tr>\n",
             ]
             if total_guests:
-                proc_str = f"{total_guests} procesados" if data.get('_notification_language', 'en') == 'es' else f"{total_guests} processed"
-                summary_rows.append(f"  <tr><td><b>📦 {_html.escape(backups_lbl)}</b></td><td>{proc_str}</td></tr>\n")
+                summary_rows.append(f"  <tr><td><b>📦 {_html.escape(backups_lbl)}</b></td><td>{total_guests}</td></tr>\n")
             summary_rows.append(f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n")
 
             if rendered_fields:

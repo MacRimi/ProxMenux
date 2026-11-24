@@ -2657,7 +2657,7 @@
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
         "botTokenHelp": "El token puede incluir el prefijo 'bot' o introducirse sin él.",
         "richCards": "Tarjetas enriquecidas (Telegram)",
-        "richCardsDescription": "Formatear alertas como tarjetas nativas con tablas, distintivos y acordeones"
+        "richCardsDescription": "Muestra las alertas como tarjetas nativas con tablas, etiquetas y secciones desplegables"
       },
       "ai": {
         "title": "mejora de la IA",
