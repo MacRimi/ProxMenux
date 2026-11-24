@@ -955,7 +955,7 @@ export function ScriptTerminalModal({
           )}
 
           {(isMobile || isTablet) && (
-            <div className="flex flex-wrap items-center justify-center gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex flex-nowrap items-center justify-center gap-1 min-[380px]:gap-1.5 px-1 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <Button
                 onPointerDown={(e) => {
                   e.preventDefault()
@@ -964,7 +964,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[50px]"
+                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
                 ESC
               </Button>
@@ -976,7 +976,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[50px]"
+                className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
                 TAB
               </Button>
@@ -988,7 +988,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
+                className="h-8 w-8 shrink-0 p-0 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
                 <ArrowUp className="h-4 w-4" />
               </Button>
@@ -1000,7 +1000,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
+                className="h-8 w-8 shrink-0 p-0 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
@@ -1012,7 +1012,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
+                className="h-8 w-8 shrink-0 p-0 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -1024,7 +1024,7 @@ export function ScriptTerminalModal({
                 }}
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
+                className="h-8 w-8 shrink-0 p-0 bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
               >
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -1037,16 +1037,17 @@ export function ScriptTerminalModal({
                 variant="outline"
                 size="sm"
                 className="h-8 px-2.5 text-xs bg-blue-600/20 hover:bg-blue-600/30 border-blue-600/50 text-blue-400"
+                aria-label="Enter"
               >
-                <CornerDownLeft className="h-4 w-4 mr-1" />
-                Enter
+                <CornerDownLeft className="h-4 w-4" />
+                <span className="ml-1 max-[379px]:hidden">Enter</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white min-w-[65px] gap-1"
+                    className="h-8 px-2 text-xs bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white gap-1"
                   >
                     Ctrl
                     <ChevronDown className="h-3 w-3" />
