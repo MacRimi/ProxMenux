@@ -1082,6 +1082,8 @@ class NotificationManager:
             for config_key in CHANNEL_TYPES[ch_type]['config_keys']:
                 full_key = f'{ch_type}.{config_key}'
                 ch_config[config_key] = self._config.get(full_key, '')
+            ch_config['rich_format'] = self._config.get(f'{ch_type}.rich_format', 'true')
+            ch_config['rich_cards'] = self._config.get(f'{ch_type}.rich_cards', 'false')
 
             channel = create_channel(ch_type, ch_config)
             if channel:
@@ -1555,6 +1557,8 @@ class NotificationManager:
                 # Rich format (emojis) is a user preference per channel
                 rich_key = f'{ch_name}.rich_format'
                 use_rich_format = self._config.get(rich_key, 'false') == 'true'
+                rich_cards_key = f'{ch_name}.rich_cards'
+                use_rich_cards = self._config.get(rich_cards_key, 'false') == 'true'
                 
                 # ── Per-channel AI enhancement ──
                 # Apply AI with channel-specific detail level and emoji setting
@@ -1624,7 +1628,10 @@ class NotificationManager:
                         event_type, ch_title, ch_body, data
                     )
                 
-                result = channel.send(ch_title, ch_body, severity, data)
+                ch_data = dict(data) if data else {}
+                ch_data['_use_rich_format'] = use_rich_format
+                ch_data['_use_rich_cards'] = use_rich_cards
+                result = channel.send(ch_title, ch_body, severity, ch_data)
                 self._record_history(
                     event_type, ch_name, ch_title, ch_body, severity,
                     result.get('success', False),
@@ -1914,11 +1921,16 @@ class NotificationManager:
 
         summary_body = self._compose_digest_body(rows, use_icons=rich_format)
 
+        rich_cards_key = f'{ch_name}.rich_cards'
+        use_rich_cards = self._config.get(rich_cards_key, 'false') == 'true'
+
         result: dict = {'success': False, 'error': ''}
         try:
             result = channel.send(summary_title, summary_body, severity='INFO',
-                                  data={'_digest': True, '_count': len(rows),
-                                        '_notification_language': language}) or result
+                                  data={'_digest': True, '_count': len(rows), '_rows': rows,
+                                        '_notification_language': language,
+                                        '_use_rich_format': rich_format,
+                                        '_use_rich_cards': use_rich_cards}) or result
         except Exception as e:
             print(f"[NotificationManager] digest send failed for "
                   f"{ch_name}: {e}")
@@ -2165,14 +2177,19 @@ class NotificationManager:
                             for row in rows)
         summary_body = self._compose_digest_body(rows, use_icons=use_icons, quiet_release=quiet_details)
 
+        rich_cards_key = f'{ch_name}.rich_cards'
+        use_rich_cards = self._config.get(rich_cards_key, 'false') == 'true'
+
         result: dict = {'success': False, 'error': ''}
         try:
             result = channel.send(
                 summary_title, summary_body, severity='INFO',
-                data={'_quiet_hours_summary': True, '_count': len(rows),
+                data={'_quiet_hours_summary': True, '_count': len(rows), '_rows': rows,
                       '_restore_summary': any(row[1] == 'system_restore_completed' for row in rows),
                       '_backup_summary': any(row[1] in ('backup_complete', 'backup_fail') for row in rows),
-                      '_notification_language': language},
+                      '_notification_language': language,
+                      '_use_rich_format': use_icons,
+                      '_use_rich_cards': use_rich_cards},
             ) or result
         except Exception as e:
             print(f"[NotificationManager] quiet send failed for "
@@ -2734,7 +2751,12 @@ class NotificationManager:
                     ch_title = ai_result.get('title', title)
                     ch_message = ai_result.get('body', message)
                 
-                result = channel.send(ch_title, ch_message, severity, data)
+                rich_cards_key = f'{ch_name}.rich_cards'
+                use_rich_cards = self._config.get(rich_cards_key, 'false') == 'true'
+                ch_data = dict(data) if data else {}
+                ch_data['_use_rich_format'] = use_rich_format
+                ch_data['_use_rich_cards'] = use_rich_cards
+                result = channel.send(ch_title, ch_message, severity, ch_data)
                 results[ch_name] = result
                 
                 self._record_history(
@@ -2811,6 +2833,8 @@ class NotificationManager:
             ch_config = {}
             for config_key in CHANNEL_TYPES.get(channel_name, {}).get('config_keys', []):
                 ch_config[config_key] = self._config.get(f'{channel_name}.{config_key}', '')
+            ch_config['rich_format'] = self._config.get(f'{channel_name}.rich_format', 'true')
+            ch_config['rich_cards'] = self._config.get(f'{channel_name}.rich_cards', 'false')
             
             channel = create_channel(channel_name, ch_config)
             if channel:
@@ -2861,11 +2885,16 @@ class NotificationManager:
                 enhanced_title = ai_result.get('title', base_title)
                 enhanced_message = ai_result.get('body', base_message)
                 
+                rich_cards_key = f'{ch_name}.rich_cards'
+                use_rich_cards = self._config.get(rich_cards_key, 'false') == 'true'
+                
                 # Send message
                 send_result = channel.send(
                     enhanced_title, enhanced_message, 'INFO',
                     data={'_notification_language': self._notification_language(),
-                          '_event_type': 'test', '_group': 'other'},
+                          '_event_type': 'test', '_group': 'other',
+                          '_use_rich_format': use_rich_format,
+                          '_use_rich_cards': use_rich_cards},
                 )
                 success = send_result.get('success', False)
                 error = send_result.get('error', '')
@@ -3103,6 +3132,7 @@ class NotificationManager:
             ch_cfg: Dict[str, Any] = {
                 'enabled': self._config.get(f'{ch_type}.enabled', 'false') == 'true',
                 'rich_format': self._config.get(f'{ch_type}.rich_format', 'false') == 'true',
+                'rich_cards': self._config.get(f'{ch_type}.rich_cards', 'false') == 'true',
                 # Quiet Hours + Daily Digest live in the same per-channel
                 # namespace but weren't being projected back to the UI —
                 # the toggles round-tripped through POST but the GET only

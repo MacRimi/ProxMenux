@@ -2568,7 +2568,9 @@
         "appriseMatrixDocs": "Formati URL e configurazione di Matrix",
         "appriseServiceFinish": "Abilita Apprise, inserisci il tuo URL, scegli le categorie di notifica o i singoli eventi, salva e poi usa Invia test. Questi esempi non modificano l'URL salvato. Questo canale Apprise ha una sola destinazione; usa l'API Apprise per più servizi contemporaneamente.",
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
-        "botTokenHelp": "Il token può includere il prefisso 'bot' oppure essere inserito senza."
+        "botTokenHelp": "Il token può includere il prefisso 'bot' oppure essere inserito senza.",
+        "richCards": "Schede avanzate (Telegram)",
+        "richCardsDescription": "Formatta gli avvisi come schede native con tabelle, badge e sezioni comprimibili"
       },
       "ai": {
         "title": "Miglioramento con IA",
@@ -8181,7 +8183,8 @@
             "kernelUpdates": "Aggiornamenti kernel",
             "importantPackages": "Pacchetti importanti",
             "currentVersion": "Versione corrente",
-            "newVersion": "Nuova versione"
+            "newVersion": "Nuova versione",
+            "channel": "Canale"
           },
           "status": {
             "failed": "Non riuscito",

@@ -2719,7 +2719,9 @@
         "appriseMatrixDocs": "Formáty URL a nastavenie Matrix",
         "appriseServiceFinish": "Povoľte Apprise, zadajte svoju URL, vyberte kategórie oznámení alebo jednotlivé udalosti, uložte a potom použite Odoslať test. Tieto príklady nemenia uloženú URL. Tento kanál Apprise má jeden cieľ; pre viac služieb naraz použite API Apprise.",
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
-        "botTokenHelp": "Token môže byť s prefixom „bot“ alebo bez neho."
+        "botTokenHelp": "Token môže byť s prefixom „bot“ alebo bez neho.",
+        "richCards": "Rozšírené karty (Telegram)",
+        "richCardsDescription": "Formátovať upozornenia ako natívne karty s tabuľkami, odznakmi a akordeónmi"
       },
       "ai": {
         "title": "AI vylepšenie",
@@ -8336,7 +8338,8 @@
             "kernelUpdates": "Aktualizácie jadra",
             "importantPackages": "Dôležité balíky",
             "currentVersion": "Aktuálna verzia",
-            "newVersion": "Nová verzia"
+            "newVersion": "Nová verzia",
+            "channel": "Kanál"
           },
           "status": {
             "failed": "Zlyhalo",

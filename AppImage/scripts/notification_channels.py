@@ -13,6 +13,7 @@ Author: MacRimi
 
 import json
 import logging
+import os
 import re
 import time
 import urllib.request
@@ -21,6 +22,8 @@ import urllib.parse
 from abc import ABC, abstractmethod
 from collections import deque
 from typing import Tuple, Optional, Dict, Any, List
+
+logger = logging.getLogger(__name__)
 
 
 # Server-side defense-in-depth for user-supplied URLs in channel configs.
@@ -210,11 +213,18 @@ class NotificationChannel(ABC):
 
 # ─── Telegram ────────────────────────────────────────────────────
 
+def _format_progress_bar(pct: float, width: int = 10) -> str:
+    filled = int(round(width * (pct / 100.0)))
+    filled = max(0, min(width, filled))
+    return f"[{'█' * filled}{'░' * (width - filled)}] {pct:.1f}%"
+
 class TelegramChannel(NotificationChannel):
-    """Telegram Bot API channel using HTML parse mode."""
+    """Telegram Bot API channel using HTML and native Rich Message support."""
     
     API_BASE = 'https://api.telegram.org/bot{token}/sendMessage'
     API_PHOTO = 'https://api.telegram.org/bot{token}/sendPhoto'
+    API_RICH = 'https://api.telegram.org/bot{token}/sendRichMessage'
+    LOGO_PATH = '/usr/local/share/proxmenux/monitor-app/proxmenux-monitor.png'
     MAX_LENGTH = 4096
     
     SEVERITY_ICONS = {
@@ -225,16 +235,16 @@ class TelegramChannel(NotificationChannel):
         'UNKNOWN':  '\u26AA',      # white circle
     }
     
-    def __init__(self, bot_token: str, chat_id: str, topic_id: str = ''):
+    def __init__(self, bot_token: str, chat_id: str, topic_id: str = '', rich_format: bool = True, rich_cards: bool = False):
         super().__init__()
         token = bot_token.strip()
-        # Strip 'bot' prefix if user included it (API_BASE already adds it)
         if token.lower().startswith('bot') and ':' in token[3:]:
             token = token[3:]
         self.bot_token = token
         self.chat_id = chat_id.strip()
-        # Topic ID for supergroups with topics enabled (message_thread_id)
         self.topic_id = topic_id.strip() if topic_id else ''
+        self.rich_format = str(rich_format).lower() in ('true', '1', 'yes') if isinstance(rich_format, str) else bool(rich_format)
+        self.rich_cards = str(rich_cards).lower() in ('true', '1', 'yes') if isinstance(rich_cards, str) else bool(rich_cards)
     
     def validate_config(self) -> Tuple[bool, str]:
         if not self.bot_token:
@@ -247,10 +257,29 @@ class TelegramChannel(NotificationChannel):
     
     def send(self, title: str, message: str, severity: str = 'INFO',
              data: Optional[Dict] = None) -> Dict[str, Any]:
-        icon = self.SEVERITY_ICONS.get(severity, self.SEVERITY_ICONS['INFO'])
-        html_msg = f"<b>{icon} {self._escape_html(title)}</b>\n\n{self._escape_html(message)}"
+        data = data or {}
         
-        # Split long messages
+        # 1. Attempt to send native Rich Cards first if rich_cards is enabled
+        use_rich_cards = data.get('_use_rich_cards', self.rich_cards)
+        if use_rich_cards:
+            try:
+                rich_html, keyboard = self._build_rich_content(title, message, severity, data)
+                res = self._post_rich_message(rich_html, keyboard)
+                if res.get('success'):
+                    return {'success': True, 'error': None, 'channel': 'telegram'}
+                logger.warning("[Telegram] Rich card delivery failed (%s), falling back to standard message", res.get('error'))
+            except Exception as e:
+                logger.warning("[Telegram] Rich card generation/send failed (%s), falling back to standard message", e)
+        
+        # 2. Standard sendMessage fallback:
+        # If rich_format is on, include bold header and emojis. If off, clean text.
+        use_rich_format = data.get('_use_rich_format', self.rich_format)
+        if use_rich_format:
+            icon = self.SEVERITY_ICONS.get(severity, self.SEVERITY_ICONS['INFO'])
+            html_msg = f"<b>{icon} {self._escape_html(title)}</b>\n\n{self._escape_html(message)}"
+        else:
+            html_msg = f"<b>{self._escape_html(title)}</b>\n\n{self._escape_html(message)}"
+        
         chunks = self._split_message(html_msg)
         result = {'success': True, 'error': None, 'channel': 'telegram'}
         
@@ -261,6 +290,453 @@ class TelegramChannel(NotificationChannel):
                 break
         
         return result
+
+    def _build_rich_content(self, title: str, message: str, severity: str,
+                            data: Optional[Dict[str, Any]] = None) -> Tuple[str, Optional[List[List[Dict[str, str]]]]]:
+        import html as _html
+        import re as _re
+        from datetime import datetime
+        
+        if not isinstance(data, dict):
+            data = {}
+        title = str(title or '')
+        message = str(message or '')
+        severity = str(severity or 'INFO')
+        
+        event_type = str(data.get('_event_type') or data.get('event_type') or data.get('type') or '').strip().lower()
+        group = str(data.get('_group') or data.get('group') or '').strip().lower()
+        hostname = _html.escape(str(data.get('hostname') or 'proxmox'))
+        rendered_fields = data.get('_rendered_fields') or []
+        
+        clean_title = _re.sub(r'^[🔴🟢🟡🔵⚪ℹ️⚠️💾📊⚙️🛡️📦🌐\s]+', '', title).strip()
+        clean_title = clean_title.split(': ', 1)[-1] if ': ' in clean_title else clean_title
+
+        # Localized standard labels via runtime_message
+        host_lbl = _runtime_notification_text('channels.email.host', data) or 'Host'
+        sev_lbl = _runtime_notification_text('channels.email.fields.severity', data) or 'Severity'
+        sev_val = _runtime_notification_text(f'channels.email.severity.{severity.lower()}', data) or severity
+        cat_lbl = _runtime_notification_text('channels.email.fields.category', data) or 'Category'
+        details_lbl = _runtime_notification_text('channels.email.details', data) or 'Details'
+        status_lbl = _runtime_notification_text('channels.email.fields.status', data) or 'Status'
+        vmid = data.get('vmid')
+        vmname = data.get('vmname') or data.get('name') or ''
+
+        # ── 0. Test Notification ──
+        if event_type == 'test':
+            test_welcome = _runtime_notification_text('test.welcome', data) or 'Welcome to ProxMenux Monitor!'
+            test_alerts = _runtime_notification_text('test.alerts', data) or 'You will receive alerts about system events, health status changes, and security incidents.'
+            icon_status = _runtime_notification_text('test.iconsEnabled', data) if data.get('icons_enabled', True) else _runtime_notification_text('test.iconsDisabled', data)
+            ai_status = _runtime_notification_text('test.aiEnabled', data) if data.get('ai_enabled') else _runtime_notification_text('test.aiDisabled', data)
+            
+            channel_lbl = _runtime_notification_text('channels.email.fields.channel', data) or 'Channel'
+            rows = [
+                f"  <tr><td><b>📡 {_html.escape(channel_lbl)}</b></td><td>Telegram</td></tr>",
+                f"  <tr><td><b>⚡ {status_lbl}</b></td><td><b>🟢 OK</b></td></tr>",
+            ]
+            if icon_status:
+                rows.append(f"  <tr><td><b>🎨</b></td><td>{_html.escape(icon_status)}</td></tr>")
+            if ai_status:
+                rows.append(f"  <tr><td><b>🤖</b></td><td>{_html.escape(ai_status)}</td></tr>")
+                
+            table_str = "\n".join(rows)
+            details_body = f"{_html.escape(test_welcome)}<br><br>{_html.escape(test_alerts)}"
+            html_out = f"""<h3>🚀 {_html.escape(clean_title or 'ProxMenux Test')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<table bordered striped compact>
+{table_str}
+</table>
+
+<details open>
+  <summary>📋 {details_lbl}</summary>
+  {details_body}
+</details>"""
+            return html_out, None
+
+        # ── A. Digest / 24h & Quiet Hours Summary ──
+        if data.get('_digest') or data.get('_quiet_hours_summary') or event_type in ('digest', 'quiet_hours_summary'):
+            raw_rows = data.get('_rows') or []
+            if not raw_rows:
+                html_out = f"""<h3>📊 {_html.escape(clean_title or 'Digest')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<details open>
+  <summary>📋 {details_lbl}</summary>
+  {self._format_html_text(message)}
+</details>"""
+                return html_out, None
+
+            from collections import OrderedDict
+            cat_dict = OrderedDict()
+            for _id, ev_t, grp, ts, t_item, b_item in raw_rows:
+                grp_key = grp or 'other'
+                cat_dict.setdefault(grp_key, []).append((ts, ev_t, t_item, b_item))
+            
+            categories = []
+            for g_name, g_items in cat_dict.items():
+                localized_g = _runtime_notification_text(f'channels.email.groups.{g_name}', data) or g_name.title()
+                categories.append({'name': localized_g, 'items': g_items})
+
+            table_cats = []
+            details_blocks = []
+            for c in categories:
+                c_name = c['name']
+                g_items = c.get('items', [])
+                total_cnt = len(g_items)
+                table_cats.append(f"  <tr><td><b>{_html.escape(c_name)}</b></td><td>{total_cnt}</td></tr>\n")
+                
+                tag = "<details>" if total_cnt > 8 else "<details open>"
+                rows_html = []
+                for ts, ev_t, t_item, b_item in g_items:
+                    hhmm = datetime.fromtimestamp(ts).strftime('%H:%M')
+                    short_t = t_item.split(': ', 1)[-1] if ': ' in t_item else t_item
+                    rows_html.append(f"    <tr><td align=\"center\">{hhmm}</td><td align=\"left\">{_html.escape(short_t)}</td></tr>\n")
+                
+                tbl = f"  <table bordered striped compact>\n{''.join(rows_html)}  </table>\n"
+                details_blocks.append(f"{tag}\n  <summary>📋 {_html.escape(c_name)} ({total_cnt})</summary>\n{tbl}</details>")
+                
+            tbl_c_str = "".join(table_cats) or f"  <tr><td><b>📋 Total</b></td><td>{len(raw_rows)}</td></tr>\n"
+            det_c_str = "\n\n".join(details_blocks)
+            
+            html_out = f"""<h3>📊 {_html.escape(clean_title or 'Digest')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<table bordered striped compact>
+{tbl_c_str}</table>
+
+{det_c_str}"""
+            return html_out, None
+
+        # ── B. Backups ──
+        if group == 'backup' or event_type.startswith(('backup_', 'vzdump', 'pve_backup')) or event_type in ('system_backup_completed', 'system_backup_failed'):
+            storage_name = str(data.get('storage') or data.get('storage_name') or data.get('target') or '')
+            if not storage_name and ' — ' in title:
+                storage_name = title.split(' — ')[-1].strip()
+            storage_lbl = _runtime_notification_text('channels.email.fields.storage', data) or 'Storage'
+            
+            failed_ids = set()
+            if data.get('failed_vms'):
+                failed_ids.update(str(x) for x in data['failed_vms'])
+            if data.get('failed_cts'):
+                failed_ids.update(str(x) for x in data['failed_cts'])
+
+            guest_rows = []
+            try:
+                from notification_templates import _parse_vzdump_message
+                raw_msg = str(data.get('pve_message') or message or '')
+                parsed_backup = _parse_vzdump_message(raw_msg)
+                if parsed_backup:
+                    for vm in parsed_backup.get('vms') or []:
+                        gid = str(vm.get('vmid') or '-')
+                        name = str(vm.get('name') or '-')
+                        sz = str(vm.get('size') or '-')
+                        dur = str(vm.get('time') or '-')
+                        status = str(vm.get('status') or '').lower()
+                        if status in ('err', 'error') or gid in failed_ids:
+                            st_icon = '❌'
+                        elif status == 'ok':
+                            st_icon = '✅'
+                        else:
+                            st_icon = '-'
+                        guest_rows.append((st_icon, gid, name, sz, dur))
+                    if not storage_name and parsed_backup.get('storage_name'):
+                        storage_name = str(parsed_backup.get('storage_name'))
+                    elif not storage_name and parsed_backup.get('storage'):
+                        storage_name = str(parsed_backup.get('storage'))
+            except Exception:
+                guest_rows = []
+
+            total_guests = len(guest_rows)
+            tag_bk = "<details>" if total_guests > 8 else "<details open>"
+
+            if guest_rows:
+                th_st = _runtime_notification_text('channels.email.fields.status', data) or 'Status'
+                th_id = _runtime_notification_text('channels.email.fields.id', data) or 'ID'
+                th_name = _runtime_notification_text('channels.email.fields.name', data) or 'Name'
+                th_sz = _runtime_notification_text('channels.email.fields.size', data) or 'Size'
+                th_time = _runtime_notification_text('channels.email.fields.duration', data) or 'Time'
+                table_guests = (
+                    "  <table bordered striped compact>\n"
+                    f"    <tr><th align=\"center\">{_html.escape(th_st)}</th><th align=\"center\">{_html.escape(th_id)}</th><th align=\"left\">{_html.escape(th_name)}</th><th align=\"center\">{_html.escape(th_sz)}</th><th align=\"center\">{_html.escape(th_time)}</th></tr>\n"
+                    + "".join(f"    <tr><td align=\"center\">{st}</td><td align=\"center\">{_html.escape(gid)}</td><td align=\"left\">{_html.escape(name)}</td><td align=\"center\">{_html.escape(sz)}</td><td align=\"center\">{_html.escape(dur)}</td></tr>\n"
+                              for st, gid, name, sz, dur in guest_rows)
+                    + "  </table>\n"
+                )
+                details_sec = f"""{tag_bk}
+  <summary>📋 {_html.escape(details_lbl)} ({total_guests})</summary>
+{table_guests}</details>"""
+            else:
+                details_sec = f"""<details open>
+  <summary>📋 {details_lbl}</summary>
+  {self._format_html_text(message)}
+</details>"""
+
+            node_lbl = _runtime_notification_text('channels.email.fields.node', data) or host_lbl or 'Node'
+            backups_lbl = _runtime_notification_text('digest.groups.backup', data) or 'Backup'
+            
+            summary_rows = [
+                f"  <tr><td><b>🖥️ {_html.escape(node_lbl)}</b></td><td>{hostname}</td></tr>\n",
+            ]
+            if total_guests:
+                summary_rows.append(f"  <tr><td><b>📦 {_html.escape(backups_lbl)}</b></td><td>{total_guests}</td></tr>\n")
+            summary_rows.append(f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n")
+
+            if rendered_fields:
+                for k, v in rendered_fields:
+                    summary_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
+            elif data.get('size'):
+                size_lbl = _runtime_notification_text('channels.email.fields.size', data) or 'Size'
+                summary_rows.append(f"  <tr><td><b>📊 {size_lbl}</b></td><td>{_html.escape(str(data['size']))}</td></tr>\n")
+
+            sub_dest = f"<h4>🗄️ {_html.escape(storage_lbl)}: {_html.escape(storage_name)}</h4>\n" if storage_name else f"<h4>🖥️ {host_lbl}: {hostname}</h4>\n"
+
+            html_out = f"""<h3>💾 {_html.escape(clean_title or 'Backup')}</h3>
+{sub_dest}
+<table bordered striped compact>
+{''.join(summary_rows)}</table>
+
+{details_sec}"""
+            return html_out, None
+
+        # ── C. Storage & Disk Health ──
+        if group == 'storage' or event_type.startswith(('disk_', 'smart_', 'zfs_')) or event_type in ('storage_full', 'disk_full', 'smart_test_failed', 'smart_error', 'zfs_pool_degraded', 'zfs_pool_error', 'io_error'):
+            dev_str = str(data.get('device') or '').strip()
+            dev_lbl = _runtime_notification_text('channels.email.fields.device', data) or 'Device'
+            
+            table_rows = [
+                f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n",
+            ]
+            if dev_str:
+                table_rows.append(f"  <tr><td><b>💾 {dev_lbl}</b></td><td><code>{_html.escape(dev_str)}</code></td></tr>\n")
+            if rendered_fields:
+                for k, v in rendered_fields:
+                    table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
+            elif data.get('result'):
+                table_rows.append(f"  <tr><td><b>⚠️ {status_lbl}</b></td><td>{_html.escape(str(data['result']))}</td></tr>\n")
+                
+            icon_storage = '🔴' if severity in ('CRITICAL', 'ERROR') else ('🟢' if severity in ('OK', 'INFO') else '🟡')
+            html_out = f"""<h3>{icon_storage} {_html.escape(clean_title or 'Storage Alert')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<table bordered striped compact>
+{''.join(table_rows)}</table>
+
+<details open>
+  <summary>📋 {details_lbl}</summary>
+  {self._format_html_text(message)}
+</details>"""
+            return html_out, None
+
+        # ── D. System Resources ──
+        if group == 'resources' or event_type in ('cpu_high', 'ram_high', 'memory_high', 'load_high', 'swap_high', 'temperature_high'):
+            metric_lbl = _runtime_notification_text('channels.email.fields.metric', data) or 'Metric'
+            metric_val = ''
+            if data.get('metric'):
+                metric_val = str(data['metric'])
+            elif 'temp' in event_type:
+                metric_val = _runtime_notification_text('channels.email.fields.temperature', data) or 'Temperature'
+            elif 'cpu' in event_type:
+                metric_val = 'CPU'
+            elif 'ram' in event_type or 'memory' in event_type:
+                metric_val = _runtime_notification_text('channels.email.fields.memory', data) or 'Memory'
+                
+            val_str = str(data.get('value') or data.get('usage') or data.get('percent') or '').strip()
+            pct_m = _re.search(r'(\d+(?:\.\d+)?)\s*%', val_str)
+            
+            table_rows = [
+                f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n",
+            ]
+            if metric_val:
+                table_rows.append(f"  <tr><td><b>📊 {metric_lbl}</b></td><td>{_html.escape(metric_val)}</td></tr>\n")
+                
+            # Only render progress bar if an ACTUAL percentage exists in event data
+            if pct_m:
+                pct_val = float(pct_m.group(1))
+                bar = self._format_progress_bar(pct_val)
+                table_rows.append(f"  <tr><td><b>⚡</b></td><td>{bar}</td></tr>\n")
+            elif data.get('value'):
+                curr_lbl = _runtime_notification_text('channels.email.fields.currentValue', data) or 'Value'
+                table_rows.append(f"  <tr><td><b>⚡ {curr_lbl}</b></td><td>{_html.escape(str(data['value']))}</td></tr>\n")
+                
+            if rendered_fields:
+                for k, v in rendered_fields:
+                    table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
+                    
+            icon_res = '🔴' if severity == 'CRITICAL' else ('🟢' if severity == 'OK' else '🟡')
+            html_out = f"""<h3>{icon_res} {_html.escape(clean_title or metric_val or 'System Resources')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<table bordered striped compact>
+{''.join(table_rows)}</table>
+
+<details open>
+  <summary>📋 {details_lbl}</summary>
+  {self._format_html_text(message)}
+</details>"""
+            return html_out, None
+
+        # ── E. Security ──
+        if group == 'security' or event_type.startswith(('fail2ban_', 'ip_', 'pve_firewall_')) or event_type in ('auth_failed', 'ip_blocked', 'security_alert'):
+            ip_val = str(data.get('ip') or '').strip()
+            jail_val = str(data.get('jail') or '')
+            ip_lbl = _runtime_notification_text('channels.email.fields.sourceIp', data) or 'IP'
+            jail_lbl = _runtime_notification_text('channels.email.fields.jail', data) or 'Jail'
+            
+            table_rows = [
+                f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n",
+            ]
+            if ip_val:
+                table_rows.append(f"  <tr><td><b>🌐 {ip_lbl}</b></td><td><code>{_html.escape(ip_val)}</code></td></tr>\n")
+            if jail_val:
+                table_rows.append(f"  <tr><td><b>🔒 {jail_lbl}</b></td><td>{_html.escape(jail_val)}</td></tr>\n")
+            if rendered_fields:
+                for k, v in rendered_fields:
+                    table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
+                    
+            html_out = f"""<h3>🛡️ {_html.escape(clean_title or 'Security Alert')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<table bordered striped compact>
+{''.join(table_rows)}</table>
+
+<details open>
+  <summary>📋 {details_lbl}</summary>
+  {self._format_html_text(message)}
+</details>"""
+            return html_out, None
+
+        # ── F. VM & Container Lifecycle ──
+        if group == 'vm_ct' or event_type.startswith(('ct_', 'vm_')):
+            is_fail = severity in ('CRITICAL', 'ERROR') or 'fail' in event_type or 'crash' in event_type
+            is_start = 'start' in event_type or event_type.endswith('_started') or event_type.endswith('_running')
+            icon_ct = '🔴' if is_fail else ('🟢' if is_start else '🔵')
+            
+            vmid_str = f"({vmid})" if vmid else ""
+            resource_label = f"{vmname} {vmid_str}".strip() or "Guest"
+            vmct_lbl = _runtime_notification_text('channels.email.fields.vmCtId', data) or 'Resource'
+            
+            table_rows = [
+                f"  <tr><td><b>🏷️ {vmct_lbl}</b></td><td><code>{_html.escape(resource_label)}</code></td></tr>\n",
+                f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n",
+            ]
+            if rendered_fields:
+                for k, v in rendered_fields:
+                    table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
+                    
+            html_out = f"""<h3>{icon_ct} {_html.escape(clean_title or 'Guest Event')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<table bordered striped compact>
+{''.join(table_rows)}</table>
+
+<details open>
+  <summary>📋 {details_lbl}</summary>
+  {self._format_html_text(message)}
+</details>"""
+            return html_out, None
+
+        # ── G. Fallback General ──
+        icon_gen = '🔴' if severity == 'CRITICAL' else ('🟡' if severity == 'WARNING' else 'ℹ️')
+        cat_val = _runtime_notification_text(f'channels.email.groups.{group}', data) or str(data.get('_group') or data.get('group') or event_type or 'System').title()
+        
+        table_rows = [
+            f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n",
+            f"  <tr><td><b>🏷️ {cat_lbl}</b></td><td>{_html.escape(cat_val)}</td></tr>\n",
+        ]
+        if rendered_fields:
+            for k, v in rendered_fields:
+                table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
+                
+        items = data.get('items') or data.get('_items') or []
+        if isinstance(items, list) and items:
+            tag_items = "<details>" if len(items) > 8 else "<details open>"
+            rows = []
+            for it in items:
+                if isinstance(it, dict):
+                    k = list(it.keys())
+                    v1 = _html.escape(str(it.get(k[0], ''))) if len(k) > 0 else ''
+                    v2 = _html.escape(str(it.get(k[1], ''))) if len(k) > 1 else ''
+                    rows.append(f"    <tr><td align=\"left\">{v1}</td><td align=\"center\">{v2}</td></tr>\n")
+                else:
+                    rows.append(f"    <tr><td colspan=\"2\" align=\"left\">{_html.escape(str(it))}</td></tr>\n")
+            details_sec = f"""{tag_items}
+  <summary>📋 {details_lbl} ({len(items)})</summary>
+  <table bordered striped compact>
+{"".join(rows)}  </table>
+</details>"""
+        else:
+            details_sec = f"""<details open>
+  <summary>📋 {details_lbl}</summary>
+  {self._format_html_text(message)}
+</details>"""
+
+        html_out = f"""<h3>{icon_gen} {_html.escape(clean_title or 'ProxMenux Notification')}</h3>
+<h4>🖥️ {host_lbl}: {hostname}</h4>
+
+<table bordered striped compact>
+{''.join(table_rows)}</table>
+
+{details_sec}"""
+        return html_out, None
+
+
+    def _post_rich_message(self, html_content: str, keyboard: Optional[List] = None) -> Dict[str, Any]:
+        url = self.API_RICH.format(token=self.bot_token)
+        rich_obj = {'html': html_content}
+        
+        img_bytes = None
+        if os.path.exists(self.LOGO_PATH):
+            try:
+                with open(self.LOGO_PATH, 'rb') as f:
+                    img_bytes = f.read()
+                rich_obj['media'] = [{
+                    'id': 'header',
+                    'media': {
+                        'type': 'photo',
+                        'media': 'attach://header'
+                    }
+                }]
+            except Exception:
+                img_bytes = None
+                
+        boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
+        body = bytearray()
+        
+        def add_field(name, val):
+            body.extend(f'--{boundary}\r\n'.encode('utf-8'))
+            body.extend(f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode('utf-8'))
+            body.extend(str(val).encode('utf-8'))
+            body.extend(b'\r\n')
+            
+        add_field('chat_id', self.chat_id)
+        if self.topic_id:
+            try:
+                add_field('message_thread_id', int(self.topic_id))
+            except ValueError:
+                pass
+                
+        add_field('rich_message', json.dumps(rich_obj))
+        if keyboard:
+            add_field('reply_markup', json.dumps({'inline_keyboard': keyboard}))
+            
+        if img_bytes:
+            body.extend(f'--{boundary}\r\n'.encode('utf-8'))
+            body.extend(b'Content-Disposition: form-data; name="header"; filename="header.png"\r\n')
+            body.extend(b'Content-Type: image/png\r\n\r\n')
+            body.extend(img_bytes)
+            body.extend(b'\r\n')
+            
+        body.extend(f'--{boundary}--\r\n'.encode('utf-8'))
+        
+        headers = {
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'User-Agent': 'ProxMenux-Monitor/1.1'
+        }
+        
+        status_code, resp_text = self._http_request(url, bytes(body), headers)
+        if 200 <= status_code < 300:
+            return {'success': True, 'error': None}
+        return {'success': False, 'error': f'HTTP {status_code}: {resp_text}'}
     
     def send_photo(self, photo_url: str, caption: str = '') -> Dict[str, Any]:
         """Send a photo to Telegram chat."""
@@ -269,14 +745,13 @@ class TelegramChannel(NotificationChannel):
             'chat_id': self.chat_id,
             'photo': photo_url,
         }
-        # Add topic ID for supergroups with topics enabled
         if self.topic_id:
             try:
                 payload['message_thread_id'] = int(self.topic_id)
             except ValueError:
                 pass
         if caption:
-            payload['caption'] = caption[:1024]  # Telegram caption limit
+            payload['caption'] = caption[:1024]
             payload['parse_mode'] = 'HTML'
         
         body = json.dumps(payload).encode()
@@ -293,10 +768,13 @@ class TelegramChannel(NotificationChannel):
         if not valid:
             return False, err
         
+        test_title = _runtime_notification_text('test.title') or 'ProxMenux Test'
+        test_msg = _runtime_notification_text('test.verify') or 'Notification service is working correctly.\nThis is a test message from ProxMenux Monitor.'
         result = self.send(
-            'ProxMenux Test',
-            'Notification service is working correctly.\nThis is a test message from ProxMenux Monitor.',
-            'INFO'
+            test_title,
+            test_msg,
+            'INFO',
+            data={'_event_type': 'test', '_group': 'other', 'hostname': 'proxmox'}
         )
         return result['success'], result.get('error', '')
     
@@ -308,12 +786,11 @@ class TelegramChannel(NotificationChannel):
             'parse_mode': 'HTML',
             'disable_web_page_preview': True,
         }
-        # Add topic ID for supergroups with topics enabled
         if self.topic_id:
             try:
                 payload_dict['message_thread_id'] = int(self.topic_id)
             except ValueError:
-                pass  # Invalid topic_id, skip
+                pass
         
         payload = json.dumps(payload_dict).encode('utf-8')
         return self._http_request(url, payload, {'Content-Type': 'application/json'})
@@ -418,8 +895,20 @@ class TelegramChannel(NotificationChannel):
         return chunks
     
     @staticmethod
+    def _format_progress_bar(pct: float, width: int = 10) -> str:
+        return _format_progress_bar(pct, width)
+
+    @staticmethod
+    def _format_html_text(text: str) -> str:
+        import html as _html
+        if not text:
+            return ''
+        escaped = _html.escape(str(text).strip())
+        return escaped.replace('\r\n', '\n').replace('\n\n', '<br><br>').replace('\n', '<br>')
+
+    @staticmethod
     def _escape_html(text: str) -> str:
-        return (text
+        return (str(text)
                 .replace('&', '&amp;')
                 .replace('<', '&lt;')
                 .replace('>', '&gt;'))
@@ -1694,10 +2183,16 @@ def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[Notifi
     """
     try:
         if channel_type == 'telegram':
+            rf_val = config.get('rich_format', True)
+            is_rf = str(rf_val).lower() in ('true', '1', 'yes') if isinstance(rf_val, str) else bool(rf_val)
+            rc_val = config.get('rich_cards', False)
+            is_rc = str(rc_val).lower() in ('true', '1', 'yes') if isinstance(rc_val, str) else bool(rc_val)
             return TelegramChannel(
                 bot_token=config.get('bot_token', ''),
                 chat_id=config.get('chat_id', ''),
-                topic_id=config.get('topic_id', '')
+                topic_id=config.get('topic_id', ''),
+                rich_format=is_rf,
+                rich_cards=is_rc
             )
         elif channel_type == 'gotify':
             return GotifyChannel(

@@ -2568,7 +2568,9 @@
         "appriseMatrixDocs": "URL-format och konfiguration för Matrix",
         "appriseServiceFinish": "Aktivera Apprise, ange din URL, välj aviseringskategorier eller enskilda händelser, spara och använd sedan Skicka test. Dessa exempel ändrar inte din sparade URL. Denna Apprise-kanal har ett mål; använd Apprise-API för flera tjänster samtidigt.",
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
-        "botTokenHelp": "Token kan anges med eller utan prefixet 'bot'."
+        "botTokenHelp": "Token kan anges med eller utan prefixet 'bot'.",
+        "richCards": "Rich cards (Telegram)",
+        "richCardsDescription": "Formatera aviseringar som infokort med tabeller, statusmärken och dragspel"
       },
       "ai": {
         "title": "AI-förbättring",
@@ -8181,7 +8183,8 @@
             "kernelUpdates": "Kärnuppdateringar",
             "importantPackages": "Viktiga paket",
             "currentVersion": "Aktuell version",
-            "newVersion": "Ny version"
+            "newVersion": "Ny version",
+            "channel": "Kanal"
           },
           "status": {
             "failed": "Misslyckades",
