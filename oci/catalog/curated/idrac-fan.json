@@ -62,11 +62,11 @@
     "environment": [
       {
         "name": "IDRAC_HOST",
-        "example": "10.0.1.2",
+        "example": "",
         "required": true,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "IP address of the iDRAC to control, or 'local' for the iDRAC of the host itself"
+        "prompt": "IP address of the iDRAC to control"
       },
       {
         "name": "IDRAC_USERNAME",
@@ -74,7 +74,7 @@
         "required": true,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "iDRAC username; only required when IDRAC_HOST is not 'local'"
+        "prompt": "iDRAC username"
       },
       {
         "name": "IDRAC_PASSWORD",
@@ -82,7 +82,7 @@
         "required": true,
         "sensitive": true,
         "source": "docker-compose",
-        "prompt": "iDRAC password; only required when IDRAC_HOST is not 'local'"
+        "prompt": "iDRAC password"
       },
       {
         "name": "FAN_SPEED",
@@ -126,7 +126,7 @@
         "choices": [
           {
             "value": "auto",
-            "label": "Auto (lm-sensors)"
+            "label": "Auto (iDRAC, then lm-sensors)"
           },
           {
             "value": "ipmi",
@@ -160,7 +160,7 @@
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "Same threshold expressed in cycles, 1 or more"
+        "prompt": "Consecutive failed checks before the container exits, 1 or more; takes precedence over the duration"
       },
       {
         "name": "DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE",
@@ -176,7 +176,7 @@
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "Restore the PCIe card cooling response state when the container stops"
+        "prompt": "Keep the PCIe card cooling response set by the container when it stops, instead of restoring Dell's default"
       },
       {
         "name": "MONITORING_ONLY_MODE",
@@ -215,7 +215,7 @@
           "container_name": "idrac-fan",
           "restart": "unless-stopped",
           "environment": {
-            "IDRAC_HOST": "10.0.1.2",
+            "IDRAC_HOST": "",
             "IDRAC_USERNAME": "root",
             "IDRAC_PASSWORD": "",
             "FAN_SPEED": "5",
