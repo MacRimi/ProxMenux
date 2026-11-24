@@ -37,7 +37,7 @@ import json
 import os
 import threading
 import time
-from typing import Any, Optional
+from typing import Any, NamedTuple, Optional
 
 # ---------------------------------------------------------------------------
 # Recommended defaults + metadata
@@ -56,6 +56,23 @@ from typing import Any, Optional
 #
 # Phase 3 will add: lxc_mount, pve_storage, zfs_pool.
 # ---------------------------------------------------------------------------
+
+class SamplingIntervalSpec(NamedTuple):
+    default: int
+    min: int
+    max: int
+
+    def to_threshold_meta(self) -> dict[str, Any]:
+        return {"value": self.default, "unit": "s", "min": self.min, "max": self.max, "step": 1}
+
+
+# Single source of truth for Vital Signs sampling intervals. Each maximum keeps
+# at least two readings inside the sustained window of its health check, so a
+# single reading never raises an alert: temperature needs 180 s above the limit
+# and swap pressure 60 s.
+CPU_INTERVAL_SPEC = SamplingIntervalSpec(default=5, min=1, max=90)
+TEMPERATURE_INTERVAL_SPEC = SamplingIntervalSpec(default=15, min=5, max=60)
+MEMORY_INTERVAL_SPEC = SamplingIntervalSpec(default=30, min=5, max=45)
 
 DEFAULTS: dict[str, Any] = {
     "cpu": {
@@ -138,6 +155,11 @@ DEFAULTS: dict[str, Any] = {
         # monitored.
         "warning": {"value": 85, "unit": "%", "min": 1, "max": 100, "step": 1},
         "critical": {"value": 95, "unit": "%", "min": 1, "max": 100, "step": 1},
+    },
+    "sampling_intervals": {
+        "cpu": CPU_INTERVAL_SPEC.to_threshold_meta(),
+        "temperature": TEMPERATURE_INTERVAL_SPEC.to_threshold_meta(),
+        "memory": MEMORY_INTERVAL_SPEC.to_threshold_meta(),
     },
 }
 
@@ -296,6 +318,11 @@ def _validate(section: str, path: tuple[str, ...], value: Any) -> float:
         meta = meta[p]
     if not isinstance(meta, dict) or "value" not in meta:
         raise ThresholdValidationError(f"Path {section}.{'.'.join(path)} is not a leaf")
+
+    if isinstance(value, bool):
+        raise ThresholdValidationError(
+            f"{section}.{'.'.join(path)} must be a number, got {value!r}"
+        )
 
     try:
         v = float(value)

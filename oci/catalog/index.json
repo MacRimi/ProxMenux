@@ -20954,6 +20954,37 @@
       "multi_container": false
     },
     {
+      "id": "nutify",
+      "provider": "DartSteven",
+      "template_family": "curated-profile",
+      "title": "Nutify",
+      "repository": "https://github.com/DartSteven/Nutify",
+      "description": "UPS monitoring for Network UPS Tools with dashboards, alerts and reports.",
+      "website": "https://github.com/DartSteven/Nutify",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nutify.webp",
+      "architectures": [
+        "amd64"
+      ],
+      "updated_at": null,
+      "main_image": "dartsteven/nutify:0.3.0-amd64",
+      "category": "monitoring",
+      "category_label": "Monitoring & Analytics",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/nutify.json",
+      "template": "apps/nutify.json",
+      "template_status": "generated-unvalidated",
+      "hidden": false,
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "multi_container": false
+    },
+    {
       "id": "idrac-fan",
       "provider": "tigerblue77",
       "template_family": "curated-profile",

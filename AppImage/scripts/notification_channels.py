@@ -340,8 +340,8 @@ class TelegramChannel(NotificationChannel):
                 
             table_str = "\n".join(rows)
             details_body = f"{_html.escape(test_welcome)}<br><br>{_html.escape(test_alerts)}"
-            html_out = f"""<h3>🚀 {_html.escape(clean_title or 'ProxMenux Test')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+            html_out = f"""<b>🚀 {_html.escape(clean_title or 'ProxMenux Test')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <table bordered striped compact>
 {table_str}
@@ -357,8 +357,8 @@ class TelegramChannel(NotificationChannel):
         if data.get('_digest') or data.get('_quiet_hours_summary') or event_type in ('digest', 'quiet_hours_summary'):
             raw_rows = data.get('_rows') or []
             if not raw_rows:
-                html_out = f"""<h3>📊 {_html.escape(clean_title or 'Digest')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+                html_out = f"""<b>📊 {_html.escape(clean_title or 'Digest')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <details open>
   <summary>📋 {details_lbl}</summary>
@@ -398,8 +398,8 @@ class TelegramChannel(NotificationChannel):
             tbl_c_str = "".join(table_cats) or f"  <tr><td><b>📋 Total</b></td><td>{len(raw_rows)}</td></tr>\n"
             det_c_str = "\n\n".join(details_blocks)
             
-            html_out = f"""<h3>📊 {_html.escape(clean_title or 'Digest')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+            html_out = f"""<b>📊 {_html.escape(clean_title or 'Digest')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <table bordered striped compact>
 {tbl_c_str}</table>
@@ -488,9 +488,9 @@ class TelegramChannel(NotificationChannel):
                 size_lbl = _runtime_notification_text('channels.email.fields.size', data) or 'Size'
                 summary_rows.append(f"  <tr><td><b>📊 {size_lbl}</b></td><td>{_html.escape(str(data['size']))}</td></tr>\n")
 
-            sub_dest = f"<h4>🗄️ {_html.escape(storage_lbl)}: {_html.escape(storage_name)}</h4>\n" if storage_name else f"<h4>🖥️ {host_lbl}: {hostname}</h4>\n"
+            sub_dest = f"🗄️ {_html.escape(storage_lbl)}: {_html.escape(storage_name)}<br>\n" if storage_name else f"🖥️ {host_lbl}: {hostname}<br>\n"
 
-            html_out = f"""<h3>💾 {_html.escape(clean_title or 'Backup')}</h3>
+            html_out = f"""<b>💾 {_html.escape(clean_title or 'Backup')}</b><br>
 {sub_dest}
 <table bordered striped compact>
 {''.join(summary_rows)}</table>
@@ -515,8 +515,8 @@ class TelegramChannel(NotificationChannel):
                 table_rows.append(f"  <tr><td><b>⚠️ {status_lbl}</b></td><td>{_html.escape(str(data['result']))}</td></tr>\n")
                 
             icon_storage = '🔴' if severity in ('CRITICAL', 'ERROR') else ('🟢' if severity in ('OK', 'INFO') else '🟡')
-            html_out = f"""<h3>{icon_storage} {_html.escape(clean_title or 'Storage Alert')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+            html_out = f"""<b>{icon_storage} {_html.escape(clean_title or 'Storage Alert')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <table bordered striped compact>
 {''.join(table_rows)}</table>
@@ -563,8 +563,8 @@ class TelegramChannel(NotificationChannel):
                     table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
                     
             icon_res = '🔴' if severity == 'CRITICAL' else ('🟢' if severity == 'OK' else '🟡')
-            html_out = f"""<h3>{icon_res} {_html.escape(clean_title or metric_val or 'System Resources')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+            html_out = f"""<b>{icon_res} {_html.escape(clean_title or metric_val or 'System Resources')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <table bordered striped compact>
 {''.join(table_rows)}</table>
@@ -593,8 +593,8 @@ class TelegramChannel(NotificationChannel):
                 for k, v in rendered_fields:
                     table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
                     
-            html_out = f"""<h3>🛡️ {_html.escape(clean_title or 'Security Alert')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+            html_out = f"""<b>🛡️ {_html.escape(clean_title or 'Security Alert')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <table bordered striped compact>
 {''.join(table_rows)}</table>
@@ -612,19 +612,20 @@ class TelegramChannel(NotificationChannel):
             icon_ct = '🔴' if is_fail else ('🟢' if is_start else '🔵')
             
             vmid_str = f"({vmid})" if vmid else ""
-            resource_label = f"{vmname} {vmid_str}".strip() or "Guest"
+            resource_label = f"{vmname} {vmid_str}".strip()
             vmct_lbl = _runtime_notification_text('channels.email.fields.vmCtId', data) or 'Resource'
             
+            # A grouped event, such as updates in several containers, has no guest of its own.
             table_rows = [
                 f"  <tr><td><b>🏷️ {vmct_lbl}</b></td><td><code>{_html.escape(resource_label)}</code></td></tr>\n",
-                f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n",
-            ]
+            ] if resource_label else []
+            table_rows.append(f"  <tr><td><b>⏱️ {sev_lbl}</b></td><td>{sev_val}</td></tr>\n")
             if rendered_fields:
                 for k, v in rendered_fields:
                     table_rows.append(f"  <tr><td><b>{_html.escape(k)}</b></td><td>{_html.escape(str(v))}</td></tr>\n")
                     
-            html_out = f"""<h3>{icon_ct} {_html.escape(clean_title or 'Guest Event')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+            html_out = f"""<b>{icon_ct} {_html.escape(clean_title or 'Guest Event')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <table bordered striped compact>
 {''.join(table_rows)}</table>
@@ -670,8 +671,8 @@ class TelegramChannel(NotificationChannel):
   {self._format_html_text(message)}
 </details>"""
 
-        html_out = f"""<h3>{icon_gen} {_html.escape(clean_title or 'ProxMenux Notification')}</h3>
-<h4>🖥️ {host_lbl}: {hostname}</h4>
+        html_out = f"""<b>{icon_gen} {_html.escape(clean_title or 'ProxMenux Notification')}</b><br>
+🖥️ {host_lbl}: {hostname}<br>
 
 <table bordered striped compact>
 {''.join(table_rows)}</table>

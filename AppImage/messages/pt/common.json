@@ -2300,7 +2300,7 @@
     "lxcUpdateDetection": {
       "title": "Detecção de atualização LXC",
       "descriptionStart": "Verifique periodicamente os contêineres Debian/Ubuntu/Alpine LXC em execução para atualizações de pacotes pendentes",
-      "descriptionEnd": "e coloque-os no painel. A alternância de notificação correspondente em Notificações -> Serviços aparece apenas enquanto a detecção está habilitada.",
+      "descriptionEnd": "e coloque-os no painel. A alternância de notificação correspondente em Notificações -> VM/CT aparece apenas enquanto a detecção está habilitada.",
       "enableLabel": "Habilitar detecção de atualização LXC",
       "loadFailed": "Não foi possível carregar a configuração de detecção de atualização LXC.",
       "saveFailed": "Não foi possível salvar a configuração de detecção de atualização LXC.",
@@ -2394,7 +2394,7 @@
         "error_resolved": "Notificação de recuperação",
         "error_escalated": "Problema de saúde escalado",
         "health_degraded": "Verificação de integridade degradada",
-        "lxc_updates_available": "Atualizações LXC disponíveis (experimental)",
+        "lxc_updates_available": "Atualizações LXC disponíveis",
         "vm_start": "VM iniciada",
         "vm_start_warning": "VM iniciada (avisos)",
         "vm_stop": "VM parada",
@@ -2568,7 +2568,7 @@
         "appriseMatrixDocs": "Formatos de URL e configuração do Matrix",
         "appriseServiceFinish": "Ative o Apprise, insira seu URL, escolha as categorias de notificação ou os eventos individuais, salve e utilize Enviar teste. Estes exemplos não alteram o URL salvo. Este canal do Apprise tem um destino; utilize a API do Apprise para vários serviços em simultâneo.",
         "botTokenPlaceholder": "7595377878:AAGE6Fb2cy...",
-"botTokenHelp": "O token pode incluir o prefixo 'bot' ou ser inserido sem ele.",
+        "botTokenHelp": "O token pode incluir o prefixo 'bot' ou ser inserido sem ele.",
         "richCards": "Cartões avançados (Telegram)",
         "richCardsDescription": "Formatar alertas como cartões nativos com tabelas, emblemas e seções expansíveis"
       },
@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "Capacidade do pool ZFS",
           "description": "Os pools ZFS no nível do host, independentemente do registro do PVE, portanto, o rpool e os pools de backup dedicados também são monitorados."
+        },
+        "sampling_intervals": {
+          "title": "intervalos de amostragem",
+          "description": "Com que frequência o Monitor lê o CPU, temperatura e memória do host.Intervalos mais longos usam menos CPU;os mais curtos atualizam os números mais cedo.",
+          "cpu": "intervalo CPU",
+          "temperature": "Intervalo de temperatura",
+          "memory": "intervalo de memória"
         }
       },
       "swapPressure": "Pressão de memória",
@@ -7448,7 +7455,7 @@
         "lxc_updates_available": {
           "title": "{hostname}: {count} LXC(s) com atualizações de pacote disponíveis",
           "body": "📊 {count} LXC(s) com atualizações de pacote pendentes (📦 {total_packages} total, 🔒 {security_count} segurança):\n\n{ct_list}",
-          "label": "LXC atualizações disponíveis (experimental)"
+          "label": "LXC atualizações disponíveis"
         },
         "lxc_update_applied": {
           "title": "{hostname}: LXC {ct_name} ({vmid}) atualização {result}",

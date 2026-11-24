@@ -2300,7 +2300,7 @@
     "lxcUpdateDetection": {
       "title": "LXC Update Detection",
       "descriptionStart": "Kontrollera med jämna mellanrum körande Debian/Ubuntu/Alpine LXC-behållare för väntande paketuppdateringar",
-      "descriptionEnd": "och placera dem på instrumentbrädan. Motsvarande meddelandeväxling i Meddelanden -> Tjänster visas endast när upptäckten är aktiverad.",
+      "descriptionEnd": "och placera dem på instrumentbrädan. Motsvarande meddelandeväxling i Meddelanden -> VM / CT visas endast när upptäckten är aktiverad.",
       "enableLabel": "Aktivera LXC-uppdateringsdetektering",
       "loadFailed": "Det gick inte att ladda inställningen för LXC-uppdateringsdetektering.",
       "saveFailed": "Det gick inte att spara inställningen för upptäckt av LXC-uppdatering.",
@@ -2394,7 +2394,7 @@
         "error_resolved": "Återställningsmeddelande",
         "error_escalated": "Hälsoproblemet eskalerade",
         "health_degraded": "Hälsokontrollen försämrad",
-        "lxc_updates_available": "LXC-uppdateringar tillgängliga (experimentell)",
+        "lxc_updates_available": "LXC-uppdateringar tillgängliga",
         "vm_start": "VM startade",
         "vm_start_warning": "VM startade (varningar)",
         "vm_stop": "VM stannade",
@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "ZFS poolkapacitet",
           "description": "ZFS-pooler på värdnivå, oberoende av PVE-registrering, så rpool och dedikerade backuppooler övervakas också."
+        },
+        "sampling_intervals": {
+          "title": "Samplingsintervall",
+          "description": "Hur ofta monitorn läser CPU, temperatur och minne för värden.Längre intervaller använder mindre CPU;kortare uppdaterar figurerna tidigare.",
+          "cpu": "CPU intervall",
+          "temperature": "Temperaturintervall",
+          "memory": "Minnesintervall"
         }
       },
       "swapPressure": "Minnestryck",
@@ -7448,7 +7455,7 @@
         "lxc_updates_available": {
           "title": "{hostname}: {count} LXC(s) med paketuppdateringar tillgängliga",
           "body": "📊 {count} LXC(s) med väntande paketuppdateringar (📦 {total_packages} totalt, 🔒 {security_count} säkerhet):\n\n{ct_list}",
-          "label": "LXC uppdateringar tillgängliga (experimentell)"
+          "label": "LXC uppdateringar tillgängliga"
         },
         "lxc_update_applied": {
           "title": "{hostname}: LXC {ct_name} ({vmid}) uppdatera {result}",

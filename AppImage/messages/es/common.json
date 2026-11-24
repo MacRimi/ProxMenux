@@ -2453,7 +2453,7 @@
     "lxcUpdateDetection": {
       "title": "Detección de actualización de LXC",
       "descriptionStart": "Comprobar periódicamente los contenedores de Debian/Ubuntu/Alpine LXC en ejecución para ver si hay actualizaciones de paquetes pendientes",
-      "descriptionEnd": " y mostrarlas en el panel. El interruptor de notificación correspondiente en Notificaciones -> Servicios aparece solo cuando la detección está activada.",
+      "descriptionEnd": " y mostrarlas en el panel. El interruptor de notificación correspondiente en Notificaciones -> VM / CT aparece solo cuando la detección está activada.",
       "enableLabel": "Habilitar la detección de actualizaciones de LXC",
       "loadFailed": "No se pudo cargar la configuración de detección de actualizaciones de LXC.",
       "saveFailed": "No se pudo guardar la configuración de detección de actualizaciones de LXC.",
@@ -2547,25 +2547,25 @@
         "error_resolved": "Notificación de recuperación",
         "error_escalated": "El problema de salud se agravó",
         "health_degraded": "Control de salud degradado",
-        "lxc_updates_available": "Actualizaciones de LXC disponibles (experimentales)",
+        "lxc_updates_available": "Actualizaciones de LXC disponibles",
         "vm_start": "VM iniciada",
         "vm_start_warning": "VM iniciada (advertencias)",
         "vm_stop": "VM detenida",
         "vm_shutdown": "VM apagada",
-        "vm_fail": "La máquina virtual falló",
+        "vm_fail": "Fallo de la VM",
         "vm_restart": "VM reiniciada",
-        "ct_start": "TC iniciada",
+        "ct_start": "CT iniciado",
         "ct_start_warning": "CT iniciado (advertencias)",
-        "ct_stop": "TC detenida",
-        "ct_shutdown": "TC apagado",
+        "ct_stop": "CT detenido",
+        "ct_shutdown": "CT apagado",
         "ct_restart": "CT reiniciado",
-        "ct_fail": "TC falló",
-        "migration_start": "La migración comenzó",
-        "migration_complete": "Migración completa",
-        "migration_warning": "Migración completada con advertencias.",
-        "migration_fail": "La migración falló",
-        "replication_fail": "La replicación falló",
-        "replication_complete": "Replicación completa",
+        "ct_fail": "Fallo del CT",
+        "migration_start": "Migración iniciada",
+        "migration_complete": "Migración completada",
+        "migration_warning": "Migración completada con advertencias",
+        "migration_fail": "Migración fallida",
+        "replication_fail": "Replicación fallida",
+        "replication_complete": "Replicación completada",
         "backup_start": "Backup iniciado",
         "backup_complete": "Backup completado",
         "backup_warning": "Backup completado con advertencias",
@@ -2573,8 +2573,8 @@
         "host_backup_start": "Backup del host iniciado",
         "host_backup_complete": "Backup del host completado",
         "host_backup_fail": "Backup del host fallido",
-        "snapshot_complete": "Instantánea creada",
-        "snapshot_fail": "El snapshot falló",
+        "snapshot_complete": "Snapshot creado",
+        "snapshot_fail": "Snapshot fallido",
         "cpu_high": "Alto uso de CPU",
         "ram_high": "Alto uso de memoria",
         "temp_high": "Temperatura alta",
@@ -2639,7 +2639,7 @@
         "mount_stale": "El montaje remoto está obsoleto",
         "mount_readonly": "El montaje remoto es de solo lectura",
         "lxc_disk_low": "Rootfs de LXC casi llenos",
-        "vm_disk_low": "Sistemas de archivos VM casi llenos",
+        "vm_disk_low": "Sistemas de archivos de VM casi llenos",
         "lxc_mount_low": "Soporte LXC casi lleno",
         "pve_storage_full": "Almacenamiento PVE casi lleno",
         "zfs_pool_full": "Grupo ZFS casi lleno",
@@ -3028,6 +3028,13 @@
         "zfs_pool": {
           "title": "Capacidad del grupo ZFS",
           "description": "Pools ZFS a nivel de host, independientes del registro en PVE, por lo que también se monitorizan rpool y los pools dedicados a backup."
+        },
+        "sampling_intervals": {
+          "title": "Intervalos de lectura",
+          "description": "Cada cuánto lee el Monitor la CPU, la temperatura y la memoria del host. Con intervalos más largos usa menos CPU; con más cortos, las cifras se actualizan antes.",
+          "cpu": "Intervalo de CPU",
+          "temperature": "Intervalo de temperatura",
+          "memory": "Intervalo de memoria"
         }
       },
       "swapPressure": "Presión de memoria",
@@ -7826,7 +7833,7 @@
         "lxc_updates_available": {
           "title": "{hostname}: {count} LXC(s) con actualizaciones de paquetes disponibles",
           "body": "📊 {count} LXC con actualizaciones de paquetes pendientes (📦 {total_packages} en total, 🔒 {security_count} de seguridad):\n\n{ct_list}",
-          "label": "Actualizaciones de LXC disponibles (experimental)"
+          "label": "Actualizaciones de LXC disponibles"
         },
         "lxc_update_applied": {
           "title": "{hostname}: LXC {ct_name} ({vmid}) actualización {result}",
@@ -8010,13 +8017,13 @@
         },
         "snapshot_complete": {
           "title": "{hostname}: snapshot creado: {vmname} ({vmid})",
-          "body": "Instantánea \"{snapshot_name}\" creada para {vmname} (ID: {vmid}).",
-          "label": "Instantánea creada"
+          "body": "Snapshot \"{snapshot_name}\" creado para {vmname} (ID: {vmid}).",
+          "label": "Snapshot creado"
         },
         "snapshot_fail": {
           "title": "{hostname}: snapshot FALLIDO — {vmname} ({vmid})",
           "body": "Error al crear un snapshot para {vmname} (ID: {vmid}).\nMotivo: {reason}",
-          "label": "Instantánea FALLIDA"
+          "label": "Snapshot FALLIDO"
         },
         "cpu_high": {
           "title": "{hostname}: uso elevado de CPU: {value}%",

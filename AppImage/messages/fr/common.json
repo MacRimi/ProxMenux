@@ -2300,7 +2300,7 @@
     "lxcUpdateDetection": {
       "title": "Détection de mise à jour LXC",
       "descriptionStart": "Vérifie périodiquement si des mises à jour de paquets sont en attente dans les conteneurs LXC Debian/Ubuntu/Alpine en cours d'exécution",
-      "descriptionEnd": " et les affiche sur le tableau de bord. L'interrupteur de notification correspondant dans Notifications -> Services n'apparaît que lorsque la détection est activée.",
+      "descriptionEnd": " et les affiche sur le tableau de bord. L'interrupteur de notification correspondant dans Notifications -> VM/CT n'apparaît que lorsque la détection est activée.",
       "enableLabel": "Activer la détection des mises à jour LXC",
       "loadFailed": "Impossible de charger le paramètre de détection de mise à jour LXC.",
       "saveFailed": "Impossible d'enregistrer le paramètre de détection de mise à jour LXC.",
@@ -2394,7 +2394,7 @@
         "error_resolved": "Notification de récupération",
         "error_escalated": "Problème de santé aggravé",
         "health_degraded": "Vérification de santé dégradée",
-        "lxc_updates_available": "Mises à jour LXC disponibles (expérimental)",
+        "lxc_updates_available": "Mises à jour LXC disponibles",
         "vm_start": "VM démarrée",
         "vm_start_warning": "VM démarrée (avertissements)",
         "vm_stop": "VM stoppée",
@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "Capacité du pool ZFS",
           "description": "Pools ZFS au niveau de l'hôte, indépendamment de leur enregistrement dans PVE, afin que rpool et les pools de sauvegarde dédiés soient aussi surveillés."
+        },
+        "sampling_intervals": {
+          "title": "Intervalles d’échantillonnage",
+          "description": "à quelle fréquence le moniteur lit le CPU, la température et la mémoire de l'hôte.Des intervalles plus longs utilisent moins de CPU ;les plus courts rafraîchissent les chiffres plus tôt.",
+          "cpu": "intervalle CPU",
+          "temperature": "Intervalle de température",
+          "memory": "Intervalle de mémoire"
         }
       },
       "swapPressure": "Pression sur le swap",
@@ -7448,7 +7455,7 @@
         "lxc_updates_available": {
           "title": "{hostname} : {count} LXC avec des mises à jour de paquets disponibles",
           "body": "📊 {count} LXC avec des mises à jour de paquets en attente (📦 {total_packages} au total, 🔒 {security_count} de sécurité) :\n\n{ct_list}",
-          "label": "Mises à jour LXC disponibles (expérimental)"
+          "label": "Mises à jour LXC disponibles"
         },
         "lxc_update_applied": {
           "title": "{hostname} : mise à jour du LXC {ct_name} ({vmid}) : {result}",

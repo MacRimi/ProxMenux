@@ -236,11 +236,11 @@ class TestTelegramRichMessages(unittest.TestCase):
 
         # Storage card icon follows severity (🟢 for OK, 🟡 for WARNING, 🔴 for ERROR)
         html_ok, _ = self.channel._build_rich_content("SMART test passed", "All self tests passed", "OK", data_smart)
-        self.assertIn("<h3>🟢", html_ok)
-        self.assertNotIn("<h3>🔴", html_ok)
+        self.assertIn("<b>🟢", html_ok)
+        self.assertNotIn("<b>🔴", html_ok)
 
         html_err, _ = self.channel._build_rich_content("SMART test failed", "Self-test failed", "ERROR", data_smart)
-        self.assertIn("<h3>🔴", html_err)
+        self.assertIn("<b>🔴", html_err)
 
     def test_backup_card_with_failed_guests_and_language_agnostic_units(self):
         """Verify backup cards capture failed guests (❌) and parse sizes/durations using native parser."""
@@ -324,6 +324,18 @@ class TestTelegramRichMessages(unittest.TestCase):
         rows = [line for line in html_bk.splitlines() if "<td" in line and ">10" in line]
         self.assertTrue(any("✅" in r and ">100<" in r for r in rows))
         self.assertTrue(any(">101<" in r and "✅" not in r and "❌" not in r for r in rows))
+
+    def test_title_is_bold_text_and_grouped_guest_events_have_no_guest_row(self):
+        """The title keeps the font of the plain message, and an event without a guest shows no guest row."""
+        data = {'_event_type': 'lxc_updates_available', '_group': 'vm_ct', '_notification_language': 'es', 'hostname': 'amd'}
+        html_ct, _ = self.channel._build_rich_content("amd: 1 LXC(s) con actualizaciones", "detalle", "INFO", data)
+        self.assertNotIn("<h3>", html_ct)
+        self.assertNotIn("<h4>", html_ct)
+        self.assertTrue(html_ct.startswith("<b>"))
+        self.assertNotIn("Guest", html_ct)
+        data.update({'vmid': 113, 'vmname': 'ubuntu', '_event_type': 'ct_start'})
+        html_one, _ = self.channel._build_rich_content("amd: CT ubuntu arrancado", "detalle", "INFO", data)
+        self.assertIn("ubuntu (113)", html_one)
 
     def test_backup_card_unparseable_fallback(self):
         """Verify that when vzdump format cannot be parsed, card falls back cleanly to details text."""

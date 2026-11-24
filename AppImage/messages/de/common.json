@@ -2300,7 +2300,7 @@
     "lxcUpdateDetection": {
       "title": "LXC-Update-Erkennung",
       "descriptionStart": "Überprüfen Sie regelmäßig laufende Debian/Ubuntu/Alpine LXC-Container auf ausstehende Paketaktualisierungen",
-      "descriptionEnd": "und zeigen Sie sie auf dem Armaturenbrett an. Der entsprechende Benachrichtigungsschalter unter Benachrichtigungen -> Dienste wird nur angezeigt, wenn die Erkennung aktiviert ist.",
+      "descriptionEnd": "und zeigen Sie sie auf dem Armaturenbrett an. Der entsprechende Benachrichtigungsschalter unter Benachrichtigungen -> VM / CT wird nur angezeigt, wenn die Erkennung aktiviert ist.",
       "enableLabel": "Aktivieren Sie die LXC-Update-Erkennung",
       "loadFailed": "Die Einstellung für die LXC-Update-Erkennung konnte nicht geladen werden.",
       "saveFailed": "Die Einstellung für die LXC-Update-Erkennung konnte nicht gespeichert werden.",
@@ -2394,7 +2394,7 @@
         "error_resolved": "Wiederherstellungsbenachrichtigung",
         "error_escalated": "Gesundheitsproblem eskalierte",
         "health_degraded": "Gesundheitscheck verschlechtert",
-        "lxc_updates_available": "LXC-Updates verfügbar (experimentell)",
+        "lxc_updates_available": "LXC-Updates verfügbar",
         "vm_start": "VM gestartet",
         "vm_start_warning": "VM gestartet (Warnungen)",
         "vm_stop": "VM gestoppt",
@@ -2875,6 +2875,13 @@
         "zfs_pool": {
           "title": "ZFS-Poolkapazität",
           "description": "ZFS-Pools auf Host-Ebene, unabhängig von der PVE-Registrierung, sodass auch Rpool- und dedizierte Backup-Pools überwacht werden."
+        },
+        "sampling_intervals": {
+          "title": "Abtastintervalle",
+          "description": "Wie oft der Monitor CPU, Temperatur und Speicher des Hosts liest.Längere Intervalle verbrauchen weniger CPU;kürzere aktualisieren die Zahlen früher.",
+          "cpu": "CPU-Intervall",
+          "temperature": "Temperaturintervall",
+          "memory": "Speicherintervall"
         }
       },
       "swapPressure": "Speicherdruck",
@@ -7448,7 +7455,7 @@
         "lxc_updates_available": {
           "title": "{hostname}: {count} LXC(s) mit verfügbaren Paketaktualisierungen",
           "body": "📊 {count} LXC(s) mit ausstehenden Paketaktualisierungen (📦 {total_packages} insgesamt, 🔒 {security_count} Sicherheit):\n\n{ct_list}",
-          "label": "LXC Updates verfügbar (experimentell)"
+          "label": "LXC Updates verfügbar"
         },
         "lxc_update_applied": {
           "title": "{hostname}: LXC {ct_name} ({vmid}) Update {result}",

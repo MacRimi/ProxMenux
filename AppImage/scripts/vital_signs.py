@@ -13,21 +13,50 @@ import time
 
 import psutil
 
+import health_thresholds
+
 # How often the sampler reads each value, in seconds.
-CPU_INTERVAL = 5
-TEMPERATURE_INTERVAL = 15
-MEMORY_INTERVAL = 30
+# Updated at runtime via refresh_intervals() when thresholds change.
+CPU_INTERVAL = health_thresholds.CPU_INTERVAL_SPEC.default
+TEMPERATURE_INTERVAL = health_thresholds.TEMPERATURE_INTERVAL_SPEC.default
+MEMORY_INTERVAL = health_thresholds.MEMORY_INTERVAL_SPEC.default
 
 # What a page that polls every few seconds accepts as current.
 LIVE_MAX_AGE = 5
 
 _lock = threading.Lock()
+_intervals_lock = threading.Lock()
+wake_event = threading.Event()
 _readings = {}
 _cpu_counters = None
 
 # Intel, AMD (two drivers), generic ARM, then the ACPI thermal zone, which
 # is usually the motherboard.
 _CPU_SENSORS = ('coretemp', 'k10temp', 'cpu_thermal', 'zenpower', 'acpitz')
+
+
+def refresh_intervals(thresholds=None):
+    """Reload sampling intervals from health_thresholds and wake the sampler on change."""
+    global CPU_INTERVAL, TEMPERATURE_INTERVAL, MEMORY_INTERVAL
+    ht = thresholds or health_thresholds
+    with _intervals_lock:
+        try:
+            specs = (
+                ('cpu', ht.CPU_INTERVAL_SPEC),
+                ('temperature', ht.TEMPERATURE_INTERVAL_SPEC),
+                ('memory', ht.MEMORY_INTERVAL_SPEC),
+            )
+            values = tuple(
+                max(spec.min, min(spec.max, int(ht.get('sampling_intervals', name, default=spec.default))))
+                for name, spec in specs
+            )
+        except Exception:
+            return (CPU_INTERVAL, TEMPERATURE_INTERVAL, MEMORY_INTERVAL)
+
+        if values != (CPU_INTERVAL, TEMPERATURE_INTERVAL, MEMORY_INTERVAL):
+            CPU_INTERVAL, TEMPERATURE_INTERVAL, MEMORY_INTERVAL = values
+            wake_event.set()
+        return values
 
 
 def samples_for(seconds, interval):
