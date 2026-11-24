@@ -347,6 +347,14 @@ def notes_html(spec, hardware_names, request_id):
 <!-- proxmenux-lxc-request={request_id} -->"""
 
 
+def pve_tags(spec):
+    """The tags of the container, as the OCI and VM installers set theirs:
+    proxmenux, the kind of guest and the distribution of its template."""
+    archive = spec["template"]["volume_id"].split("/", 1)[-1]
+    distribution = re.match(r"[a-z]+", archive.lower())
+    return ";".join(["proxmenux", "lxc"] + ([distribution.group()] if distribution else []))
+
+
 def pve_params(spec, password, request_id):
     rootfs, access = spec["rootfs"], spec["access"]
     params = {
@@ -355,6 +363,7 @@ def pve_params(spec, password, request_id):
         "cores": spec["cpu"]["cores"], "memory": spec["memory"]["ram_mib"], "swap": spec["memory"]["swap_mib"],
         "unprivileged": 1, "features": f'nesting={int(spec["nesting"])}', "onboot": int(spec["onboot"]), "start": 0,
         "description": f"ProxMenux request {request_id}",
+        "tags": pve_tags(spec),
     }
     if 'architecture' in spec['template']:
         params['arch'] = spec['template']['architecture']

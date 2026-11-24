@@ -1995,6 +1995,26 @@ class PerlBridgeTests(unittest.TestCase):
                 rejected = self.call("create", **{**params, **change})
                 self.assertEqual((rejected.returncode, rejected.stdout, rejected.stderr), (1, b"", b""))
 
+    def test_create_takes_the_tags_of_the_container_and_refuses_malformed_ones(self):
+        params = {
+            "vmid": VMID, "ostemplate": VOLUME, "storage": "local-lvm", "rootfs": "local-lvm:8",
+            "description": "ProxMenux request " + REQUEST_ID, "unprivileged": 1, "features": "nesting=0",
+            "start": 0, "password": PASSWORD, "tags": "proxmenux;lxc;debian",
+        }
+        result = self.call("create", **params)
+        self.assertEqual((result.returncode, json.loads(result.stdout)), (0, upid("vzcreate", VMID)))
+        for tags in ("Proxmenux", "proxmenux;", "proxmenux lxc", "proxmenux;lxc\n", ";".join(["a"] * 9)):
+            with self.subTest(tags=tags):
+                rejected = self.call("create", **{**params, "tags": tags})
+                self.assertEqual((rejected.returncode, rejected.stdout, rejected.stderr), (1, b"", b""))
+
+    def test_tags_name_proxmenux_the_kind_of_guest_and_the_distribution(self):
+        from plain_lxc_spec import pve_tags
+        for archive, tags in (("debian-13-standard_13.1-2_amd64.tar.zst", "proxmenux;lxc;debian"),
+                              ("alpine-3.22-default_20250617_amd64.tar.xz", "proxmenux;lxc;alpine"),
+                              ("1234.tar.gz", "proxmenux;lxc")):
+            self.assertEqual(pve_tags({"template": {"volume_id": f"local:vztmpl/{archive}"}}), tags)
+
     def test_start_requires_the_same_unlocked_container_and_excludes_ha(self):
         marker = "ProxMenux request " + REQUEST_ID
         for env in ({}, {"TEST_MARKER": marker, "TEST_HA": "1"}):

@@ -424,7 +424,7 @@ sub dispatch {
     }
     if ($action eq 'create') {
         my %allowed = map { $_ => 1 } qw(vmid hostname ostemplate storage rootfs cores memory swap
-            unprivileged features onboot start description password ssh-public-keys net0 nameserver searchdomain arch resource_identity);
+            unprivileged features onboot start description password ssh-public-keys net0 nameserver searchdomain arch tags resource_identity);
         die if grep { !$allowed{$_} && !/\A(?:mp|dev)(?:[0-9]|1[0-5])\z/ } keys %$params;
         my $storage = $params->{storage} // '';
         die unless $vmid =~ /\A[1-9][0-9]{2,8}\z/
@@ -435,6 +435,7 @@ sub dispatch {
             && ($params->{unprivileged} // '') eq '1'
             && ($params->{features} // '') =~ /\Anesting=[01]\z/
             && (!exists($params->{arch}) || ($params->{arch} // '') =~ /\A(?:amd64|arm64)\z/)
+            && (!exists($params->{tags}) || ($params->{tags} // '') =~ /\A[a-z0-9][a-z0-9_.+-]{0,63}(?:;[a-z0-9][a-z0-9_.+-]{0,63}){0,7}\z/)
             && ($params->{start} // '') eq '0';
         my $resources = delete $params->{resource_identity};
         check_resources($params, $resources, $vmid, 0);
