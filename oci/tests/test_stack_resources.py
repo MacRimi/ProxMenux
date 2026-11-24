@@ -34,7 +34,10 @@ class StackResourceTests(unittest.TestCase):
             plan = build_deployment(template, ui, ADVANCED_MODE)
             self.assertEqual((plan["resources"]["cores"], plan["resources"]["memory_mb"]), (6, 4096), app)
             self.assertLess(ui.asked.index("Memory in MB"), ui.asked.index("Storage for rootfs"), app)
-            self.assertIn("6 CPU, 4096 MB RAM", _deployment_summary_text(template, plan), app)
+            summary = _deployment_summary_text(template, plan)
+            self.assertIn("6 CPU · 4096 MB RAM", summary, app)
+            # One resources line for the whole installation.
+            self.assertEqual(summary.count("Resources:"), 1, app)
 
     def test_the_default_installation_keeps_the_resources_of_the_recipe(self, *_):
         for app, expected in SPECIAL.items():

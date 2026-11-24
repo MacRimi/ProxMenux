@@ -241,13 +241,42 @@ def _app_detail_text(catalog: Catalog, item: dict[str, Any], template: dict[str,
     return "\n".join(lines)
 
 
+# The text of the final summary fits the summary window of the installer.
+SUMMARY_TEXT_WIDTH = 72
+SUMMARY_RULE = 60
+
+
+def _columns(items: list[str], indent: str = "  ") -> list[str]:
+    """Items in two aligned columns when the widest pair fits, else one per line."""
+    width = max((len(item) for item in items), default=0) + 3
+    if len(indent) + 2 * width > SUMMARY_TEXT_WIDTH:
+        return [f"{indent}{item}" for item in items]
+    return [f"{indent}{items[i]:<{width}}{items[i + 1] if i + 1 < len(items) else ''}".rstrip()
+            for i in range(0, len(items), 2)]
+
+
 def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any]) -> str:
     plan = redacted(deployment)
     title = source_text(template["catalog_ui"]["title"]) or template["id"]
-    lines = [title, ""]
+    rule = "─" * max(len(title), SUMMARY_RULE)
+    lines = [rule, title, rule, ""]
 
     def row(label: str, value: Any) -> None:
-        lines.append(f"{label + ':':<16} {value}")
+        lines.append((label, value))
+
+    def gap() -> None:
+        """One blank line between groups of the summary."""
+        if lines and lines[-1] != "":
+            lines.append("")
+
+    def path_lines(indent: str, paths: list[tuple[str, str]]) -> None:
+        """Each path and where it goes, on one line when every pair fits and
+        otherwise with each target below its path, so the list reads alike."""
+        if all(len(f"{indent}{path} → {target}") <= SUMMARY_TEXT_WIDTH for path, target in paths):
+            lines.extend(f"{indent}{path} → {target}" for path, target in paths)
+        else:
+            for path, target in paths:
+                lines.extend([f"{indent}{path}", f"{indent}    → {target}"])
 
     on = translate("on")
     if plan.get("suite_arr"):
@@ -286,6 +315,7 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                          'completed': translate('Must finish successfully (exit code 0)'),
                          'exec': translate('Command'), 'http': 'HTTP', 'tcp': 'TCP'}.get(check, check)
                 lines.append(f"    {translate('Startup check')}: {label}")
+            service_paths = []
             for mount in child["mounts"]:
                 target = (f"{mount['size_gb']} GB {on} {mount['source']}"
                           if mount["type"] == "managed-volume" else
@@ -294,7 +324,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     target += f" ({translate('in backups')})"
                 if mount.get('idmap'):
                     target += f" · idmap={mount['idmap']}"
-                lines.append(f"    {mount['container_path']} → {target}")
+                service_paths.append((mount['container_path'], target))
+            path_lines("    ", service_paths)
         for key, label in (("media", N_("Library")), ("application", N_("Application data")), ("transfer", N_("Consume/export"))):
             storage = plan.get(key)
             if isinstance(storage, dict) and "mode" in storage:
@@ -302,10 +333,9 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     row(translate(label), f"{translate('host directory')} {storage.get('host_path', '-')}")
                 else:
                     row(translate(label), f"{storage.get('size_gb', '-')} GB {on} {storage.get('storage', '-')}")
-        if isinstance(plan.get("resources"), dict):
-            row(translate("Resources"), f"{plan['resources']['cores']} CPU, {plan['resources']['memory_mb']} MB RAM")
         if plan.get("extra_mounts"):
-            lines.append(f"{translate('Extra paths') + ':':<16}")
+            lines.append(f"{translate('Extra paths')}:")
+            extra_paths = []
             for mount in plan["extra_mounts"]:
                 target = (f"{translate('host directory')} {mount['source']}" if mount["type"] == "host-bind"
                           else f"{translate('Container volume')} {mount.get('size_gb', '-')} GB {on} {mount['source']}")
@@ -313,7 +343,8 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                     target += f" ({translate('read-only')})"
                 if mount.get('idmap'):
                     target += f" · idmap={mount['idmap']}"
-                lines.append(f"  {mount['container_path']} → {target}")
+                extra_paths.append((mount['container_path'], target))
+            path_lines("  ", extra_paths)
         if plan.get("extra_devices"):
             row(translate("Devices"), ", ".join(device_label(device) for device in plan["extra_devices"]))
     else:
@@ -331,7 +362,9 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
     for mount in plan.get('tmpfs_mounts', []):
         row('tmpfs', f"{mount['container_path']} → {mount['size_mb']} MiB RAM")
     if mounts:
-        lines.append(f"{translate('Data') + ':':<16}")
+        gap()
+        lines.append(f"{translate('Data')}:")
+        data_paths = []
         for mount in mounts:
             if mount["type"] == "host-bind":
                 target = f"{translate('host directory')} {mount['source']}"
@@ -343,8 +376,10 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
                 target += f" ({translate('read-only')})"
             if mount.get('idmap'):
                 target += f" · idmap={mount['idmap']}"
-            lines.append(f"  {mount['container_path']} → {target}")
+            data_paths.append((mount['container_path'], target))
+        path_lines("  ", data_paths)
     network = plan.get("network", {})
+    gap()
     if plan.get("host_monitor"):
         row(translate("Network"), translate("IP address and firewall of the host"))
         firewall = plan.get("host_firewall")
@@ -383,16 +418,19 @@ def _deployment_summary_text(template: dict[str, Any], deployment: dict[str, Any
             translate("unprivileged LXC") if security.get("unprivileged") else translate("privileged LXC"))
     environment = plan.get("environment", [])
     if environment:
-        row(translate("Variables"), ", ".join(
-            f"{item['name']}={item['value'].replace(CONTAINER_ADDRESS, ADDRESS_SHOWN)}" for item in environment))
+        gap()
+        lines.append(f"{translate('Variables')}:")
+        lines += _columns([f"{item['name']}={item['value'].replace(CONTAINER_ADDRESS, ADDRESS_SHOWN)}"
+                           for item in environment])
     if plan.get("suite_arr"):
         lines += ["", *[translate(note) for note in plan.get("completion_notes", [])]]
-    lines.append("")
+    gap()
     row(translate("Start"), f"{translate('when finished')}: {_yes_no(plan.get('start_after_create'))} · "
                             f"{translate('with Proxmox')}: {_yes_no(plan.get('onboot'))}")
     if "watchdog" in plan:
         row(translate("Watchdog"), _yes_no(plan["watchdog"]))
-    return "\n".join(lines)
+    width = min(max((len(line[0]) for line in lines if isinstance(line, tuple)), default=0) + 1, 22)
+    return "\n".join(f"{line[0] + ':':<{width}}  {line[1]}" if isinstance(line, tuple) else line for line in lines)
 
 
 def _print_installation_summary(result: dict[str, Any], images_removed: str | None = None) -> None:
