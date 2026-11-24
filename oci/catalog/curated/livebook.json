@@ -14,7 +14,7 @@
       "en_US": "Create and run collaborative Elixir notebooks in a browser. The official image includes the runtime; notebook files can be persisted in the mounted /data directory."
     },
     "category": "ai",
-    "category_label": "AI",
+    "category_label": "AI / Coding & Dev-Tools",
     "author": "livebook-dev",
     "developer": "livebook-dev",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/livebook.webp",

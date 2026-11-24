@@ -14,7 +14,7 @@
       "en_US": "Run the diagrams.net web editor from the project-maintained image. No external database or sidecar is needed. By default, diagrams are saved or exported by the browser; configure an integration if you want server-side storage."
     },
     "category": "creative",
-    "category_label": "Creative",
+    "category_label": "Creative & Design",
     "author": "docker-drawio",
     "developer": "docker-drawio",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/draw-io.webp",

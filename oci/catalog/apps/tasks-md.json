@@ -14,7 +14,7 @@
       "en_US": "Create, organize and search personal tasks through a lightweight web interface. Tasks and settings persist as files, with no external database. The app has no built-in login, so keep it on a trusted network or protect access at your reverse proxy."
     },
     "category": "productivity",
-    "category_label": "Productivity",
+    "category_label": "Productivity & Workflows",
     "author": "Tasks.md",
     "developer": "Tasks.md",
     "icon": "https://raw.githubusercontent.com/baldissaramatheus/Tasks.md/main/frontend/public/favicon/android-chrome-192x192.png",

@@ -14,7 +14,7 @@
       "en_US": "Self-hosted Soulseek client with a web interface for searching, sharing and downloading files. It can start on its own; add Soulseek network credentials in the app before connecting."
     },
     "category": "downloads",
-    "category_label": "Files & Downloads",
+    "category_label": "Downloads",
     "author": "slskd",
     "developer": "slskd",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/slskd.webp",

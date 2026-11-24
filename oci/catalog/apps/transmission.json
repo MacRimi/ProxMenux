@@ -14,7 +14,7 @@
       "en_US": "Transmission is designed for easy, powerful use. Transmission has the features you want from a BitTorrent client: encryption, a web interface, peer exchange, magnet links, DHT, µTP, UPnP and NAT-PMP port forwarding, webseed support, watch directories, tracker editing, global and per-torrent speed limits, and more."
     },
     "category": "downloads",
-    "category_label": "Files & Downloads",
+    "category_label": "Downloads",
     "author": "LinuxServer.io",
     "developer": null,
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/transmission.webp",

@@ -14,7 +14,7 @@
       "en_US": "Queue and manage video or audio downloads using yt-dlp and save files to a persistent folder."
     },
     "category": "downloads",
-    "category_label": "Files & Downloads",
+    "category_label": "Downloads",
     "author": "alexta69",
     "developer": "alexta69",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/metube.webp",

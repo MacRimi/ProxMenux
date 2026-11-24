@@ -14,7 +14,7 @@
       "en_US": "Share files through temporary download links and manage them from a web interface. Gokapi stores its configuration and application data in separate persistent directories and uses its built-in database."
     },
     "category": "sharing",
-    "category_label": "Sharing",
+    "category_label": "Files & Sharing",
     "author": "Gokapi",
     "developer": "Gokapi",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gokapi.webp",

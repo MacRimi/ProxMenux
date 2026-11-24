@@ -14,7 +14,7 @@
       "en_US": "Collect coding activity from compatible editor plugins and view personal statistics in a web dashboard. The image uses SQLite by default and stores its database under /data; no external database is required."
     },
     "category": "productivity",
-    "category_label": "Productivity",
+    "category_label": "Productivity & Workflows",
     "author": "wakapi",
     "developer": "wakapi",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/wakapi.webp",

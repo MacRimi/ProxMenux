@@ -74,7 +74,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Authentik | Authentication & Security |
 | ChromeOS Flex | Browsers & Web Desktops |
 | Chromium | Browsers & Web Desktops |
-| CodeProject.AI Server | AI |
+| CodeProject.AI Server | AI / Coding & Dev-Tools |
 | CopyParty | Files & Sharing |
 | Crafty | Gaming & Leisure |
 | ddclient | Adblock & DNS |
@@ -87,7 +87,7 @@ Questions and ideas about OCI testing go in [discussion #440](https://github.com
 | Grafana | Monitoring & Analytics |
 | HAOS One | IoT & Smart Home |
 | HedgeDoc | Documents & Notes |
-| Immich | Media |
+| Immich | Media & Streaming |
 | JDownloader | Downloads |
 | Jenkins CI/CD | AI / Coding & Dev-Tools |
 | Karakeep | Documents & Notes |

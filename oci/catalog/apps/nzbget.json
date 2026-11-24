@@ -14,7 +14,7 @@
       "en_US": "Nzbget is a usenet downloader, written in C++ and designed with performance in mind to achieve maximum download speed by using very little system resources."
     },
     "category": "downloads",
-    "category_label": "Files & Downloads",
+    "category_label": "Downloads",
     "author": "LinuxServer.io",
     "developer": null,
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nzbget.webp",

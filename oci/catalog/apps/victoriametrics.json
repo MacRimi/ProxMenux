@@ -14,7 +14,7 @@
       "en_US": "Store and query time-series metrics through a Prometheus-compatible HTTP API and web interface."
     },
     "category": "monitoring",
-    "category_label": "Monitoring",
+    "category_label": "Monitoring & Analytics",
     "author": "VictoriaMetrics",
     "developer": "VictoriaMetrics",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/victoriametrics.webp",

@@ -17,7 +17,7 @@
       "es_ES": "AirDC++ Web Client con la imagen comunitaria de gangefors. La configuración, las descargas y los archivos compartidos usan rutas persistentes separadas."
     },
     "category": "downloads",
-    "category_label": "Files & Downloads",
+    "category_label": "Downloads",
     "author": "gangefors",
     "developer": "AirDC++",
     "icon": "https://raw.githubusercontent.com/airdcpp-web/airdcpp-webui/eeeea5025a5e720f38dac53ced8e002940f00a74/resources/images/logo.svg",

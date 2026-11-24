@@ -14,7 +14,7 @@
       "en_US": "Immich as a coordinated four-LXC native OCI stack with private PostgreSQL and Valkey services, persistent media and model cache, and selectable hardware acceleration."
     },
     "category": "media",
-    "category_label": "Media",
+    "category_label": "Media & Streaming",
     "author": "Immich",
     "developer": "Immich",
     "icon": null,

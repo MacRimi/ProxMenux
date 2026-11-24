@@ -14,7 +14,7 @@
       "en_US": "Tdarr keeps a media library in the formats and codecs chosen for it: it scans the library, checks the health of every file and transcodes what does not match, with its own worker node inside the container. The web interface is on port 8265 and the node listens on 8266."
     },
     "category": "media",
-    "category_label": "Media",
+    "category_label": "Media & Streaming",
     "author": "HaveAGitGat",
     "developer": null,
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/tdarr.webp",

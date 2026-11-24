@@ -14,7 +14,7 @@
       "en_US": "Official latest CPU image with persistent settings and modules. Initial CPU and Coral PCIe inference passed on Intel amd64. Coral module uses its persistent upstream EdgeTPU runtime via module-scoped LD_PRELOAD; missing JSON defaults preserve existing user settings. The TPU needs exclusive access. ARM and NVIDIA channels are not offered by this template; Failures observed on the AMD lab host remain unexplained; no blanket AMD incompatibility is inferred."
     },
     "category": "ai",
-    "category_label": "AI",
+    "category_label": "AI / Coding & Dev-Tools",
     "author": "codeproject",
     "developer": "codeproject",
     "icon": null,

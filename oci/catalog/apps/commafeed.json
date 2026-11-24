@@ -14,7 +14,7 @@
       "en_US": "Follow and organize RSS feeds in a responsive web interface. This image variant uses the embedded H2 database, so the service runs as one image without an external database."
     },
     "category": "productivity",
-    "category_label": "Productivity",
+    "category_label": "Productivity & Workflows",
     "author": "commafeed",
     "developer": "commafeed",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/commafeed.webp",

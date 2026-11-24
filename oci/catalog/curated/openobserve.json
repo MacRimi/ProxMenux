@@ -14,7 +14,7 @@
       "en_US": "Collect and explore logs, metrics and traces in a single-node observability server."
     },
     "category": "monitoring",
-    "category_label": "Monitoring",
+    "category_label": "Monitoring & Analytics",
     "author": "OpenObserve",
     "developer": "OpenObserve",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openobserve.webp",

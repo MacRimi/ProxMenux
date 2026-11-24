@@ -14,7 +14,7 @@
       "en_US": "Track projects, issues, milestones, time and documentation in a self-hosted web application. This single-image profile uses Redmine\u2019s built-in SQLite database and persists it alongside uploaded files."
     },
     "category": "productivity",
-    "category_label": "Productivity",
+    "category_label": "Productivity & Workflows",
     "author": "redmine",
     "developer": "redmine",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/redmine.webp",

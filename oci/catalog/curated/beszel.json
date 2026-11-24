@@ -14,7 +14,7 @@
       "en_US": "Monitor system metrics and container stats from a self-hosted web dashboard."
     },
     "category": "monitoring",
-    "category_label": "Monitoring",
+    "category_label": "Monitoring & Analytics",
     "author": "henrygd",
     "developer": "henrygd",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/beszel.webp",

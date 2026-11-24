@@ -14,7 +14,7 @@
       "en_US": "The maintained jlesage JDownloader 2 image adapted as a native Proxmox OCI LXC with persistent configuration and shared downloads."
     },
     "category": "downloads",
-    "category_label": "Files & Downloads",
+    "category_label": "Downloads",
     "author": "jlesage",
     "developer": "jlesage",
     "icon": null,

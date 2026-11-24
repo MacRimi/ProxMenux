@@ -14,7 +14,7 @@
       "en_US": "Scrape metrics endpoints, store time-series data and explore them in a web interface."
     },
     "category": "monitoring",
-    "category_label": "Monitoring",
+    "category_label": "Monitoring & Analytics",
     "author": "prometheus",
     "developer": "prometheus",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/prometheus.webp",

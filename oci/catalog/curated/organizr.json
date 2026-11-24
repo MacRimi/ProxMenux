@@ -14,7 +14,7 @@
       "en_US": "Organize links and integrations for homelab services behind a single dashboard. The project-maintained image stores its configuration under /config and runs without an external database or sidecar."
     },
     "category": "management",
-    "category_label": "Management",
+    "category_label": "Host Management",
     "author": "docker-organizr",
     "developer": "docker-organizr",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/organizr.webp",

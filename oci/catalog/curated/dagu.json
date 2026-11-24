@@ -14,7 +14,7 @@
       "en_US": "Define and run scheduled workflows from YAML files, scripts, SSH commands and local tasks. Dagu stores definitions and run state in its data directory and does not require a separate database."
     },
     "category": "automation",
-    "category_label": "Automation & Workflow",
+    "category_label": "Automation & Scheduling",
     "author": "dagucloud",
     "developer": "dagucloud",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dagu.webp",
