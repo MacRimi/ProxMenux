@@ -2451,7 +2451,7 @@
     "lxcUpdateDetection": {
       "title": "Kontrola aktualizácií v LXC",
       "descriptionStart": "Pravidelne kontroluje bežiace Debian/Ubuntu/Alpine LXC kontajnery, či nemajú dostupné aktualizácie balíkov",
-      "descriptionEnd": " a zobrazí ich v prehľade. Zodpovedajúci prepínač v Notifikácie → Služby sa zobrazí iba vtedy, keď je táto kontrola zapnutá.",
+      "descriptionEnd": " a zobrazí ich v prehľade. Zodpovedajúci prepínač v Notifikácie → VM / CT sa zobrazí iba vtedy, keď je táto kontrola zapnutá.",
       "enableLabel": "Zapnúť kontrolu aktualizácií v LXC",
       "loadFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo načítať.",
       "saveFailed": "Nastavenie kontroly aktualizácií LXC sa nepodarilo uložiť.",
@@ -2545,7 +2545,7 @@
         "error_resolved": "Problém bol vyriešený",
         "error_escalated": "Problém sa zhoršil",
         "health_degraded": "Zhoršený stav kontroly",
-        "lxc_updates_available": "Dostupné aktualizácie LXC (experimentálne)",
+        "lxc_updates_available": "Dostupné aktualizácie LXC",
         "lxc_update_applied": "Aktualizácia LXC bola vykonaná",
         "docker_stack_update_available": "Dostupné aktualizácie Dockeru",
         "vm_start": "VM bola spustená",
@@ -7599,7 +7599,7 @@
         "lxc_updates_available": {
           "title": "{hostname}: Aktualizácie balíkov sú dostupné pre {count} LXC",
           "body": "📊 Čakajúce aktualizácie balíkov má {count} LXC (📦 spolu {total_packages}, 🔒 bezpečnostné {security_count}):\n\n{ct_list}",
-          "label": "Dostupné aktualizácie LXC (experimentálne)"
+          "label": "Dostupné aktualizácie LXC"
         },
         "lxc_update_applied": {
           "title": "{hostname}: LXC {ct_name} ({vmid}) aktualizácia {result}",

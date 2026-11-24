@@ -2300,7 +2300,7 @@
     "lxcUpdateDetection": {
       "title": "Rilevamento aggiornamenti LXC",
       "descriptionStart": "Controlla periodicamente i container LXC Debian/Ubuntu/Alpine in esecuzione per individuare gli aggiornamenti dei pacchetti in sospeso",
-      "descriptionEnd": " e mostrali nella dashboard. L’interruttore di notifica corrispondente in Notifiche -> Servizi viene visualizzato solo quando il rilevamento è abilitato.",
+      "descriptionEnd": " e mostrali nella dashboard. L’interruttore di notifica corrispondente in Notifiche -> VM/CT viene visualizzato solo quando il rilevamento è abilitato.",
       "enableLabel": "Rileva aggiornamenti LXC",
       "loadFailed": "Impossibile caricare l'impostazione di rilevamento degli aggiornamenti LXC.",
       "saveFailed": "Impossibile salvare l'impostazione di rilevamento degli aggiornamenti LXC.",
@@ -2394,7 +2394,7 @@
         "error_resolved": "Notifica di recupero",
         "error_escalated": "Gravità del problema di salute aumentata",
         "health_degraded": "Controllo dello stato peggiorato",
-        "lxc_updates_available": "Aggiornamenti LXC disponibili (sperimentale)",
+        "lxc_updates_available": "Aggiornamenti LXC disponibili",
         "vm_start": "VM avviata",
         "vm_start_warning": "VM avviata (avvisi)",
         "vm_stop": "VM arrestata",
@@ -7448,7 +7448,7 @@
         "lxc_updates_available": {
           "title": "{hostname}: {count} container LXC con aggiornamenti pacchetti disponibili",
           "body": "📊 {count} container LXC con aggiornamenti dei pacchetti in sospeso (📦 {total_packages} in totale, 🔒 {security_count} di sicurezza):\n\n{ct_list}",
-          "label": "Aggiornamenti LXC disponibili (sperimentali)"
+          "label": "Aggiornamenti LXC disponibili"
         },
         "lxc_update_applied": {
           "title": "{hostname}: aggiornamento LXC {ct_name} ({vmid}): {result}",

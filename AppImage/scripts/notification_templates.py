@@ -859,7 +859,7 @@ TEMPLATES = {
             '(📦 {total_packages} total, 🔒 {security_count} security):\n\n'
             '{ct_list}'
         ),
-        'label': 'LXC updates available (experimental)',
+        'label': 'LXC updates available',
         'group': 'vm_ct',
         'default_enabled': False,
     },

@@ -2300,7 +2300,7 @@
     "lxcUpdateDetection": {
       "title": "Detecção de atualização LXC",
       "descriptionStart": "Verifique periodicamente os contêineres Debian/Ubuntu/Alpine LXC em execução para atualizações de pacotes pendentes",
-      "descriptionEnd": "e coloque-os no painel. A alternância de notificação correspondente em Notificações -> Serviços aparece apenas enquanto a detecção está habilitada.",
+      "descriptionEnd": "e coloque-os no painel. A alternância de notificação correspondente em Notificações -> VM/CT aparece apenas enquanto a detecção está habilitada.",
       "enableLabel": "Habilitar detecção de atualização LXC",
       "loadFailed": "Não foi possível carregar a configuração de detecção de atualização LXC.",
       "saveFailed": "Não foi possível salvar a configuração de detecção de atualização LXC.",
@@ -2394,7 +2394,7 @@
         "error_resolved": "Notificação de recuperação",
         "error_escalated": "Problema de saúde escalado",
         "health_degraded": "Verificação de integridade degradada",
-        "lxc_updates_available": "Atualizações LXC disponíveis (experimental)",
+        "lxc_updates_available": "Atualizações LXC disponíveis",
         "vm_start": "VM iniciada",
         "vm_start_warning": "VM iniciada (avisos)",
         "vm_stop": "VM parada",
@@ -7448,7 +7448,7 @@
         "lxc_updates_available": {
           "title": "{hostname}: {count} LXC(s) com atualizações de pacote disponíveis",
           "body": "📊 {count} LXC(s) com atualizações de pacote pendentes (📦 {total_packages} total, 🔒 {security_count} segurança):\n\n{ct_list}",
-          "label": "LXC atualizações disponíveis (experimental)"
+          "label": "LXC atualizações disponíveis"
         },
         "lxc_update_applied": {
           "title": "{hostname}: LXC {ct_name} ({vmid}) atualização {result}",
