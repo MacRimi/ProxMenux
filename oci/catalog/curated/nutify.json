@@ -1,0 +1,557 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-nutify",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Nutify"
+    },
+    "tagline": {
+      "en_US": "UPS monitoring for Network UPS Tools with dashboards, alerts and reports."
+    },
+    "description": {
+      "en_US": "Nutify is a web interface for Network UPS Tools (NUT): real-time battery, load and voltage dashboards, historical telemetry, alerts and scheduled reports for a USB UPS attached to the host or a remote NUT server."
+    },
+    "category": "monitoring",
+    "category_label": "Monitoring & Analytics",
+    "author": "DartSteven",
+    "developer": "DartSteven",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nutify.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": 5050,
+      "path": "/"
+    },
+    "website": "https://github.com/DartSteven/Nutify",
+    "documentation": "https://github.com/DartSteven/Nutify/wiki",
+    "repository": "https://github.com/DartSteven/Nutify",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "DartSteven",
+    "repository": "https://github.com/DartSteven/Nutify",
+    "revision": "943c5794773c4a39fb17462a0e4f4014a9c86e73",
+    "default_branch": "main",
+    "image_repository_url": "https://hub.docker.com/r/dartsteven/nutify",
+    "readme_pushed_at": "2026-08-24T12:40:07Z",
+    "readme_raw_url": "https://raw.githubusercontent.com/DartSteven/Nutify/main/docker-compose.yaml",
+    "compose_sha256": "6c92286bf7f17f52a734dd4a7106fb56a1404bcca96286643f314132f46ee02b",
+    "generated_at": "2026-11-24T00:00:00+00:00"
+  },
+  "container_contract": {
+    "service_name": "nutify",
+    "container_name": "nutify",
+    "image": {
+      "reference": "dartsteven/nutify:0.3.0-amd64",
+      "registry": "docker.io",
+      "repository": "dartsteven/nutify",
+      "tag": "0.3.0-amd64",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "SECRET_KEY",
+        "example": "${GENERATED_SECRET_KEY}",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose",
+        "prompt": "Session and credential encryption key; the installer generates one with openssl rand -hex 32"
+      },
+      {
+        "name": "NUTIFY_WEB_USER",
+        "example": "nut",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NUT_SERVICE_USER",
+        "example": "nut",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "UDEV",
+        "example": "1",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SKIP_PERMCHECK",
+        "example": "true",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "NUTIFY_USB_GID",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Numeric group of the host USB device node, only when it cannot be detected at startup"
+      },
+      {
+        "name": "LOG",
+        "example": "true",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LOG_LEVEL",
+        "example": "INFO",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "LOG_WERKZEUG",
+        "example": "true",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "ENABLE_LOG_STARTUP",
+        "example": "Y",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SSL_ENABLED",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose"
+      },
+      {
+        "name": "SOCKETIO_ALLOWED_ORIGINS",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Comma-separated exact reverse-proxy origins; wildcards are rejected"
+      }
+    ],
+    "volumes": [
+      {
+        "compose_source_example": "Nutify/instance",
+        "container_path": "/app/nutify/instance",
+        "default": "managed-volume",
+        "id": "volume-0",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 4
+        },
+        "read_only": false,
+        "required": true
+      },
+      {
+        "compose_source_example": "Nutify/etc/nut",
+        "container_path": "/etc/nut",
+        "default": "managed-volume",
+        "id": "volume-1",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 1
+        },
+        "read_only": false,
+        "required": true
+      },
+      {
+        "compose_source_example": "Nutify/logs",
+        "container_path": "/app/nutify/logs",
+        "default": "managed-volume",
+        "id": "volume-2",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind",
+          "skip"
+        ],
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 2
+        },
+        "read_only": false,
+        "required": false
+      },
+      {
+        "compose_source_example": "Nutify/ssl",
+        "container_path": "/app/ssl",
+        "default": "skip",
+        "id": "volume-3",
+        "installation_choice": [
+          "managed-volume",
+          "host-bind",
+          "skip"
+        ],
+        "managed_volume": {
+          "backup": false,
+          "default_size_gb": 1
+        },
+        "read_only": false,
+        "required": false
+      }
+    ],
+    "ports": [
+      {
+        "container_port": 5050,
+        "published_example": 5050,
+        "protocol": "tcp",
+        "required": true,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 3493,
+        "published_example": 3493,
+        "protocol": "tcp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      },
+      {
+        "container_port": 443,
+        "published_example": 443,
+        "protocol": "tcp",
+        "required": false,
+        "proxmox_behavior": "listener-on-dedicated-lxc-address-no-nat"
+      }
+    ],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "services:\n  # Main Nutify application and NUT monitoring service.\n  nut:\n    # Select the tag matching the host CPU. This default is for AMD64/x86_64.\n    image: dartsteven/nutify:latest-amd64\n    # Fixed name makes logs and container commands easier to use.\n    container_name: Nutify\n\n    # Start from no Linux capabilities, then restore only those needed by the\n    # entrypoint for file ownership, user switching, and process supervision.\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN        # Set ownership on persistent bind-mounted files.\n      - DAC_OVERRIDE # Prepare files whose existing permissions are restrictive.\n      - FOWNER       # Adjust modes on files prepared during startup.\n      - KILL         # Supervise child NUT and web processes.\n      - SETGID       # Drop services to the configured runtime group.\n      - SETUID       # Drop services to the configured runtime user.\n    security_opt:\n      # Prevent processes from gaining additional privileges after startup.\n      - no-new-privileges:true\n\n    # USB HID discovery and driver access. This exposes only the USB bus, not\n    # privileged mode or the complete host /dev tree. Major 189 is Linux USB.\n    device_cgroup_rules:\n      - \"c 189:* rwm\"\n\n    # Persistent host directories. They survive image updates and recreation.\n    volumes:\n      - ./Nutify/logs:/app/nutify/logs         # Application and NUT logs.\n      - ./Nutify/instance:/app/nutify/instance # Database and runtime state.\n      - ./Nutify/ssl:/app/ssl                  # Optional TLS certificate/key.\n      - ./Nutify/etc/nut:/etc/nut              # Generated NUT configuration.\n      - /dev/bus/usb:/dev/bus/usb:rw           # USB devices for nut-scanner/NUT.\n      - /run/udev:/run/udev:ro                 # Read-only USB identity metadata.\n\n    # Base runtime settings. OIDC can be configured later in\n    # System -> Authentication, without changing this file.\n    environment:\n      # Required secret for sessions and encrypted provider credentials.\n      # Generate it once with: openssl rand -hex 32\n      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env; generate it with openssl rand -hex 32}\n      NUTIFY_WEB_USER: nut      # Unprivileged user running the web application.\n      NUT_SERVICE_USER: nut     # Unprivileged user running NUT commands.\n      UDEV: \"1\"                 # Enable USB/udev-aware device discovery.\n      SKIP_PERMCHECK: \"true\"    # Never chmod/chown host USB device nodes.\n      # Optional numeric host USB group when it cannot be detected at startup.\n      NUTIFY_USB_GID: ${NUTIFY_USB_GID:-}\n      LOG: \"true\"               # Enable application logging.\n      LOG_LEVEL: INFO            # DEBUG, INFO, WARNING, ERROR, or CRITICAL.\n      LOG_WERKZEUG: \"true\"      # Enable HTTP access logs.\n      ENABLE_LOG_STARTUP: Y      # Log startup diagnostics without secret values.\n      SSL_ENABLED: \"false\"      # Set true only after mounting valid TLS files.\n      # Optional comma-separated exact reverse-proxy origins; wildcards fail.\n      SOCKETIO_ALLOWED_ORIGINS: ${SOCKETIO_ALLOWED_ORIGINS:-}\n\n    # Explicit external resolvers used by provider APIs and remote NUT hosts.\n    dns:\n      - 1.1.1.1 # Cloudflare DNS.\n      - 8.8.8.8 # Google Public DNS fallback.\n    dns_opt:\n      - timeout:2 # Seconds allowed for each DNS attempt.\n      - attempts:2 # Number of attempts before the query fails.\n\n    # Host-to-container ports. Quote mappings to avoid YAML number parsing.\n    ports:\n      - \"3493:3493\" # NUT upsd endpoint for authorized network clients.\n      - \"5050:5050\" # Nutify HTTP application and setup wizard.\n      - \"443:443\"   # Nutify HTTPS endpoint when SSL_ENABLED=true.\n\n    # Restart after crashes and host reboots until explicitly stopped.\n    restart: always\n"
+  },
+  "compose_stack": {
+    "project_name": "nutify",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "nutify",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "nutify",
+        "image": "dartsteven/nutify:0.3.0-amd64",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "dartsteven/nutify:0.3.0-amd64",
+          "container_name": "nutify",
+          "restart": "always",
+          "cap_add": [
+            "CHOWN",
+            "DAC_OVERRIDE",
+            "FOWNER",
+            "KILL",
+            "SETGID",
+            "SETUID"
+          ],
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "environment": {
+            "SECRET_KEY": "${GENERATED_SECRET_KEY}",
+            "NUTIFY_WEB_USER": "nut",
+            "NUT_SERVICE_USER": "nut",
+            "UDEV": "1",
+            "SKIP_PERMCHECK": "true",
+            "NUTIFY_USB_GID": "",
+            "LOG": "true",
+            "LOG_LEVEL": "INFO",
+            "LOG_WERKZEUG": "true",
+            "ENABLE_LOG_STARTUP": "Y",
+            "SSL_ENABLED": "false",
+            "SOCKETIO_ALLOWED_ORIGINS": ""
+          },
+          "volumes": [
+            "./Nutify/logs:/app/nutify/logs",
+            "./Nutify/instance:/app/nutify/instance",
+            "./Nutify/ssl:/app/ssl",
+            "./Nutify/etc/nut:/etc/nut"
+          ],
+          "ports": [
+            "3493:3493",
+            "5050:5050",
+            "443:443"
+          ]
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "nutify"
+      ],
+      "stop_order": [
+        "nutify"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": [
+        {
+          "id": "secret-key",
+          "strategy": "generate-cryptographically-random-at-install",
+          "bindings": [
+            {
+              "service": "nutify",
+              "environment_variable": "SECRET_KEY"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "first_run": {
+    "endpoints": [
+      {
+        "label": "Web UI",
+        "path": "/",
+        "port": 5050,
+        "scheme": "http",
+        "source": "compose-metadata"
+      }
+    ],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 2,
+      "memory_mb": 1024,
+      "swap_mb": 512,
+      "rootfs_size_gb": 8,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": true,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {
+      "startup_healthcheck": {
+        "scheme": "http",
+        "port": 5050,
+        "path": "/",
+        "timeout_seconds": 300,
+        "request_timeout_seconds": 10,
+        "stability_seconds": 5,
+        "verify_tls": true
+      },
+      "optional_devices": [
+        {
+          "id": "ups-usb",
+          "kind": "character-device",
+          "purpose": "ups",
+          "enable_prompt": "Pass the USB device of the UPS to the LXC",
+          "enabled_default": false,
+          "required_by_compose": false,
+          "path_prompt": "USB device node of the UPS, as listed in the LXC configuration of the host",
+          "host_path_default": "",
+          "container_path_strategy": "same-as-host",
+          "mode": "preserve-host",
+          "deny_write": false,
+          "gid_strategy": "host-device-gid"
+        }
+      ],
+      "generated_sensitive_environment": {
+        "SECRET_KEY": {
+          "strategy": "token-hex",
+          "bytes": 32,
+          "prompt": true
+        }
+      }
+    },
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The source definition deploys the complete Docker Compose application model.",
+        "native_lxc_behavior": "The source model is preserved and translated into one native OCI service.",
+        "reason": "Catalog entries must state where the definition came from.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "reviewed-from-upstream-compose"
+      },
+      {
+        "id": "docker-hardening",
+        "upstream_behavior": "The official Docker baseline uses cap_drop: ALL, keeps six capabilities, sets no-new-privileges and scopes USB access with device_cgroup_rules for major 189.",
+        "native_lxc_behavior": "ProxMenux validates the declared cap_add names and maps no-new-privileges through security_opt, but does not translate cap_drop or device_cgroup_rules into equivalent native OCI-on-LXC controls. The unprivileged LXC already runs without those capabilities.",
+        "reason": "Docker Engine confinement options cannot be asserted as equivalent to the LXC user namespace without a native mapping.",
+        "behavioral_impact": "Capability bounding and cgroup device rules are not reproduced; device access is limited by the device requests of the profile instead.",
+        "validation": "reviewed-from-upstream-compose"
+      },
+      {
+        "id": "usb-bus-passthrough",
+        "upstream_behavior": "The UPS is reached through the whole /dev/bus/usb bus plus /run/udev metadata, so nut-scanner discovers the device automatically.",
+        "native_lxc_behavior": "A native LXC passes individual device nodes, so the profile asks for the USB node of the UPS and passes it at the same path inside the container.",
+        "reason": "An unprivileged LXC receives devices one by one; binding the full USB bus would require host privileges the engine does not grant.",
+        "behavioral_impact": "Nutify can drive the passed UPS, but automatic re-discovery after a replug is not guaranteed, and /run/udev metadata is not available. A remote NUT server needs no device at all.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "compose-resolvers",
+        "upstream_behavior": "The Compose file sets explicit resolvers 1.1.1.1 and 8.8.8.8 with dns_opt timeouts.",
+        "native_lxc_behavior": "The LXC uses the DNS configuration of the Proxmox datacenter and the selected bridge.",
+        "reason": "A native LXC is not a Docker host; resolvers are a property of the datacenter.",
+        "behavioral_impact": "Resolution of remote NUT hosts and provider APIs depends on the datacenter DNS, which may differ from the upstream defaults.",
+        "validation": "reviewed-from-upstream-compose"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "Docker publishes 3493, 5050 and 443 on the Docker host.",
+        "native_lxc_behavior": "The application listens on its original container ports at the address of its own LXC.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "Published ports are metadata; ProxMenux URLs use the matching container target port.",
+        "validation": "reviewed-from-upstream-compose"
+      },
+      {
+        "id": "per-architecture-tags",
+        "upstream_behavior": "The project publishes one tag per architecture (0.3.0-amd64, 0.3.0-mac-arm64, 0.3.0-raspberrypi5-arm64) instead of a multi-architecture manifest.",
+        "native_lxc_behavior": "The curated profile pins 0.3.0-amd64 for amd64 hosts.",
+        "reason": "One catalog entry can only name one image reference, and the project's own default is the amd64 tag.",
+        "behavioral_impact": "arm64 and arm hosts must replace the reference with the matching tag before installing; an amd64 host resolves the digest of 0.3.0-amd64.",
+        "validation": "reviewed-from-upstream-compose"
+      },
+      {
+        "id": "restart-policy",
+        "upstream_behavior": "Compose restarts the container on crashes and on host reboot.",
+        "native_lxc_behavior": "The LXC starts on boot and ProxMenux restarts failed services through its health watchdog.",
+        "reason": "There is no Docker daemon inside the LXC to honour restart: always.",
+        "behavioral_impact": "Restart behaviour is a property of the LXC, not of the Compose file.",
+        "validation": "pending-per-application"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "policy": "A generated template is never promoted to validated without install, health, restart and persistence tests.",
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "stop_signal",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "validated": false
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "automatic_unattended_updates": false,
+    "change_detection": "compare-resolved-architecture-digest",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes"
+  }
+}
