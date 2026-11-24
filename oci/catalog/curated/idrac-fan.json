@@ -1,0 +1,436 @@
+{
+  "schema_version": "0.5.0",
+  "kind": "proxmenux.oci-template",
+  "id": "image-idrac-fan",
+  "status": "generated-unvalidated",
+  "catalog_ui": {
+    "title": {
+      "en_US": "Dell iDRAC Fan Controller"
+    },
+    "tagline": {
+      "en_US": "Hold Dell PowerEdge fans at a fixed duty cycle from CPU temperature over IPMI."
+    },
+    "description": {
+      "en_US": "Dell iDRAC fan controller drives the fans of a Dell PowerEdge server from its CPU junction temperature over IPMI. It holds a low duty cycle while the server is cool and hands control back to Dell's BIOS profile above a configurable threshold. It works on iDRAC 6, 7 and 8, and on iDRAC 9 up to firmware 3.30.30.30; iDRAC 10 and blades are not supported by Dell's IPMI commands."
+    },
+    "category": "monitoring",
+    "category_label": "Monitoring & Analytics",
+    "author": "tigerblue77",
+    "developer": "tigerblue77",
+    "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dell.webp",
+    "thumbnail": null,
+    "screenshots": [],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "launch": {
+      "scheme": "http",
+      "port": null,
+      "path": "/"
+    },
+    "website": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
+    "documentation": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker#readme",
+    "repository": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
+    "tips": [],
+    "mini_changelog": [],
+    "display_version": null,
+    "updated_at": null
+  },
+  "source": {
+    "provider": "tigerblue77",
+    "repository": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
+    "revision": "85731a28c8b4b6daf34d52c375fea9e7b88bd20a",
+    "default_branch": "master",
+    "image_repository_url": "https://hub.docker.com/r/tigerblue77/dell_idrac_fan_controller",
+    "readme_pushed_at": "2026-10-13T12:19:09Z",
+    "readme_raw_url": "https://raw.githubusercontent.com/tigerblue77/Dell_iDRAC_fan_controller_Docker/master/README.md",
+    "compose_sha256": "dc5e3e1d24b0a6d20e87b88e719793881b763823b192262e3b8097da7f17680a",
+    "generated_at": "2026-11-24T00:00:00+00:00"
+  },
+  "container_contract": {
+    "service_name": "idrac-fan",
+    "container_name": "idrac-fan",
+    "image": {
+      "reference": "tigerblue77/dell_idrac_fan_controller:v1.108",
+      "registry": "docker.io",
+      "repository": "tigerblue77/dell_idrac_fan_controller",
+      "tag": "v1.108",
+      "digest": null,
+      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+    },
+    "environment": [
+      {
+        "name": "IDRAC_HOST",
+        "example": "10.0.1.2",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "IP address of the iDRAC to control, or 'local' for the iDRAC of the host itself"
+      },
+      {
+        "name": "IDRAC_USERNAME",
+        "example": "root",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "iDRAC username; only required when IDRAC_HOST is not 'local'"
+      },
+      {
+        "name": "IDRAC_PASSWORD",
+        "example": "",
+        "required": true,
+        "sensitive": true,
+        "source": "docker-compose",
+        "prompt": "iDRAC password; only required when IDRAC_HOST is not 'local'"
+      },
+      {
+        "name": "FAN_SPEED",
+        "example": "5",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Fan duty cycle while the profile is applied, in % (0-100) or hex (0x00-0x64). Default 5"
+      },
+      {
+        "name": "CPU_TEMPERATURE_THRESHOLD",
+        "example": "auto",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Junction temperature beyond which Dell's BIOS fan mode takes over, or 'auto' to read it from the CPUs"
+      },
+      {
+        "name": "HIGH_FAN_SPEED",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Higher duty cycle that enables line interpolation between FAN_SPEED and this value"
+      },
+      {
+        "name": "CPU_TEMPERATURE_THRESHOLD_TO_START_LINE_INTERPOLATION",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Temperature in degrees Celsius at which interpolation starts, lower than CPU_TEMPERATURE_THRESHOLD"
+      },
+      {
+        "name": "CPU_TEMPERATURE_SOURCE",
+        "example": "auto",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Source of the CPU temperature: auto, ipmi or lm-sensors",
+        "choices": [
+          {
+            "value": "auto",
+            "label": "Auto (lm-sensors)"
+          },
+          {
+            "value": "ipmi",
+            "label": "IPMI"
+          },
+          {
+            "value": "lm-sensors",
+            "label": "lm-sensors"
+          }
+        ]
+      },
+      {
+        "name": "CHECK_INTERVAL",
+        "example": "5",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Seconds between checks, or a suffixed duration up to 15 minutes"
+      },
+      {
+        "name": "MAXIMUM_IPMI_UNREACHABLE_DURATION",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "How long the iDRAC may stay unreachable before the container exits, in seconds or suffixed like 5m"
+      },
+      {
+        "name": "MAXIMUM_CONSECUTIVE_IPMI_FAILURES",
+        "example": "",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Same threshold expressed in cycles, 1 or more"
+      },
+      {
+        "name": "DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Disable Dell's default cooling response for third-party PCIe cards"
+      },
+      {
+        "name": "KEEP_THIRD_PARTY_PCIE_CARD_COOLING_RESPONSE_STATE_ON_EXIT",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Restore the PCIe card cooling response state when the container stops"
+      },
+      {
+        "name": "MONITORING_ONLY_MODE",
+        "example": "false",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Apply no fan profile at all; only report temperatures"
+      }
+    ],
+    "volumes": [],
+    "ports": [],
+    "related_services": [],
+    "restart": "unless-stopped",
+    "stop_grace_period": null,
+    "original_compose": "No official Compose file. Reference docker run command:\n\ndocker run -d --name idrac-fan \\\n  -e IDRAC_HOST=<iDRAC IP or local> \\\n  -e IDRAC_USERNAME=<iDRAC username> \\\n  -e IDRAC_PASSWORD=<iDRAC password> \\\n  -e FAN_SPEED=5 \\\n  -e CPU_TEMPERATURE_THRESHOLD=auto \\\n  tigerblue77/dell_idrac_fan_controller:v1.108\n"
+  },
+  "compose_stack": {
+    "project_name": "idrac-fan",
+    "deployment_model": "one-native-oci-lxc-per-compose-service",
+    "user_experience": "single-application-install",
+    "main_service": "idrac-fan",
+    "service_count": 1,
+    "services": [
+      {
+        "name": "idrac-fan",
+        "image": "tigerblue77/dell_idrac_fan_controller:v1.108",
+        "is_main": true,
+        "role": "frontend",
+        "vmid_offset": 0,
+        "depends_on": [],
+        "frontend_network": true,
+        "private_network": false,
+        "compose": {
+          "image": "tigerblue77/dell_idrac_fan_controller:v1.108",
+          "container_name": "idrac-fan",
+          "restart": "unless-stopped",
+          "environment": {
+            "IDRAC_HOST": "10.0.1.2",
+            "IDRAC_USERNAME": "root",
+            "IDRAC_PASSWORD": "",
+            "FAN_SPEED": "5",
+            "CPU_TEMPERATURE_THRESHOLD": "auto",
+            "HIGH_FAN_SPEED": "",
+            "CPU_TEMPERATURE_THRESHOLD_TO_START_LINE_INTERPOLATION": "",
+            "CPU_TEMPERATURE_SOURCE": "auto",
+            "CHECK_INTERVAL": "5",
+            "MAXIMUM_IPMI_UNREACHABLE_DURATION": "",
+            "MAXIMUM_CONSECUTIVE_IPMI_FAILURES": "",
+            "DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE": "false",
+            "KEEP_THIRD_PARTY_PCIE_CARD_COOLING_RESPONSE_STATE_ON_EXIT": "false",
+            "MONITORING_ONLY_MODE": "false"
+          }
+        }
+      }
+    ],
+    "top_level": {},
+    "networking": {
+      "frontend": "selected-proxmox-bridge",
+      "private_required": false,
+      "private_creation": "automatic-create-if-missing",
+      "private_address_allocation": "automatic-static-address-per-service",
+      "service_discovery": "private-addresses-with-compose-service-host-aliases",
+      "dependency_external_access": "disabled-unless-service-publishes-ports",
+      "prompt_user_for_private_network": false
+    },
+    "storage": [],
+    "orchestration": {
+      "reserve_vmids_atomically": 1,
+      "start_order": [
+        "idrac-fan"
+      ],
+      "stop_order": [
+        "idrac-fan"
+      ],
+      "dependency_readiness": "compose-healthcheck-then-port-or-process-fallback",
+      "rollback_on_failure": "remove-new-rootfs-preserve-created-persistent-volumes"
+    },
+    "installer_inputs": {
+      "prompted": [
+        "stack_name",
+        "base_vmid",
+        "rootfs_storage",
+        "persistent_data_destinations",
+        "frontend_bridge",
+        "frontend_ipv4_mode"
+      ],
+      "automatic": [
+        "dependent_vmids",
+        "private_bridge",
+        "private_subnet",
+        "private_service_addresses",
+        "compose_service_aliases",
+        "generated_secrets",
+        "dependency_start_and_stop_order"
+      ],
+      "generated_secrets": []
+    }
+  },
+  "first_run": {
+    "endpoints": [],
+    "credentials": []
+  },
+  "proxmox": {
+    "runtime": "native-oci-lxc",
+    "technology_status": "proxmox-technology-preview",
+    "defaults": {
+      "unprivileged": true,
+      "ostype": "auto-from-image",
+      "cores": 1,
+      "memory_mb": 256,
+      "swap_mb": 256,
+      "rootfs_size_gb": 4,
+      "rootfs_storage": "local-lvm",
+      "volume_storage": "local-lvm",
+      "template_storage": "local",
+      "bridge": "vmbr0",
+      "ipv4": "dhcp",
+      "firewall": true,
+      "host_managed_network": true,
+      "onboot": true,
+      "features": [
+        "nesting=1"
+      ],
+      "shutdown_timeout_seconds": 30
+    },
+    "image_metadata_policy": {
+      "entrypoint": "import-from-oci-image",
+      "cmd": "import-from-oci-image",
+      "environment": "import-image-env-then-apply-compose-overrides",
+      "user": "import-from-oci-image",
+      "working_dir": "import-from-oci-image",
+      "stop_signal": "import-from-oci-image"
+    },
+    "installer_profile": {},
+    "adaptations": [
+      {
+        "id": "imported-compose-source",
+        "upstream_behavior": "The project publishes a Docker image driven by environment variables; there is no official Compose file, only a documented docker run command and an .env.example.",
+        "native_lxc_behavior": "The source model is reconstructed from the documented parameters and translated into one native OCI service.",
+        "reason": "Catalog entries must state where the definition came from.",
+        "behavioral_impact": "No automatic installation before review.",
+        "validation": "reviewed-from-upstream-documentation"
+      },
+      {
+        "id": "no-web-ui",
+        "upstream_behavior": "The container is a daemon: it runs supervisor.sh, controls the fans and logs to stdout; it exposes no listening port and no web interface.",
+        "native_lxc_behavior": "ProxMenux installs it as a non-web application with no frontend endpoint and no published port.",
+        "reason": "A daemon has nothing to browse; the installer shows it as a headless service.",
+        "behavioral_impact": "There is no first-run URL and no credential to recover; all configuration is done through the environment variables at install time.",
+        "validation": "reviewed-from-upstream-documentation"
+      },
+      {
+        "id": "ipmi-over-network",
+        "upstream_behavior": "When IDRAC_HOST is an IP address, the container drives the iDRAC over IPMI-over-LAN and needs no host device.",
+        "native_lxc_behavior": "The LXC uses its own address on the selected bridge and reaches the iDRAC over the network like any other client.",
+        "reason": "A dedicated LXC has its own network namespace and does not need the host's IPMI device.",
+        "behavioral_impact": "The profile covers the remote mode only; IDRAC_HOST=local, which needs /dev/ipmi0 passthrough, is not covered and must be configured by hand.",
+        "validation": "reviewed-from-upstream-documentation"
+      },
+      {
+        "id": "firmware-compatibility",
+        "upstream_behavior": "The container relies on two IPMI raw commands Dell removed from recent firmware: they exist on iDRAC 6, 7 and 8, on iDRAC 9 up to firmware 3.30.30.30, and never on iDRAC 10 or on blades and modular servers.",
+        "native_lxc_behavior": "The container starts, logs the iDRAC firmware version and reports whether the server accepted fan control; it exits cleanly when the commands are refused.",
+        "reason": "The compatibility limit is a property of the iDRAC firmware, not of the container runtime.",
+        "behavioral_impact": "On an iDRAC 9 at 3.34.34.34 or newer, or on any iDRAC 10, the container cannot control the fans and only monitors; the user must not expect the profile to change that.",
+        "validation": "pending-per-application"
+      },
+      {
+        "id": "no-persistent-storage",
+        "upstream_behavior": "The container is stateless: every setting comes from environment variables and nothing is written to a volume.",
+        "native_lxc_behavior": "ProxMenux installs it with no managed volume and no host bind.",
+        "reason": "A daemon with no state has nothing to persist or back up.",
+        "behavioral_impact": "Removing and reinstalling the LXC loses no data; the configuration lives in the environment of the instance.",
+        "validation": "reviewed-from-upstream-documentation"
+      },
+      {
+        "id": "per-architecture-image",
+        "upstream_behavior": "The project publishes one multi-architecture manifest tagged latest and v1.x, covering amd64 and arm64.",
+        "native_lxc_behavior": "The curated profile pins v1.108 and declares both architectures.",
+        "reason": "One catalog entry can name one image reference; the project's own tags are multi-arch.",
+        "behavioral_impact": "The installer resolves the digest for the architecture of the host.",
+        "validation": "reviewed-from-upstream-documentation"
+      },
+      {
+        "id": "dedicated-lxc-network",
+        "upstream_behavior": "The container reaches the iDRAC over the network; it publishes no port.",
+        "native_lxc_behavior": "The application uses the address of its own LXC to reach the iDRAC.",
+        "reason": "A native LXC has its own address and does not require Docker port NAT.",
+        "behavioral_impact": "No published port; the installer shows it as a headless service.",
+        "validation": "reviewed-from-upstream-documentation"
+      }
+    ]
+  },
+  "compatibility": {
+    "automatic_install_candidate": true,
+    "policy": "Single-image definitions are installable when every declared Compose option has a native Proxmox translation. Multi-image and unsupported runtime features remain blocked until their orchestrator or mapping is available.",
+    "supported_compose_keys": [
+      "cap_add",
+      "command",
+      "container_name",
+      "cpu_shares",
+      "deploy",
+      "devices",
+      "entrypoint",
+      "environment",
+      "extra_hosts",
+      "group_add",
+      "healthcheck",
+      "hostname",
+      "image",
+      "init",
+      "ipc",
+      "labels",
+      "logging",
+      "mac_address",
+      "mem_limit",
+      "network_mode",
+      "networks",
+      "ports",
+      "privileged",
+      "restart",
+      "runtime",
+      "security_opt",
+      "shm_size",
+      "stdin_open",
+      "stop_grace_period",
+      "sysctls",
+      "tty",
+      "ulimits",
+      "user",
+      "volumes",
+      "working_dir"
+    ],
+    "untranslated_blockers": [],
+    "validated": false
+  },
+  "validation": {
+    "schema": "passed-at-generation",
+    "clean_install": "pending",
+    "service_health": "pending",
+    "restart_persistence": "pending",
+    "backup_restore": "pending",
+    "update_preserves_data": "pending"
+  },
+  "lifecycle": {
+    "automatic_unattended_updates": false,
+    "change_detection": "compare-resolved-architecture-digest",
+    "registry_state": {
+      "resolved_architecture": null,
+      "resolved_digest": null,
+      "image_version_label": null,
+      "image_created": null
+    },
+    "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes"
+  }
+}
