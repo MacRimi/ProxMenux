@@ -46,7 +46,7 @@
       },
       {
         "feature": "Bevarande / rensning",
-        "local": "Tillämpas per schemalagt jobb via <code>KEEP_LAST</code>. Gamla arkiv tas bort tillsammans med sina sidofiler och körningsloggar. Interaktiva säkerhetskopior utför ingen rensning.",
+        "local": "Tillämpas per schemalagt jobb med de sex <code>KEEP_*</code>-gränserna, med samma urval som vzdump över det jobbets arkiv. Gamla arkiv (och deras sidofiler och körningsloggar) tas bort tillsammans. Interaktiva säkerhetskopior utför ingen rensning.",
         "pbs": "Tillämpas per schemalagt jobb via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktiva säkerhetskopior utför ingen rensning.",
         "borg": "Tillämpas per schemalagt jobb via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktiva säkerhetskopior utför ingen rensning."
       },

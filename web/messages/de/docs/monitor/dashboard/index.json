@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard | ProxMenux-Dokumentation",
-    "description": "Das Dashboard ist die Hauptoberfläche von ProxMenux Monitor: zehn Inhaltsreiter einschließlich Apps-Starter, eine globale Kopfzeile und eine konfigurierbare Navigationsreihenfolge."
+    "description": "Das Dashboard ist die Hauptoberfläche von ProxMenux Monitor: seine Registerkarten, die globale Kopfzeile und eine konfigurierbare Navigationsreihenfolge der obersten Ebene."
   },
   "header": {
     "title": "Dashboard",
-    "description": "Die Alltagsansicht von ProxMenux Monitor: zehn Inhaltsreiter einschließlich Apps-Starter, eine globale Kopfzeile und eine konfigurierbare Navigationsreihenfolge.",
+    "description": "Das Dashboard ist die Alltagsansicht von ProxMenux Monitor: seine Registerkarten, eine globale Kopfzeile und eine konfigurierbare Navigationsreihenfolge der obersten Ebene.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "Ein Header, zehn Tabs",
+    "title": "Ein Header für jeden Tab",
     "body": "Die Kopfzeile mit Logo, Knotenname, Statusanzeige, Laufzeit, Aktualisierung und Designauswahl bleibt sichtbar. Der aktive Reiter wechselt den gesamten Inhalt darunter. Die Statusfarbe entspricht der schwerwiegendsten Kategorie der <link>Zustandsüberwachung</link>; im Dashboard wird derselbe Wert angezeigt."
   },
   "tabs": {
-    "heading": "Die zehn Tabs",
-    "intro": "Jeder Tab hat eine eigene eigene Seite. Seiten werden schrittweise hinzugefügt, wenn die Dokumentation ausgefüllt wird; unten ist die vollständige Liste und wofür jeder verantwortlich ist.",
+    "heading": "Die Tabs",
+    "intro": "Jeder Tab hat eine eigene Seite, unten aufgelistet mit dem, wofür er zuständig ist. In der oberen Leiste sind Speicher, Netzwerk und Hardware unter Knoten gruppiert, Systemprotokolle, Sicherheit und Einstellungen unter Admin.",
     "headerTab": "Tab.",
     "headerOwns": "Zuständig für",
     "rows": [
@@ -30,34 +30,47 @@
       },
       {
         "name": "Speicher",
+        "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Proxmox-Pools, physische Festplatten, SMART-Daten, ZFS-Zustand, Verschleiß & Lebensdauer, Beobachtungshistorie."
       },
       {
         "name": "Netzwerk",
+        "linksTo": "/docs/monitor/dashboard/network",
         "owns": "Physische Schnittstellen, Bonds, Bridges und OVS, IP/MAC-Adressen, RX/TX-Diagramme und RRD-Verlauf je Schnittstelle."
       },
       {
         "name": "VMs und LXCs",
+        "linksTo": "/docs/monitor/dashboard/vms-lxcs",
         "owns": "Bestandsaufnahme der Gastsysteme, Detailansicht für Konfiguration, Metriken und Protokolle sowie Starten, Stoppen, Neustarten und Herunterfahren."
       },
       {
         "name": "Hardware",
+        "linksTo": "/docs/monitor/dashboard/hardware",
         "owns": "CPU-Modell und Topologie, Speicherlayout, PCIe-Topologie, GPUs mit Echtzeitüberwachung pro Slot."
       },
       {
+        "name": "Backup",
+        "linksTo": "/docs/monitor/dashboard/backup",
+        "owns": "Host-Backups mit ihren Jobs, Zielen und der Wiederherstellung, die Proxmox-Backup-Jobs von VMs und LXCs mit der Aufbewahrung jedes Speichers und der Status von Proxmox Backup Servern."
+      },
+      {
         "name": "Systemprotokolle",
+        "linksTo": "/docs/monitor/dashboard/system-logs",
         "owns": "Live <code>journalctl</code> mit Filtern, Proxmox Task History, Benachrichtigungsprotokoll, herunterladbare Log-Bundles."
       },
       {
         "name": "Terminal",
+        "linksTo": "/docs/monitor/dashboard/terminal",
         "owns": "Browser-Shell auf dem Proxmox-Host mit <code>xterm.js</code> über WebSockets. LXC-Konsolen öffnen sich im Tab VMs und LXCs."
       },
       {
         "name": "Sicherheit",
+        "linksTo": "/docs/monitor/dashboard/security",
         "owns": "Auth-Setup, Passwort / 2FA / API-Token, Audit-Log, optionales Fail2Ban-Panel, Secure Gateway-Bereitstellung."
       },
       {
         "name": "Einstellungen",
+        "linksTo": "/docs/monitor/dashboard/settings",
         "owns": "Monitor-Sprache, Navigationsreihenfolge, Benachrichtigungskanäle, KI-Anbieter, Zustandsschwellen, Ausschlüsse und Nachinstallationsoptimierungen."
       }
     ]

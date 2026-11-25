@@ -46,7 +46,7 @@
       },
       {
         "feature": "Aufbewahrung / Bereinigung",
-        "local": "Wird pro geplantem Auftrag über <code>KEEP_LAST</code> angewendet. Alte Archive werden zusammen mit ihren Begleitdateien und Ausführungsprotokollen gelöscht. Interaktive Backups führen keine Bereinigung aus.",
+        "local": "Wird pro geplantem Auftrag mit den sechs <code>KEEP_*</code>-Limits angewendet, mit derselben Auswahl wie vzdump über die Archive dieses Auftrags. Alte Archive (samt ihren Begleitdateien und Ausführungsprotokollen) werden gleichermaßen gelöscht. Interaktive Backups führen keine Bereinigung aus.",
         "pbs": "Angewendet pro geplanten Auftrag über <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktive Backups führen keine Bereinigung aus.",
         "borg": "Angewendet pro geplanten Auftrag über <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktive Backups führen keine Bereinigung aus."
       },

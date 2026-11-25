@@ -72,6 +72,7 @@
       "dashboardVmsLxcsApp": "Application",
       "dashboardVmsLxcsUpdates": "Mises à jour",
       "dashboardHardware": "Onglet Matériel",
+      "dashboardBackup": "Onglet Sauvegarde",
       "dashboardSystemLogs": "Onglet Journaux système",
       "dashboardTerminal": "Onglet Terminal",
       "dashboardSecurity": "Onglet Sécurité",

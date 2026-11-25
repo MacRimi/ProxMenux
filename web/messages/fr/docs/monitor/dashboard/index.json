@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Tableau de bord | Documentation ProxMenux",
-    "description": "Le tableau de bord est l'interface principale de ProxMenux Monitor : dix onglets, dont le lanceur Apps, un en-tête global et un ordre de navigation configurable."
+    "description": "Le tableau de bord est l’interface principale de ProxMenux Monitor : ses onglets, un en-tête global et un ordre de navigation configurable."
   },
   "header": {
     "title": "Tableau de bord",
-    "description": "La vue quotidienne de ProxMenux Monitor : dix onglets, dont le lanceur Apps, un en-tête global et un ordre de navigation configurable.",
+    "description": "La vue quotidienne de ProxMenux Monitor : ses onglets, un en-tête global et un ordre de navigation configurable.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "Un en-tête, dix onglets",
+    "title": "Un en-tête pour tous les onglets",
     "body": "L'en-tête (logo, nom du nœud, indicateur d'état, durée de fonctionnement, actualisation et thème) reste visible. L'onglet actif change toute la zone de contenu. La couleur de l'indicateur reflète la catégorie la plus grave du <link>moniteur d'état</link> : la même donnée est affichée sur le tableau de bord."
   },
   "tabs": {
-    "heading": "Les dix onglets",
-    "intro": "Chaque onglet a sa propre page dédiée. Les pages sont ajoutées progressivement à mesure que la documentation est remplie; ci-dessous est la liste complète et la responsabilité de chacun.",
+    "heading": "Les onglets",
+    "intro": "Chaque onglet a sa propre page, listée ci-dessous avec ce qu’il couvre. Dans la barre du haut, Stockage, Réseau et Matériel sont regroupés sous Nœud, et Journaux système, Sécurité et Paramètres sous Administration.",
     "headerTab": "onglet",
     "headerOwns": "Ce que cet onglet couvre",
     "rows": [
@@ -30,34 +30,47 @@
       },
       {
         "name": "Stockage",
+        "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Pools Proxmox, disques physiques, données SMART, état ZFS, usure et durée de vie, historique d'observation."
       },
       {
         "name": "Réseau",
+        "linksTo": "/docs/monitor/dashboard/network",
         "owns": "Interfaces physiques, bonds, bridges et OVS, adresses IP/MAC, graphiques RX/TX et historique RRD par interface."
       },
       {
         "name": "VM et LXC",
+        "linksTo": "/docs/monitor/dashboard/vms-lxcs",
         "owns": "Inventaire des invités, détails de configuration, métriques et journaux, actions de démarrage, arrêt, redémarrage et extinction."
       },
       {
         "name": "Matériel",
+        "linksTo": "/docs/monitor/dashboard/hardware",
         "owns": "Modèle et topologie CPU, mise en page de mémoire, topologie PCIe, GPUs avec surveillance en temps réel per-slot."
       },
       {
+        "name": "Sauvegarde",
+        "linksTo": "/docs/monitor/dashboard/backup",
+        "owns": "Sauvegardes de l’hôte avec leurs tâches, destinations et restauration, tâches de sauvegarde Proxmox des VM et LXC avec la rétention de chaque stockage, et état des Proxmox Backup Server."
+      },
+      {
         "name": "Journaux système",
+        "linksTo": "/docs/monitor/dashboard/system-logs",
         "owns": "Live <code>journalctl</code> avec filtres, historique des tâches Proxmox, journal de notification, paquets de journaux téléchargeables."
       },
       {
         "name": "Terminal",
+        "linksTo": "/docs/monitor/dashboard/terminal",
         "owns": "Shell dans le navigateur sur l’hôte Proxmox, avec <code>xterm.js</code> via WebSockets. Les consoles LXC s’ouvrent depuis l’onglet VM et LXC."
       },
       {
         "name": "Sécurité",
+        "linksTo": "/docs/monitor/dashboard/security",
         "owns": "Configuration auth, mot de passe / 2FA / API jetons, journal d'audit, panneau Fail2Ban optionnel, déploiement Secure Gateway."
       },
       {
         "name": "Paramètres",
+        "linksTo": "/docs/monitor/dashboard/settings",
         "owns": "Langue de Monitor, ordre de navigation, canaux de notification, fournisseur IA, seuils de surveillance, exclusions et inventaire des optimisations après installation."
       }
     ]

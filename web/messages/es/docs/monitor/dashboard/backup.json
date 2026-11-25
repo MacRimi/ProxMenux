@@ -1,0 +1,506 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Panel: pestaña Backup | Documentación de ProxMenux",
+    "description": "La pestaña Backup de ProxMenux Monitor: backups del host con sus tareas, destinos y restauración, las tareas de backup de Proxmox para VMs y LXC, y el estado de solo lectura de los Proxmox Backup Server."
+  },
+  "header": {
+    "title": "Panel: pestaña Backup",
+    "description": "Backups del host, tareas de backup de las VMs y los LXC, y los Proxmox Backup Server en los que escriben, cada uno en su propia vista de la misma pestaña.",
+    "section": "ProxMenux Monitor · Panel"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "p": "La pestaña <strong>Backup</strong> tiene tres vistas, que se eligen con el selector de arriba a la derecha: <strong>Host</strong>, <strong>VM y LXC</strong> y <strong>Proxmox Backup Server</strong>. La vista Host sigue cargada mientras hay otra abierta, así que un backup o una restauración en curso se siguen viendo."
+        },
+        {
+          "table": {
+            "headers": [
+              "Vista",
+              "Qué gestiona",
+              "Dónde más está"
+            ],
+            "rows": [
+              [
+                "Host",
+                "Backups de la configuración del host hechos por ProxMenux: tareas programadas, destinos, backups manuales, la lista de backups y su restauración.",
+                "El menú <backupLink>Backup & Restore</backupLink> de la CLI, con el mismo motor y los mismos archivos."
+              ],
+              [
+                "VM y LXC",
+                "Las tareas de backup de Proxmox para VMs y contenedores, y la retención por defecto de cada almacenamiento de backups.",
+                "<strong>Datacenter → Backup</strong> en la interfaz web de Proxmox. Ambos editan las mismas tareas."
+              ],
+              [
+                "Proxmox Backup Server",
+                "El estado de los servidores PBS: datastores, tareas recientes y programaciones de mantenimiento.",
+                "La interfaz web de PBS. Esta vista solo lee: nunca cambia nada en el servidor."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-host-view.png",
+            "alt": "Vista Host de la pestaña Backup con las tarjetas Programado, Configuración de backup, Backup manual y Backups, y el selector de vista arriba a la derecha",
+            "caption": "La vista Host, con el selector entre las tres vistas arriba a la derecha."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Quién ve la pestaña",
+            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Backup</strong>. Crear, ejecutar, editar, restaurar, descargar, ver el contenido de un backup o eliminarlo requiere la acción <strong>Gestionar backups</strong>. Sin ella las vistas son de solo lectura y esos botones no aparecen. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El Monitor de un host con Proxmox Backup Server tiene sus propias pestañas y no tiene la pestaña Backup."
+          }
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "title": "Host",
+      "intro": "La vista Host trabaja con los backups del host de ProxMenux: archivos de la configuración del host, no de los invitados. Qué incluyen, los destinos y la restauración se explican en <backupLink>Backup & Restore</backupLink>. Esta sección describe dónde está cada parte en el Monitor. Las tarjetas aparecen en este orden:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Tarjeta",
+              "Qué contiene"
+            ],
+            "rows": [
+              [
+                "Progreso posterior a la restauración",
+                "Se muestra solo mientras una restauración está en curso o hasta que se descarta su resumen. Sigue la restauración también después del reinicio, con los pasos, los componentes, el log y el delta de rollback. Una vez descartada, <strong>Restauraciones pasadas</strong> guarda las 20 últimas."
+              ],
+              [
+                "Programado",
+                "Las tareas programadas y <strong>Crear tarea</strong>."
+              ],
+              [
+                "Configuración de backup",
+                "<strong>Destinos</strong> y <strong>Rutas personalizadas</strong>."
+              ],
+              [
+                "Backup manual",
+                "<strong>Ejecutar</strong>, para un backup puntual ahora mismo."
+              ],
+              [
+                "Backups",
+                "Los backups que hay en cada destino, para inspeccionar, descargar, restaurar o eliminar."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "scheduled",
+      "title": "Tareas programadas",
+      "intro": "<strong>Crear tarea</strong> abre un asistente de cinco pasos. El modelo de trabajo, con su propio timer o unido a una tarea de Proxmox, se describe en <jobsLink>Trabajos programados</jobsLink>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Nombre y backend",
+                "body": "El nombre de la tarea se usa en los nombres de los timers y en los logs, y no se puede cambiar después. El backend es <strong>Local</strong>, <strong>PBS</strong> o <strong>Borg</strong>, y también queda fijo una vez creada la tarea."
+              },
+              {
+                "title": "¿Cómo debería funcionar?",
+                "body": "<strong>Nueva tarea programada</strong> crea un timer de systemd propio. <strong>Unirse a una tarea de Backup en PVE</strong> ejecuta el backup cuando termina una tarea vzdump de Proxmox (<code>job-end</code>) y toma el horario y la retención de esa tarea. Las tareas de Borg solo pueden usar su propio timer."
+              },
+              {
+                "title": "Programación y retención",
+                "body": "<strong>A diario</strong>, <strong>Cada hora</strong>, <strong>Semanalmente</strong>, <strong>Mensual</strong> o <strong>Avanzado</strong>, que admite una expresión <code>OnCalendar</code> de systemd y muestra una vista previa. La retención conserva los últimos backups y los horarios, diarios, semanales, mensuales y anuales: 0 desactiva un límite, y sin ningún límite los backups se acumulan. Una tarea unida elige aquí su tarea padre de Proxmox."
+              },
+              {
+                "title": "Perfil",
+                "body": "<strong>Por defecto</strong> incluye la configuración recomendada del host y los datos de ProxMenux. <strong>Personalizado</strong> permite elegir cuáles de esas rutas entran."
+              },
+              {
+                "title": "Destino y resumen",
+                "body": "El repositorio PBS, la carpeta local o el repositorio Borg. En PBS el paso también fija el cifrado: ninguno, un keyfile nuevo o uno importado. Termina con un resumen de la tarea."
+              }
+            ]
+          }
+        },
+        {
+          "p": "Cada fila muestra el backend, la insignia <strong>adjunto</strong>, un candado cuando la tarea está cifrada, el perfil (<strong>Por defecto</strong> o <strong>Personalizado</strong>), el destino, la programación, la retención, y la próxima y la última ejecución. Al pulsarla se abre la tarea con su configuración, el log de la última ejecución y los botones <strong>Ejecutar</strong>, <strong>Editar</strong>, <strong>Desactivar</strong> y <strong>Eliminar</strong>. Eliminar quita la tarea y su timer, nunca los backups ya hechos. Eliminar una tarea unida también quita el hook del Monitor de ese almacenamiento de Proxmox."
+        },
+        {
+          "calloutTip": {
+            "title": "Cómo se aplica la retención",
+            "body": "La retención se ejecuta después de cada backup correcto y la aplica el destino: PBS poda su grupo y Borg poda su repositorio. En un destino local la tarea usa la misma selección que vzdump, con los seis límites, y solo sobre sus propios archivos: los demás archivos de una carpeta compartida nunca se tocan. Cada archivo eliminado se lleva consigo su archivo acompañante y su log de ejecución."
+          }
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "title": "Configuración de backup",
+      "intro": "Esta tarjeta contiene dos listas: dónde se escriben los backups del host y qué rutas extra entran en cada backup.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Destino",
+              "Qué conviene saber en el Monitor"
+            ],
+            "rows": [
+              [
+                "Local/USB",
+                "Una carpeta de este host o de una unidad USB montada. <code>/var/lib/vz/dump</code> aparece siempre, como <strong>Valor integrado por defecto</strong>. El asistente lista las unidades USB, que se escanean cada 30 segundos: <strong>Montar y usar</strong> monta una tal cual y <strong>Formato y uso</strong> la borra y crea una única partición ext4, después de que escribas la ruta del dispositivo para confirmar."
+              ],
+              [
+                "PBS",
+                "Un datastore de un Proxmox Backup Server. Los almacenamientos PBS ya configurados en Proxmox aparecen solos, marcados como <strong>Gestionado por PVE</strong>. Cada fila PBS tiene los controles del keyfile: generarlo, importarlo, descargarlo o eliminarlo, guardar una copia de recuperación cifrada en PBS y <strong>Recuperar archivo de claves</strong> cuando falta la clave local. Se describen en <pbsLink>Destinos: Proxmox Backup Server</pbsLink>."
+              ],
+              [
+                "Borg",
+                "Un repositorio Borg en este host, en una unidad USB o en otro host por SSH. Para SSH, <strong>preparar clave</strong> crea una clave en este host y muestra la línea de la clave pública, que añades a <code>~/.ssh/authorized_keys</code> en el host remoto: el Monitor no la instala allí."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "<strong>Configurar destino</strong> abre el asistente que añade uno. Mientras haya tareas que usen un destino, su nombre y sus credenciales no se pueden cambiar, y quitarlo también elimina esas tareas (<strong>Eliminar destino y eliminar tareas</strong>). Los backups ya escritos se quedan donde están."
+        },
+        {
+          "p": "<strong>Rutas personalizadas</strong> son rutas absolutas que se añaden a cada backup, manual o programado, con cualquiera de los dos perfiles: datos de aplicaciones, carpetas de configuración y similares. Una ruta que ya no existe en el host se marca como <strong>falta en el disco</strong>."
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Backup manual",
+      "blocks": [
+        {
+          "p": "<strong>Ejecutar</strong> abre un diálogo breve: el destino, el perfil y, para PBS, el cifrado. El backup empieza de inmediato y su log se abre en vivo. Si el diálogo se cierra antes de que termine, una línea <strong>Backup manual en curso</strong> en la tarjeta vuelve a abrir el log. Cada backup puntual se guarda como una tarea terminada, de modo que su log se puede leer más tarde."
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Backups",
+      "blocks": [
+        {
+          "p": "La lista reúne los backups de todos los destinos: las carpetas locales, que se leen mediante el archivo acompañante junto a cada archivo, y los repositorios PBS y Borg, que pueden tardar un momento en responder. Cada fila muestra el backend, un candado cuando el backup está cifrado, la fecha, el tamaño y dónde está. Los backups locales muestran además su tarea, o <strong>manual</strong>, y <strong>Trabajo anterior</strong> cuando la tarea que los hizo ya no existe."
+        },
+        {
+          "p": "Cuando un destino contiene backups de otros nodos, aparece un selector <strong>Este nodo</strong> / <strong>Todos los nodos</strong>. La lista empieza con los backups de este nodo solamente."
+        },
+        {
+          "p": "Al pulsar un backup se abre: su manifiesto (host de origen, versión de Proxmox, kernel, las VMs y los LXC de ese momento, las rutas archivadas) y, en un backup local, su log. Los botones son:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Botón",
+              "Qué hace"
+            ],
+            "rows": [
+              [
+                "Ver contenido",
+                "Extrae el backup a una carpeta temporal y muestra sus archivos, el plan de restauración, el almacenamiento, la red y los drivers que hay que reinstalar, sin modificar el host."
+              ],
+              [
+                "Descargar",
+                "Descarga el archivo. Un backup de PBS o de Borg se exporta antes a un archivo (<strong>Preparando descarga...</strong>)."
+              ],
+              [
+                "Restaurar",
+                "Prepara la restauración y abre sus opciones, descritas más abajo."
+              ],
+              [
+                "Eliminar",
+                "Elimina el archivo local, el snapshot de PBS o el archivo de Borg de su destino."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Los backups cifrados necesitan su keyfile",
+            "body": "Un backup de PBS cifrado no se puede ver, descargar ni restaurar sin su keyfile. Los botones lo piden primero (<strong>Se requiere archivo de claves</strong>): impórtalo o recupéralo de la copia cifrada que se guarda en PBS con la frase de recuperación. Consulta <pbsLink>Destinos: Proxmox Backup Server</pbsLink>."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Restauración",
+      "intro": "<strong>Restaurar</strong> ofrece dos modos:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Modo",
+              "Qué restaura"
+            ],
+            "rows": [
+              [
+                "Completo",
+                "Todo lo que hay en el backup, como la restauración completa del menú de la CLI. Antes de empezar, el diálogo lista lo que existe en el host pero no en el backup (VMs, LXC y componentes creados después), que la restauración elimina de forma permanente, y te pide marcar una confirmación."
+              ],
+              [
+                "Personalizado por rutas",
+                "Solo las rutas que elijas entre las del backup. Las rutas que requieren reinicio, como el kernel, los módulos o fstab, las detecta la restauración, que ofrece aplicarlas en el próximo arranque."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-restore-custom.png",
+            "alt": "Diálogo de restauración Personalizado por rutas con la lista de rutas del backup, un filtro y el número de rutas seleccionadas",
+            "caption": "Personalizado por rutas: las rutas del backup, para restaurar solo algunas."
+          }
+        },
+        {
+          "p": "Cuando el backup procede de un kernel anterior al que ejecuta el host, ambos modos restauran solo el subconjunto seguro: las rutas ligadas al kernel y al arranque aparecen en gris y se omiten (<crossKernelLink>Restauración cross-kernel</crossKernelLink>). En ambos modos, los ajustes escritos por el operador se fusionan en el host."
+        },
+        {
+          "p": "La restauración se ejecuta en un terminal dentro del Monitor, que antes de tocar el host todavía pregunta cómo aplicarla: solo los cambios seguros, los cambios seguros y un reinicio, o todo a la vez. Tras el reinicio, la tarjeta <strong>Progreso posterior a la restauración</strong>, arriba en la vista, muestra cómo va. El flujo completo está en <restoreLink>Restauración</restoreLink>."
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "VM y LXC",
+      "intro": "Esta vista muestra las tareas de backup de Proxmox para VMs y contenedores: las tareas de <code>/cluster/backup</code>, las mismas que <strong>Datacenter → Backup</strong>. Una tarea creada o cambiada aquí aparece allí, y al revés.",
+      "blocks": [
+        {
+          "p": "Cada tarea muestra su programación, almacenamiento, modo y compresión, retención e invitados. Al pulsarla se abre con <strong>Ejecutar</strong>, <strong>Editar</strong>, <strong>Desactivar</strong> o <strong>Activar</strong>, y <strong>Eliminar</strong>. <strong>Ejecutar</strong> inicia el backup como una tarea de Proxmox con los ajustes de la tarea; en modo stop, sus invitados se apagan durante el backup. <strong>Desactivar</strong> detiene las ejecuciones programadas pero conserva la tarea, que aún se puede ejecutar a mano. <strong>Eliminar</strong> quita solo la programación: los backups ya hechos se quedan en el almacenamiento."
+        },
+        {
+          "p": "<strong>Nuevo trabajo</strong> abre el formulario:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Campo",
+              "Qué define"
+            ],
+            "rows": [
+              [
+                "Nombre (opcional)",
+                "Letras, números y guiones. Si se deja vacío, Proxmox genera uno."
+              ],
+              [
+                "Qué se incluye",
+                "Todas las VMs y contenedores, o una selección."
+              ],
+              [
+                "Almacenamiento de destino",
+                "Uno de los almacenamientos de Proxmox que admiten backups."
+              ],
+              [
+                "Programación",
+                "Un preajuste (cada día a las 02:00 o a las 03:00, cada domingo a las 02:00, cada 6 horas, cada hora) o un evento de calendario de Proxmox personalizado, como <code>mon..fri 01:30</code>."
+              ],
+              [
+                "Modo",
+                "<strong>Snapshot</strong>, sin parada; <strong>Suspend</strong>, que pausa el invitado; o <strong>Stop</strong>, que lo apaga."
+              ],
+              [
+                "Compresión",
+                "<code>zstd</code>, <code>gzip</code>, <code>lzo</code> o ninguna."
+              ],
+              [
+                "Retención",
+                "Cuántos de los últimos backups y de los horarios, diarios, semanales, mensuales y anuales se conservan. 0 desactiva un límite. Con todos los campos vacíos, la tarea usa la retención de su almacenamiento."
+              ],
+              [
+                "Notas de los backups",
+                "La plantilla de notas que se escribe con cada backup."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Backups del host que se ejecutan con una tarea",
+            "body": "Cuando una tarea de backup del host está unida a una tarea de Proxmox, esa tarea de Proxmox la lista en <strong>Backups del host que se ejecutan con este trabajo</strong>. Si se elimina la tarea de Proxmox, o se le da otro almacenamiento, se avisa de que ya no iniciará esos backups del host. Otra tarea que escriba en el mismo almacenamiento sigue iniciándolos."
+          }
+        },
+        {
+          "p": "Debajo de las tareas, <strong>Retención del almacenamiento</strong> lista los almacenamientos de backups con su retención por defecto, que se guarda en Proxmox. Una tarea con política propia la sustituye. <strong>Editar</strong> ofrece el valor por defecto de Proxmox (sin política en el almacenamiento), <strong>Conservar todos los backups</strong> o recuentos de retención. Guardar no elimina ningún backup: la política se aplica a las próximas ejecuciones que la heredan, y los backups protegidos siguen protegidos."
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-guests-job.png",
+            "alt": "Vista VM y LXC con la lista de tareas de backup de Proxmox, una tarea abierta con su programación, almacenamiento, modo y retención, y la tarjeta Retención del almacenamiento debajo",
+            "caption": "La vista VM y LXC: las tareas de Datacenter → Backup y la retención de cada almacenamiento."
+          }
+        },
+        {
+          "p": "Los backups de un solo invitado, con <strong>Crear backup</strong>, están en la pestaña Backups de su ventana en <vmsLink>VMs y LXCs</vmsLink>."
+        }
+      ]
+    },
+    {
+      "id": "pbs",
+      "title": "Proxmox Backup Server",
+      "intro": "Esta vista lee el estado de los Proxmox Backup Server a través de su API y nunca cambia nada en ellos. No es lo mismo que usar PBS como destino de los backups del host, que se configura en <pbsLink>Destinos: Proxmox Backup Server</pbsLink>.",
+      "blocks": [
+        {
+          "p": "El selector de arriba lista las conexiones guardadas y <strong>PBS de este nodo</strong> cuando PBS está instalado en el mismo host que Proxmox VE, lo que no necesita conexión. Los datos se actualizan cada 30 segundos y con <strong>Actualizar</strong>."
+        },
+        {
+          "table": {
+            "headers": [
+              "Parte",
+              "Qué muestra"
+            ],
+            "rows": [
+              [
+                "Línea de resumen",
+                "Nombre del servidor, versión de PBS, hora de la última actualización y si los servicios de PBS están activos."
+              ],
+              [
+                "Datastores",
+                "Capacidad, espacio usado y disponible de cada datastore, con <strong>Lleno previsto</strong>."
+              ],
+              [
+                "Tareas recientes",
+                "Backups, restauraciones, verificaciones, podas, recolecciones de basura y sincronizaciones, con hora de inicio, duración y resultado."
+              ],
+              [
+                "Programaciones de mantenimiento",
+                "Las tareas de sincronización, verificación y poda, con su datastore, programación y último resultado."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-pbs-view.png",
+            "alt": "Vista Proxmox Backup Server con un servidor seleccionado: datastores con su uso, tareas recientes y programaciones de mantenimiento",
+            "caption": "La vista Proxmox Backup Server, leyendo un PBS remoto con un token de solo lectura."
+          }
+        },
+        {
+          "p": "<strong>Gestionar conexiones PBS</strong> añade, edita y quita servidores, hasta 32. Una conexión nueva inicia sesión de una de dos maneras:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Iniciar sesión con",
+              "Cómo funciona"
+            ],
+            "rows": [
+              [
+                "Usuario y contraseña",
+                "El usuario, como <code>user@realm</code>, inicia sesión una vez. El Monitor crea un token de API llamado <code>proxmenux-</code> más caracteres aleatorios, le da el rol Audit sobre <code>/</code> con propagación y guarda solo el token: la contraseña no se almacena. El usuario debe poder crear tokens y conceder ese rol, como puede <code>root@pam</code>."
+              ],
+              [
+                "Token API",
+                "Un token creado en PBS, como <code>user@realm!token</code> con su secreto. Necesita el rol Audit sobre <code>/</code> con propagación, en las ACL tanto del usuario como del token."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "La dirección es HTTPS, con <code>:8007</code> para el puerto por defecto. La huella SHA256 es opcional: déjala vacía para un certificado firmado por una autoridad de confianza y rellénala para uno autofirmado. Se comprueba antes de enviar ninguna credencial. Guardar o cambiar una conexión requiere tener activada la autenticación del Monitor. <strong>Eliminar conexión</strong> borra la conexión y su token solo del Monitor: el token sigue en PBS, donde se puede eliminar."
+        },
+        {
+          "p": "Cuando Proxmox VE tiene almacenamientos PBS sin conexión, la tarjeta <strong>PBS detectados en el almacenamiento de Proxmox</strong> los lista con <strong>Conectar</strong>, que abre el formulario con el nombre, la dirección y la huella ya rellenados."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Cómo se recogen los datos",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Sección de la pestaña",
+              "Endpoint",
+              "Fuente"
+            ],
+            "rows": [
+              [
+                "Programado",
+                "<code>GET /api/host-backups/jobs</code>",
+                "Los archivos de tareas en <code>/var/lib/proxmenux/backup-jobs/</code> y sus timers de systemd."
+              ],
+              [
+                "Destinos",
+                "<code>GET /api/host-backups/destinations</code>",
+                "Los destinos guardados por ProxMenux, la carpeta local por defecto y los almacenamientos PBS de <code>/etc/pve/storage.cfg</code>."
+              ],
+              [
+                "Backups",
+                "<code>GET /api/host-backups/archives</code>, <code>GET /api/host-backups/remote-archives</code>",
+                "Los archivos acompañantes <code>*.proxmenux.json</code> en los destinos locales y los listados de los repositorios PBS y Borg."
+              ],
+              [
+                "Restauración",
+                "<code>POST /api/host-backups/archives/&lt;id&gt;/prepare-restore</code>, <code>GET /api/host-backups/restore/status</code>",
+                "El backup extraído a una carpeta temporal y, tras el reinicio, <code>/var/lib/proxmenux/restore-state.json</code>."
+              ],
+              [
+                "VM y LXC",
+                "<code>GET /api/vm-backup-jobs</code>",
+                "<code>pvesh get /cluster/backup</code>."
+              ],
+              [
+                "Retención del almacenamiento",
+                "<code>GET /api/vm-backup-storages</code>",
+                "La opción <code>prune-backups</code> de cada almacenamiento con contenido de backups, de <code>pvesh get /storage</code>."
+              ],
+              [
+                "Proxmox Backup Server",
+                "<code>GET /api/pbs/servers</code>, <code>GET /api/pbs/status</code>",
+                "La API de PBS con el token guardado, sobre HTTPS verificado. En este nodo, <code>proxmox-backup-manager</code> y <code>proxmox-backup-debug api</code>. Las conexiones se guardan en <code>/root/.config/proxmenux-monitor/pbs_servers.json</code>."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Siguientes pasos",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Backup & Restore",
+                "href": "/docs/backup-restore",
+                "tail": "cómo funcionan los backups del host, desde la CLI y desde el Monitor."
+              },
+              {
+                "label": "Trabajos programados",
+                "href": "/docs/backup-restore/scheduled-jobs",
+                "tail": "tareas con su propio timer o unidas a una tarea de Proxmox, y sus archivos."
+              },
+              {
+                "label": "Restauración",
+                "href": "/docs/backup-restore/restoring",
+                "tail": "el flujo de restauración y su progreso tras el reinicio."
+              },
+              {
+                "label": "Destinos: Proxmox Backup Server",
+                "href": "/docs/backup-restore/destinations/pbs",
+                "tail": "PBS como destino, el keyfile y su copia de recuperación."
+              },
+              {
+                "label": "Notificaciones",
+                "href": "/docs/monitor/notifications",
+                "tail": "los eventos de los backups de Proxmox y de los backups del host."
+              },
+              {
+                "label": "Usuarios y perfiles",
+                "href": "/docs/monitor/access-auth#users-profiles",
+                "tail": "el área Backup y la acción Gestionar backups."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

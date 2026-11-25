@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Panel | Documentación de ProxMenux",
-    "description": "El panel es la interfaz principal de ProxMenux Monitor: diez pestañas, incluido el lanzador Apps, una cabecera global y un orden de navegación configurable."
+    "description": "El panel es la interfaz principal de ProxMenux Monitor: sus pestañas, la cabecera global y un orden de navegación configurable."
   },
   "header": {
     "title": "Panel",
-    "description": "La vista diaria de ProxMenux Monitor: diez pestañas, incluido el lanzador Apps, una cabecera global y un orden de navegación configurable.",
+    "description": "La vista diaria de ProxMenux Monitor: sus pestañas, una cabecera global y un orden de navegación configurable.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "Una cabecera, diez pestañas",
+    "title": "Una cabecera para todas las pestañas",
     "body": "La cabecera (logo, nombre del nodo, indicador de estado, tiempo activo, actualización y tema) permanece visible. La pestaña activa cambia toda el área de contenido. El color del indicador refleja la peor categoría del <link>Monitor de estado</link>: el mismo dato mostrado en el panel."
   },
   "tabs": {
-    "heading": "Las diez pestañas",
-    "intro": "Cada pestaña tiene su propia página dedicada. Las páginas se añaden de forma incremental a medida que se completa la documentación; abajo está la lista completa con lo que cubre cada una.",
+    "heading": "Las pestañas",
+    "intro": "Cada pestaña tiene su propia página, listada abajo con lo que cubre. En la barra superior, Almacenamiento, Red y Hardware se agrupan bajo Nodo, y Logs del sistema, Seguridad y Ajustes bajo Administración.",
     "headerTab": "Pestaña",
     "headerOwns": "De qué se encarga",
     "rows": [
@@ -30,34 +30,47 @@
       },
       {
         "name": "Almacenamiento",
+        "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Pools de Proxmox, discos físicos, datos SMART, estado de ZFS, desgaste y vida útil, historial de observaciones."
       },
       {
         "name": "Red",
+        "linksTo": "/docs/monitor/dashboard/network",
         "owns": "Interfaces físicas, bond, bridge y OVS, direcciones IP/MAC, gráficas RX/TX e histórico RRD por interfaz."
       },
       {
         "name": "VMs y LXCs",
+        "linksTo": "/docs/monitor/dashboard/vms-lxcs",
         "owns": "Inventario de invitados, detalles de configuración, métricas y registros, acciones de iniciar, detener, reiniciar y apagar."
       },
       {
         "name": "Hardware",
+        "linksTo": "/docs/monitor/dashboard/hardware",
         "owns": "Modelo y topología de CPU, distribución de memoria, topología PCIe, GPUs con monitorización en tiempo real por slot."
       },
       {
+        "name": "Backup",
+        "linksTo": "/docs/monitor/dashboard/backup",
+        "owns": "Backups del host con sus tareas, destinos y restauración, las tareas de backup de Proxmox para VMs y LXCs con la retención de cada almacenamiento, y el estado de los Proxmox Backup Server."
+      },
+      {
         "name": "Logs del sistema",
+        "linksTo": "/docs/monitor/dashboard/system-logs",
         "owns": "<code>journalctl</code> en vivo con filtros, historial de tareas de Proxmox, log de notificaciones, paquetes de logs descargables."
       },
       {
         "name": "Terminal",
+        "linksTo": "/docs/monitor/dashboard/terminal",
         "owns": "Shell del navegador en el host Proxmox, con <code>xterm.js</code> sobre WebSockets. Las consolas LXC se abren desde la pestaña VM y LXC."
       },
       {
         "name": "Seguridad",
+        "linksTo": "/docs/monitor/dashboard/security",
         "owns": "Configuración de autenticación, contraseña / 2FA / tokens API, log de auditoría, panel opcional de Fail2Ban, despliegue de Secure Gateway."
       },
       {
         "name": "Ajustes",
+        "linksTo": "/docs/monitor/dashboard/settings",
         "owns": "Idioma de Monitor, orden de navegación, canales de notificación, proveedor IA, umbrales de estado, exclusiones e inventario de optimizaciones posteriores a la instalación."
       }
     ]

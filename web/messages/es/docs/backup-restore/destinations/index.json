@@ -46,7 +46,7 @@
       },
       {
         "feature": "Retención / poda",
-        "local": "Aplicada por trabajo programado vía <code>KEEP_LAST</code>. Los archivos antiguos (y sus sidecars + logs del runner) se eliminan de forma simétrica. Los backups interactivos no aplican poda.",
+        "local": "Aplicada por trabajo programado con los seis límites <code>KEEP_*</code>, con la misma selección que vzdump sobre los archivos de ese trabajo. Los archivos antiguos (y sus sidecars + logs del runner) se eliminan de forma simétrica. Los backups interactivos no aplican poda.",
         "pbs": "Aplicada por trabajo programado vía <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Los backups interactivos no aplican poda.",
         "borg": "Aplicada por trabajo programado vía <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Los backups interactivos no aplican poda."
       },

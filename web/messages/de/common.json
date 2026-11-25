@@ -72,6 +72,7 @@
       "dashboardVmsLxcsApp": "App",
       "dashboardVmsLxcsUpdates": "Aktualisierungen",
       "dashboardHardware": "Registerkarte Hardware",
+      "dashboardBackup": "Registerkarte Backup",
       "dashboardSystemLogs": "Registerkarte Systemprotokolle",
       "dashboardTerminal": "Registerkarte Terminal",
       "dashboardSecurity": "Registerkarte Sicherheit",

@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard | Documentazione ProxMenux",
-    "description": "Il pannello è l'interfaccia principale di ProxMenux Monitor: dieci schede, incluso il lanciatore Apps, un'intestazione globale e un ordine di navigazione configurabile."
+    "description": "Il pannello è l’interfaccia principale di ProxMenux Monitor: le sue schede, un’intestazione globale e un ordine di navigazione configurabile."
   },
   "header": {
     "title": "Dashboard",
-    "description": "La vista quotidiana di ProxMenux Monitor: dieci schede, incluso il lanciatore Apps, un'intestazione globale e un ordine di navigazione configurabile.",
+    "description": "La vista quotidiana di ProxMenux Monitor: le sue schede, un’intestazione globale e un ordine di navigazione configurabile.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "Un'intestazione, dieci schede",
+    "title": "Un’intestazione per ogni scheda",
     "body": "L'intestazione (logo, nome del nodo, indicatore di stato, tempo di attività, aggiornamento e tema) rimane visibile. La scheda attiva cambia l'intera area dei contenuti. Il colore indica la categoria peggiore del <link>monitoraggio dello stato</link>: lo stesso dato visualizzato nel pannello."
   },
   "tabs": {
-    "heading": "Le dieci schede",
-    "intro": "Ogni scheda ha una propria pagina dedicata. Le pagine sono aggiunte in modo incrementale come la documentazione è riempita in; di seguito è l'elenco completo e ciò che ciascuno è responsabile.",
+    "heading": "Le schede",
+    "intro": "Ogni scheda ha una propria pagina, elencata di seguito con ciò di cui si occupa. Nella barra superiore, Archiviazione, Rete e Hardware sono raggruppate sotto Nodo, mentre Log di sistema, Sicurezza e Impostazioni sotto Amministratore.",
     "headerTab": "Scheda",
     "headerOwns": "Di cosa si occupa",
     "rows": [
@@ -30,34 +30,47 @@
       },
       {
         "name": "Archiviazione",
+        "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Pool Proxmox, dischi fisici, dati SMART, stato ZFS, usura e durata utile, cronologia delle osservazioni."
       },
       {
         "name": "Rete",
+        "linksTo": "/docs/monitor/dashboard/network",
         "owns": "Interfacce fisiche, bond, bridge e OVS, indirizzi IP/MAC, grafici RX/TX e cronologia RRD per interfaccia."
       },
       {
         "name": "VM e LXC",
+        "linksTo": "/docs/monitor/dashboard/vms-lxcs",
         "owns": "Inventario dei guest, dettagli di configurazione, metriche e log, azioni di avvio, arresto, riavvio e spegnimento."
       },
       {
         "name": "Hardware",
+        "linksTo": "/docs/monitor/dashboard/hardware",
         "owns": "Modello e topologia CPU, layout di memoria, topologia PCIe, GPU con monitoraggio in tempo reale per-slot."
       },
       {
+        "name": "Backup",
+        "linksTo": "/docs/monitor/dashboard/backup",
+        "owns": "I backup dell’host con le loro attività, destinazioni e ripristino, i job di backup Proxmox di VM e LXC con la conservazione di ogni storage e lo stato dei Proxmox Backup Server."
+      },
+      {
         "name": "Log di sistema",
+        "linksTo": "/docs/monitor/dashboard/system-logs",
         "owns": "Live <code>journalctl</code> con filtri, cronologia delle attività Proxmox, registro delle notifiche, pacchetti di log scaricabili."
       },
       {
         "name": "Terminale",
+        "linksTo": "/docs/monitor/dashboard/terminal",
         "owns": "Shell nel browser sull’host Proxmox, con <code>xterm.js</code> tramite WebSocket. Le console LXC si aprono dalla scheda VM e LXC."
       },
       {
         "name": "Sicurezza",
+        "linksTo": "/docs/monitor/dashboard/security",
         "owns": "Impostazione dell'auth, password / Token 2FA / API, log di audit, pannello Fail2Ban opzionale, distribuzione Secure Gateway."
       },
       {
         "name": "Impostazioni",
+        "linksTo": "/docs/monitor/dashboard/settings",
         "owns": "Lingua di Monitor, ordine di navigazione, canali di notifica, provider IA, soglie di stato, esclusioni e inventario delle ottimizzazioni post-installazione."
       }
     ]
