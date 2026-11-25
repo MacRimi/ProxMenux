@@ -170,7 +170,7 @@
     {
       "id": "rclone",
       "title": "Cloud-Speicher über die rclone-Anwendung",
-      "intro": "Der rclone-Eintrag im Katalog bietet neben der Installation auch <strong>Mount in einem vorhandenen rclone-OCI-Container aktivieren</strong>. Dabei wird ein bereits in der rclone-Weboberfläche angelegtes und autorisiertes Remote eingehängt und auf dem Host bereitgestellt. Andere Container können es als Host-Verzeichnis nutzen.",
+      "intro": "Der rclone-Eintrag im Katalog bietet neben der Installation auch <strong>Aktivieren einer Halterung an einem vorhandenen Rclone OCI Container</strong>. Dabei wird ein bereits in der rclone-Weboberfläche angelegtes und autorisiertes Remote eingehängt und auf dem Host bereitgestellt. Andere Container können es als Host-Verzeichnis nutzen.",
       "blocks": [
         {
           "steps": {

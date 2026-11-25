@@ -170,7 +170,7 @@
     {
       "id": "rclone",
       "title": "Armazenamento na nuvem através da aplicação rclone",
-      "intro": "Além da instalação, a ficha do rclone no catálogo permite <strong>Ativar uma montagem em um contêiner OCI de rclone existente</strong>. É montado um armazenamento remoto já criado e autorizado na interface web do rclone e disponibilizado no host. Outros contêineres podem utilizá-lo como um diretório do host.",
+      "intro": "Além da instalação, a ficha do rclone no catálogo permite <strong>Activar uma montagem num contentor Rclone OCI existente</strong>. É montado um armazenamento remoto já criado e autorizado na interface web do rclone e disponibilizado no host. Outros contêineres podem utilizá-lo como um diretório do host.",
       "blocks": [
         {
           "steps": {

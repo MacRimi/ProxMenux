@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Le même convertisseur et le même installateur",
-            "body": "L’option <strong>Installer une image absente du catalogue</strong> utilise le même convertisseur et le même installateur que les modèles du catalogue. Le contrat est simplement généré à ce moment-là à partir de la définition fournie, puis validé avant toute création de LXC."
+            "body": "L’option <strong>Installez une image qui n’est pas dans le catalogue</strong> utilise le même convertisseur et le même installateur que les modèles du catalogue. Le contrat est simplement généré à ce moment-là à partir de la définition fournie, puis validé avant toute création de LXC."
           }
         }
       ]
@@ -343,7 +343,7 @@
           }
         },
         {
-          "p": "<strong>Comptes de registres</strong>, dans le menu principal d’OCI manager Apps, affiche les comptes enregistrés par registre et utilisateur, jamais leurs secrets. Chaque compte permet de vérifier, télécharger ou installer une image, ainsi que de mettre à jour ou supprimer les identifiants."
+          "p": "<strong>Comptes de registre</strong>, dans le menu principal d’OCI manager Apps, affiche les comptes enregistrés par registre et utilisateur, jamais leurs secrets. Chaque compte permet de vérifier, télécharger ou installer une image, ainsi que de mettre à jour ou supprimer les identifiants."
         },
         {
           "list": {

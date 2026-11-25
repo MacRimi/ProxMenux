@@ -170,7 +170,7 @@
     {
       "id": "rclone",
       "title": "Molnlagring via programmet rclone",
-      "intro": "Utöver installation erbjuder rclone-posten i katalogen <strong>Aktivera en montering i en befintlig OCI-container med rclone</strong>. En fjärrlagring som redan skapats och auktoriserats i rclones webbgränssnitt monteras och görs tillgänglig på värden. Andra containrar kan använda den som en katalog på värden.",
+      "intro": "Utöver installation erbjuder rclone-posten i katalogen <strong>Möjliggöra en montering på en befintlig Rclone OCI behållare</strong>. En fjärrlagring som redan skapats och auktoriserats i rclones webbgränssnitt monteras och görs tillgänglig på värden. Andra containrar kan använda den som en katalog på värden.",
       "blocks": [
         {
           "steps": {

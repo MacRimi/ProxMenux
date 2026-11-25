@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Derselbe Konverter und Installer",
-            "body": "Die Option <strong>Image außerhalb des Katalogs installieren</strong> nutzt denselben Konverter und Installer wie die Katalogvorlagen. Der Unterschied: Der Vertrag wird erst in diesem Moment aus der angegebenen Definition erzeugt und vor dem Erstellen eines LXC validiert."
+            "body": "Die Option <strong>Installieren Sie ein Bild, das sich nicht im Katalog befindet</strong> nutzt denselben Konverter und Installer wie die Katalogvorlagen. Der Unterschied: Der Vertrag wird erst in diesem Moment aus der angegebenen Definition erzeugt und vor dem Erstellen eines LXC validiert."
           }
         }
       ]
@@ -299,11 +299,11 @@
             ],
             "rows": [
               [
-                "<strong>Die lokale öffentliche URL ist mehrdeutig; gib eine eindeutige URL an</strong>",
+                "<strong>Die lokale öffentliche URL ist mehrdeutig; geben Sie eine eindeutige URL an</strong>",
                 "Mehr als ein Dienst veröffentlicht diesen Port."
               ],
               [
-                "<strong>Für die lokale öffentliche URL gibt es keinen passenden veröffentlichten Port; gib eine eindeutige URL an</strong>",
+                "<strong>Für die lokale öffentliche URL gibt es keinen passenden veröffentlichten Port; geben Sie eine eindeutige URL an</strong>",
                 "Kein Dienst veröffentlicht diesen Port."
               ],
               [
@@ -311,7 +311,7 @@
                 "Der Dienst, auf den die URL zeigt, hat eine DHCP-Adresse."
               ],
               [
-                "<strong>URL-Prüfung für ungültige Dienste</strong>",
+                "<strong>Ungültige URL für die Dienstprüfung</strong>",
                 "Die URL ist fehlerhaft oder ihr Port ist ungültig."
               ]
             ]
@@ -343,7 +343,7 @@
           }
         },
         {
-          "p": "<strong>Registry-Konten</strong> im Hauptmenü von OCI manager Apps zeigt gespeicherte Konten nach Registry und Benutzer, niemals ihre geheimen Zugangsdaten. Pro Konto können Images geprüft, heruntergeladen oder installiert sowie Zugangsdaten aktualisiert oder entfernt werden."
+          "p": "<strong>Registrierungskonten</strong> im Hauptmenü von OCI manager Apps zeigt gespeicherte Konten nach Registry und Benutzer, niemals ihre geheimen Zugangsdaten. Pro Konto können Images geprüft, heruntergeladen oder installiert sowie Zugangsdaten aktualisiert oder entfernt werden."
         },
         {
           "list": {
@@ -371,7 +371,7 @@
             "items": [
               "Ein Dockerfile ohne veröffentlichtes Image: Das Image muss zuerst gebaut und in einer OCI-Registry veröffentlicht werden.",
               "Eine Compose-Datei mit mehreren Diensten wird wie in <sectionLink>Compose-Dateien mit mehreren Diensten</sectionLink> beschrieben installiert, außer sie deklariert mehr als ein Netzwerk, ein externes Netzwerk, Optionen auf Top-Level-Volumes, optionale Abhängigkeiten (<code>required: false</code>) oder Dienste, die vom Hauptdienst abhängen.",
-              "In einem Stack wird ein Dienst, der <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> oder <code>extra_hosts</code> verwendet, als „Needs Stack Überprüfung“ markiert, und der Stack wird nicht installiert.",
+              "In einem Stack wird ein Dienst, der <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> oder <code>extra_hosts</code> verwendet, als „erfordert eine Stack-Prüfung“ markiert, und der Stack wird nicht installiert.",
               "<code>configs</code>, externe Geheimnisse oder Geräteformate, die sich nicht eindeutig umsetzen lassen.",
               "Shell-Ersetzungen wie <code>$(command)</code>: Stattdessen muss der resultierende Wert angegeben werden.",
               "Nicht erkannte <code>docker run</code>-Optionen und <code>--env-file</code>: Verwenden Sie stattdessen eine Compose-Datei mit expliziten Werten."
