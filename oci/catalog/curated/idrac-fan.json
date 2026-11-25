@@ -5,7 +5,7 @@
   "status": "generated-unvalidated",
   "catalog_ui": {
     "title": {
-      "en_US": "Dell iDRAC Fan Controller"
+      "en_US": "Dell iDRAC Fan Controller (with line interpolation)"
     },
     "tagline": {
       "en_US": "Hold Dell PowerEdge fans at a fixed duty cycle from CPU temperature over IPMI."
@@ -15,8 +15,8 @@
     },
     "category": "monitoring",
     "category_label": "Monitoring & Analytics",
-    "author": "tigerblue77",
-    "developer": "tigerblue77",
+    "author": "7Adrian",
+    "developer": "7Adrian",
     "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/dell.webp",
     "thumbnail": null,
     "screenshots": [],
@@ -29,44 +29,44 @@
       "port": null,
       "path": "/"
     },
-    "website": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
-    "documentation": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker#readme",
-    "repository": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
+    "website": "https://github.com/7Adrian/Dell_iDRAC_fan_controller_Docker_with_line_interpolation",
+    "documentation": "https://github.com/7Adrian/Dell_iDRAC_fan_controller_Docker_with_line_interpolation",
+    "repository": "https://github.com/7Adrian/Dell_iDRAC_fan_controller_Docker_with_line_interpolation",
     "tips": [],
     "mini_changelog": [],
     "display_version": null,
     "updated_at": null
   },
   "source": {
-    "provider": "tigerblue77",
-    "repository": "https://github.com/tigerblue77/Dell_iDRAC_fan_controller_Docker",
-    "revision": "85731a28c8b4b6daf34d52c375fea9e7b88bd20a",
+    "provider": "7Adrian",
+    "repository": "https://github.com/7Adrian/Dell_iDRAC_fan_controller_Docker_with_line_interpolation",
+    "revision": "e05c5d665150c8d9a24904235cb0b1ecbe1aafb6",
     "default_branch": "master",
-    "image_repository_url": "https://hub.docker.com/r/tigerblue77/dell_idrac_fan_controller",
-    "readme_pushed_at": "2026-10-13T12:19:09Z",
-    "readme_raw_url": "https://raw.githubusercontent.com/tigerblue77/Dell_iDRAC_fan_controller_Docker/master/README.md",
-    "compose_sha256": "dc5e3e1d24b0a6d20e87b88e719793881b763823b192262e3b8097da7f17680a",
-    "generated_at": "2026-11-24T00:00:00+00:00"
+    "image_repository_url": "https://hub.docker.com/r/7adrian/dell_idrac_fan_controller_with_line_interpolation",
+    "readme_pushed_at": "2026-09-09T12:57:04Z",
+    "readme_raw_url": "https://raw.githubusercontent.com/7Adrian/Dell_iDRAC_fan_controller_Docker_with_line_interpolation/master/README.md",
+    "compose_sha256": "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed",
+    "generated_at": "2026-11-25T00:00:00+00:00"
   },
   "container_contract": {
     "service_name": "idrac-fan",
     "container_name": "idrac-fan",
     "image": {
-      "reference": "tigerblue77/dell_idrac_fan_controller:v1.108",
+      "reference": "7adrian/dell_idrac_fan_controller_with_line_interpolation:latest",
       "registry": "docker.io",
-      "repository": "tigerblue77/dell_idrac_fan_controller",
-      "tag": "v1.108",
-      "digest": null,
-      "pull_policy": "resolve-selected-tag-to-architecture-digest-at-install"
+      "repository": "7adrian/dell_idrac_fan_controller_with_line_interpolation",
+      "tag": "latest",
+      "digest": "531a78eb8da8345b3727d96efab606eb4f4469c99b04556d679cfb93eba9f9d1",
+      "pull_policy": "resolve-written-reference-to-architecture-digest-at-install"
     },
     "environment": [
       {
         "name": "IDRAC_HOST",
-        "example": "",
+        "example": "10.0.1.2",
         "required": true,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "IP address of the iDRAC to control"
+        "prompt": "IP address of the iDRAC to control, or 'local' for the iDRAC of the host itself"
       },
       {
         "name": "IDRAC_USERNAME",
@@ -74,7 +74,7 @@
         "required": true,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "iDRAC username"
+        "prompt": "iDRAC username; only required when IDRAC_HOST is not 'local'"
       },
       {
         "name": "IDRAC_PASSWORD",
@@ -82,85 +82,55 @@
         "required": true,
         "sensitive": true,
         "source": "docker-compose",
-        "prompt": "iDRAC password"
+        "prompt": "Password of the iDRAC user"
+      },
+      {
+        "name": "ENABLE_LINE_INTERPOLATION",
+        "example": "true",
+        "required": false,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt": "Enable linear interpolation of fan speed between FAN_SPEED and HIGH_FAN_SPEED"
       },
       {
         "name": "FAN_SPEED",
-        "example": "5",
+        "example": "01",
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "Fan duty cycle while the profile is applied, in % (0-100) or hex (0x00-0x64). Default 5"
-      },
-      {
-        "name": "CPU_TEMPERATURE_THRESHOLD",
-        "example": "auto",
-        "required": false,
-        "sensitive": false,
-        "source": "docker-compose",
-        "prompt": "Junction temperature beyond which Dell's BIOS fan mode takes over, or 'auto' to read it from the CPUs"
+        "prompt": "Fan duty cycle while the profile is applied, in % (0-100) or hex (0x00-0x64). Default 10"
       },
       {
         "name": "HIGH_FAN_SPEED",
-        "example": "",
+        "example": "40",
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "Higher duty cycle that enables line interpolation between FAN_SPEED and this value"
+        "prompt": "Highest fan speed interpolation will reach, higher than FAN_SPEED"
       },
       {
-        "name": "CPU_TEMPERATURE_THRESHOLD_TO_START_LINE_INTERPOLATION",
-        "example": "",
+        "name": "CPU_TEMPERATURE_FOR_START_LINE_INTERPOLATION",
+        "example": "57",
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "Temperature in degrees Celsius at which interpolation starts, lower than CPU_TEMPERATURE_THRESHOLD"
+        "prompt": "CPU temperature in degrees Celsius at which interpolation starts"
       },
       {
-        "name": "CPU_TEMPERATURE_SOURCE",
-        "example": "auto",
+        "name": "CPU_TEMPERATURE_THRESHOLD",
+        "example": "70",
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "Source of the CPU temperature: auto, ipmi or lm-sensors",
-        "choices": [
-          {
-            "value": "auto",
-            "label": "Auto (iDRAC, then lm-sensors)"
-          },
-          {
-            "value": "ipmi",
-            "label": "IPMI"
-          },
-          {
-            "value": "lm-sensors",
-            "label": "lm-sensors"
-          }
-        ]
+        "prompt": "Junction temperature beyond which Dell's BIOS fan mode takes over"
       },
       {
         "name": "CHECK_INTERVAL",
-        "example": "5",
+        "example": "10",
         "required": false,
         "sensitive": false,
         "source": "docker-compose",
-        "prompt": "Seconds between checks, or a suffixed duration up to 15 minutes"
-      },
-      {
-        "name": "MAXIMUM_IPMI_UNREACHABLE_DURATION",
-        "example": "",
-        "required": false,
-        "sensitive": false,
-        "source": "docker-compose",
-        "prompt": "How long the iDRAC may stay unreachable before the container exits, in seconds or suffixed like 5m"
-      },
-      {
-        "name": "MAXIMUM_CONSECUTIVE_IPMI_FAILURES",
-        "example": "",
-        "required": false,
-        "sensitive": false,
-        "source": "docker-compose",
-        "prompt": "Consecutive failed checks before the container exits, 1 or more; takes precedence over the duration"
+        "prompt": "Seconds between checks. Default 3 for line interpolation, 60 for non-interpolation"
       },
       {
         "name": "DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE",
@@ -169,22 +139,6 @@
         "sensitive": false,
         "source": "docker-compose",
         "prompt": "Disable Dell's default cooling response for third-party PCIe cards"
-      },
-      {
-        "name": "KEEP_THIRD_PARTY_PCIE_CARD_COOLING_RESPONSE_STATE_ON_EXIT",
-        "example": "false",
-        "required": false,
-        "sensitive": false,
-        "source": "docker-compose",
-        "prompt": "Keep the PCIe card cooling response set by the container when it stops, instead of restoring Dell's default"
-      },
-      {
-        "name": "MONITORING_ONLY_MODE",
-        "example": "false",
-        "required": false,
-        "sensitive": false,
-        "source": "docker-compose",
-        "prompt": "Apply no fan profile at all; only report temperatures"
       }
     ],
     "volumes": [],
@@ -192,7 +146,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "No official Compose file. Reference docker run command:\n\ndocker run -d --name idrac-fan \\\n  -e IDRAC_HOST=<iDRAC IP or local> \\\n  -e IDRAC_USERNAME=<iDRAC username> \\\n  -e IDRAC_PASSWORD=<iDRAC password> \\\n  -e FAN_SPEED=5 \\\n  -e CPU_TEMPERATURE_THRESHOLD=auto \\\n  tigerblue77/dell_idrac_fan_controller:v1.108\n"
+    "original_compose": "No official Compose file. Reference docker run command:\n\ndocker run -d --name idrac-fan \\\n  -e IDRAC_HOST=<iDRAC IP or local> \\\n  -e IDRAC_USERNAME=<iDRAC username> \\\n  -e IDRAC_PASSWORD=<iDRAC password> \\\n  -e ENABLE_LINE_INTERPOLATION=true \\\n  -e FAN_SPEED=01 \\\n  -e HIGH_FAN_SPEED=40 \\\n  -e CPU_TEMPERATURE_FOR_START_LINE_INTERPOLATION=57 \\\n  -e CPU_TEMPERATURE_THRESHOLD=70 \\\n  -e CHECK_INTERVAL=10 \\\n  -e DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE=false \\\n  7adrian/dell_idrac_fan_controller_with_line_interpolation:latest\n"
   },
   "compose_stack": {
     "project_name": "idrac-fan",
@@ -203,7 +157,7 @@
     "services": [
       {
         "name": "idrac-fan",
-        "image": "tigerblue77/dell_idrac_fan_controller:v1.108",
+        "image": "7adrian/dell_idrac_fan_controller_with_line_interpolation:latest",
         "is_main": true,
         "role": "frontend",
         "vmid_offset": 0,
@@ -211,24 +165,20 @@
         "frontend_network": true,
         "private_network": false,
         "compose": {
-          "image": "tigerblue77/dell_idrac_fan_controller:v1.108",
+          "image": "7adrian/dell_idrac_fan_controller_with_line_interpolation:latest",
           "container_name": "idrac-fan",
           "restart": "unless-stopped",
           "environment": {
-            "IDRAC_HOST": "",
+            "IDRAC_HOST": "10.0.1.2",
             "IDRAC_USERNAME": "root",
             "IDRAC_PASSWORD": "",
-            "FAN_SPEED": "5",
-            "CPU_TEMPERATURE_THRESHOLD": "auto",
-            "HIGH_FAN_SPEED": "",
-            "CPU_TEMPERATURE_THRESHOLD_TO_START_LINE_INTERPOLATION": "",
-            "CPU_TEMPERATURE_SOURCE": "auto",
-            "CHECK_INTERVAL": "5",
-            "MAXIMUM_IPMI_UNREACHABLE_DURATION": "",
-            "MAXIMUM_CONSECUTIVE_IPMI_FAILURES": "",
-            "DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE": "false",
-            "KEEP_THIRD_PARTY_PCIE_CARD_COOLING_RESPONSE_STATE_ON_EXIT": "false",
-            "MONITORING_ONLY_MODE": "false"
+            "ENABLE_LINE_INTERPOLATION": "true",
+            "FAN_SPEED": "01",
+            "HIGH_FAN_SPEED": "40",
+            "CPU_TEMPERATURE_FOR_START_LINE_INTERPOLATION": "57",
+            "CPU_TEMPERATURE_THRESHOLD": "70",
+            "CHECK_INTERVAL": "10",
+            "DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE": "false"
           }
         }
       }
@@ -432,5 +382,12 @@
       "image_created": null
     },
     "update_strategy": "replace-rootfs-from-new-oci-image-preserve-managed-volumes"
+  },
+  "community_tested": {
+    "by": "danibauti94",
+    "date": "2026-11-25",
+    "report": "https://github.com/MacRimi/ProxMenux/discussions/440#discussioncomment-19829190",
+    "digest": "531a78eb8da8345b3727d96efab606eb4f4469c99b04556d679cfb93eba9f9d1",
+    "scenario": "amd64/PVE: native OCI LXC daemon driving iDRAC at 10.0.1.2 over IPMI-over-LAN with line interpolation. Uptime over 5 days, headless, stateless."
   }
 }
