@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Dashboard | ProxMenux Documentation",
-    "description": "The dashboard is the main UI of ProxMenux Monitor: ten content tabs including the Apps launcher, plus the global header and a configurable top-level navigation order."
+    "description": "The dashboard is the main UI of ProxMenux Monitor: its tabs, the global header and a configurable top-level navigation order."
   },
   "header": {
     "title": "Dashboard",
-    "description": "The dashboard is the everyday view of ProxMenux Monitor — ten content tabs, including the Apps launcher, plus a global header and a configurable top-level navigation order.",
+    "description": "The dashboard is the everyday view of ProxMenux Monitor: its tabs, a global header and a configurable top-level navigation order.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "One header, ten tabs",
+    "title": "One header for every tab",
     "body": "The header (logo, node name, status pill, uptime, refresh, theme toggle) stays visible everywhere. The active tab below it changes the entire content area. The status pill colour mirrors the worst category of the <link>Health Monitor</link> — it's the same data point seen from the dashboard."
   },
   "tabs": {
-    "heading": "The ten tabs",
-    "intro": "Each tab has its own dedicated page. Pages are added incrementally as the documentation is filled in; below is the full list and what each one is responsible for.",
+    "heading": "The tabs",
+    "intro": "Each tab has its own page, listed below with what it is responsible for. In the top bar, Storage, Network and Hardware are grouped under Node, and System Logs, Security and Settings under Admin.",
     "headerTab": "Tab",
     "headerOwns": "What it owns",
     "rows": [
@@ -30,34 +30,47 @@
       },
       {
         "name": "Storage",
+        "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Proxmox pools, physical disks, SMART data, ZFS state, wear & lifetime, observation history."
       },
       {
         "name": "Network",
+        "linksTo": "/docs/monitor/dashboard/network",
         "owns": "Every interface (physical / bond / bridge / OVS), IP/MAC, RX/TX graphs, historical RRD per interface."
       },
       {
         "name": "VMs & LXCs",
+        "linksTo": "/docs/monitor/dashboard/vms-lxcs",
         "owns": "Inventory of guests, drill-in for config / metrics / logs, start / stop / reboot / shutdown actions."
       },
       {
         "name": "Hardware",
+        "linksTo": "/docs/monitor/dashboard/hardware",
         "owns": "CPU model and topology, memory layout, PCIe topology, GPUs with per-slot real-time monitoring."
       },
       {
+        "name": "Backup",
+        "linksTo": "/docs/monitor/dashboard/backup",
+        "owns": "Host backups with their jobs, destinations and restore, the Proxmox backup jobs of VMs and LXCs with the retention of each storage, and the status of Proxmox Backup Servers."
+      },
+      {
         "name": "System Logs",
+        "linksTo": "/docs/monitor/dashboard/system-logs",
         "owns": "Live <code>journalctl</code> with filters, Proxmox task history, notification log, downloadable log bundles."
       },
       {
         "name": "Terminal",
+        "linksTo": "/docs/monitor/dashboard/terminal",
         "owns": "Browser shell on the Proxmox host, powered by <code>xterm.js</code> over WebSockets. LXC consoles open from the VMs & LXCs tab."
       },
       {
         "name": "Security",
+        "linksTo": "/docs/monitor/dashboard/security",
         "owns": "Auth setup, password / 2FA / API tokens, audit log, optional Fail2Ban panel, Secure Gateway deployment."
       },
       {
         "name": "Settings",
+        "linksTo": "/docs/monitor/dashboard/settings",
         "owns": "Monitor language, navigation order, notification channels, AI provider, health thresholds, exclusions and post-install optimization inventory."
       }
     ]

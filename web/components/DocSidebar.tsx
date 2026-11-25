@@ -73,6 +73,7 @@ export const sidebarItems: MenuItem[] = [
             ],
           },
           { title: "Hardware tab", i18nKey: "dashboardHardware", href: "/docs/monitor/dashboard/hardware" },
+          { title: "Backup tab", i18nKey: "dashboardBackup", href: "/docs/monitor/dashboard/backup" },
           { title: "System Logs tab", i18nKey: "dashboardSystemLogs", href: "/docs/monitor/dashboard/system-logs" },
           { title: "Terminal tab", i18nKey: "dashboardTerminal", href: "/docs/monitor/dashboard/terminal" },
           { title: "Security tab", i18nKey: "dashboardSecurity", href: "/docs/monitor/dashboard/security" },

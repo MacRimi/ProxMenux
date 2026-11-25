@@ -46,7 +46,7 @@
       },
       {
         "feature": "Retention / pruning",
-        "local": "Applied per scheduled job via <code>KEEP_LAST</code>. Old archives (and their sidecars + runner logs) are deleted symmetrically. Interactive backups do not prune.",
+        "local": "Applied per scheduled job with the six <code>KEEP_*</code> limits, using the same selection as vzdump over the archives of that job. Old archives (and their sidecars + runner logs) are deleted symmetrically. Interactive backups do not prune.",
         "pbs": "Applied per scheduled job via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interactive backups do not prune.",
         "borg": "Applied per scheduled job via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interactive backups do not prune."
       },
