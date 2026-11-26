@@ -491,7 +491,39 @@ def setup_then_web_port(template, check):
     return check
 
 
-def effective_healthcheck(template):
+# Applications whose web address can be moved or turned off with a variable.
+PORT_VARIABLES = {'linuxserver-adguardhome-sync': 'API_PORT'}
+
+
+def port_from_variable(template, check, environment):
+    """A derived check follows the port the application was told to use; with
+    the port turned off (0), the container only has to keep running."""
+    name = PORT_VARIABLES.get(template.get('id'))
+    value = str((environment or {}).get(name, '')).strip() if name else ''
+    if not value.isdigit() or check.get('type') in ('running', 'haos'):
+        return check
+    if int(value) == 0:
+        return {'type': 'running', 'timeout_seconds': 90, 'stability_seconds': 20}
+    if int(value) <= 65535:
+        return dict(check, port=int(value))
+    return check
+
+
+def plan_environment(deployment):
+    return {item.get('name'): item.get('value') for item in (deployment or {}).get('environment', [])
+            if isinstance(item, dict)}
+
+
+def config_environment(config):
+    values = {}
+    for line in config.decode(errors='replace').splitlines():
+        if line.startswith('lxc.environment.runtime: ') and '=' in line:
+            name, _, value = line.split(': ', 1)[1].partition('=')
+            values[name] = value
+    return values
+
+
+def effective_healthcheck(template, environment=None):
     """The template's own health check or, when it has none, one derived from
     its web address: any HTTP answer below 500 means the application is up."""
     profile = template.get('proxmox', {}).get('installer_profile', {})
@@ -514,7 +546,7 @@ def effective_healthcheck(template):
             # web address may serve a database or SSH: any answer counts.
             if endpoint.get('source') == GUESSED_ENDPOINT:
                 check['accept_non_http'] = True
-            return check
+            return port_from_variable(template, check, environment)
     # Without a web address, the new image must at least keep the container running.
     return {'type': 'running', 'timeout_seconds': 90, 'stability_seconds': 20}
 
@@ -538,7 +570,7 @@ def current_recipe(template):
 
 def with_default_healthcheck(contract):
     current_recipe(contract['template'])
-    check = effective_healthcheck(contract['template'])
+    check = effective_healthcheck(contract['template'], plan_environment(contract.get('deployment')))
     if check and check.get('type') != 'haos':
         contract['template'].setdefault('proxmox', {}).setdefault('installer_profile', {})['startup_healthcheck'] = check
     return contract
@@ -1043,7 +1075,9 @@ def haos_healthcheck(vmid, timeout):
 
 
 def healthcheck(vmid, template):
-    check = effective_healthcheck(template)
+    # The variables the container runs with, which may differ from the record
+    # when they were changed in Proxmox after the last operation.
+    check = effective_healthcheck(template, config_environment(run('pct', 'config', str(vmid))))
     if not check:
         return None
     if check.get('type') == 'haos':
