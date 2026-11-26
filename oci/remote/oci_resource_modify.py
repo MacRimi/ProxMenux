@@ -60,7 +60,7 @@ def guarded_set(vmid, installation_id, expected, parameters):
 
 def expected_config(before, after, parameters):
     def unrelated(config):
-        return b''.join(line for line in config.splitlines(keepends=True)
+        return b''.join(line for line in transaction.as_written(config).splitlines(keepends=True)
                         if line.split(b':', 1)[0].decode() not in parameters)
     new = parse_config(after)
     return unrelated(before) == unrelated(after) and all(new.get(key) == value for key, value in parameters.items())

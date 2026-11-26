@@ -131,6 +131,13 @@ def image_from_archive(path):
                 'defaults': {k: config.get('config', {}).get(k) for k in FIELDS}}
 
 
+def without_guest_identity(config):
+    """The configuration without the `meta:` line of Proxmox VE: the creation
+    time and identity of the guest, which Proxmox writes and renews on its own.
+    It is never a setting of the application."""
+    return b''.join(line for line in config.splitlines(keepends=True) if not line.startswith(b'meta: '))
+
+
 def parse_config(data):
     values = {}
     for line in data.decode().splitlines():

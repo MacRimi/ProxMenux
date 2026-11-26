@@ -18,7 +18,7 @@ import tempfile
 import time
 import uuid
 
-from oci_installation_state import command, image_from_archive, private_directory, sha
+from oci_installation_state import command, image_from_archive, private_directory, sha, without_guest_identity
 from oci_host_mounts import capture_sources
 from oci_accelerators import capture as capture_gpu_devices
 from oci_ui import translate, msg_error, msg_ok
@@ -254,7 +254,7 @@ def same_config_except_notes(record, config, ignore_tags=False):
         return False
 
     def without_notes(value, recorded=False):
-        lines = value.splitlines(keepends=True)
+        lines = without_guest_identity(value).splitlines(keepends=True)
         notes = [line for line in lines if line.startswith(b'description: ')]
         if len(notes) != 1:
             return None
@@ -283,7 +283,7 @@ def changed_settings(record, config, ignore_tags=False):
             key, separator, rest = line.partition(':')
             if not separator or key.startswith('#'):
                 continue
-            if key in ('description', 'digest') or (ignore_tags and key == 'tags'):
+            if key in ('description', 'digest', 'meta') or (ignore_tags and key == 'tags'):
                 continue
             name = f'{section} {key}' if section else key
             result.setdefault(name, []).append(rest.strip())

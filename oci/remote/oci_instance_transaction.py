@@ -29,7 +29,7 @@ from urllib.parse import unquote
 
 import oci_instances as instances
 import oci_native_reads as native_reads
-from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha
+from oci_installation_state import container_curl, image_from_archive, parse_config, private_directory, sha, without_guest_identity
 from verify_oci_archive import verify_archive
 import oci_host_mounts as host_mounts
 import oci_mount_idmap as mount_idmap
@@ -53,6 +53,8 @@ BASIC = {'arch', 'cmode', 'console', 'tty', 'cores', 'cpulimit', 'cpuunits', 'de
          'ostype', 'rootfs', 'swap', 'tags', 'unprivileged',
          'lxc.init.cwd', 'lxc.init.uid', 'lxc.init.gid', 'lxc.init.groups',
          'lxc.signal.halt', 'lxc.environment.runtime',
+         # Creation time and identity, written and renewed by Proxmox VE.
+         'meta',
          # The container's console log, set by the installer on every
          # creation; the rebuilt container gets it again the same way.
          'lxc.console.logfile',
@@ -619,6 +621,27 @@ def without_backup_snapshot(config):
     return b''.join(line for line in config.splitlines(keepends=True) if line.strip() != b'parent: vzdump')
 
 
+def as_written(config):
+    """The configuration as Proxmox VE writes it, to compare two readings of
+    the same container: without its identity, which Proxmox renews on its
+    own, and with the runtime variables together before the other lxc.* lines
+    of each section, where every write of Proxmox puts them."""
+    sections, section = [], []
+    for line in without_guest_identity(config).splitlines(keepends=True):
+        if line.startswith(b'['):
+            sections.append(section)
+            section = []
+        section.append(line)
+    sections.append(section)
+    result = []
+    for lines in sections:
+        variables = [line for line in lines if line.startswith(b'lxc.environment.runtime: ')]
+        others = [line for line in lines if not line.startswith(b'lxc.environment.runtime: ')]
+        first = next((index for index, line in enumerate(others) if line.startswith(b'lxc.')), len(others))
+        result += others[:first] + variables + others[first:]
+    return b''.join(result)
+
+
 def drop_backup_snapshot(vmid):
     """A disk with a snapshot cannot be moved. The one an interrupted backup
     left goes the way Proxmox removes it before its next backup."""
@@ -630,7 +653,8 @@ def drop_backup_snapshot(vmid):
 def settings(config):
     """The settings of a configuration to compare with those saved: without
     that mark, and without the lines that follow the mount points."""
-    return parse_config(usb_passthrough.without(nested_mounts.without(without_backup_snapshot(config))))
+    return parse_config(usb_passthrough.without(nested_mounts.without(
+        without_guest_identity(without_backup_snapshot(config)))))
 
 
 def custom_lxc(record, config):
@@ -1524,7 +1548,7 @@ def apply(root, vmid, archive, operation, proposal=None, registry_digest=None, i
     current = owned(vmid, record['installation_id'])
     expected = b''.join(line for line in before.splitlines(keepends=True)
                         if not re.match(rb'(mp|unused)[0-9]+: ', line))
-    if mounts(current) or unused_volumes(current) or current != expected:
+    if mounts(current) or unused_volumes(current) or as_written(current) != as_written(expected):
         raise ValueError(translate('A concurrent change was detected; the container is not removed'))
     host_mounts.verify_sources(original_sources)
     gpu_devices.verify(original_gpu)

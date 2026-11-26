@@ -278,7 +278,7 @@ def untouched(before, after, keys):
     keys = set(keys)
     if 'env' in keys: keys.add('lxc.environment.runtime')
     def keep(config):
-        return b''.join(line for line in config.splitlines(keepends=True)
+        return b''.join(line for line in transaction.as_written(config).splitlines(keepends=True)
                         if line.split(b':', 1)[0].decode() not in keys
                         and not re.match(rb'unused[0-9]+:', line))
     return keep(before) == keep(after)
