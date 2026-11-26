@@ -3,7 +3,6 @@ import type { ReactNode } from "react"
 import Image from "next/image"
 import { getTranslations } from "next-intl/server"
 import { BookOpen, Code2, ExternalLink, FlaskRound, GitPullRequest, Heart, Languages } from "lucide-react"
-import { Youtube } from "@/components/ui/brand-icons"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 
@@ -21,7 +20,6 @@ const earlyContributors = [
   { name: "MALOW", avatar: "malow.png" },
   { name: "Segarra", avatar: "segarra.png" },
   { name: "Aprilia", avatar: "aprilia.png" },
-  { name: "Jonatan Castro", avatar: "jonatancastro.png", github: "jcastro", youtube: "https://www.youtube.com/@JonatanCastro" },
   { name: "Kamunhas", avatar: "Kamunhas.png" },
   { name: "heriberto", avatar: "heriberto.png" },
   { name: "JF_Car", avatar: "JF_Car.png" },
@@ -115,10 +113,7 @@ export default async function ContributorsPage({ params }: { params: Promise<{ l
           {earlyContributors.map((person) => (
             <li key={person.name} className="min-w-0 text-center">
               <Image src={"/avatars/" + person.avatar} alt="" width={64} height={64} className="mx-auto h-16 w-16 rounded-full border border-gray-200 object-cover" />
-              <h3 className="mb-0 mt-2 wrap-break-word text-sm font-semibold text-gray-900">
-                {person.github ? <External href={"https://github.com/" + person.github} className="hover:text-blue-700 hover:underline">{person.name}</External> : person.name}
-              </h3>
-              {person.youtube && <External href={person.youtube} className="mt-1 inline-flex items-center gap-1 text-xs text-red-700 hover:underline"><Youtube className="h-3.5 w-3.5" aria-hidden="true" />{t("testers.youtube")}</External>}
+              <h3 className="mb-0 mt-2 wrap-break-word text-sm font-semibold text-gray-900">{person.name}</h3>
             </li>
           ))}
         </ul>
