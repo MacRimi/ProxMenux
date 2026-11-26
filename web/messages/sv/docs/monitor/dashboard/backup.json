@@ -1,0 +1,506 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Översikt: fliken Säkerhetskopiering | ProxMenux-dokumentation",
+    "description": "Fliken Säkerhetskopiering i ProxMenux Monitor: värdens säkerhetskopior med jobb, destinationer och återställning, Proxmox säkerhetskopieringsjobb för VM och LXC samt skrivskyddad status för Proxmox Backup Server."
+  },
+  "header": {
+    "title": "Översikt: fliken Säkerhetskopiering",
+    "description": "Värdens säkerhetskopior, säkerhetskopieringsjobb för VM och LXC samt de Proxmox Backup Server de skriver till, var och en i sin egen vy i samma flik.",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "p": "Fliken <strong>Säkerhetskopiering</strong> har tre vyer, som väljs med omkopplaren uppe till höger: <strong>Värd</strong>, <strong>VM och LXC</strong> och <strong>Proxmox Backup Server</strong>. Vyn Värd förblir laddad medan en annan vy är öppen, så en säkerhetskopiering eller återställning som pågår följs fortfarande."
+        },
+        {
+          "table": {
+            "headers": [
+              "Vy",
+              "Vad den hanterar",
+              "Var den annars finns"
+            ],
+            "rows": [
+              [
+                "Värd",
+                "Säkerhetskopior av värdens konfiguration som görs av ProxMenux: schemalagda jobb, destinationer, manuella säkerhetskopior, listan över säkerhetskopior och deras återställning.",
+                "Menyn <backupLink>Säkerhetskopiering och återställning</backupLink> i CLI, med samma motor och samma filer."
+              ],
+              [
+                "VM och LXC",
+                "Proxmox säkerhetskopieringsjobb för VM och containrar, samt standardvärdet för bevarande för varje lagring av säkerhetskopior.",
+                "<strong>Datacenter → Säkerhetskopiering</strong> i Proxmox webbgränssnitt. Båda redigerar samma jobb."
+              ],
+              [
+                "Proxmox Backup Server",
+                "Status för PBS-servrar: datalager, senaste uppgifter och underhållsscheman.",
+                "PBS webbgränssnitt. Den här vyn läser serverns status; det enda den skapar där är den skrivskyddade token för en anslutning som görs med användare och lösenord."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-host-view.png",
+            "alt": "Vyn Värd i fliken Säkerhetskopiering med korten Schemalagt, Säkerhetskopieringskonfiguration, Manuell säkerhetskopia och Säkerhetskopieringar, samt vyomkopplaren uppe till höger",
+            "caption": "Vyn Värd, med omkopplaren mellan de tre vyerna uppe till höger."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Vem som ser fliken",
+            "body": "Fliken visas när kontots profil innehåller området <strong>Säkerhetskopiering</strong>. Att skapa, köra, redigera, återställa, ladda ner, visa innehållet i en säkerhetskopia eller radera den kräver åtgärden <strong>Hantera säkerhetskopior</strong>, liksom att hantera PBS-anslutningarna och redigera <strong>Lagringens bevarandepolicy</strong>. Utan den är vyerna skrivskyddade och knapparna visas inte. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Monitor på en värd med Proxmox Backup Server har egna flikar och ingen flik för säkerhetskopiering."
+          }
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "title": "Värd",
+      "intro": "Vyn Värd arbetar med ProxMenux säkerhetskopior av värden: arkiv av värdens konfiguration, inte av gästerna. Vad de innehåller, destinationerna och återställningen förklaras i <backupLink>Säkerhetskopiering och återställning</backupLink>. Det här avsnittet beskriver var varje del finns i Monitor. Korten visas i den här ordningen:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Kort",
+              "Vad det innehåller"
+            ],
+            "rows": [
+              [
+                "Framsteg efter återställning",
+                "Visas bara medan en återställning pågår eller tills dess sammanfattning har stängts. Det följer återställningen även efter omstarten, med stegen, komponenterna, loggen och rollback-deltat. När det har stängts sparar <strong>Tidigare återställningar</strong> de senaste 20."
+              ],
+              [
+                "Schemalagt",
+                "De schemalagda jobben och <strong>Skapa jobb</strong>."
+              ],
+              [
+                "Säkerhetskopieringskonfiguration",
+                "<strong>Destinationer</strong> och <strong>Anpassade vägar</strong>."
+              ],
+              [
+                "Manuell säkerhetskopia",
+                "<strong>Sikt</strong>, för en engångssäkerhetskopia direkt."
+              ],
+              [
+                "Säkerhetskopieringar",
+                "Säkerhetskopiorna som finns i alla destinationer, för att granska, ladda ner, återställa eller radera."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "scheduled",
+      "title": "Schemalagda jobb",
+      "intro": "<strong>Skapa jobb</strong> öppnar en guide i fem steg. Jobbmodellen, med egen timer eller kopplad till ett Proxmox-jobb, beskrivs i <jobsLink>Schemalagda jobb</jobsLink>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Namn och backend",
+                "body": "Jobbets namn används i timernas namn och i loggarna och kan inte ändras senare. Backend är <strong>Lokal</strong>, <strong>PBS</strong> eller <strong>Borg</strong>, och är också fast när jobbet har skapats."
+              },
+              {
+                "title": "Hur det körs",
+                "body": "<strong>Nytt schemalagt jobb</strong> skapar en egen systemd-timer. <strong>Fäst till PVE-jobb</strong> kör säkerhetskopieringen när ett Proxmox vzdump-jobb avslutas (<code>job-end</code>) och tar schemat och bevarandet från det jobbet. Borg-jobb kan bara använda sin egen timer."
+              },
+              {
+                "title": "Schema och bevarande",
+                "body": "<strong>Dagligen</strong>, <strong>Varje timme</strong>, <strong>Varje vecka</strong>, <strong>Månatlig</strong> eller <strong>Avancerad</strong>, som tar ett systemd-uttryck för <code>OnCalendar</code> och visar en förhandsvisning. Bevarandet behåller de senaste, timvisa, dagliga, veckovisa, månatliga och årliga säkerhetskopiorna: 0 inaktiverar en gräns, och utan någon gräns ackumuleras säkerhetskopiorna. Ett kopplat jobb väljer sitt överordnade Proxmox-jobb här i stället."
+              },
+              {
+                "title": "Profil",
+                "body": "<strong>Standard</strong> säkerhetskopierar den rekommenderade värdkonfigurationen och ProxMenux-data. <strong>Beställnings</strong> låter dig välja vilka av de sökvägarna som ska med."
+              },
+              {
+                "title": "Destination och sammanfattning",
+                "body": "PBS-förvaret, den lokala mappen eller Borg-förvaret. För PBS anger steget också krypteringen: ingen, en ny nyckelfil eller en importerad. Det avslutas med en sammanfattning av jobbet."
+              }
+            ]
+          }
+        },
+        {
+          "p": "Varje rad visar backend, märket <strong>bunden</strong>, ett lås när jobbet är krypterat, profilen (<strong>Standard</strong> eller <strong>Beställnings</strong>), destinationen, schemat, bevarandet samt nästa och senaste körning. Ett klick öppnar jobbet med dess inställningar, loggen från den senaste körningen och <strong>Kör nu</strong>, <strong>Redigera</strong>, <strong>Inaktivera</strong> och <strong>Radera</strong>. Att radera tar bort jobbet och dess timer, aldrig de säkerhetskopior som redan har gjorts. Att radera ett kopplat jobb lämnar Proxmox-jobbet som det är: det fortsätter att säkerhetskopiera sina gäster, utan den här säkerhetskopian av värden."
+        },
+        {
+          "calloutTip": {
+            "title": "Hur bevarandet tillämpas",
+            "body": "Bevarandet körs efter varje lyckad säkerhetskopiering och tillämpas av destinationen: PBS rensar sin grupp och Borg rensar sitt förvar. På en lokal destination använder jobbet samma urval som vzdump, med alla sex gränser, och bara över sina egna arkiv: andra filer i en delad mapp berörs aldrig. Varje arkiv som tas bort tar med sig sin följeslagarfil och sin körningslogg."
+          }
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "title": "Säkerhetskopieringskonfiguration",
+      "intro": "Det här kortet innehåller två listor: var värdens säkerhetskopior skrivs och vilka extra sökvägar som ingår i varje säkerhetskopia.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Destination",
+              "Bra att veta i Monitor"
+            ],
+            "rows": [
+              [
+                "Lokal / USB",
+                "En mapp på den här värden eller på en monterad USB-enhet. <code>/var/lib/vz/dump</code> listas alltid, som <strong>Inbyggd standard</strong>. Guiden listar USB-enheterna när den öppnas och igen med <strong>Uppdatera</strong>. Varje enhet erbjuder den åtgärd som dess tillstånd tillåter: <strong>Använda</strong> för en monterad enhet, <strong>Montera och använd</strong> för en omonterad enhet med filsystem, som monterar den som den är, och <strong>Formatera och använda</strong> för en enhet utan filsystem, som skapar en enda ext4-partition efter att du har skrivit enhetens sökväg för att bekräfta."
+              ],
+              [
+                "PBS",
+                "Ett datalager på en Proxmox Backup Server. De PBS-lagringar som redan är konfigurerade i Proxmox visas av sig själva, markerade <strong>Drivs av PVE</strong>. Varje PBS-rad har nyckelfilens kontroller: generera, importera, ladda ner eller radera den, behålla en krypterad återställningskopia i PBS och <strong>Återställ nyckelfil</strong> när den lokala nyckeln saknas. De beskrivs i <pbsLink>Mål: Proxmox Backup Server</pbsLink>."
+              ],
+              [
+                "Borg",
+                "Ett Borg-förvar på den här värden, på en USB-enhet eller på en annan värd via SSH. För SSH skapar <strong>Förbered nyckel</strong> en nyckel på den här värden och visar raden med den publika nyckeln, som du lägger till i <code>~/.ssh/authorized_keys</code> på fjärrvärden: Monitor installerar den inte där."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "<strong>Konfigurera destination</strong> öppnar guiden som lägger till en. Så länge jobb använder en destination kan dess namn och inloggningsuppgifter inte ändras, och att ta bort den raderar också de jobben (<strong>Ta bort destination och ta bort jobb</strong>). De säkerhetskopior som redan har skrivits ligger kvar där de är."
+        },
+        {
+          "p": "<strong>Anpassade vägar</strong> är absoluta sökvägar som läggs till i varje säkerhetskopia, manuell eller schemalagd, med båda profilerna: programdata, konfigurationsmappar och liknande. En sökväg som inte längre finns på värden markeras <strong>saknas på disken</strong>."
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Manuell säkerhetskopia",
+      "blocks": [
+        {
+          "p": "<strong>Sikt</strong> öppnar en kort dialogruta: destinationen, profilen och, för PBS, krypteringen. Säkerhetskopieringen startar direkt och dess logg öppnas live. Om dialogrutan stängs innan den är klar öppnar raden <strong>Manuell säkerhetskopiering pågår</strong> i kortet loggen igen. Varje engångssäkerhetskopia sparas som ett avslutat jobb, så att dess logg kan läsas senare."
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Säkerhetskopieringar",
+      "blocks": [
+        {
+          "p": "Listan sammanför säkerhetskopiorna från alla destinationer: lokala mappar, som läses via följeslagarfilen bredvid varje arkiv, samt PBS- och Borg-förvar, som kan ta en stund att svara. Varje rad visar backend, ett lås när säkerhetskopian är krypterad, datum, storlek och var den finns. Lokala säkerhetskopior visar också sitt jobb, eller <strong>manuell</strong>, och <strong>Tidigare jobb</strong> när jobbet som gjorde dem inte längre finns."
+        },
+        {
+          "p": "När en destination innehåller säkerhetskopior från andra noder visas en omkopplare <strong>Denna nod</strong> / <strong>Alla noder</strong>. Listan börjar med enbart den här nodens säkerhetskopior."
+        },
+        {
+          "p": "Ett klick öppnar säkerhetskopian: dess manifest (källvärd, Proxmox-version, kärna, VM och LXC vid den tidpunkten, de arkiverade sökvägarna) och, för en lokal säkerhetskopia, dess logg. Knapparna är:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Knapp",
+              "Vad den gör"
+            ],
+            "rows": [
+              [
+                "Visa innehållet",
+                "Packar upp säkerhetskopian i en tillfällig mapp och visar dess filer, återställningsplanen, lagringen, nätverket och drivrutinerna som ska installeras om, utan att ändra värden."
+              ],
+              [
+                "Ladda ner",
+                "Laddar ner arkivet. En PBS- eller Borg-säkerhetskopia exporteras först till en fil (<strong>Förbereder nedladdning...</strong>)."
+              ],
+              [
+                "Återställa",
+                "Förbereder återställningen och öppnar dess alternativ, som beskrivs nedan."
+              ],
+              [
+                "Radera",
+                "Raderar det lokala arkivet, PBS-snapshoten eller Borg-arkivet från dess destination."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Krypterade säkerhetskopior behöver sin nyckelfil",
+            "body": "En krypterad PBS-säkerhetskopia kan inte visas, laddas ner eller återställas utan sin nyckelfil. Knapparna ber först om den (<strong>Nyckelfil krävs</strong>): importera den, eller återställ den från den krypterade kopian som finns i PBS med återställningslösenfrasen. Se <pbsLink>Mål: Proxmox Backup Server</pbsLink>."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Återställning",
+      "intro": "<strong>Återställa</strong> erbjuder två lägen:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Läge",
+              "Vad som återställs"
+            ],
+            "rows": [
+              [
+                "Komplett",
+                "Allt i säkerhetskopian, som den fullständiga återställningen i CLI-menyn. Innan den startar listar dialogrutan vad som finns på värden men inte i säkerhetskopian (VM, LXC och komponenter som skapats senare), vilket återställningen raderar permanent, och ber dig bocka i en bekräftelse."
+              ],
+              [
+                "Anpassad efter stigar",
+                "Bara de sökvägar du väljer bland dem i säkerhetskopian. Sökvägar som kräver en omstart, till exempel kärnan, moduler eller fstab, identifieras av återställningen, som erbjuder att tillämpa dem vid nästa uppstart."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-restore-custom.png",
+            "alt": "Dialogrutan för återställning Anpassad efter stigar med listan över sökvägar i säkerhetskopian, ett filter och antalet valda sökvägar",
+            "caption": "Anpassad efter stigar: säkerhetskopians sökvägar, för att återställa bara några av dem."
+          }
+        },
+        {
+          "p": "När säkerhetskopian kommer från en äldre kärna än den som värden kör återställer båda lägena bara den säkra delmängden: sökvägarna som hör till kärnan och uppstarten är nedtonade och hoppas över (<crossKernelLink>Återställning mellan kärnversioner</crossKernelLink>). I båda lägena slås de inställningar som operatören har skrivit samman med värden."
+        },
+        {
+          "p": "Återställningen körs i en terminal inne i Monitor, som fortfarande frågar hur den ska tillämpas innan den rör värden: bara säkra ändringar, säkra ändringar och en omstart, eller allt på en gång. Efter omstarten visar kortet <strong>Framsteg efter återställning</strong> överst i vyn hur det går. Hela flödet finns i <restoreLink>Återställning</restoreLink>."
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "VM och LXC",
+      "intro": "Den här vyn visar Proxmox säkerhetskopieringsjobb för VM och containrar: jobben i <code>/cluster/backup</code>, de samma som <strong>Datacenter → Säkerhetskopiering</strong>. Ett jobb som skapas eller ändras här visas där, och tvärtom.",
+      "blocks": [
+        {
+          "p": "Varje jobb visar sitt schema, sin lagring, sitt läge och sin komprimering, sitt bevarande och sina gäster. Ett klick öppnar det med <strong>Kör nu</strong>, <strong>Redigera</strong>, <strong>Inaktivera</strong> eller <strong>Aktivera</strong>, och <strong>Radera</strong>. <strong>Kör nu</strong> startar säkerhetskopieringen som en Proxmox-uppgift med jobbets inställningar; i läget stop stängs dess gäster av under säkerhetskopieringen. <strong>Inaktivera</strong> stoppar de schemalagda körningarna men behåller jobbet, som fortfarande kan köras för hand. <strong>Radera</strong> tar bara bort schemat: de säkerhetskopior som redan har gjorts ligger kvar i lagringen."
+        },
+        {
+          "p": "<strong>Nytt jobb</strong> öppnar formuläret:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Fält",
+              "Vad det anger"
+            ],
+            "rows": [
+              [
+                "Namn (valfritt)",
+                "Bokstäver, siffror och bindestreck. Om det är tomt genererar Proxmox ett."
+              ],
+              [
+                "Vad som ska säkerhetskopieras",
+                "Alla VM och containrar, eller ett urval."
+              ],
+              [
+                "Mållagring",
+                "En av de Proxmox-lagringar som accepterar säkerhetskopior."
+              ],
+              [
+                "Schema",
+                "En förinställning (varje dag kl. 02:00 eller 03:00, varje söndag kl. 02:00, var 6:e timme, varje timme) eller en egen Proxmox-kalenderhändelse, till exempel <code>mon..fri 01:30</code>."
+              ],
+              [
+                "Läge",
+                "<strong>Snapshot</strong>, utan avbrott; <strong>Suspend</strong>, som pausar gästen; eller <strong>Stop</strong>, som stänger av den."
+              ],
+              [
+                "Komprimering",
+                "<code>zstd</code>, <code>gzip</code>, <code>lzo</code> eller ingen."
+              ],
+              [
+                "Retention",
+                "Hur många av de senaste, timvisa, dagliga, veckovisa, månatliga och årliga säkerhetskopiorna som ska behållas. 0 inaktiverar en gräns. Med alla fält tomma använder jobbet lagringens bevarande."
+              ],
+              [
+                "Anteckningar för säkerhetskopior",
+                "Anteckningsmallen som skrivs med varje säkerhetskopia."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Värdsäkerhetskopior som körs med ett jobb",
+            "body": "När ett jobb för värdsäkerhetskopiering är kopplat till ett Proxmox-jobb listar det Proxmox-jobbet det under <strong>Värdsäkerhetskopior som körs med det här jobbet</strong>. Om Proxmox-jobbet raderas, eller får en annan lagring, varnas det för att det inte längre kommer att starta de värdsäkerhetskopiorna. Ett annat jobb som skriver till samma lagring startar dem fortfarande."
+          }
+        },
+        {
+          "p": "Under jobben listar <strong>Lagringens bevarandepolicy</strong> lagringarna för säkerhetskopior med deras standardbevarande, som lagras i Proxmox. Ett jobb med egen policy åsidosätter det. <strong>Redigera</strong> erbjuder Proxmox standard (ingen policy på lagringen), <strong>Behåll alla säkerhetskopior</strong> eller bevarandeantal. Att spara raderar ingen säkerhetskopia: policyn gäller för de kommande körningar som ärver den, och skyddade säkerhetskopior förblir skyddade."
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-guests-job.png",
+            "alt": "Vyn VM och LXC med listan över Proxmox säkerhetskopieringsjobb, ett jobb öppet med sitt schema, sin lagring, sitt läge och sitt bevarande, och kortet Lagringens bevarandepolicy nedanför",
+            "caption": "Vyn VM och LXC: jobben i Datacenter → Säkerhetskopiering och bevarandet för varje lagring."
+          }
+        },
+        {
+          "p": "Säkerhetskopiorna för en enskild gäst, med <strong>Skapa säkerhetskopia</strong>, finns på fliken Säkerhetskopieringar i dess modal i <vmsLink>VM och LXC</vmsLink>."
+        }
+      ]
+    },
+    {
+      "id": "pbs",
+      "title": "Proxmox Backup Server",
+      "intro": "Den här vyn läser statusen för Proxmox Backup Server via deras API. På en server skapar den bara den skrivskyddade token för en anslutning som görs med användare och lösenord. Det är inte samma sak som att använda PBS som destination för värdens säkerhetskopior, vilket konfigureras i <pbsLink>Mål: Proxmox Backup Server</pbsLink>.",
+      "blocks": [
+        {
+          "p": "Väljaren överst listar de sparade anslutningarna, och <strong>PBS på den här noden</strong> när PBS är installerat på samma värd som Proxmox VE, vilket inte behöver någon anslutning. Data uppdateras var 30:e sekund och med <strong>Uppdatera</strong>."
+        },
+        {
+          "table": {
+            "headers": [
+              "Del",
+              "Vad den visar"
+            ],
+            "rows": [
+              [
+                "Sammanfattningsrad",
+                "Servernamn, PBS-version, tidpunkt för den senaste uppdateringen och, för <strong>PBS på den här noden</strong>, om PBS-tjänsterna är aktiva."
+              ],
+              [
+                "Datalager",
+                "Kapacitet, använt och ledigt utrymme för varje datalager, med <strong>Beräknad full</strong>."
+              ],
+              [
+                "Senaste uppgifter",
+                "Säkerhetskopieringar, återställningar, verifieringar, rensningar, skräpsamlingar och synkroniseringar, med starttid, varaktighet och resultat."
+              ],
+              [
+                "Underhållsscheman",
+                "Jobben för synkronisering, verifiering och rensning, med sitt datalager, schema och senaste resultat."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-pbs-view.png",
+            "alt": "Vyn Proxmox Backup Server med en vald server: datalager med sin användning, senaste uppgifter och underhållsscheman",
+            "caption": "Vyn Proxmox Backup Server, som läser en fjärr-PBS med en skrivskyddad token."
+          }
+        },
+        {
+          "p": "<strong>Hantera PBS-anslutningar</strong> lägger till, redigerar och tar bort servrar, upp till 32. En ny anslutning loggar in på ett av två sätt:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Logga in med",
+              "Hur det fungerar"
+            ],
+            "rows": [
+              [
+                "Användare och lösenord",
+                "Användaren, som <code>user@realm</code>, loggar in en gång. Monitor skapar en API-token som heter <code>proxmenux-</code> plus slumpmässiga tecken, ger den rollen Audit på <code>/</code> med propagering och sparar bara token: lösenordet lagras inte. Användaren måste få skapa token och bevilja den rollen, vilket <code>root@pam</code> får."
+              ],
+              [
+                "API-token",
+                "En token som skapats i PBS, som <code>user@realm!token</code> med sin hemlighet. Den behöver rollen Audit på <code>/</code> med propagering, i ACL:erna för både användaren och token."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Adressen är HTTPS, med <code>:8007</code> som standardport. SHA256-fingeravtrycket är valfritt: lämna det tomt för ett certifikat som signerats av en betrodd utfärdare och fyll i det för ett självsignerat. Det kontrolleras innan någon inloggningsuppgift skickas. Att spara en anslutning, logga in och ta bort den kräver Monitors lokala konto med dess lösenord; med inloggning via Proxmox VE avvisas de. <strong>Ta bort anslutningen</strong> raderar anslutningen och dess token bara från Monitor: token finns kvar i PBS, där den kan raderas."
+        },
+        {
+          "p": "När Proxmox VE har PBS-lagringar utan anslutning listar kortet <strong>PBS som hittats i Proxmox-lagringen</strong> dem med <strong>Anslut</strong>, som öppnar formuläret med namn, adress och fingeravtryck redan ifyllda."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Hur data samlas in",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Avsnitt i fliken",
+              "Endpoint",
+              "Källa"
+            ],
+            "rows": [
+              [
+                "Schemalagt",
+                "<code>GET /api/host-backups/jobs</code>",
+                "Jobbfilerna i <code>/var/lib/proxmenux/backup-jobs/</code> och deras systemd-timers."
+              ],
+              [
+                "Destinationer",
+                "<code>GET /api/host-backups/destinations</code>",
+                "De destinationer som ProxMenux har sparat, standardmappen för lokalt och PBS-lagringarna i <code>/etc/pve/storage.cfg</code>."
+              ],
+              [
+                "Säkerhetskopieringar",
+                "<code>GET /api/host-backups/archives</code>, <code>GET /api/host-backups/remote-archives</code>",
+                "Följeslagarfilerna <code>*.proxmenux.json</code> i lokala destinationer och listorna över PBS- och Borg-förvar."
+              ],
+              [
+                "Återställning",
+                "<code>POST /api/host-backups/archives/&lt;id&gt;/prepare-restore</code>, <code>GET /api/host-backups/restore/status</code>",
+                "Säkerhetskopian uppackad i en mellanlagringsmapp och, efter omstarten, <code>/var/lib/proxmenux/restore-state.json</code>."
+              ],
+              [
+                "VM och LXC",
+                "<code>GET /api/vm-backup-jobs</code>",
+                "<code>pvesh get /cluster/backup</code>."
+              ],
+              [
+                "Lagringens bevarandepolicy",
+                "<code>GET /api/vm-backup-storages</code>",
+                "Alternativet <code>prune-backups</code> för varje lagring med säkerhetskopieringsinnehåll, från <code>pvesh get /storage</code>."
+              ],
+              [
+                "Proxmox Backup Server",
+                "<code>GET /api/pbs/servers</code>, <code>GET /api/pbs/status</code>",
+                "PBS API med den sparade token, över verifierad HTTPS. På den här noden <code>proxmox-backup-manager</code> och <code>proxmox-backup-debug api</code>. Anslutningar sparas i <code>/root/.config/proxmenux-monitor/pbs_servers.json</code>."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Vidare läsning",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Säkerhetskopiering och återställning",
+                "href": "/docs/backup-restore",
+                "tail": "hur värdens säkerhetskopior fungerar, från CLI och från Monitor."
+              },
+              {
+                "label": "Schemalagda jobb",
+                "href": "/docs/backup-restore/scheduled-jobs",
+                "tail": "jobb med egen timer eller kopplade till ett Proxmox-jobb, och deras filer."
+              },
+              {
+                "label": "Återställning",
+                "href": "/docs/backup-restore/restoring",
+                "tail": "återställningsflödet och dess framsteg efter omstarten."
+              },
+              {
+                "label": "Mål: Proxmox Backup Server",
+                "href": "/docs/backup-restore/destinations/pbs",
+                "tail": "PBS som destination, nyckelfilen och dess återställningskopia."
+              },
+              {
+                "label": "Aviseringar",
+                "href": "/docs/monitor/notifications",
+                "tail": "händelserna för Proxmox säkerhetskopior och värdsäkerhetskopior."
+              },
+              {
+                "label": "Användare och profiler",
+                "href": "/docs/monitor/access-auth#users-profiles",
+                "tail": "området Säkerhetskopiering och åtgärden Hantera säkerhetskopior."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

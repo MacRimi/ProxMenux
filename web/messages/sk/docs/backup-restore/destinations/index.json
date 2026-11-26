@@ -46,9 +46,9 @@
       },
       {
         "feature": "Uchovávanie / čistenie",
-        "local": "Použije sa pre každú plánovanú úlohu cez <code>KEEP_LAST</code>. Staré archívy sa odstránia spolu so sprievodnými súbormi a záznamami spúšťacieho skriptu. Interaktívne zálohy nevykonávajú čistenie.",
-        "pbs": "Použité pre každú plánovanú úlohu cez <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktívne zálohy nevykonávajú čistenie.",
-        "borg": "Použité pre každú plánovanú úlohu cez <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Interaktívne zálohy nevykonávajú čistenie."
+        "local": "Použije sa pre každú plánovanú úlohu so šiestimi limitmi <code>KEEP_*</code>, s rovnakým výberom ako vzdump nad archívmi tejto úlohy. Staré archívy (spolu so sprievodnými súbormi a záznamami spúšťacieho skriptu) sa odstránia rovnako. Interaktívne zálohy nevykonávajú čistenie.",
+        "pbs": "Použité pre každú plánovanú úlohu cez <code>proxmox-backup-client prune</code> so šiestimi limitmi <code>--keep-*</code>: posledné, hodinové, denné, týždenné, mesačné a ročné. Interaktívne zálohy nevykonávajú čistenie.",
+        "borg": "Použité pre každú plánovanú úlohu cez <code>borg prune</code> so šiestimi limitmi <code>--keep-*</code>: posledné, hodinové, denné, týždenné, mesačné a ročné. Interaktívne zálohy nevykonávajú čistenie."
       },
       {
         "feature": "Sieť",

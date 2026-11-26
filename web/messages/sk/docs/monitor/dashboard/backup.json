@@ -1,0 +1,506 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Prehľad: karta Záloha | Dokumentácia ProxMenux",
+    "description": "Karta Záloha v ProxMenux Monitor: zálohy hostiteľa s ich úlohami, cieľmi a obnovou, zálohovacie úlohy Proxmox pre VM a LXC a stav Proxmox Backup Server len na čítanie."
+  },
+  "header": {
+    "title": "Prehľad: karta Záloha",
+    "description": "Zálohy hostiteľa, zálohovacie úlohy VM a LXC a servery Proxmox Backup Server, na ktoré zapisujú, každé vo vlastnom zobrazení tej istej karty.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "p": "Karta <strong>Záloha</strong> má tri zobrazenia, ktoré sa prepínajú vpravo hore: <strong>Hostiteľ</strong>, <strong>VM a LXC</strong> a <strong>Proxmox Backup Server</strong>. Zobrazenie Hostiteľ zostáva načítané aj pri otvorenom inom zobrazení, takže prebiehajúca záloha alebo obnova sa naďalej sleduje."
+        },
+        {
+          "table": {
+            "headers": [
+              "Zobrazenie",
+              "Čo spravuje",
+              "Kde ešte nájdete"
+            ],
+            "rows": [
+              [
+                "Hostiteľ",
+                "Zálohy konfigurácie hostiteľa vytvorené ProxMenux: plánované úlohy, ciele, ručné zálohy, zoznam záloh a ich obnova.",
+                "Ponuka <backupLink>Záloha a obnova</backupLink> v CLI, s rovnakým jadrom a rovnakými súbormi."
+              ],
+              [
+                "VM a LXC",
+                "Zálohovacie úlohy Proxmox pre VM a kontajnery a predvolené uchovávanie každého zálohovacieho úložiska.",
+                "<strong>Dátové centrum → Zálohovanie</strong> vo webovom rozhraní Proxmox. Obe upravujú tie isté úlohy."
+              ],
+              [
+                "Proxmox Backup Server",
+                "Stav serverov PBS: dátové úložiská, nedávne úlohy a plány údržby.",
+                "Webové rozhranie PBS. Toto zobrazenie číta stav servera; jediné, čo na ňom vytvorí, je token len na čítanie pre pripojenie vytvorené pomocou používateľa a hesla."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-host-view.png",
+            "alt": "Zobrazenie Hostiteľ na karte Záloha s kartami Naplánované zálohy, Nastavenie záloh, Ručná záloha a Zálohy a prepínačom zobrazení vpravo hore",
+            "caption": "Zobrazenie Hostiteľ s prepínačom medzi tromi zobrazeniami vpravo hore."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Kto kartu vidí",
+            "body": "Karta sa zobrazí, ak profil účtu obsahuje oblasť <strong>Záloha</strong>. Vytváranie, spúšťanie, úprava, obnova, sťahovanie, zobrazenie obsahu zálohy alebo vymazanie vyžaduje akciu <strong>Spravovať zálohy</strong>, rovnako ako správa pripojení PBS a úprava karty <strong>Uchovávanie záloh úložiska</strong>. Bez nej sú zobrazenia len na čítanie a tieto tlačidlá sa nezobrazia. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Monitor na hostiteľovi Proxmox Backup Server má vlastné karty a kartu Záloha nemá."
+          }
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "title": "Hostiteľ",
+      "intro": "Zobrazenie Hostiteľ pracuje so zálohami hostiteľa vytvorenými ProxMenux: archívmi konfigurácie hostiteľa, nie hostí. Čo do nich patrí, ciele a obnova sú vysvetlené v časti <backupLink>Záloha a obnova</backupLink>. Táto časť opisuje, kde je v Monitore každá súčasť. Karty sa zobrazujú v tomto poradí:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Karta",
+              "Čo obsahuje"
+            ],
+            "rows": [
+              [
+                "Priebeh po obnove",
+                "Zobrazuje sa len počas obnovy alebo dovtedy, kým sa nezatvorí jej zhrnutie. Obnovu sleduje aj po reštarte: kroky, súčasti, záznam a rozdiel pri návrate zmien. Po zatvorení ponecháva <strong>Minulé obnovy</strong> posledných 20."
+              ],
+              [
+                "Naplánované zálohy",
+                "Plánované úlohy a <strong>Vytvoriť úlohu</strong>."
+              ],
+              [
+                "Nastavenie záloh",
+                "<strong>Ciele</strong> a <strong>Vlastné cesty</strong>."
+              ],
+              [
+                "Ručná záloha",
+                "<strong>Spustiť</strong>, na jednorazovú zálohu hneď."
+              ],
+              [
+                "Zálohy",
+                "Zálohy nájdené v každom cieli, ktoré možno skontrolovať, stiahnuť, obnoviť alebo vymazať."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "scheduled",
+      "title": "Plánované úlohy",
+      "intro": "<strong>Vytvoriť úlohu</strong> otvorí sprievodcu s piatimi krokmi. Model úloh, či už s vlastným časovačom alebo prepojený s úlohou Proxmox, je opísaný v časti <jobsLink>Plánované úlohy</jobsLink>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Názov úlohy a typ cieľa",
+                "body": "Názov úlohy sa používa v názvoch časovačov a v záznamoch a neskôr sa nedá zmeniť. Typ cieľa je <strong>Lokálne</strong>, <strong>PBS</strong> alebo <strong>Borg</strong> a po vytvorení úlohy sa tiež nedá zmeniť."
+              },
+              {
+                "title": "Ako sa má spúšťať?",
+                "body": "<strong>Nová plánovaná úloha</strong> vytvorí vlastný časovač systemd. <strong>Prepojiť s úlohou PVE</strong> spustí zálohu po skončení úlohy vzdump Proxmox (<code>job-end</code>) a prevezme plán a uchovávanie tejto úlohy. Úlohy Borg môžu používať len vlastný časovač."
+              },
+              {
+                "title": "Plán a uchovávanie",
+                "body": "<strong>Denne</strong>, <strong>Hodinovo</strong>, <strong>Týždenne</strong>, <strong>Mesačne</strong> alebo <strong>Pokročilé</strong>, ktoré prijíma výraz systemd <code>OnCalendar</code> a zobrazí jeho náhľad. Uchovávanie ponecháva posledné, hodinové, denné, týždenné, mesačné a ročné zálohy: 0 vypne limit a bez nastaveného limitu sa zálohy hromadia. Prepojená úloha tu namiesto toho vyberie svoju nadradenú úlohu Proxmox."
+              },
+              {
+                "title": "Profil",
+                "body": "<strong>Predvolený</strong> zálohuje odporúčanú konfiguráciu hostiteľa a údaje ProxMenux. <strong>Vlastný</strong> umožňuje vybrať, ktoré z týchto ciest sa zahrnú."
+              },
+              {
+                "title": "Cieľ a zhrnutie",
+                "body": "Repozitár PBS, lokálny priečinok alebo repozitár Borg. Pri PBS sa v tomto kroku nastavuje aj šifrovanie: žiadne, nový súbor s kľúčom alebo importovaný. Krok končí zhrnutím úlohy."
+              }
+            ]
+          }
+        },
+        {
+          "p": "Každý riadok ukazuje typ cieľa, štítok <strong>pripojené</strong>, zámok pri šifrovanej úlohe, profil (<strong>Predvolený</strong> alebo <strong>Vlastný</strong>), cieľ, plán, uchovávanie a ďalšie a posledné spustenie. Kliknutím sa úloha otvorí s nastaveniami, záznamom posledného spustenia a tlačidlami <strong>Spustiť teraz</strong>, <strong>Upraviť</strong>, <strong>Vypnúť</strong> a <strong>Vymazať</strong>. Vymazanie odstráni úlohu a jej časovač, nikdy nie už vytvorené zálohy. Vymazanie prepojenej úlohy ponechá úlohu Proxmox tak, ako je: naďalej zálohuje svojich hostí, bez tejto zálohy hostiteľa."
+        },
+        {
+          "calloutTip": {
+            "title": "Ako sa uplatňuje uchovávanie",
+            "body": "Uchovávanie sa spúšťa po každej úspešnej zálohe a uplatňuje ho cieľ: PBS čistí svoju skupinu a Borg svoj repozitár. Pri lokálnom cieli úloha používa rovnaký výber ako vzdump, so všetkými šiestimi limitmi, a len nad vlastnými archívmi: ostatné súbory v zdieľanom priečinku sa nikdy nedotknú. Každý odstránený archív so sebou odnesie aj sprievodný súbor a záznam o spustení."
+          }
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "title": "Nastavenie záloh",
+      "intro": "Táto karta obsahuje dva zoznamy: kam sa zapisujú zálohy hostiteľa a ktoré ďalšie cesty sa zahrnú do každej zálohy.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Cieľ",
+              "Čo treba vedieť v Monitore"
+            ],
+            "rows": [
+              [
+                "Lokálne / USB",
+                "Priečinok na tomto hostiteľovi alebo na pripojenom disku USB. <code>/var/lib/vz/dump</code> je v zozname vždy, ako <strong>Vstavaný predvolený</strong>. Sprievodca zobrazuje disky USB pri otvorení a znova po stlačení <strong>Obnoviť</strong>. Každý disk ponúka akciu, ktorú umožňuje jeho stav: <strong>Použiť</strong> pre pripojený disk, <strong>Pripojiť a použiť</strong> pre nepripojený disk so súborovým systémom, ktorá ho pripojí tak, ako je, a <strong>Naformátovať a použiť</strong> pre disk bez súborového systému, ktorá vytvorí jedinú partíciu ext4 po zadaní cesty zariadenia na potvrdenie."
+              ],
+              [
+                "PBS",
+                "Dátové úložisko servera Proxmox Backup Server. Úložiská PBS, ktoré sú už nastavené v Proxmoxe, sa zobrazia samy a sú označené <strong>Spravuje PVE</strong>. Každý riadok PBS má ovládanie súboru s kľúčom: vygenerovať ho, importovať, stiahnuť alebo vymazať, uchovávať v PBS šifrovanú záložnú kópiu a <strong>Obnoviť súbor s kľúčom</strong>, ak lokálny kľúč chýba. Sú opísané v časti <pbsLink>Ciele: Proxmox Backup Server</pbsLink>."
+              ],
+              [
+                "Borg",
+                "Repozitár Borg na tomto hostiteľovi, na disku USB alebo na inom hostiteľovi cez SSH. Pri SSH <strong>Pripraviť kľúč</strong> vytvorí na tomto hostiteľovi kľúč a zobrazí riadok verejného kľúča, ktorý pridáte do <code>~/.ssh/authorized_keys</code> na vzdialenom hostiteľovi: Monitor ho tam neinštaluje."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "<strong>Nastaviť cieľ</strong> otvorí sprievodcu, ktorý cieľ pridá. Kým cieľ používajú úlohy, jeho názov a prihlasovacie údaje sa nedajú zmeniť a jeho odstránenie vymaže aj tieto úlohy (<strong>Odstrániť cieľ a vymazať úlohy</strong>). Už zapísané zálohy zostanú na svojom mieste."
+        },
+        {
+          "p": "<strong>Vlastné cesty</strong> sú absolútne cesty pridané do každej zálohy, ručnej aj plánovanej, s ľubovoľným profilom: údaje aplikácií, priečinky s konfiguráciou a podobne. Cesta, ktorá na hostiteľovi už neexistuje, je označená <strong>chýba na disku</strong>."
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Ručná záloha",
+      "blocks": [
+        {
+          "p": "<strong>Spustiť</strong> otvorí krátky dialóg: cieľ, profil a pri PBS šifrovanie. Záloha sa spustí hneď a jej záznam sa otvorí naživo. Ak sa dialóg zatvorí pred koncom, riadok <strong>Ručná záloha práve beží</strong> na karte záznam otvorí znova. Každá jednorazová záloha sa uchová ako dokončená úloha, takže jej záznam si možno prečítať neskôr."
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Zálohy",
+      "blocks": [
+        {
+          "p": "Zoznam spája zálohy zo všetkých cieľov: lokálne priečinky, čítané cez sprievodný súbor vedľa každého archívu, a repozitáre PBS a Borg, ktorých odpoveď môže chvíľu trvať. Každý riadok ukazuje typ cieľa, zámok pri šifrovanej zálohe, dátum, veľkosť a umiestnenie. Lokálne zálohy ukazujú aj svoju úlohu alebo <strong>ručné</strong> a <strong>Predchádzajúca úloha</strong>, ak úloha, ktorá ich vytvorila, už neexistuje."
+        },
+        {
+          "p": "Ak cieľ obsahuje zálohy iných uzlov, zobrazí sa prepínač <strong>Tento uzol</strong> / <strong>Všetky uzly</strong>. Zoznam sa spočiatku zobrazí len so zálohami tohto uzla."
+        },
+        {
+          "p": "Kliknutím sa záloha otvorí: jej manifest (zdrojový hostiteľ, verzia Proxmox, kernel, VM a LXC v tom čase, archivované cesty) a pri lokálnej zálohe aj jej záznam. Tlačidlá sú:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Tlačidlo",
+              "Čo robí"
+            ],
+            "rows": [
+              [
+                "Zobraziť obsah",
+                "Rozbalí zálohu do dočasného priečinka a zobrazí jej súbory, plán obnovy, úložisko, sieť a ovládače na opätovnú inštaláciu, bez zmeny hostiteľa."
+              ],
+              [
+                "Stiahnuť",
+                "Stiahne archív. Záloha PBS alebo Borg sa najprv exportuje do súboru (<strong>Pripravujem stiahnutie...</strong>)."
+              ],
+              [
+                "Obnoviť",
+                "Pripraví obnovu a otvorí jej možnosti, opísané nižšie."
+              ],
+              [
+                "Vymazať",
+                "Vymaže lokálny archív, snapshot PBS alebo archív Borg z jeho cieľa."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Šifrované zálohy potrebujú súbor s kľúčom",
+            "body": "Šifrovanú zálohu PBS nemožno zobraziť, stiahnuť ani obnoviť bez jej súboru s kľúčom. Tlačidlá si ho najprv vyžiadajú (<strong>Treba súbor s kľúčom</strong>): importujte ho alebo ho obnovte zo šifrovanej kópie uloženej v PBS pomocou prístupovej frázy na obnovu. Pozrite <pbsLink>Ciele: Proxmox Backup Server</pbsLink>."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Obnova",
+      "intro": "<strong>Obnoviť</strong> ponúka dva režimy:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Režim",
+              "Čo obnovuje"
+            ],
+            "rows": [
+              [
+                "Úplná",
+                "Všetko zo zálohy, ako úplná obnova v ponuke CLI. Pred spustením dialóg vypíše, čo na hostiteľovi existuje, ale nie je v zálohe (VM, LXC a súčasti vytvorené neskôr), čo obnova natrvalo vymaže, a vyžiada si zaškrtnutie potvrdenia."
+              ],
+              [
+                "Vlastná podľa ciest",
+                "Len cesty, ktoré vyberiete spomedzi ciest v zálohe. Cesty, ktoré vyžadujú reštart, napríklad kernel, moduly alebo fstab, obnova zistí a ponúkne ich uplatnenie pri ďalšom štarte."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-restore-custom.png",
+            "alt": "Dialóg obnovy Vlastná podľa ciest so zoznamom ciest v zálohe, filtrom a počtom vybraných ciest",
+            "caption": "Vlastná podľa ciest: cesty zálohy, z ktorých možno obnoviť len niektoré."
+          }
+        },
+        {
+          "p": "Ak záloha pochádza zo staršieho kernelu, než aký hostiteľ používa, oba režimy obnovia len bezpečnú podmnožinu: cesty viazané na kernel a zavádzanie sú zosivené a preskočené (<crossKernelLink>Obnova medzi kernelmi</crossKernelLink>). V oboch režimoch sa nastavenia zadané operátorom zlúčia do hostiteľa."
+        },
+        {
+          "p": "Obnova beží v termináli vnútri Monitora, ktorý sa pred zásahom do hostiteľa ešte opýta, ako ju uplatniť: len bezpečné zmeny, bezpečné zmeny a reštart, alebo všetko naraz. Po reštarte ukazuje, ako obnova prebieha, karta <strong>Priebeh po obnove</strong> na začiatku zobrazenia. Celý postup je v časti <restoreLink>Obnova</restoreLink>."
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "VM a LXC",
+      "intro": "Toto zobrazenie ukazuje zálohovacie úlohy Proxmox pre VM a kontajnery: úlohy z <code>/cluster/backup</code>, tie isté ako <strong>Dátové centrum → Zálohovanie</strong>. Úloha vytvorená alebo zmenená tu sa zobrazí tam a naopak.",
+      "blocks": [
+        {
+          "p": "Každá úloha ukazuje svoj plán, úložisko, režim a kompresiu, uchovávanie a hostí. Kliknutím sa otvorí s tlačidlami <strong>Spustiť teraz</strong>, <strong>Upraviť</strong>, <strong>Vypnúť</strong> alebo <strong>Zapnúť</strong> a <strong>Vymazať</strong>. <strong>Spustiť teraz</strong> spustí zálohu ako úlohu Proxmox s nastaveniami úlohy; v režime stop sa jej hostia počas zálohy vypnú. <strong>Vypnúť</strong> zastaví plánované spúšťanie, ale úlohu ponechá, takže ju stále možno spustiť ručne. <strong>Vymazať</strong> odstráni len plán: už vytvorené zálohy zostanú v úložisku."
+        },
+        {
+          "p": "<strong>Nová úloha</strong> otvorí formulár:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Pole",
+              "Čo nastavuje"
+            ],
+            "rows": [
+              [
+                "Názov (voliteľný)",
+                "Písmená, čísla a spojovníky. Ak je prázdny, Proxmox ho vygeneruje."
+              ],
+              [
+                "Čo zálohovať",
+                "Všetky VM a kontajnery alebo výber."
+              ],
+              [
+                "Cieľové úložisko",
+                "Jedno z úložísk Proxmox, ktoré prijímajú zálohy."
+              ],
+              [
+                "Plán",
+                "Predvoľba (každý deň o 02:00 alebo 03:00, každú nedeľu o 02:00, každých 6 hodín, každú hodinu) alebo vlastná udalosť kalendára Proxmox, napríklad <code>mon..fri 01:30</code>."
+              ],
+              [
+                "Režim",
+                "<strong>Snapshot</strong>, bez výpadku; <strong>Suspend</strong>, ktorý hosťa pozastaví; alebo <strong>Stop</strong>, ktorý ho vypne."
+              ],
+              [
+                "Kompresia",
+                "<code>zstd</code>, <code>gzip</code>, <code>lzo</code> alebo žiadna."
+              ],
+              [
+                "Uchovávanie",
+                "Koľko posledných, hodinových, denných, týždenných, mesačných a ročných záloh sa ponechá. 0 vypne limit. Ak sú všetky polia prázdne, úloha použije uchovávanie svojho úložiska."
+              ],
+              [
+                "Poznámky k zálohám",
+                "Šablóna poznámok zapísaná ku každej zálohe."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Zálohy hostiteľa, ktoré sa spúšťajú s úlohou",
+            "body": "Ak je úloha zálohy hostiteľa prepojená s úlohou Proxmox, táto úloha Proxmox ju uvádza pod <strong>Zálohy hostiteľa, ktoré sa spúšťajú s touto úlohou</strong>. Vymazanie úlohy Proxmox alebo zmena jej úložiska upozorní, že tieto zálohy hostiteľa už nespustí. Iná úloha, ktorá zapisuje do rovnakého úložiska, ich stále spustí."
+          }
+        },
+        {
+          "p": "Pod úlohami <strong>Uchovávanie záloh úložiska</strong> uvádza zálohovacie úložiská s ich predvoleným uchovávaním, ktoré je uložené v Proxmoxe. Úloha s vlastnou politikou ho prepíše. <strong>Upraviť</strong> ponúka predvolenú hodnotu Proxmox (bez politiky na úložisku), <strong>Ponechať všetky zálohy</strong> alebo počty uchovávania. Uloženie nevymaže žiadnu zálohu: politika sa uplatní pri ďalších spusteniach, ktoré ju zdedia, a chránené zálohy zostanú chránené."
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-guests-job.png",
+            "alt": "Zobrazenie VM a LXC so zoznamom zálohovacích úloh Proxmox, jednou otvorenou úlohou s plánom, úložiskom, režimom a uchovávaním a kartou Uchovávanie záloh úložiska pod ňou",
+            "caption": "Zobrazenie VM a LXC: úlohy z Dátové centrum → Zálohovanie a uchovávanie každého úložiska."
+          }
+        },
+        {
+          "p": "Zálohy jedného hosťa s tlačidlom <strong>Vytvoriť zálohu</strong> sú na karte Zálohy v jeho okne na karte <vmsLink>VM a LXC</vmsLink>."
+        }
+      ]
+    },
+    {
+      "id": "pbs",
+      "title": "Proxmox Backup Server",
+      "intro": "Toto zobrazenie číta stav serverov Proxmox Backup Server cez ich API. Na serveri vytvorí iba token len na čítanie pre pripojenie vytvorené pomocou používateľa a hesla. Nejde o to isté ako použitie PBS ako cieľa záloh hostiteľa, ktoré sa nastavuje v časti <pbsLink>Ciele: Proxmox Backup Server</pbsLink>.",
+      "blocks": [
+        {
+          "p": "Selektor hore uvádza uložené pripojenia a <strong>PBS na tomto uzle</strong>, ak je PBS nainštalovaný na tom istom hostiteľovi ako Proxmox VE, čo nevyžaduje pripojenie. Údaje sa obnovujú každých 30 sekúnd a tlačidlom <strong>Obnoviť</strong>."
+        },
+        {
+          "table": {
+            "headers": [
+              "Časť",
+              "Čo ukazuje"
+            ],
+            "rows": [
+              [
+                "Súhrnný riadok",
+                "Názov servera, verziu PBS, čas poslednej aktualizácie a pre <strong>PBS na tomto uzle</strong> aj to, či sú služby PBS aktívne."
+              ],
+              [
+                "Dátové úložiská",
+                "Kapacitu, využité a voľné miesto každého dátového úložiska, s <strong>Odhadované zaplnenie</strong>."
+              ],
+              [
+                "Nedávne úlohy",
+                "Zálohy, obnovy, overenia, čistenia, zbery nepotrebných údajov a synchronizácie, s časom spustenia, trvaním a výsledkom."
+              ],
+              [
+                "Plány údržby",
+                "Úlohy synchronizácie, overenia a čistenia s ich dátovým úložiskom, plánom a posledným výsledkom."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-pbs-view.png",
+            "alt": "Zobrazenie Proxmox Backup Server s vybraným serverom: dátové úložiská s využitím, nedávne úlohy a plány údržby",
+            "caption": "Zobrazenie Proxmox Backup Server, ktoré číta vzdialený PBS pomocou tokenu len na čítanie."
+          }
+        },
+        {
+          "p": "<strong>Spravovať pripojenia PBS</strong> pridáva, upravuje a odstraňuje servery, najviac 32. Nové pripojenie sa prihlási jedným z dvoch spôsobov:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Prihlásiť sa pomocou",
+              "Ako to funguje"
+            ],
+            "rows": [
+              [
+                "Používateľ a heslo",
+                "Používateľ, v tvare <code>user@realm</code>, sa prihlási raz. Monitor vytvorí token API s názvom <code>proxmenux-</code> a náhodnými znakmi, pridelí mu rolu Audit na <code>/</code> s propagáciou a uloží len token: heslo sa neukladá. Používateľ musí mať oprávnenie vytvárať tokeny a prideľovať túto rolu, ako ho má <code>root@pam</code>."
+              ],
+              [
+                "API token",
+                "Token vytvorený v PBS, v tvare <code>user@realm!token</code> s jeho tajomstvom. Vyžaduje rolu Audit na <code>/</code> s propagáciou, v ACL používateľa aj tokenu."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Adresa je HTTPS, pričom <code>:8007</code> je predvolený port. Odtlačok SHA256 je voliteľný: pri certifikáte podpísanom dôveryhodnou autoritou ho nechajte prázdny a pri certifikáte podpísanom svojpomocne ho vyplňte. Kontroluje sa pred odoslaním akýchkoľvek prihlasovacích údajov. Uloženie pripojenia, prihlásenie a jeho odstránenie vyžadujú lokálny účet Monitora s jeho heslom; pri prihlásení cez Proxmox VE sa odmietnu. <strong>Odstrániť pripojenie</strong> vymaže pripojenie a jeho token len z Monitora: token zostane v PBS, kde ho možno vymazať."
+        },
+        {
+          "p": "Ak má Proxmox VE úložiská PBS bez pripojenia, karta <strong>PBS zistené v nastaveniach úložísk Proxmoxu</strong> ich uvádza s tlačidlom <strong>Pripojiť</strong>, ktoré otvorí formulár s už vyplneným názvom, adresou a odtlačkom."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Ako sa údaje zbierajú",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Časť karty",
+              "Endpoint",
+              "Zdroj"
+            ],
+            "rows": [
+              [
+                "Naplánované zálohy",
+                "<code>GET /api/host-backups/jobs</code>",
+                "Súbory úloh v <code>/var/lib/proxmenux/backup-jobs/</code> a ich časovače systemd."
+              ],
+              [
+                "Ciele",
+                "<code>GET /api/host-backups/destinations</code>",
+                "Ciele uložené ProxMenux, predvolený lokálny priečinok a úložiská PBS z <code>/etc/pve/storage.cfg</code>."
+              ],
+              [
+                "Zálohy",
+                "<code>GET /api/host-backups/archives</code>, <code>GET /api/host-backups/remote-archives</code>",
+                "Sprievodné súbory <code>*.proxmenux.json</code> v lokálnych cieľoch a zoznamy repozitárov PBS a Borg."
+              ],
+              [
+                "Obnova",
+                "<code>POST /api/host-backups/archives/&lt;id&gt;/prepare-restore</code>, <code>GET /api/host-backups/restore/status</code>",
+                "Záloha rozbalená do pracovného priečinka a po reštarte <code>/var/lib/proxmenux/restore-state.json</code>."
+              ],
+              [
+                "VM a LXC",
+                "<code>GET /api/vm-backup-jobs</code>",
+                "<code>pvesh get /cluster/backup</code>."
+              ],
+              [
+                "Uchovávanie záloh úložiska",
+                "<code>GET /api/vm-backup-storages</code>",
+                "Voľba <code>prune-backups</code> každého úložiska so zálohovým obsahom, z <code>pvesh get /storage</code>."
+              ],
+              [
+                "Proxmox Backup Server",
+                "<code>GET /api/pbs/servers</code>, <code>GET /api/pbs/status</code>",
+                "API PBS s uloženým tokenom cez overené HTTPS. Na tomto uzle <code>proxmox-backup-manager</code> a <code>proxmox-backup-debug api</code>. Pripojenia sa ukladajú do <code>/root/.config/proxmenux-monitor/pbs_servers.json</code>."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Čo ďalej",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Záloha a obnova",
+                "href": "/docs/backup-restore",
+                "tail": "ako fungujú zálohy hostiteľa, z CLI aj z Monitora."
+              },
+              {
+                "label": "Plánované úlohy",
+                "href": "/docs/backup-restore/scheduled-jobs",
+                "tail": "úlohy s vlastným časovačom alebo prepojené s úlohou Proxmox a ich súbory."
+              },
+              {
+                "label": "Obnova",
+                "href": "/docs/backup-restore/restoring",
+                "tail": "postup obnovy a jej priebeh po reštarte."
+              },
+              {
+                "label": "Ciele: Proxmox Backup Server",
+                "href": "/docs/backup-restore/destinations/pbs",
+                "tail": "PBS ako cieľ, súbor s kľúčom a jeho záložná kópia."
+              },
+              {
+                "label": "Upozornenia",
+                "href": "/docs/monitor/notifications",
+                "tail": "udalosti záloh Proxmox a záloh hostiteľa."
+              },
+              {
+                "label": "Používatelia a profily",
+                "href": "/docs/monitor/access-auth#users-profiles",
+                "tail": "oblasť Záloha a akcia Spravovať zálohy."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

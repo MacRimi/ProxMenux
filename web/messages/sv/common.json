@@ -72,6 +72,7 @@
       "dashboardVmsLxcsApp": "Program",
       "dashboardVmsLxcsUpdates": "Uppdateringar",
       "dashboardHardware": "Fliken Maskinvara",
+      "dashboardBackup": "Fliken Säkerhetskopiering",
       "dashboardSystemLogs": "Fliken Systemloggar",
       "dashboardTerminal": "Fliken Terminal",
       "dashboardSecurity": "Fliken Säkerhet",

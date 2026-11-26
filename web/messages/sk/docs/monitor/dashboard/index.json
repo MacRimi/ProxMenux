@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Panel | Dokumentácia ProxMenux",
-    "description": "Panel je hlavným rozhraním ProxMenux Monitor: desať kariet vrátane spúšťača Apps, spoločná hlavička a nastaviteľné poradie hlavnej navigácie."
+    "description": "Panel je hlavným rozhraním ProxMenux Monitor: jeho karty, spoločná hlavička a nastaviteľné poradie hlavnej navigácie."
   },
   "header": {
     "title": "Panel",
-    "description": "Každodenný pohľad na ProxMenux Monitor: desať kariet vrátane spúšťača Apps, spoločná hlavička a nastaviteľné poradie hlavnej navigácie.",
+    "description": "Každodenný pohľad na ProxMenux Monitor: jeho karty, spoločná hlavička a nastaviteľné poradie hlavnej navigácie.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "Jedna hlavička, desať kariet",
+    "title": "Jedna hlavička pre každú kartu",
     "body": "Hlavička s logom, názvom uzla, indikátorom stavu, dobou prevádzky, obnovením a témou zostáva viditeľná. Aktívna karta mení celý obsah pod ňou. Farba indikátora zodpovedá najhoršej kategórii <link>monitora stavu</link>; panel zobrazuje ten istý údaj."
   },
   "tabs": {
-    "heading": "Desať kariet",
-    "intro": "Každá karta má svoju vlastnú vyhradenú stránku. Stránky sa pridávajú postupne pri vypĺňaní dokumentácie; nižšie je úplný zoznam a za čo je zodpovedný každý z nich.",
+    "heading": "Karty",
+    "intro": "Každá karta má svoju vlastnú stránku, nižšie uvedenú s tým, za čo je zodpovedná. V hornej lište sú Úložisko, Sieť a Hardvér zoskupené pod Server a Systémové záznamy, Zabezpečenie a Nastavenia pod Správa.",
     "headerTab": "Karta",
     "headerOwns": "Čo pokrýva",
     "rows": [
@@ -30,34 +30,47 @@
       },
       {
         "name": "Úložisko",
+        "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Proxmox pools, fyzické disky, SMART údaje, ZFS stav, opotrebovanie a životnosť, história pozorovania."
       },
       {
         "name": "Sieť",
+        "linksTo": "/docs/monitor/dashboard/network",
         "owns": "Fyzické rozhrania, bondy, mosty a OVS, adresy IP/MAC, grafy RX/TX a história RRD každého rozhrania."
       },
       {
         "name": "VM a LXC",
+        "linksTo": "/docs/monitor/dashboard/vms-lxcs",
         "owns": "Inventár hosťovských systémov, podrobnosti konfigurácie, metrík a denníkov a akcie spustenia, zastavenia, reštartu a vypnutia."
       },
       {
         "name": "Hardvér",
+        "linksTo": "/docs/monitor/dashboard/hardware",
         "owns": "Model a topológia CPU, rozloženie pamäte, topológia PCIe a GPU s monitorovaním každého slotu v reálnom čase."
       },
       {
+        "name": "Záloha",
+        "linksTo": "/docs/monitor/dashboard/backup",
+        "owns": "Zálohy hostiteľa s ich úlohami, cieľmi a obnovou, zálohovacie úlohy Proxmox pre VM a LXC s uchovávaním každého úložiska a stav serverov Proxmox Backup Server."
+      },
+      {
         "name": "Systémové záznamy",
+        "linksTo": "/docs/monitor/dashboard/system-logs",
         "owns": "Živé <code>journalctl</code> s filtrami, História úloh Proxmox, protokol upozornení, sťahovacie log zväzky."
       },
       {
         "name": "Terminál",
+        "linksTo": "/docs/monitor/dashboard/terminal",
         "owns": "Shell v prehliadači na hostiteľovi Proxmox pomocou <code>xterm.js</code> cez WebSockets. Konzoly LXC sa otvárajú z karty VM a LXC."
       },
       {
         "name": "Zabezpečenie",
+        "linksTo": "/docs/monitor/dashboard/security",
         "owns": "Nastavenie overovania, heslo, 2FA a tokeny API, denník auditu, voliteľný panel Fail2Ban a nasadenie Secure Gateway."
       },
       {
         "name": "Nastavenia",
+        "linksTo": "/docs/monitor/dashboard/settings",
         "owns": "Jazyk Monitora, poradie navigácie, kanály oznámení, poskytovateľ AI, prahové hodnoty stavu, výnimky a inventár úprav po inštalácii."
       }
     ]

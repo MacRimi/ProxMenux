@@ -1,20 +1,20 @@
 {
   "meta": {
     "title": "ProxMenux Monitor — Översikt | ProxMenux-dokumentation",
-    "description": "Panelen är ProxMenux Monitors huvudgränssnitt: tio innehållsflikar inklusive Apps-startaren, ett gemensamt sidhuvud och en konfigurerbar ordning i huvudnavigeringen."
+    "description": "Panelen är ProxMenux Monitors huvudgränssnitt: dess flikar, ett gemensamt sidhuvud och en konfigurerbar ordning i huvudnavigeringen."
   },
   "header": {
     "title": "Översikt",
-    "description": "ProxMenux Monitors vardagsvy: tio innehållsflikar inklusive Apps-startaren, ett gemensamt sidhuvud och en konfigurerbar ordning i huvudnavigeringen.",
+    "description": "Panelen är ProxMenux Monitors vardagsvy: dess flikar, ett gemensamt sidhuvud och en konfigurerbar ordning i huvudnavigeringen.",
     "section": "ProxMenux Monitor"
   },
   "oneHeader": {
-    "title": "En rubrik, tio flikar",
+    "title": "Ett sidhuvud för varje flik",
     "body": "Sidhuvudet med logotyp, nodnamn, statusindikator, drifttid, uppdatering och tema förblir synligt. Den aktiva fliken ändrar hela innehållsytan nedanför. Statusfärgen visar den allvarligaste kategorin i <link>hälsoövervakningen</link>; samma värde visas i panelen."
   },
   "tabs": {
-    "heading": "De tio flikarna",
-    "intro": "Varje flik har sin egen dedikerade sida. Sidor läggs inkrementellt som dokumentationen fylls i; nedan är den fullständiga listan och vad var och en är ansvarig för.",
+    "heading": "Flikarna",
+    "intro": "Varje flik har sin egen sida, som listas nedan med vad den ansvarar för. I det övre fältet är Lagring, Nätverk och Hårdvara grupperade under Nod, och Systemloggar, Säkerhet och Inställningar under Administration.",
     "headerTab": "Flik",
     "headerOwns": "Vad fliken omfattar",
     "rows": [
@@ -30,34 +30,47 @@
       },
       {
         "name": "Lagring",
+        "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Proxmox pooler, fysiska diskar, SMART data, ZFS tillstånd, slitage och livstid, observationshistorik."
       },
       {
         "name": "Nätverk",
+        "linksTo": "/docs/monitor/dashboard/network",
         "owns": "Fysiska gränssnitt, bondningar, bryggor och OVS, IP/MAC-adresser, RX/TX-diagram och RRD-historik per gränssnitt."
       },
       {
         "name": "VM och LXC",
+        "linksTo": "/docs/monitor/dashboard/vms-lxcs",
         "owns": "Inventering av gäster, detaljvyer för konfiguration, mätvärden och loggar samt start, stopp, omstart och avstängning."
       },
       {
         "name": "Hårdvara",
+        "linksTo": "/docs/monitor/dashboard/hardware",
         "owns": "CPU modell och topologi, minne layout, PCIe topologi, GPU med per-slot realtid övervakning."
       },
       {
+        "name": "Säkerhetskopiering",
+        "linksTo": "/docs/monitor/dashboard/backup",
+        "owns": "Värdens säkerhetskopior med jobb, destinationer och återställning, Proxmox säkerhetskopieringsjobb för VM och LXC med bevarandet för varje lagring samt status för Proxmox Backup Server."
+      },
+      {
         "name": "Systemloggar",
+        "linksTo": "/docs/monitor/dashboard/system-logs",
         "owns": "Live <code>journalctl</code> med filter, Proxmox aktivitetshistorik, anmälningslogg, nedladdningsbara loggpaket."
       },
       {
         "name": "Terminal",
+        "linksTo": "/docs/monitor/dashboard/terminal",
         "owns": "Skal i webbläsaren på Proxmox-värden, med <code>xterm.js</code> över WebSockets. LXC-konsoler öppnas från fliken VM och LXC."
       },
       {
         "name": "Säkerhet",
+        "linksTo": "/docs/monitor/dashboard/security",
         "owns": "Auth installation, lösenord / 2FA / API tokens, revisionslogg, valfri Fail2Ban panel, Secure Gateway distribution."
       },
       {
         "name": "Inställningar",
+        "linksTo": "/docs/monitor/dashboard/settings",
         "owns": "Monitors språk, navigeringsordning, aviseringskanaler, AI-leverantör, hälsotrösklar, undantag och inventering av efterinstallationsoptimeringar."
       }
     ]

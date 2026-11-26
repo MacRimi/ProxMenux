@@ -72,6 +72,7 @@
       "dashboardVmsLxcsApp": "App",
       "dashboardVmsLxcsUpdates": "Updates",
       "dashboardHardware": "Hardware tab",
+      "dashboardBackup": "Backup tab",
       "dashboardSystemLogs": "System Logs tab",
       "dashboardTerminal": "Terminal tab",
       "dashboardSecurity": "Security tab",

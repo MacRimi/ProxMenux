@@ -1,0 +1,506 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Tableau de bord : onglet Sauvegarde | Documentation ProxMenux",
+    "description": "L’onglet Sauvegarde de ProxMenux Monitor : sauvegardes de l’hôte avec leurs tâches, destinations et restauration, tâches de sauvegarde Proxmox des VM et LXC, et état en lecture seule des Proxmox Backup Server."
+  },
+  "header": {
+    "title": "Tableau de bord : onglet Sauvegarde",
+    "description": "Sauvegardes de l’hôte, tâches de sauvegarde des VM et LXC, et Proxmox Backup Server où elles sont écrites, chacun dans sa propre vue du même onglet.",
+    "section": "ProxMenux Monitor · Tableau de bord"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "p": "L’onglet <strong>Sauvegarde</strong> a trois vues, choisies avec le sélecteur en haut à droite : <strong>Hôte</strong>, <strong>VM et LXC</strong> et <strong>Proxmox Backup Server</strong>. La vue Hôte reste chargée pendant qu’une autre vue est ouverte : une sauvegarde ou une restauration en cours continue donc d’être suivie."
+        },
+        {
+          "table": {
+            "headers": [
+              "Vue",
+              "Ce qu’elle gère",
+              "Où la retrouver ailleurs"
+            ],
+            "rows": [
+              [
+                "Hôte",
+                "Sauvegardes de la configuration de l’hôte faites par ProxMenux : tâches planifiées, destinations, sauvegardes manuelles, liste des sauvegardes et leur restauration.",
+                "Le menu <backupLink>Sauvegarde et restauration</backupLink> de la CLI, avec le même moteur et les mêmes fichiers."
+              ],
+              [
+                "VM et LXC",
+                "Les tâches de sauvegarde Proxmox des VM et des conteneurs, et la rétention par défaut de chaque stockage de sauvegarde.",
+                "<strong>Centre de données → Sauvegarde</strong> dans l’interface web de Proxmox. Les deux modifient les mêmes tâches."
+              ],
+              [
+                "Proxmox Backup Server",
+                "L’état des serveurs PBS : datastores, tâches récentes et planifications de maintenance.",
+                "L’interface web de PBS. Cette vue lit l’état du serveur ; la seule chose qu’elle y crée est le jeton en lecture seule d’une connexion établie avec un utilisateur et un mot de passe."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-host-view.png",
+            "alt": "Vue Hôte de l’onglet Sauvegarde avec les cartes Planifiée, Configuration de sauvegarde, Sauvegarde manuelle et Sauvegardes, et le sélecteur de vue en haut à droite",
+            "caption": "La vue Hôte, avec le sélecteur entre les trois vues en haut à droite."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Qui voit l’onglet",
+            "body": "L’onglet apparaît lorsque le profil du compte inclut la zone <strong>Sauvegarde</strong>. Créer, exécuter, modifier, restaurer, télécharger, afficher le contenu d’une sauvegarde ou supprimer demande l’action <strong>Gérer les sauvegardes</strong>, tout comme gérer les connexions PBS et modifier la <strong>Rétention du stockage</strong>. Sans elle, les vues sont en lecture seule et ces boutons n’apparaissent pas. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. Le Monitor d’un hôte Proxmox Backup Server a ses propres onglets et pas d’onglet Sauvegarde."
+          }
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "title": "Hôte",
+      "intro": "La vue Hôte travaille avec les sauvegardes d’hôte de ProxMenux : des archives de la configuration de l’hôte, pas des invités. Leur contenu, les destinations et la restauration sont expliqués dans <backupLink>Sauvegarde et restauration</backupLink>. Cette section décrit où se trouve chaque élément dans le Monitor. Les cartes apparaissent dans cet ordre :",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Carte",
+              "Ce qu’elle contient"
+            ],
+            "rows": [
+              [
+                "Progression post-restauration",
+                "Affichée seulement pendant une restauration ou jusqu’à ce que son résumé soit fermé. Elle suit la restauration aussi après le redémarrage, avec les étapes, les composants, le journal et l’écart de retour arrière. Une fois fermée, <strong>Restaurations passées</strong> garde les 20 dernières."
+              ],
+              [
+                "Planifiée",
+                "Les tâches planifiées, et <strong>Créer la tâche</strong>."
+              ],
+              [
+                "Configuration de sauvegarde",
+                "<strong>Destinations</strong> et <strong>Chemins personnalisés</strong>."
+              ],
+              [
+                "Sauvegarde manuelle",
+                "<strong>Exécuter</strong>, pour une sauvegarde ponctuelle immédiate."
+              ],
+              [
+                "Sauvegardes",
+                "Les sauvegardes trouvées dans chaque destination, à examiner, télécharger, restaurer ou supprimer."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "scheduled",
+      "title": "Tâches planifiées",
+      "intro": "<strong>Créer la tâche</strong> ouvre un assistant en cinq étapes. Le modèle de tâche, avec son propre minuteur ou rattaché à une tâche Proxmox, est décrit dans <jobsLink>Tâches planifiées</jobsLink>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Nom et backend",
+                "body": "Le nom de la tâche sert dans les noms des minuteurs et dans les journaux, et ne peut plus être modifié ensuite. Le backend est <strong>Local</strong>, <strong>PBS</strong> ou <strong>Borg</strong>, lui aussi fixé une fois la tâche créée."
+              },
+              {
+                "title": "Mode d’exécution",
+                "body": "<strong>Nouvelle tâche planifiée</strong> crée un minuteur systemd propre. <strong>Rattacher à une tâche PVE</strong> lance la sauvegarde à la fin d’une tâche vzdump Proxmox (<code>job-end</code>) et reprend le calendrier et la rétention de cette tâche. Les tâches Borg ne peuvent utiliser que leur propre minuteur."
+              },
+              {
+                "title": "Calendrier et rétention",
+                "body": "<strong>Tous les jours</strong>, <strong>Toutes les heures</strong>, <strong>Hebdomadaire</strong>, <strong>Mensuel</strong> ou <strong>Avancé</strong>, qui accepte une expression systemd <code>OnCalendar</code> et affiche un aperçu. La rétention garde les dernières sauvegardes, horaires, quotidiennes, hebdomadaires, mensuelles et annuelles : 0 désactive une limite, et sans aucune limite les sauvegardes s’accumulent. Une tâche rattachée choisit ici sa tâche Proxmox parente à la place."
+              },
+              {
+                "title": "Profil",
+                "body": "<strong>Par défaut</strong> sauvegarde la configuration d’hôte recommandée et les données de ProxMenux. <strong>Personnalisé</strong> permet de choisir lesquels de ces chemins sont inclus."
+              },
+              {
+                "title": "Destination et résumé",
+                "body": "Le dépôt PBS, le dossier local ou le dépôt Borg. Pour PBS, l’étape définit aussi le chiffrement : aucun, un nouveau fichier de clé ou un fichier importé. Elle se termine par un résumé de la tâche."
+              }
+            ]
+          }
+        },
+        {
+          "p": "Chaque ligne affiche le backend, le badge <strong>rattachée</strong>, un cadenas quand la tâche est chiffrée, le profil (<strong>Par défaut</strong> ou <strong>Personnalisé</strong>), la destination, le calendrier, la rétention, et la prochaine et la dernière exécution. Un clic ouvre la tâche avec ses paramètres, le journal de la dernière exécution, et <strong>Exécuter maintenant</strong>, <strong>Modifier</strong>, <strong>Désactiver</strong> et <strong>Supprimer</strong>. Supprimer retire la tâche et son minuteur, jamais les sauvegardes déjà faites. Supprimer une tâche rattachée laisse la tâche Proxmox telle quelle : elle continue de sauvegarder ses invités, sans cette sauvegarde d’hôte."
+        },
+        {
+          "calloutTip": {
+            "title": "Comment la rétention est appliquée",
+            "body": "La rétention s’exécute après chaque sauvegarde réussie et est appliquée par la destination : PBS purge son groupe et Borg purge son dépôt. Sur une destination locale, la tâche utilise la même sélection que vzdump, avec les six limites, et seulement sur ses propres archives : les autres fichiers d’un dossier partagé ne sont jamais touchés. Chaque archive supprimée emporte avec elle son fichier annexe et son journal d’exécution."
+          }
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "title": "Configuration de sauvegarde",
+      "intro": "Cette carte contient deux listes : où les sauvegardes d’hôte sont écrites, et quels chemins supplémentaires entrent dans chaque sauvegarde.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Destination",
+              "À savoir dans le Monitor"
+            ],
+            "rows": [
+              [
+                "Local/USB",
+                "Un dossier sur cet hôte ou sur un disque USB monté. <code>/var/lib/vz/dump</code> est toujours listé, comme <strong>Valeur par défaut intégrée</strong>. L’assistant liste les disques USB à son ouverture et de nouveau avec <strong>Actualiser</strong>. Chaque disque propose l’action que permet son état : <strong>Utiliser</strong> pour un disque monté, <strong>Monter et utiliser</strong> pour un disque non monté doté d’un système de fichiers, qui le monte tel quel, et <strong>Formater et utiliser</strong> pour un disque sans système de fichiers, qui crée une seule partition ext4 après que vous avez saisi le chemin du périphérique pour confirmer."
+              ],
+              [
+                "PBS",
+                "Un datastore d’un Proxmox Backup Server. Les stockages PBS déjà configurés dans Proxmox apparaissent d’eux-mêmes, marqués <strong>Géré par PVE</strong>. Chaque ligne PBS a les commandes du fichier de clé : le générer, l’importer, le télécharger ou le supprimer, garder une copie de récupération chiffrée dans PBS, et <strong>Récupérer le fichier de clé</strong> quand la clé locale manque. Elles sont décrites dans <pbsLink>Destinations : Proxmox Backup Server</pbsLink>."
+              ],
+              [
+                "Borg",
+                "Un dépôt Borg sur cet hôte, sur un disque USB ou sur un autre hôte via SSH. Pour SSH, <strong>Préparer la clé</strong> crée une clé sur cet hôte et affiche la ligne de la clé publique, que vous ajoutez à <code>~/.ssh/authorized_keys</code> sur l’hôte distant : le Monitor ne l’y installe pas."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "<strong>Configurer la destination</strong> ouvre l’assistant qui en ajoute une. Tant que des tâches utilisent une destination, son nom et ses identifiants ne peuvent pas être modifiés, et la supprimer supprime aussi ces tâches (<strong>Supprimer la destination et ses tâches</strong>). Les sauvegardes déjà écrites restent où elles sont."
+        },
+        {
+          "p": "Les <strong>Chemins personnalisés</strong> sont des chemins absolus ajoutés à chaque sauvegarde, manuelle ou planifiée, avec l’un ou l’autre profil : données d’applications, dossiers de configuration et similaires. Un chemin qui n’existe plus sur l’hôte est marqué <strong>manquant sur le disque</strong>."
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Sauvegarde manuelle",
+      "blocks": [
+        {
+          "p": "<strong>Exécuter</strong> ouvre une courte boîte de dialogue : la destination, le profil et, pour PBS, le chiffrement. La sauvegarde démarre aussitôt et son journal s’ouvre en direct. Si la boîte est fermée avant la fin, une ligne <strong>Sauvegarde manuelle en cours</strong> dans la carte rouvre le journal. Chaque sauvegarde ponctuelle est conservée comme une tâche terminée, son journal peut donc être lu plus tard."
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Sauvegardes",
+      "blocks": [
+        {
+          "p": "La liste réunit les sauvegardes de chaque destination : les dossiers locaux, lus grâce au fichier annexe placé à côté de chaque archive, et les dépôts PBS et Borg, qui peuvent mettre un moment à répondre. Chaque ligne affiche le backend, un cadenas quand la sauvegarde est chiffrée, la date, la taille et son emplacement. Les sauvegardes locales affichent aussi leur tâche, ou <strong>manuelle</strong>, et <strong>Ancienne tâche</strong> quand la tâche qui les a faites n’existe plus."
+        },
+        {
+          "p": "Lorsqu’une destination contient des sauvegardes d’autres nœuds, un sélecteur <strong>Ce nœud</strong> / <strong>Tous les nœuds</strong> apparaît. La liste commence avec les sauvegardes de ce nœud seulement."
+        },
+        {
+          "p": "Un clic ouvre la sauvegarde : son manifeste (hôte source, version de Proxmox, noyau, les VM et LXC à ce moment, les chemins archivés) et, pour une sauvegarde locale, son journal. Les boutons sont :"
+        },
+        {
+          "table": {
+            "headers": [
+              "Bouton",
+              "Ce qu’il fait"
+            ],
+            "rows": [
+              [
+                "Afficher le contenu",
+                "Extrait la sauvegarde dans un dossier temporaire et affiche ses fichiers, le plan de restauration, le stockage, le réseau et les pilotes à réinstaller, sans modifier l’hôte."
+              ],
+              [
+                "Télécharger",
+                "Télécharge l’archive. Une sauvegarde PBS ou Borg est d’abord exportée vers un fichier (<strong>Préparation du téléchargement…</strong>)."
+              ],
+              [
+                "Restaurer",
+                "Prépare la restauration et ouvre ses options, décrites plus bas."
+              ],
+              [
+                "Supprimer",
+                "Supprime l’archive locale, le snapshot PBS ou l’archive Borg de sa destination."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Les sauvegardes chiffrées ont besoin de leur fichier de clé",
+            "body": "Une sauvegarde PBS chiffrée ne peut être ni affichée, ni téléchargée, ni restaurée sans son fichier de clé. Les boutons le demandent d’abord (<strong>Fichier de clé requis</strong>) : importez-le, ou récupérez-le depuis la copie chiffrée conservée dans PBS avec la phrase de passe de récupération. Voir <pbsLink>Destinations : Proxmox Backup Server</pbsLink>."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Restauration",
+      "intro": "<strong>Restaurer</strong> propose deux modes :",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Mode",
+              "Ce qu’il restaure"
+            ],
+            "rows": [
+              [
+                "Complète",
+                "Tout le contenu de la sauvegarde, comme la restauration complète du menu CLI. Avant de démarrer, la boîte de dialogue liste ce qui existe sur l’hôte mais pas dans la sauvegarde (VM, LXC et composants créés plus tard), que la restauration supprime définitivement, et demande de cocher une confirmation."
+              ],
+              [
+                "Personnalisé par chemins",
+                "Seulement les chemins que vous choisissez parmi ceux de la sauvegarde. Les chemins qui demandent un redémarrage, comme le noyau, les modules ou fstab, sont détectés par la restauration, qui propose de les appliquer au prochain démarrage."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-restore-custom.png",
+            "alt": "Boîte de dialogue de restauration Personnalisé par chemins, avec la liste des chemins de la sauvegarde, un filtre et le nombre de chemins sélectionnés",
+            "caption": "Personnalisé par chemins : les chemins de la sauvegarde, pour n’en restaurer que certains."
+          }
+        },
+        {
+          "p": "Quand la sauvegarde provient d’un noyau plus ancien que celui de l’hôte, les deux modes ne restaurent que le sous-ensemble sûr : les chemins liés au noyau et au démarrage sont grisés et ignorés (<crossKernelLink>Restauration entre versions du noyau</crossKernelLink>). Dans les deux modes, les réglages écrits par l’opérateur sont fusionnés dans l’hôte."
+        },
+        {
+          "p": "La restauration s’exécute dans un terminal à l’intérieur du Monitor, qui demande encore comment l’appliquer avant de toucher à l’hôte : changements sûrs seulement, changements sûrs et redémarrage, ou tout en une fois. Après le redémarrage, la carte <strong>Progression post-restauration</strong> en haut de la vue montre l’avancement. Le déroulement complet est dans <restoreLink>Restaurer</restoreLink>."
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "VM et LXC",
+      "intro": "Cette vue affiche les tâches de sauvegarde Proxmox des VM et des conteneurs : les tâches de <code>/cluster/backup</code>, les mêmes que <strong>Centre de données → Sauvegarde</strong>. Une tâche créée ou modifiée ici apparaît là-bas, et inversement.",
+      "blocks": [
+        {
+          "p": "Chaque tâche affiche son calendrier, son stockage, son mode et sa compression, sa rétention et ses invités. Un clic l’ouvre avec <strong>Exécuter maintenant</strong>, <strong>Modifier</strong>, <strong>Désactiver</strong> ou <strong>Activer</strong>, et <strong>Supprimer</strong>. <strong>Exécuter maintenant</strong> lance la sauvegarde comme une tâche Proxmox avec les paramètres de la tâche ; en mode arrêt, ses invités sont arrêtés pendant la sauvegarde. <strong>Désactiver</strong> arrête les exécutions planifiées mais garde la tâche, qui peut encore être lancée à la main. <strong>Supprimer</strong> retire seulement la planification : les sauvegardes déjà faites restent dans le stockage."
+        },
+        {
+          "p": "<strong>Nouvelle tâche</strong> ouvre le formulaire :"
+        },
+        {
+          "table": {
+            "headers": [
+              "Champ",
+              "Ce qu’il définit"
+            ],
+            "rows": [
+              [
+                "Nom (facultatif)",
+                "Lettres, chiffres et tirets. S’il est vide, Proxmox en génère un."
+              ],
+              [
+                "Invités à sauvegarder",
+                "Toutes les VM et tous les conteneurs, ou une sélection."
+              ],
+              [
+                "Stockage de destination",
+                "L’un des stockages Proxmox qui acceptent les sauvegardes."
+              ],
+              [
+                "Planification",
+                "Un préréglage (tous les jours à 02:00 ou 03:00, tous les dimanches à 02:00, toutes les 6 heures, toutes les heures) ou un événement de calendrier Proxmox personnalisé, comme <code>mon..fri 01:30</code>."
+              ],
+              [
+                "Mode",
+                "<strong>Instantané</strong>, sans interruption ; <strong>Suspendre</strong>, qui met l’invité en pause ; ou <strong>Arrêt</strong>, qui l’arrête."
+              ],
+              [
+                "Compression",
+                "<code>zstd</code>, <code>gzip</code>, <code>lzo</code> ou aucune."
+              ],
+              [
+                "Rétention",
+                "Combien de sauvegardes récentes, horaires, quotidiennes, hebdomadaires, mensuelles et annuelles conserver. 0 désactive une limite. Si tous les champs sont vides, la tâche utilise la rétention de son stockage."
+              ],
+              [
+                "Notes de sauvegarde",
+                "Le modèle de notes écrit avec chaque sauvegarde."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Sauvegardes d’hôte exécutées avec une tâche",
+            "body": "Quand une tâche de sauvegarde d’hôte est rattachée à une tâche Proxmox, cette tâche Proxmox la liste sous <strong>Sauvegardes de l’hôte exécutées avec cette tâche</strong>. Supprimer la tâche Proxmox, ou lui donner un autre stockage, avertit qu’elle ne lancera plus ces sauvegardes d’hôte. Une autre tâche qui écrit dans le même stockage continue de les lancer."
+          }
+        },
+        {
+          "p": "Sous les tâches, <strong>Rétention du stockage</strong> liste les stockages de sauvegarde avec leur rétention par défaut, enregistrée dans Proxmox. Une tâche avec sa propre politique la remplace. <strong>Modifier</strong> propose la valeur par défaut de Proxmox (aucune politique sur le stockage), <strong>Conserver toutes les sauvegardes</strong>, ou des nombres de rétention. Enregistrer ne supprime aucune sauvegarde : la politique s’applique aux prochaines exécutions qui en héritent, et les sauvegardes protégées restent protégées."
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-guests-job.png",
+            "alt": "Vue VM et LXC avec la liste des tâches de sauvegarde Proxmox, une tâche ouverte avec son calendrier, son stockage, son mode et sa rétention, et la carte Rétention du stockage en dessous",
+            "caption": "La vue VM et LXC : les tâches de Centre de données → Sauvegarde et la rétention de chaque stockage."
+          }
+        },
+        {
+          "p": "Les sauvegardes d’un seul invité, avec <strong>Créer une sauvegarde</strong>, se trouvent dans l’onglet Sauvegardes de sa fenêtre dans <vmsLink>VM et LXC</vmsLink>."
+        }
+      ]
+    },
+    {
+      "id": "pbs",
+      "title": "Proxmox Backup Server",
+      "intro": "Cette vue lit l’état des Proxmox Backup Server via leur API. Sur un serveur, elle crée seulement le jeton en lecture seule d’une connexion établie avec un utilisateur et un mot de passe. Ce n’est pas la même chose qu’utiliser PBS comme destination des sauvegardes d’hôte, ce qui se configure dans <pbsLink>Destinations : Proxmox Backup Server</pbsLink>.",
+      "blocks": [
+        {
+          "p": "Le sélecteur en haut liste les connexions enregistrées, et <strong>PBS de ce nœud</strong> quand PBS est installé sur le même hôte que Proxmox VE, ce qui ne demande aucune connexion. Les données s’actualisent toutes les 30 secondes et avec <strong>Actualiser</strong>."
+        },
+        {
+          "table": {
+            "headers": [
+              "Partie",
+              "Ce qu’elle affiche"
+            ],
+            "rows": [
+              [
+                "Ligne de résumé",
+                "Nom du serveur, version de PBS, heure de la dernière mise à jour et, pour <strong>PBS de ce nœud</strong>, état actif ou non des services PBS."
+              ],
+              [
+                "Datastores",
+                "Capacité, espace utilisé et disponible de chaque datastore, avec <strong>Saturation estimée</strong>."
+              ],
+              [
+                "Tâches récentes",
+                "Sauvegardes, restaurations, vérifications, purges, ramasse-miettes et synchronisations, avec heure de début, durée et résultat."
+              ],
+              [
+                "Planifications de maintenance",
+                "Les tâches de synchronisation, de vérification et de purge, avec leur datastore, leur calendrier et leur dernier résultat."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-pbs-view.png",
+            "alt": "Vue Proxmox Backup Server avec un serveur sélectionné : datastores avec leur utilisation, tâches récentes et planifications de maintenance",
+            "caption": "La vue Proxmox Backup Server, qui lit un PBS distant avec un jeton en lecture seule."
+          }
+        },
+        {
+          "p": "<strong>Gérer les connexions PBS</strong> ajoute, modifie et supprime des serveurs, jusqu’à 32. Une nouvelle connexion s’authentifie de deux façons :"
+        },
+        {
+          "table": {
+            "headers": [
+              "Se connecter avec",
+              "Comment ça marche"
+            ],
+            "rows": [
+              [
+                "Utilisateur et mot de passe",
+                "L’utilisateur, sous la forme <code>user@realm</code>, se connecte une seule fois. Le Monitor crée un jeton API nommé <code>proxmenux-</code> suivi de caractères aléatoires, lui donne le rôle Audit sur <code>/</code> avec propagation et n’enregistre que le jeton : le mot de passe n’est pas conservé. L’utilisateur doit pouvoir créer des jetons et accorder ce rôle, comme <code>root@pam</code>."
+              ],
+              [
+                "Jeton API",
+                "Un jeton créé dans PBS, sous la forme <code>user@realm!token</code> avec son secret. Il lui faut le rôle Audit sur <code>/</code> avec propagation, dans les ACL de l’utilisateur et du jeton."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "L’adresse est en HTTPS, avec <code>:8007</code> pour le port par défaut. L’empreinte SHA256 est facultative : laissez-la vide pour un certificat signé par une autorité de confiance, et renseignez-la pour un certificat auto-signé. Elle est vérifiée avant l’envoi de tout identifiant. Enregistrer une connexion, s’y connecter et la supprimer demandent le compte local du Monitor, avec son mot de passe ; avec la connexion Proxmox VE, ces actions sont refusées. <strong>Supprimer la connexion</strong> supprime la connexion et son jeton du Monitor seulement : le jeton reste dans PBS, où il peut être supprimé."
+        },
+        {
+          "p": "Quand Proxmox VE a des stockages PBS sans connexion, la carte <strong>PBS détectés dans le stockage Proxmox</strong> les liste avec <strong>Connecter</strong>, qui ouvre le formulaire avec le nom, l’adresse et l’empreinte déjà remplis."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Comment les données sont collectées",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Section de l’onglet",
+              "Endpoint",
+              "Source"
+            ],
+            "rows": [
+              [
+                "Planifiée",
+                "<code>GET /api/host-backups/jobs</code>",
+                "Les fichiers de tâches dans <code>/var/lib/proxmenux/backup-jobs/</code> et leurs minuteurs systemd."
+              ],
+              [
+                "Destinations",
+                "<code>GET /api/host-backups/destinations</code>",
+                "Les destinations enregistrées par ProxMenux, le dossier local par défaut et les stockages PBS de <code>/etc/pve/storage.cfg</code>."
+              ],
+              [
+                "Sauvegardes",
+                "<code>GET /api/host-backups/archives</code>, <code>GET /api/host-backups/remote-archives</code>",
+                "Les fichiers annexes <code>*.proxmenux.json</code> des destinations locales, et les listes des dépôts PBS et Borg."
+              ],
+              [
+                "Restauration",
+                "<code>POST /api/host-backups/archives/&lt;id&gt;/prepare-restore</code>, <code>GET /api/host-backups/restore/status</code>",
+                "La sauvegarde extraite dans un dossier de préparation et, après le redémarrage, <code>/var/lib/proxmenux/restore-state.json</code>."
+              ],
+              [
+                "VM et LXC",
+                "<code>GET /api/vm-backup-jobs</code>",
+                "<code>pvesh get /cluster/backup</code>."
+              ],
+              [
+                "Rétention du stockage",
+                "<code>GET /api/vm-backup-storages</code>",
+                "L’option <code>prune-backups</code> de chaque stockage avec contenu de sauvegarde, d’après <code>pvesh get /storage</code>."
+              ],
+              [
+                "Proxmox Backup Server",
+                "<code>GET /api/pbs/servers</code>, <code>GET /api/pbs/status</code>",
+                "L’API PBS avec le jeton enregistré, en HTTPS vérifié. Sur ce nœud, <code>proxmox-backup-manager</code> et <code>proxmox-backup-debug api</code>. Les connexions sont enregistrées dans <code>/root/.config/proxmenux-monitor/pbs_servers.json</code>."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Pour aller plus loin",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Sauvegarde et restauration",
+                "href": "/docs/backup-restore",
+                "tail": "comment fonctionnent les sauvegardes d’hôte, depuis la CLI et depuis le Monitor."
+              },
+              {
+                "label": "Tâches planifiées",
+                "href": "/docs/backup-restore/scheduled-jobs",
+                "tail": "tâches avec leur propre minuteur ou rattachées à une tâche Proxmox, et leurs fichiers."
+              },
+              {
+                "label": "Restaurer",
+                "href": "/docs/backup-restore/restoring",
+                "tail": "le déroulement de la restauration et sa progression après le redémarrage."
+              },
+              {
+                "label": "Destinations : Proxmox Backup Server",
+                "href": "/docs/backup-restore/destinations/pbs",
+                "tail": "PBS comme destination, le fichier de clé et sa copie de récupération."
+              },
+              {
+                "label": "Notifications",
+                "href": "/docs/monitor/notifications",
+                "tail": "les événements des sauvegardes Proxmox et des sauvegardes d’hôte."
+              },
+              {
+                "label": "Utilisateurs et profils",
+                "href": "/docs/monitor/access-auth#users-profiles",
+                "tail": "la zone Sauvegarde et l’action Gérer les sauvegardes."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

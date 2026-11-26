@@ -46,9 +46,9 @@
       },
       {
         "feature": "Retenção / limpeza",
-        "local": "Aplicada por trabalho agendado via <code>KEEP_LAST</code>. Os arquivos antigos são removidos junto com seus arquivos auxiliares e logs de execução. Os backups interativos não fazem limpeza.",
-        "pbs": "Aplicado por trabalho programado via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Os backups interativos não fazem limpeza.",
-        "borg": "Aplicado por trabalho programado via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Os backups interativos não fazem limpeza."
+        "local": "Aplicada por trabalho agendado com os seis limites <code>KEEP_*</code>, usando a mesma seleção do vzdump sobre os arquivos desse trabalho. Os arquivos antigos são removidos junto com seus arquivos auxiliares e logs de execução. Os backups interativos não fazem limpeza.",
+        "pbs": "Aplicado por trabalho programado via <code>proxmox-backup-client prune</code> com os seis limites <code>--keep-*</code>: últimos, de hora em hora, diários, semanais, mensais e anuais. Os backups interativos não fazem limpeza.",
+        "borg": "Aplicado por trabalho programado via <code>borg prune</code> com os seis limites <code>--keep-*</code>: últimos, de hora em hora, diários, semanais, mensais e anuais. Os backups interativos não fazem limpeza."
       },
       {
         "feature": "Rede",

@@ -1,0 +1,506 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Registerkarte Backup | ProxMenux-Dokumentation",
+    "description": "Die Registerkarte Backup von ProxMenux Monitor: Host-Backups mit Jobs, Zielen und Wiederherstellung, die Proxmox-Backup-Jobs von VMs und LXCs und der schreibgeschützte Status von Proxmox Backup Servern."
+  },
+  "header": {
+    "title": "Dashboard: Registerkarte Backup",
+    "description": "Backups des Hosts, Backup-Jobs der VMs und LXCs und die Proxmox Backup Server, auf die sie schreiben, jeweils in einer eigenen Ansicht derselben Registerkarte.",
+    "section": "ProxMenux Monitor · Übersicht"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "p": "Die Registerkarte <strong>Backup</strong> hat drei Ansichten, die Sie mit dem Schalter oben rechts wählen: <strong>Host</strong>, <strong>VMs und LXCs</strong> und <strong>Proxmox Backup Server</strong>. Die Host-Ansicht bleibt geladen, während eine andere Ansicht geöffnet ist. So wird ein laufendes Backup oder eine laufende Wiederherstellung weiterhin verfolgt."
+        },
+        {
+          "table": {
+            "headers": [
+              "Ansicht",
+              "Was sie verwaltet",
+              "Wo es sonst zu finden ist"
+            ],
+            "rows": [
+              [
+                "Host",
+                "Backups der Host-Konfiguration, die ProxMenux erstellt: geplante Jobs, Ziele, manuelle Backups, die Liste der Backups und ihre Wiederherstellung.",
+                "Das Menü <backupLink>Sichern und Wiederherstellen</backupLink> der CLI, mit derselben Engine und denselben Dateien."
+              ],
+              [
+                "VMs und LXCs",
+                "Die Proxmox-Backup-Jobs für VMs und Container und die Standard-Aufbewahrung jedes Backup-Speichers.",
+                "<strong>Datencenter → Backup</strong> in der Proxmox-Weboberfläche. Beide bearbeiten dieselben Jobs."
+              ],
+              [
+                "Proxmox Backup Server",
+                "Der Status von PBS-Servern: Datenspeicher, letzte Aufgaben und Wartungszeitpläne.",
+                "Die PBS-Weboberfläche. Diese Ansicht liest den Status des Servers; das Einzige, was sie dort anlegt, ist das schreibgeschützte Token einer Verbindung, die mit Benutzer und Passwort hergestellt wurde."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-host-view.png",
+            "alt": "Host-Ansicht der Registerkarte Backup mit den Karten Geplant, Backup-Konfiguration, Manuelles Backup und Backups sowie dem Ansichtsschalter oben rechts",
+            "caption": "Die Host-Ansicht, mit dem Schalter zwischen den drei Ansichten oben rechts."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Wer die Registerkarte sieht",
+            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Backup</strong> enthält. Zum Erstellen, Ausführen, Bearbeiten, Wiederherstellen, Herunterladen, Ansehen des Inhalts eines Backups und zum Löschen ist die Aktion <strong>Backups verwalten</strong> nötig, ebenso zum Verwalten der PBS-Verbindungen und zum Bearbeiten von <strong>Aufbewahrung im Speicher</strong>. Ohne sie sind die Ansichten schreibgeschützt und diese Schaltflächen erscheinen nicht. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Monitor eines Proxmox-Backup-Server-Hosts hat eigene Registerkarten und keine Registerkarte Backup."
+          }
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "title": "Host",
+      "intro": "Die Host-Ansicht arbeitet mit den Host-Backups von ProxMenux: Archive der Host-Konfiguration, nicht der Gäste. Was darin enthalten ist, die Ziele und die Wiederherstellung erklärt <backupLink>Sichern und Wiederherstellen</backupLink>. Dieser Abschnitt beschreibt, wo sich die einzelnen Teile im Monitor befinden. Die Karten erscheinen in dieser Reihenfolge:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Karte",
+              "Was sie enthält"
+            ],
+            "rows": [
+              [
+                "Fortschritt nach der Wiederherstellung",
+                "Wird nur angezeigt, solange eine Wiederherstellung läuft oder bis ihre Zusammenfassung geschlossen wird. Sie verfolgt die Wiederherstellung auch nach dem Neustart, mit den Schritten, den Komponenten, dem Protokoll und dem Rollback-Delta. Nach dem Schließen bewahrt <strong>Vergangene Restaurierungen</strong> die letzten 20 auf."
+              ],
+              [
+                "Geplant",
+                "Die geplanten Jobs und <strong>Job erstellen</strong>."
+              ],
+              [
+                "Backup-Konfiguration",
+                "<strong>Reiseziele</strong> und <strong>Benutzerdefinierte Pfade</strong>."
+              ],
+              [
+                "Manuelles Backup",
+                "<strong>Starten</strong>, für ein einmaliges Backup sofort."
+              ],
+              [
+                "Backups",
+                "Die Backups aus allen Zielen, zum Ansehen, Herunterladen, Wiederherstellen oder Löschen."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "scheduled",
+      "title": "Geplante Jobs",
+      "intro": "<strong>Job erstellen</strong> öffnet einen Assistenten mit fünf Schritten. Das Job-Modell, mit eigenem Timer oder an einen Proxmox-Job angehängt, beschreibt <jobsLink>Geplante Aufträge</jobsLink>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Name und Backend",
+                "body": "Der Jobname wird in den Timer-Namen und in den Protokollen verwendet und lässt sich später nicht ändern. Das Backend ist <strong>Lokal</strong>, <strong>PBS</strong> oder <strong>Borg</strong> und steht ebenfalls fest, sobald der Job existiert."
+              },
+              {
+                "title": "Wie er läuft",
+                "body": "<strong>Neuer geplanter Auftrag</strong> erstellt einen eigenen systemd-Timer. <strong>An PVE-Job anhängen</strong> führt das Backup aus, wenn ein Proxmox-vzdump-Job endet (<code>job-end</code>), und übernimmt Zeitplan und Aufbewahrung dieses Jobs. Borg-Jobs können nur ihren eigenen Timer verwenden."
+              },
+              {
+                "title": "Zeitplan und Aufbewahrung",
+                "body": "<strong>Täglich</strong>, <strong>Stündlich</strong>, <strong>Wöchentlich</strong>, <strong>Monatlich</strong> oder <strong>Fortschrittlich</strong>, das einen systemd-<code>OnCalendar</code>-Ausdruck annimmt und eine Vorschau zeigt. Die Aufbewahrung behält die letzten sowie die stündlichen, täglichen, wöchentlichen, monatlichen und jährlichen Backups: 0 deaktiviert ein Limit, und ohne gesetztes Limit sammeln sich die Backups an. Ein angehängter Job wählt hier stattdessen seinen übergeordneten Proxmox-Job."
+              },
+              {
+                "title": "Profil",
+                "body": "<strong>Standard</strong> sichert die empfohlene Host-Konfiguration und die ProxMenux-Daten. Bei <strong>Benutzerdefiniert</strong> wählen Sie selbst, welche dieser Pfade aufgenommen werden."
+              },
+              {
+                "title": "Ziel und Zusammenfassung",
+                "body": "Das PBS-Repository, der lokale Ordner oder das Borg-Repository. Bei PBS legt der Schritt auch die Verschlüsselung fest: keine, eine neue Schlüsseldatei oder eine importierte. Er endet mit einer Zusammenfassung des Jobs."
+              }
+            ]
+          }
+        },
+        {
+          "p": "Jede Zeile zeigt das Backend, das Badge <strong>beigefügt</strong>, ein Schloss bei verschlüsselten Jobs, das Profil (<strong>Standard</strong> oder <strong>Benutzerdefiniert</strong>), das Ziel, den Zeitplan, die Aufbewahrung sowie den nächsten und letzten Lauf. Ein Klick öffnet den Job mit seinen Einstellungen, dem Protokoll des letzten Laufs und den Schaltflächen <strong>Lauf jetzt</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> und <strong>Löschen</strong>. Das Löschen entfernt den Job und seinen Timer, nie die bereits erstellten Backups. Beim Löschen eines angehängten Jobs bleibt der Proxmox-Job unverändert: Er sichert seine Gäste weiterhin, ohne dieses Host-Backup."
+        },
+        {
+          "calloutTip": {
+            "title": "Wie die Aufbewahrung angewendet wird",
+            "body": "Die Aufbewahrung läuft nach jedem erfolgreichen Backup und wird vom Ziel angewendet: PBS bereinigt seine Gruppe, Borg sein Repository. Bei einem lokalen Ziel verwendet der Job dieselbe Auswahl wie vzdump, mit allen sechs Limits, und nur über seine eigenen Archive: andere Dateien in einem gemeinsam genutzten Ordner bleiben unberührt. Jedes entfernte Archiv nimmt seine Begleitdatei und sein Laufprotokoll mit."
+          }
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "title": "Backup-Konfiguration",
+      "intro": "Diese Karte enthält zwei Listen: wohin Host-Backups geschrieben werden und welche zusätzlichen Pfade in jedes Backup aufgenommen werden.",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Ziel",
+              "Was im Monitor zu beachten ist"
+            ],
+            "rows": [
+              [
+                "Lokal / USB",
+                "Ein Ordner auf diesem Host oder auf einem eingebundenen USB-Laufwerk. <code>/var/lib/vz/dump</code> ist immer aufgeführt, als <strong>Integrierte Standardeinstellung</strong>. Der Assistent listet die USB-Laufwerke beim Öffnen und erneut mit <strong>Aktualisieren</strong> auf. Jedes Laufwerk bietet die Aktion an, die sein Zustand zulässt: <strong>Verwenden</strong> für ein eingebundenes Laufwerk, <strong>Mounten und verwenden</strong> für ein nicht eingebundenes Laufwerk mit Dateisystem, das es unverändert einbindet, und <strong>Formatieren und verwenden</strong> für ein Laufwerk ohne Dateisystem, das eine einzelne ext4-Partition anlegt, nachdem Sie den Gerätepfad zur Bestätigung eingegeben haben."
+              ],
+              [
+                "PBS",
+                "Ein Datenspeicher eines Proxmox Backup Servers. Die in Proxmox bereits konfigurierten PBS-Speicher erscheinen von selbst, gekennzeichnet mit <strong>Verwaltet von PVE</strong>. Jede PBS-Zeile hat die Schlüsseldatei-Steuerung: erzeugen, importieren, herunterladen oder löschen, eine verschlüsselte Wiederherstellungskopie in PBS aufbewahren und <strong>Schlüsseldatei wiederherstellen</strong>, wenn der lokale Schlüssel fehlt. Sie werden unter <pbsLink>Ziele: Proxmox Backup Server</pbsLink> beschrieben."
+              ],
+              [
+                "Borg",
+                "Ein Borg-Repository auf diesem Host, auf einem USB-Laufwerk oder auf einem anderen Host über SSH. Bei SSH erstellt <strong>Schlüssel vorbereiten</strong> einen Schlüssel auf diesem Host und zeigt die Zeile des öffentlichen Schlüssels, die Sie auf dem Remote-Host in <code>~/.ssh/authorized_keys</code> eintragen: Der Monitor installiert ihn dort nicht."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "<strong>Ziel konfigurieren</strong> öffnet den Assistenten, der eines hinzufügt. Solange Jobs ein Ziel verwenden, lassen sich sein Name und seine Zugangsdaten nicht ändern, und sein Entfernen löscht auch diese Jobs (<strong>Ziel entfernen und Jobs löschen</strong>). Die bereits geschriebenen Backups bleiben, wo sie sind."
+        },
+        {
+          "p": "<strong>Benutzerdefinierte Pfade</strong> sind absolute Pfade, die jedem Backup hinzugefügt werden, manuell oder geplant, mit beiden Profilen: Anwendungsdaten, Konfigurationsordner und Ähnliches. Ein Pfad, der auf dem Host nicht mehr existiert, wird mit <strong>fehlt auf dem Laufwerk</strong> gekennzeichnet."
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Manuelles Backup",
+      "blocks": [
+        {
+          "p": "<strong>Starten</strong> öffnet einen kurzen Dialog: das Ziel, das Profil und, bei PBS, die Verschlüsselung. Das Backup beginnt sofort und sein Protokoll öffnet sich live. Wird der Dialog vor dem Ende geschlossen, öffnet eine Zeile <strong>Manuelles Backup läuft</strong> in der Karte das Protokoll erneut. Jedes einmalige Backup bleibt als abgeschlossener Job erhalten, sodass sich sein Protokoll später lesen lässt."
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Backups",
+      "blocks": [
+        {
+          "p": "Die Liste führt die Backups aller Ziele zusammen: lokale Ordner, gelesen über die Begleitdatei neben jedem Archiv, sowie PBS- und Borg-Repositories, deren Antwort einen Moment dauern kann. Jede Zeile zeigt das Backend, ein Schloss bei verschlüsselten Backups, das Datum, die Größe und den Ablageort. Lokale Backups zeigen außerdem ihren Job oder <strong>Handbuch</strong> sowie <strong>Ehemaliger Auftrag</strong>, wenn der Job, der sie erstellt hat, nicht mehr existiert."
+        },
+        {
+          "p": "Enthält ein Ziel Backups anderer Knoten, erscheint ein Schalter <strong>Dieser Knoten</strong> / <strong>Alle Knoten</strong>. Die Liste beginnt nur mit den Backups dieses Knotens."
+        },
+        {
+          "p": "Ein Klick öffnet das Backup: sein Manifest (Quell-Host, Proxmox-Version, Kernel, die VMs und LXCs zum damaligen Zeitpunkt, die archivierten Pfade) und, bei einem lokalen Backup, sein Protokoll. Die Schaltflächen sind:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Schaltfläche",
+              "Was sie bewirkt"
+            ],
+            "rows": [
+              [
+                "Inhalte ansehen",
+                "Entpackt das Backup in einen temporären Ordner und zeigt seine Dateien, den Wiederherstellungsplan, den Speicher, das Netzwerk und die neu zu installierenden Treiber, ohne den Host zu verändern."
+              ],
+              [
+                "Herunterladen",
+                "Lädt das Archiv herunter. Ein PBS- oder Borg-Backup wird zuvor in eine Datei exportiert (<strong>Download wird vorbereitet...</strong>)."
+              ],
+              [
+                "Wiederherstellen",
+                "Bereitet die Wiederherstellung vor und öffnet ihre Optionen, die unten beschrieben sind."
+              ],
+              [
+                "Löschen",
+                "Löscht das lokale Archiv, den PBS-Snapshot oder das Borg-Archiv aus seinem Ziel."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Verschlüsselte Backups brauchen ihre Schlüsseldatei",
+            "body": "Ein verschlüsseltes PBS-Backup lässt sich ohne seine Schlüsseldatei weder ansehen noch herunterladen oder wiederherstellen. Die Schaltflächen fragen zuerst danach (<strong>Schlüsseldatei erforderlich</strong>): Importieren Sie sie oder stellen Sie sie mit der Wiederherstellungs-Passphrase aus der in PBS aufbewahrten verschlüsselten Kopie wieder her. Siehe <pbsLink>Ziele: Proxmox Backup Server</pbsLink>."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Wiederherstellen",
+      "intro": "<strong>Wiederherstellen</strong> bietet zwei Modi:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Modus",
+              "Was wiederhergestellt wird"
+            ],
+            "rows": [
+              [
+                "Vollständig",
+                "Alles im Backup, so wie die vollständige Wiederherstellung des CLI-Menüs. Vor dem Start listet der Dialog auf, was auf dem Host existiert, aber nicht im Backup enthalten ist (später erstellte VMs, LXCs und Komponenten), was die Wiederherstellung dauerhaft löscht, und verlangt, dass Sie eine Bestätigung ankreuzen."
+              ],
+              [
+                "Benutzerdefiniert nach Pfaden",
+                "Nur die Pfade, die Sie aus denen im Backup auswählen. Pfade, die einen Neustart erfordern, etwa Kernel, Module oder fstab, erkennt die Wiederherstellung und bietet an, sie beim nächsten Start anzuwenden."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-restore-custom.png",
+            "alt": "Wiederherstellungsdialog Benutzerdefiniert nach Pfaden mit der Liste der Pfade im Backup, einem Filter und der Anzahl der ausgewählten Pfade",
+            "caption": "Benutzerdefiniert nach Pfaden: die Pfade des Backups, um nur einige davon wiederherzustellen."
+          }
+        },
+        {
+          "p": "Stammt das Backup von einem älteren Kernel als dem, den der Host ausführt, stellen beide Modi nur die sichere Teilmenge wieder her: Die an Kernel und Boot gebundenen Pfade sind ausgegraut und werden übersprungen (<crossKernelLink>Wiederherstellung mit anderer Kernel-Version</crossKernelLink>). In beiden Modi werden die vom Betreiber geschriebenen Einstellungen in den Host eingefügt."
+        },
+        {
+          "p": "Die Wiederherstellung läuft in einem Terminal im Monitor, das vor jedem Eingriff in den Host noch fragt, wie sie angewendet werden soll: nur sichere Änderungen, sichere Änderungen und ein Neustart oder alles auf einmal. Nach dem Neustart zeigt die Karte <strong>Fortschritt nach der Wiederherstellung</strong> oben in der Ansicht, wie es läuft. Der gesamte Ablauf steht unter <restoreLink>Wiederherstellen</restoreLink>."
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "VMs und LXCs",
+      "intro": "Diese Ansicht zeigt die Proxmox-Backup-Jobs für VMs und Container: die Jobs von <code>/cluster/backup</code>, dieselben wie unter <strong>Datencenter → Backup</strong>. Ein hier erstellter oder geänderter Job erscheint dort und umgekehrt.",
+      "blocks": [
+        {
+          "p": "Jeder Job zeigt seinen Zeitplan, Speicher, Modus und seine Komprimierung, Aufbewahrung und Gäste. Ein Klick öffnet ihn mit <strong>Lauf jetzt</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> oder <strong>Aktivieren</strong> und <strong>Löschen</strong>. <strong>Lauf jetzt</strong> startet das Backup als Proxmox-Task mit den Einstellungen des Jobs; im Modus Stop werden seine Gäste während des Backups heruntergefahren. <strong>Deaktivieren</strong> beendet die geplanten Läufe, behält aber den Job, der weiterhin von Hand ausgeführt werden kann. <strong>Löschen</strong> entfernt nur den Zeitplan: Die bereits erstellten Backups bleiben im Speicher."
+        },
+        {
+          "p": "<strong>Neuer Job</strong> öffnet das Formular:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Feld",
+              "Was es festlegt"
+            ],
+            "rows": [
+              [
+                "Name (optional)",
+                "Buchstaben, Ziffern und Bindestriche. Ist es leer, erzeugt Proxmox einen Namen."
+              ],
+              [
+                "Zu sichernde Gäste",
+                "Alle VMs und Container oder eine Auswahl."
+              ],
+              [
+                "Zielspeicher",
+                "Einer der Proxmox-Speicher, die Backups annehmen."
+              ],
+              [
+                "Zeitplan",
+                "Eine Voreinstellung (täglich um 02:00 oder 03:00 Uhr, sonntags um 02:00 Uhr, alle 6 Stunden, stündlich) oder ein eigenes Proxmox-Kalenderereignis, etwa <code>mon..fri 01:30</code>."
+              ],
+              [
+                "Modus",
+                "<strong>Snapshot</strong>, ohne Ausfallzeit; <strong>Suspend</strong>, das den Gast pausiert; oder <strong>Stop</strong>, das ihn herunterfährt."
+              ],
+              [
+                "Komprimierung",
+                "<code>zstd</code>, <code>gzip</code>, <code>lzo</code> oder keine."
+              ],
+              [
+                "Aufbewahrung",
+                "Wie viele letzte sowie stündliche, tägliche, wöchentliche, monatliche und jährliche Backups behalten werden. 0 deaktiviert ein Limit. Sind alle Felder leer, verwendet der Job die Aufbewahrung seines Speichers."
+              ],
+              [
+                "Backup-Notizen",
+                "Die Notizvorlage, die mit jedem Backup geschrieben wird."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Host-Backups, die mit einem Job laufen",
+            "body": "Ist ein Host-Backup-Job an einen Proxmox-Job angehängt, listet dieser Proxmox-Job ihn unter <strong>Host-Backups, die mit diesem Job laufen</strong> auf. Beim Löschen des Proxmox-Jobs oder wenn ihm ein anderer Speicher zugewiesen wird, erscheint eine Warnung, dass er diese Host-Backups nicht mehr startet. Ein anderer Job, der in denselben Speicher schreibt, startet sie weiterhin."
+          }
+        },
+        {
+          "p": "Unterhalb der Jobs listet <strong>Aufbewahrung im Speicher</strong> die Backup-Speicher mit ihrer Standard-Aufbewahrung auf, die in Proxmox gespeichert ist. Ein Job mit eigener Richtlinie überschreibt sie. <strong>Bearbeiten</strong> bietet den Proxmox-Standard (keine Richtlinie auf dem Speicher), <strong>Alle Sicherungen behalten</strong> oder Aufbewahrungsanzahlen. Das Speichern löscht keine Backups: Die Richtlinie gilt für die nächsten Läufe, die sie erben, und geschützte Backups bleiben geschützt."
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-guests-job.png",
+            "alt": "Ansicht VMs und LXCs mit der Liste der Proxmox-Backup-Jobs, einem geöffneten Job mit Zeitplan, Speicher, Modus und Aufbewahrung und darunter der Karte Aufbewahrung im Speicher",
+            "caption": "Die Ansicht VMs und LXCs: die Jobs von Datencenter → Backup und die Aufbewahrung jedes Speichers."
+          }
+        },
+        {
+          "p": "Die Backups eines einzelnen Gasts mit <strong>Backup erstellen</strong> befinden sich in der Registerkarte Backups seines Modals unter <vmsLink>VMs und LXCs</vmsLink>."
+        }
+      ]
+    },
+    {
+      "id": "pbs",
+      "title": "Proxmox Backup Server",
+      "intro": "Diese Ansicht liest den Status von Proxmox Backup Servern über deren API. Auf einem Server legt sie nur das schreibgeschützte Token einer Verbindung an, die mit Benutzer und Passwort hergestellt wurde. Sie ist nicht dasselbe wie PBS als Ziel von Host-Backups zu verwenden, was unter <pbsLink>Ziele: Proxmox Backup Server</pbsLink> eingerichtet wird.",
+      "blocks": [
+        {
+          "p": "Die Auswahl oben listet die gespeicherten Verbindungen auf, und <strong>PBS auf diesem Knoten</strong>, wenn PBS auf demselben Host wie Proxmox VE installiert ist, wofür keine Verbindung nötig ist. Die Daten werden alle 30 Sekunden und mit <strong>Aktualisieren</strong> aktualisiert."
+        },
+        {
+          "table": {
+            "headers": [
+              "Teil",
+              "Was er zeigt"
+            ],
+            "rows": [
+              [
+                "Übersichtszeile",
+                "Servername, PBS-Version, Zeitpunkt der letzten Aktualisierung und, bei <strong>PBS auf diesem Knoten</strong>, ob die PBS-Dienste aktiv sind."
+              ],
+              [
+                "Datenspeicher",
+                "Kapazität, belegten und verfügbaren Platz jedes Datenspeichers, mit <strong>Voraussichtlich voll</strong>."
+              ],
+              [
+                "Letzte Aufgaben",
+                "Backups, Wiederherstellungen, Verifizierungen, Prunes, Garbage Collections und Syncs, mit Startzeit, Dauer und Ergebnis."
+              ],
+              [
+                "Wartungszeitpläne",
+                "Die Sync-, Verifizierungs- und Prune-Jobs, mit ihrem Datenspeicher, Zeitplan und letztem Ergebnis."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-pbs-view.png",
+            "alt": "Ansicht Proxmox Backup Server mit ausgewähltem Server: Datenspeicher mit ihrer Belegung, letzte Aufgaben und Wartungszeitpläne",
+            "caption": "Die Ansicht Proxmox Backup Server beim Lesen eines entfernten PBS mit einem schreibgeschützten Token."
+          }
+        },
+        {
+          "p": "<strong>PBS-Verbindungen verwalten</strong> fügt Server hinzu, bearbeitet und entfernt sie, bis zu 32. Eine neue Verbindung meldet sich auf eine von zwei Arten an:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Anmelden mit",
+              "Wie es funktioniert"
+            ],
+            "rows": [
+              [
+                "Benutzer und Passwort",
+                "Der Benutzer meldet sich einmal als <code>user@realm</code> an. Der Monitor erstellt ein API-Token namens <code>proxmenux-</code> plus Zufallszeichen, gibt ihm die Rolle Audit auf <code>/</code> mit Vererbung und speichert nur das Token: Das Passwort wird nicht gespeichert. Der Benutzer muss Token erstellen und diese Rolle vergeben dürfen, wie es bei <code>root@pam</code> der Fall ist."
+              ],
+              [
+                "API-Token",
+                "Ein in PBS erstelltes Token, als <code>user@realm!token</code> mit seinem Secret. Es braucht die Rolle Audit auf <code>/</code> mit Vererbung, in den ACLs sowohl des Benutzers als auch des Tokens."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Die Adresse ist HTTPS, mit <code>:8007</code> für den Standardport. Der SHA256-Fingerprint ist optional: Lassen Sie ihn leer für ein von einer vertrauenswürdigen Stelle signiertes Zertifikat und tragen Sie ihn für ein selbstsigniertes ein. Er wird geprüft, bevor Zugangsdaten gesendet werden. Zum Speichern einer Verbindung, zum Anmelden und zum Entfernen ist das lokale Konto des Monitors mit seinem Passwort nötig; bei Anmeldung über Proxmox VE werden diese Aktionen abgelehnt. <strong>Verbindung entfernen</strong> löscht die Verbindung und ihr Token nur aus dem Monitor: Das Token bleibt in PBS, wo es gelöscht werden kann."
+        },
+        {
+          "p": "Hat Proxmox VE PBS-Speicher ohne Verbindung, listet die Karte <strong>Im Proxmox-Speicher erkannte PBS</strong> sie mit <strong>Verbinden</strong> auf, das das Formular mit bereits ausgefülltem Namen, Adresse und Fingerprint öffnet."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Wie die Daten erfasst werden",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Bereich der Registerkarte",
+              "Endpoint",
+              "Quelle"
+            ],
+            "rows": [
+              [
+                "Geplant",
+                "<code>GET /api/host-backups/jobs</code>",
+                "Die Job-Dateien in <code>/var/lib/proxmenux/backup-jobs/</code> und ihre systemd-Timer."
+              ],
+              [
+                "Reiseziele",
+                "<code>GET /api/host-backups/destinations</code>",
+                "Die von ProxMenux gespeicherten Ziele, der lokale Standardordner und die PBS-Speicher aus <code>/etc/pve/storage.cfg</code>."
+              ],
+              [
+                "Backups",
+                "<code>GET /api/host-backups/archives</code>, <code>GET /api/host-backups/remote-archives</code>",
+                "Die Begleitdateien <code>*.proxmenux.json</code> in lokalen Zielen und die Auflistungen der PBS- und Borg-Repositories."
+              ],
+              [
+                "Wiederherstellen",
+                "<code>POST /api/host-backups/archives/&lt;id&gt;/prepare-restore</code>, <code>GET /api/host-backups/restore/status</code>",
+                "Das in einen Staging-Ordner entpackte Backup und, nach dem Neustart, <code>/var/lib/proxmenux/restore-state.json</code>."
+              ],
+              [
+                "VMs und LXCs",
+                "<code>GET /api/vm-backup-jobs</code>",
+                "<code>pvesh get /cluster/backup</code>."
+              ],
+              [
+                "Aufbewahrung im Speicher",
+                "<code>GET /api/vm-backup-storages</code>",
+                "Die Option <code>prune-backups</code> jedes Speichers mit Backup-Inhalt, aus <code>pvesh get /storage</code>."
+              ],
+              [
+                "Proxmox Backup Server",
+                "<code>GET /api/pbs/servers</code>, <code>GET /api/pbs/status</code>",
+                "Die PBS-API mit dem gespeicherten Token, über verifiziertes HTTPS. Auf diesem Knoten <code>proxmox-backup-manager</code> und <code>proxmox-backup-debug api</code>. Verbindungen werden in <code>/root/.config/proxmenux-monitor/pbs_servers.json</code> gespeichert."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Wie es weitergeht",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Sichern und Wiederherstellen",
+                "href": "/docs/backup-restore",
+                "tail": "wie Host-Backups funktionieren, über die CLI und über den Monitor."
+              },
+              {
+                "label": "Geplante Aufträge",
+                "href": "/docs/backup-restore/scheduled-jobs",
+                "tail": "Jobs mit eigenem Timer oder an einen Proxmox-Job angehängt, und ihre Dateien."
+              },
+              {
+                "label": "Wiederherstellen",
+                "href": "/docs/backup-restore/restoring",
+                "tail": "der Ablauf der Wiederherstellung und ihr Fortschritt nach dem Neustart."
+              },
+              {
+                "label": "Ziele: Proxmox Backup Server",
+                "href": "/docs/backup-restore/destinations/pbs",
+                "tail": "PBS als Ziel, die Schlüsseldatei und ihre Wiederherstellungskopie."
+              },
+              {
+                "label": "Benachrichtigungen",
+                "href": "/docs/monitor/notifications",
+                "tail": "die Ereignisse von Proxmox-Backups und Host-Backups."
+              },
+              {
+                "label": "Benutzer und Profile",
+                "href": "/docs/monitor/access-auth#users-profiles",
+                "tail": "der Bereich Backup und die Aktion Backups verwalten."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

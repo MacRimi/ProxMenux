@@ -1,0 +1,431 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Backup tab | ProxMenux Documentation",
+    "description": "The Backup tab of ProxMenux Monitor: host backups with their jobs, destinations and restore, the Proxmox backup jobs of VMs and LXCs, and the read-only status of Proxmox Backup Servers."
+  },
+  "header": {
+    "title": "Dashboard: Backup tab",
+    "description": "Backups of the host, backup jobs of the VMs and LXCs, and the Proxmox Backup Servers they write to, each in its own view of the same tab.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "sections": [
+    {
+      "id": "views",
+      "blocks": [
+        {
+          "p": "The <strong>Backup</strong> tab has three views, chosen with the switch at the top right: <strong>Host</strong>, <strong>VMs and LXCs</strong> and <strong>Proxmox Backup Server</strong>. The Host view stays loaded while another view is open, so a backup or a restore that is running is still followed."
+        },
+        {
+          "table": {
+            "headers": ["View", "What it manages", "Where else it is"],
+            "rows": [
+              [
+                "Host",
+                "Backups of the host configuration made by ProxMenux: scheduled jobs, destinations, manual backups, the list of backups and their restore.",
+                "The <backupLink>Backup and Restore</backupLink> menu of the CLI, with the same engine and the same files."
+              ],
+              [
+                "VMs and LXCs",
+                "The Proxmox backup jobs for VMs and containers, and the default retention of each backup storage.",
+                "<strong>Datacenter → Backup</strong> in the Proxmox web interface. Both edit the same jobs."
+              ],
+              [
+                "Proxmox Backup Server",
+                "The status of PBS servers: datastores, recent tasks and maintenance schedules.",
+                "The PBS web interface. This view reads the status of the server; the only thing it creates there is the read-only token of a connection made with a user and password."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-host-view.png",
+            "alt": "Host view of the Backup tab with the Scheduled, Backup configuration, Manual backup and Backups cards, and the view switch at the top right",
+            "caption": "The Host view, with the switch between the three views at the top right."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Who sees the tab",
+            "body": "The tab appears when the profile of the account includes the <strong>Backup</strong> area. Creating, running, editing, restoring, downloading, viewing the contents of a backup or deleting needs the action <strong>Manage backups</strong>, and so do managing the PBS connections and editing <strong>Storage retention</strong>. Without it the views are read-only and those buttons do not appear. Profiles are described in <accessLink>Users and profiles</accessLink>. The Monitor of a Proxmox Backup Server host has its own tabs and no Backup tab."
+          }
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "title": "Host",
+      "intro": "The Host view works with the host backups of ProxMenux: archives of the host configuration, not of the guests. What goes into them, the destinations and the restore are explained in <backupLink>Backup and Restore</backupLink>. This section describes where each part is in the Monitor. The cards appear in this order:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Card", "What it holds"],
+            "rows": [
+              [
+                "Post-restore progress",
+                "Shown only while a restore is running or until its summary is dismissed. It follows the restore also after the reboot, with the steps, the components, the log and the rollback delta. Once dismissed, <strong>Past restores</strong> keeps the latest 20."
+              ],
+              ["Scheduled", "The scheduled jobs, and <strong>Create job</strong>."],
+              ["Backup configuration", "<strong>Destinations</strong> and <strong>Custom paths</strong>."],
+              ["Manual backup", "<strong>Run</strong>, for a one-shot backup now."],
+              ["Backups", "The backups found in every destination, to inspect, download, restore or delete."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "scheduled",
+      "title": "Scheduled jobs",
+      "intro": "<strong>Create job</strong> opens a wizard of five steps. The job model, with its own timer or attached to a Proxmox job, is described in <jobsLink>Scheduled jobs</jobsLink>.",
+      "blocks": [
+        {
+          "steps": {
+            "items": [
+              {
+                "title": "Name and backend",
+                "body": "The job name is used in the timer names and the logs, and cannot be changed later. The backend is <strong>Local</strong>, <strong>PBS</strong> or <strong>Borg</strong>, also fixed once the job exists."
+              },
+              {
+                "title": "How it runs",
+                "body": "<strong>New scheduled job</strong> creates a systemd timer of its own. <strong>Attach to PVE job</strong> runs the backup when a Proxmox vzdump job ends (<code>job-end</code>) and takes the schedule and retention of that job. Borg jobs can only use their own timer."
+              },
+              {
+                "title": "Schedule and retention",
+                "body": "<strong>Daily</strong>, <strong>Hourly</strong>, <strong>Weekly</strong>, <strong>Monthly</strong> or <strong>Advanced</strong>, which takes a systemd <code>OnCalendar</code> expression and shows a preview. Retention keeps the last, hourly, daily, weekly, monthly and yearly backups: 0 disables a limit, and with no limit set the backups accumulate. An attached job picks its parent Proxmox job here instead."
+              },
+              {
+                "title": "Profile",
+                "body": "<strong>Default</strong> backs up the recommended host configuration and the ProxMenux data. <strong>Custom</strong> lets you pick which of those paths go in."
+              },
+              {
+                "title": "Destination and summary",
+                "body": "The PBS repository, the local folder or the Borg repository. For PBS the step also sets the encryption: none, a new keyfile or an imported one. It ends with a summary of the job."
+              }
+            ]
+          }
+        },
+        {
+          "p": "Each row shows the backend, the <strong>attached</strong> badge, a lock when the job is encrypted, the profile (<strong>Default</strong> or <strong>Custom</strong>), the destination, the schedule, the retention, and the next and last run. A click opens the job with its settings, the log of the last run, and <strong>Run now</strong>, <strong>Edit</strong>, <strong>Disable</strong> and <strong>Delete</strong>. Deleting removes the job and its timer, never the backups already made. Deleting an attached job leaves the Proxmox job as it is: it goes on backing up its guests, without this host backup."
+        },
+        {
+          "calloutTip": {
+            "title": "How retention is applied",
+            "body": "Retention runs after each successful backup and is applied by the destination: PBS prunes its group and Borg prunes its repository. On a local destination the job uses the same selection as vzdump, with all six limits, and only over its own archives: other files in a shared folder are never touched. Each archive removed takes its companion file and its run log with it."
+          }
+        }
+      ]
+    },
+    {
+      "id": "configuration",
+      "title": "Backup configuration",
+      "intro": "This card holds two lists: where host backups are written, and which extra paths go into every backup.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Destination", "What to know in the Monitor"],
+            "rows": [
+              [
+                "Local / USB",
+                "A folder on this host or on a mounted USB drive. <code>/var/lib/vz/dump</code> is always listed, as <strong>Built-in default</strong>. The wizard lists the USB drives when it opens and again with <strong>Refresh</strong>. Each drive offers the action its state allows: <strong>Use</strong> for a mounted drive, <strong>Mount and use</strong> for an unmounted drive with a filesystem, which mounts it as it is, and <strong>Format and use</strong> for a drive with no filesystem, which creates a single ext4 partition after you type the device path to confirm."
+              ],
+              [
+                "PBS",
+                "A datastore of a Proxmox Backup Server. The PBS storages already configured in Proxmox appear on their own, marked <strong>Managed by PVE</strong>. Each PBS row has the keyfile controls: generate, import, download or delete it, keep an encrypted recovery copy in PBS, and <strong>Recover keyfile</strong> when the local key is missing. They are described in <pbsLink>PBS destination</pbsLink>."
+              ],
+              [
+                "Borg",
+                "A Borg repository on this host, on a USB drive or on another host over SSH. For SSH, <strong>Prepare key</strong> creates a key on this host and shows the public key line, which you add to <code>~/.ssh/authorized_keys</code> on the remote host: the Monitor does not install it there."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "<strong>Configure destination</strong> opens the wizard that adds one. While jobs use a destination its name and credentials cannot be changed, and removing it also deletes those jobs (<strong>Remove destination and delete jobs</strong>). The backups already written stay where they are."
+        },
+        {
+          "p": "<strong>Custom paths</strong> are absolute paths added to every backup, manual or scheduled, with either profile: application data, configuration folders and the like. A path that no longer exists on the host is marked <strong>missing on disk</strong>."
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Manual backup",
+      "blocks": [
+        {
+          "p": "<strong>Run</strong> opens a short dialog: the destination, the profile and, for PBS, the encryption. The backup starts at once and its log opens live. If the dialog is closed before it ends, a <strong>Manual backup in progress</strong> line in the card opens the log again. Each one-shot backup is kept as a finished job, so its log can be read later."
+        }
+      ]
+    },
+    {
+      "id": "archives",
+      "title": "Backups",
+      "blocks": [
+        {
+          "p": "The list joins the backups of every destination: local folders, read through the companion file next to each archive, and PBS and Borg repositories, which can take a moment to answer. Each row shows the backend, a lock when the backup is encrypted, the date, the size and where it is. Local backups also show their job, or <strong>manual</strong>, and <strong>Former job</strong> when the job that made them no longer exists."
+        },
+        {
+          "p": "When a destination holds backups of other nodes, a <strong>This node</strong> / <strong>All nodes</strong> switch appears. The list starts with the backups of this node only."
+        },
+        {
+          "p": "A click opens the backup: its manifest (source host, Proxmox version, kernel, the VMs and LXCs at the time, the paths archived) and, for a local backup, its log. The buttons are:"
+        },
+        {
+          "table": {
+            "headers": ["Button", "What it does"],
+            "rows": [
+              [
+                "View contents",
+                "Extracts the backup to a temporary folder and shows its files, the restore plan, the storage, the network and the drivers to reinstall, without changing the host."
+              ],
+              [
+                "Download",
+                "Downloads the archive. A PBS or Borg backup is exported to a file first (<strong>Preparing download...</strong>)."
+              ],
+              ["Restore", "Prepares the restore and opens its options, described below."],
+              ["Delete", "Deletes the local archive, the PBS snapshot or the Borg archive from its destination."]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Encrypted backups need their keyfile",
+            "body": "An encrypted PBS backup cannot be viewed, downloaded or restored without its keyfile. The buttons ask for it first (<strong>Keyfile required</strong>): import it, or recover it from the encrypted copy kept in PBS with the recovery passphrase. See <pbsLink>PBS destination</pbsLink>."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restore",
+      "title": "Restore",
+      "intro": "<strong>Restore</strong> offers two modes:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Mode", "What it restores"],
+            "rows": [
+              [
+                "Complete",
+                "Everything in the backup, as the complete restore of the CLI menu does. Before it starts, the dialog lists what exists on the host but not in the backup (VMs, LXCs and components created later), which the restore permanently deletes, and asks you to tick an acknowledgement."
+              ],
+              [
+                "Custom by paths",
+                "Only the paths you pick from those in the backup. Paths that need a reboot, such as the kernel, modules or fstab, are detected by the restore, which offers to apply them at the next boot."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-restore-custom.png",
+            "alt": "Custom by paths restore dialog with the list of paths in the backup, a filter and the count of selected paths",
+            "caption": "Custom by paths: the paths of the backup, to restore only some of them."
+          }
+        },
+        {
+          "p": "When the backup comes from an older kernel than the one the host runs, both modes restore only the safe subset: the paths tied to the kernel and the boot are grayed out and skipped (<crossKernelLink>Cross-kernel restore</crossKernelLink>). In both modes the settings written by the operator are merged into the host."
+        },
+        {
+          "p": "The restore runs in a terminal inside the Monitor, which still asks how to apply it before touching the host: safe changes only, safe changes and a reboot, or everything at once. After the reboot, the <strong>Post-restore progress</strong> card at the top of the view shows how it goes. The whole flow is in <restoreLink>Restoring</restoreLink>."
+        }
+      ]
+    },
+    {
+      "id": "guests",
+      "title": "VMs and LXCs",
+      "intro": "This view shows the Proxmox backup jobs for VMs and containers: the jobs of <code>/cluster/backup</code>, the same ones as <strong>Datacenter → Backup</strong>. A job created or changed here appears there, and the other way round.",
+      "blocks": [
+        {
+          "p": "Each job shows its schedule, storage, mode and compression, retention and guests. A click opens it with <strong>Run now</strong>, <strong>Edit</strong>, <strong>Disable</strong> or <strong>Enable</strong>, and <strong>Delete</strong>. <strong>Run now</strong> starts the backup as a Proxmox task with the settings of the job; in mode stop, its guests are shut down during the backup. <strong>Disable</strong> stops the scheduled runs but keeps the job, which can still be run by hand. <strong>Delete</strong> removes only the schedule: the backups already made stay in the storage."
+        },
+        {
+          "p": "<strong>New job</strong> opens the form:"
+        },
+        {
+          "table": {
+            "headers": ["Field", "What it sets"],
+            "rows": [
+              ["Name (optional)", "Letters, numbers and hyphens. If it is empty, Proxmox generates one."],
+              ["Guests to back up", "All VMs and containers, or a selection."],
+              ["Destination storage", "One of the Proxmox storages that accept backups."],
+              [
+                "Schedule",
+                "A preset (every day at 02:00 or 03:00, every Sunday at 02:00, every 6 hours, every hour) or a custom Proxmox calendar event, such as <code>mon..fri 01:30</code>."
+              ],
+              [
+                "Mode",
+                "<strong>Snapshot</strong>, without downtime; <strong>Suspend</strong>, which pauses the guest; or <strong>Stop</strong>, which shuts it down."
+              ],
+              ["Compression", "<code>zstd</code>, <code>gzip</code>, <code>lzo</code> or none."],
+              [
+                "Retention",
+                "How many last, hourly, daily, weekly, monthly and yearly backups to keep. 0 disables a limit. With every field empty, the job uses the retention of its storage."
+              ],
+              ["Backup notes", "The notes template written with each backup."]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Host backups that run with a job",
+            "body": "When a host backup job is attached to a Proxmox job, that Proxmox job lists it under <strong>Host backups that run with this job</strong>. Deleting the Proxmox job, or giving it another storage, warns that it will no longer start those host backups. Another job that writes to the same storage still starts them."
+          }
+        },
+        {
+          "p": "Below the jobs, <strong>Storage retention</strong> lists the backup storages with their default retention, which is stored in Proxmox. A job with its own policy overrides it. <strong>Edit</strong> offers the Proxmox default (no policy on the storage), <strong>Keep all backups</strong>, or retention counts. Saving does not delete any backup: the policy applies to the next runs that inherit it, and protected backups stay protected."
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-guests-job.png",
+            "alt": "VMs and LXCs view with the list of Proxmox backup jobs, one job open with its schedule, storage, mode and retention, and the Storage retention card below",
+            "caption": "The VMs and LXCs view: the jobs of Datacenter → Backup and the retention of each storage."
+          }
+        },
+        {
+          "p": "The backups of a single guest, with <strong>Create Backup</strong>, are in the Backups tab of its modal in <vmsLink>VMs & LXCs</vmsLink>."
+        }
+      ]
+    },
+    {
+      "id": "pbs",
+      "title": "Proxmox Backup Server",
+      "intro": "This view reads the status of Proxmox Backup Servers through their API. On a server it only creates the read-only token of a connection made with a user and password. It is not the same as using PBS as a destination of host backups, which is set up in <pbsLink>PBS destination</pbsLink>.",
+      "blocks": [
+        {
+          "p": "The selector at the top lists the saved connections, and <strong>PBS on this node</strong> when PBS is installed on the same host as Proxmox VE, which needs no connection. The data refreshes every 30 seconds and with <strong>Refresh</strong>."
+        },
+        {
+          "table": {
+            "headers": ["Part", "What it shows"],
+            "rows": [
+              ["Summary line", "Server name, PBS version, time of the last update and, for <strong>PBS on this node</strong>, whether the PBS services are active."],
+              ["Datastores", "Capacity, used and available space of each datastore, with <strong>Estimated full</strong>."],
+              [
+                "Recent tasks",
+                "Backups, restores, verifications, prunes, garbage collections and syncs, with start time, duration and result."
+              ],
+              ["Maintenance schedules", "The sync, verification and prune jobs, with their datastore, schedule and last result."]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/backup/backup-pbs-view.png",
+            "alt": "Proxmox Backup Server view with a server selected: datastores with their usage, recent tasks and maintenance schedules",
+            "caption": "The Proxmox Backup Server view, reading a remote PBS with a read-only token."
+          }
+        },
+        {
+          "p": "<strong>Manage PBS connections</strong> adds, edits and removes servers, up to 32. A new connection signs in one of two ways:"
+        },
+        {
+          "table": {
+            "headers": ["Sign in with", "How it works"],
+            "rows": [
+              [
+                "User and password",
+                "The user, as <code>user@realm</code>, signs in once. The Monitor creates an API token named <code>proxmenux-</code> plus random characters, gives it the Audit role on <code>/</code> with propagation and saves only the token: the password is not stored. The user must be allowed to create tokens and grant that role, as <code>root@pam</code> is."
+              ],
+              [
+                "API token",
+                "A token created in PBS, as <code>user@realm!token</code> with its secret. It needs the Audit role on <code>/</code> with propagation, in the ACLs of both the user and the token."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "The address is HTTPS, with <code>:8007</code> for the default port. The SHA256 fingerprint is optional: leave it empty for a certificate signed by a trusted authority, and fill it in for a self-signed one. It is checked before any credential is sent. Saving a connection, signing in and removing it need the local account of the Monitor, with its password; with Proxmox VE sign-in they are refused. <strong>Remove connection</strong> deletes the connection and its token from the Monitor only: the token stays in PBS, where it can be deleted."
+        },
+        {
+          "p": "When Proxmox VE has PBS storages without a connection, the card <strong>PBS detected in Proxmox storage</strong> lists them with <strong>Connect</strong>, which opens the form with the name, address and fingerprint already filled in."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "How the data is collected",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Section of the tab", "Endpoint", "Source"],
+            "rows": [
+              [
+                "Scheduled",
+                "<code>GET /api/host-backups/jobs</code>",
+                "The job files in <code>/var/lib/proxmenux/backup-jobs/</code> and their systemd timers."
+              ],
+              [
+                "Destinations",
+                "<code>GET /api/host-backups/destinations</code>",
+                "The destinations saved by ProxMenux, the default local folder and the PBS storages of <code>/etc/pve/storage.cfg</code>."
+              ],
+              [
+                "Backups",
+                "<code>GET /api/host-backups/archives</code>, <code>GET /api/host-backups/remote-archives</code>",
+                "The companion files <code>*.proxmenux.json</code> in local destinations, and the listings of the PBS and Borg repositories."
+              ],
+              [
+                "Restore",
+                "<code>POST /api/host-backups/archives/&lt;id&gt;/prepare-restore</code>, <code>GET /api/host-backups/restore/status</code>",
+                "The backup extracted to a staging folder and, after the reboot, <code>/var/lib/proxmenux/restore-state.json</code>."
+              ],
+              ["VMs and LXCs", "<code>GET /api/vm-backup-jobs</code>", "<code>pvesh get /cluster/backup</code>."],
+              [
+                "Storage retention",
+                "<code>GET /api/vm-backup-storages</code>",
+                "The <code>prune-backups</code> option of each storage with backup content, from <code>pvesh get /storage</code>."
+              ],
+              [
+                "Proxmox Backup Server",
+                "<code>GET /api/pbs/servers</code>, <code>GET /api/pbs/status</code>",
+                "The PBS API with the saved token, over verified HTTPS. On this node, <code>proxmox-backup-manager</code> and <code>proxmox-backup-debug api</code>. Connections are saved in <code>/root/.config/proxmenux-monitor/pbs_servers.json</code>."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Where to next",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "Backup and Restore",
+                "href": "/docs/backup-restore",
+                "tail": "how host backups work, from the CLI and from the Monitor."
+              },
+              {
+                "label": "Scheduled jobs",
+                "href": "/docs/backup-restore/scheduled-jobs",
+                "tail": "jobs with their own timer or attached to a Proxmox job, and their files."
+              },
+              {
+                "label": "Restoring",
+                "href": "/docs/backup-restore/restoring",
+                "tail": "the restore flow and its progress after the reboot."
+              },
+              {
+                "label": "PBS destination",
+                "href": "/docs/backup-restore/destinations/pbs",
+                "tail": "PBS as a destination, the keyfile and its recovery copy."
+              },
+              {
+                "label": "Notifications",
+                "href": "/docs/monitor/notifications",
+                "tail": "the events of Proxmox backups and host backups."
+              },
+              {
+                "label": "Users and profiles",
+                "href": "/docs/monitor/access-auth#users-profiles",
+                "tail": "the Backup area and the Manage backups action."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

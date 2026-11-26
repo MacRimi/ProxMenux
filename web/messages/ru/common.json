@@ -72,6 +72,7 @@
       "dashboardVmsLxcsApp": "Приложение",
       "dashboardVmsLxcsUpdates": "Обновления",
       "dashboardHardware": "Вкладка «Оборудование»",
+      "dashboardBackup": "Вкладка «Резервные копии»",
       "dashboardSystemLogs": "Вкладка «Системные журналы»",
       "dashboardTerminal": "Вкладка «Терминал»",
       "dashboardSecurity": "Вкладка «Безопасность»",
