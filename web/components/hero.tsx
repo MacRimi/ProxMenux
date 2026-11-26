@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen } from "lucide-react"
 import { Link } from "@/i18n/navigation"
 import { useTranslations } from "next-intl"
 import Image from "next/image"
+import { ProxMenuxMark } from "@/components/proxmenux-mark"
 
 export default function Hero() {
   const t = useTranslations("hero")
@@ -13,7 +14,7 @@ export default function Hero() {
       {/* Mobile version (visible only on small screens) */}
       <section className="md:hidden py-20 px-4 sm:px-6 text-center">
         <h1 className="text-4xl sm:text-5xl font-extrabold mb-6">
-          {t("title")}{" "}
+          <ProxMenuxMark weight={800} />{" "}
           <span className="block mt-2 bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-purple-500 font-bold">
             {t("tagline")}
           </span>
@@ -57,7 +58,7 @@ export default function Hero() {
             </div>
             <div className="w-0.5 h-40 lg:h-48 xl:h-56 bg-white mx-6 self-center"></div>
             <div className="text-left max-w-md lg:max-w-lg xl:max-w-xl">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight md:leading-none">{t("title")}</h1>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight md:leading-none"><ProxMenuxMark weight={800} /></h1>
               <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl mt-2 bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-purple-500 font-bold leading-tight md:leading-8 lg:leading-9 xl:leading-10">
                 {t("tagline")}
               </p>
