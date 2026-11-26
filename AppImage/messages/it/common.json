@@ -4838,7 +4838,7 @@
     },
     "deleteJob": {
       "attachedToStorage": "Associato allo storage PVE",
-      "attachedWarning": "Questa attività è associata a un hook dello storage PVE. Eliminandola si rimuove anche l’hook del Monitor da quello storage.",
+      "attachedWarning": "Questa attività viene eseguita al termine dell’attività di backup di Proxmox del suo storage. Eliminandola si interrompe questo backup dell’host; l’attività di Proxmox continua a eseguire il backup dei suoi guest.",
       "description": "Il timer e i metadati Monitor dell’attività verranno rimossi.",
       "timerWarning": "Il timer systemd verrà rimosso. I backup già creati rimangono nella loro destinazione.",
       "title": "Elimina attività di backup"
@@ -5419,7 +5419,7 @@
     "usb": {
       "description": "Monta le unità USB per usarle come destinazione locale o Borg. Quelle con filesystem si possono rimontare senza modifiche; quelle raw (senza tabella delle partizioni) si possono cancellare e formattare in",
       "drivesDetected": "{count} unità rilevate",
-      "empty": "Nessuna unità USB rilevata. Collegane una e aggiorna: Monitor le rileva automaticamente ogni 30 secondi.",
+      "empty": "Nessuna unità USB rilevata. Collegane una e premi Aggiorna.",
       "formatAndUse": "Formatta e usa",
       "formatDescription": "Cancellerà il disco selezionato e creerà una sola partizione ext4.",
       "formatDrive": "Formatta unità",

@@ -5135,7 +5135,7 @@
     },
     "deleteJob": {
       "attachedToStorage": "Attached to PVE storage",
-      "attachedWarning": "This job is attached to a PVE storage hook. Deleting it also removes the Monitor hook from that storage.",
+      "attachedWarning": "This job runs when the Proxmox backup job of its storage ends. Deleting it stops this host backup; the Proxmox job keeps backing up its guests.",
       "description": "The timer and Monitor metadata for this job will be removed.",
       "timerWarning": "The systemd timer will be removed. Already-created backups stay in their destination.",
       "title": "Delete backup job"
@@ -5834,7 +5834,7 @@
     "usb": {
       "description": "Mount USB drives so they can be picked as a local or Borg target. Drives that already had a filesystem can be remounted as-is; raw drives (no partition table) can be wiped and formatted to",
       "drivesDetected": "{count} drives detected",
-      "empty": "No USB drives detected. Plug one in and refresh — Monitor scans for them automatically every 30s.",
+      "empty": "No USB drives detected. Plug one in and press Refresh.",
       "formatAndUse": "Format and use",
       "formatDescription": "This will wipe the selected disk and create a single ext4 partition.",
       "formatDrive": "Format drive",

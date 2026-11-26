@@ -4838,7 +4838,7 @@
     },
     "deleteJob": {
       "attachedToStorage": "An PVE-Speicher angeschlossen",
-      "attachedWarning": "Dieser Job ist an einem PVE-Aufbewahrungshaken befestigt. Durch das Löschen wird auch der Monitor-Hook aus diesem Speicher entfernt.",
+      "attachedWarning": "Dieser Job läuft, wenn der Proxmox-Backup-Job seines Speichers endet. Wird er gelöscht, entfällt dieses Host-Backup; der Proxmox-Job sichert seine Gäste weiterhin.",
       "description": "Die Timer- und Monitor-Metadaten für diesen Job werden entfernt.",
       "timerWarning": "Der systemd-Timer wird entfernt. Bereits erstellte Backups bleiben an ihrem Zielort.",
       "title": "Backup-Auftrag löschen"
@@ -5419,7 +5419,7 @@
     "usb": {
       "description": "Hängen Sie USB-Laufwerke ein, damit sie als lokales oder Borg-Ziel ausgewählt werden können. Laufwerke, die bereits über ein Dateisystem verfügten, können unverändert wieder gemountet werden; Raw-Laufwerke (keine Partitionstabelle) können gelöscht und formatiert werden",
       "drivesDetected": "{count} Laufwerke erkannt",
-      "empty": "Keine USB-Laufwerke erkannt. Schließen Sie eines an und aktualisieren Sie es. Der Monitor scannt automatisch alle 30 Sekunden.",
+      "empty": "Keine USB-Laufwerke erkannt. Schließen Sie eines an und klicken Sie auf Aktualisieren.",
       "formatAndUse": "Formatieren und verwenden",
       "formatDescription": "Dadurch wird das ausgewählte Laufwerk gelöscht und eine einzelne ext4-Partition erstellt.",
       "formatDrive": "Laufwerk formatieren",

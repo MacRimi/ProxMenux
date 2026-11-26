@@ -4991,7 +4991,7 @@
     },
     "deleteJob": {
       "attachedToStorage": "Adjunto al almacenamiento PVE",
-      "attachedWarning": "Esta tarea está conectada a un gancho de almacenamiento PVE. Al eliminarla, también se elimina el gancho del Monitor de ese almacenamiento.",
+      "attachedWarning": "Esta tarea se ejecuta cuando termina la tarea de backup de Proxmox de su almacenamiento. Al eliminarla deja de hacerse este backup del host; la tarea de Proxmox sigue haciendo el backup de sus invitados.",
       "description": "Se eliminarán los metadatos del temporizador y del monitor para esta tarea.",
       "timerWarning": "Se eliminará el temporizador de systemd. Los backups ya creados permanecen en su destino.",
       "title": "Eliminar trabajo de backup"
@@ -5572,7 +5572,7 @@
     "usb": {
       "description": "Monta unidades USB para que puedan ser elegidas como objetivo local o Borg. Las unidades que ya tenían un sistema de archivos se pueden volver a montar tal como están; Las unidades sin formato (sin tabla de particiones) se pueden borrar y formatear para",
       "drivesDetected": "{count} unidades detectadas",
-      "empty": "No se detectaron unidades USB. Conecta una y actualiza: Monitor las busca automáticamente cada 30 segundos.",
+      "empty": "No se detectaron unidades USB. Conecta una y pulsa Recargar.",
       "formatAndUse": "Formato y uso",
       "formatDescription": "Esto borrará el disco seleccionado y creará una única partición ext4.",
       "formatDrive": "Formatear unidad",

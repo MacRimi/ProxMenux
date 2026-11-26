@@ -68,6 +68,10 @@ export function PBSDatastoreCard({ store }: { store: PBSDatastore }) {
   const percent = datastorePercent(store)
   const tone = percent == null ? null : usageTone(percent)
   const fullDate = store["estimated-full-date"]
+  // PBS sends the largest 64-bit integer while it has no trend to estimate from.
+  const fullDay = fullDate !== undefined && fullDate > 0 ? new Date(fullDate * 1000) : null
+  const fullDateText = fullDay && !Number.isNaN(fullDay.getTime())
+    ? fullDay.toLocaleDateString(language) : t("pbs.estimatedFullUnknown")
   const type = store["backend-type"] || t("pbs.datastoreType")
   return <div className={`border rounded-lg p-4 ${store.error ? "border-red-500/50 bg-red-500/5" : ""}`}>
     <div className="flex items-center justify-between gap-2 mb-3">
@@ -108,7 +112,7 @@ export function PBSDatastoreCard({ store }: { store: PBSDatastore }) {
       {store.path && <span className="font-mono truncate" title={store.path}>{store.path}</span>}
       {fullDate !== undefined && <span className="flex items-center">
         <CalendarClock className="mr-1.5 h-3.5 w-3.5" />{t("pbs.estimatedFull")}:
-        <span className="ml-1 font-medium text-foreground">{fullDate > 0 ? new Date(fullDate * 1000).toLocaleDateString(language) : t("pbs.estimatedFullUnknown")}</span>
+        <span className="ml-1 font-medium text-foreground">{fullDateText}</span>
       </span>}
     </div>}
   </div>

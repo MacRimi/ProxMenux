@@ -22,6 +22,7 @@ import threading
 import time
 
 SCRIPT = "/usr/local/share/proxmenux/scripts/utilities/proxmox_update.sh"
+PBS_SCRIPT = "/usr/local/share/proxmenux/scripts/utilities/pbs_update.sh"
 RUN_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 INTERACTION_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ATTENTION_AFTER = 4 * 3600
@@ -60,7 +61,7 @@ def _identity(identity):
 
 
 class HostUpdateJob:
-    def __init__(self, identity, callback):
+    def __init__(self, identity, callback, script=None):
         self.id = identity
         self.created_at = time.time()
         self.started = time.monotonic()
@@ -72,6 +73,7 @@ class HostUpdateJob:
         self.lock = threading.RLock()
         self.process = self.master = self.log_path = None
         self.callback = callback
+        self.script = script or SCRIPT
         self._input = bytearray()
         self._interaction_buffer = ""
 
@@ -135,7 +137,7 @@ class HostUpdateJob:
             env = dict(os.environ, EXECUTION_MODE="web", PROXMENUX_HOST_UPDATE_JOB="1",
                        WEB_LOG=self.log_path, TERM="xterm-256color", PYTHONUNBUFFERED="1")
             interactions = open(self.log_path, encoding="utf-8", errors="replace")
-            self.process = subprocess.Popen(["/bin/bash", SCRIPT], stdin=slave,
+            self.process = subprocess.Popen(["/bin/bash", self.script], stdin=slave,
                                             stdout=slave, stderr=slave,
                                             start_new_session=True, env=env)
             os.close(slave)
@@ -217,7 +219,7 @@ class HostUpdateJob:
             self._input.clear()
             self.revision += 1
         try:
-            self.callback(SCRIPT, {"PROXMENUX_HOST_UPDATE_JOB": "1"}, code,
+            self.callback(self.script, {"PROXMENUX_HOST_UPDATE_JOB": "1"}, code,
                           time.monotonic() - self.started)
         except Exception:
             self.finalization_error = True
@@ -281,10 +283,23 @@ def _prune():
             del _jobs[identity]
 
 
+def update_script():
+    """The update of this host: a Proxmox Backup Server has its own, which
+    keeps its repositories and never runs the Proxmox VE steps."""
+    try:
+        import pbs_manager
+        if pbs_manager.is_pbs_host():
+            return PBS_SCRIPT
+    except Exception:
+        pass
+    return SCRIPT
+
+
 def start(identity, callback):
     _identity(identity)
-    if os.path.realpath(SCRIPT) != SCRIPT or not os.path.isfile(SCRIPT):
-        raise ValueError("PVE update script is unavailable")
+    script = update_script()
+    if os.path.realpath(script) != script or not os.path.isfile(script):
+        raise ValueError("Host update script is unavailable")
     with _lock:
         if identity in _jobs:
             return _jobs[identity]
@@ -293,7 +308,7 @@ def start(identity, callback):
             raise JobConflict("A host update is already running; reconnect to it")
         while len(_jobs) >= MAX_JOBS:
             del _jobs[min(_jobs, key=lambda key: _jobs[key].finished_at)]
-        job = HostUpdateJob(identity, callback)
+        job = HostUpdateJob(identity, callback, script)
         _jobs[identity] = job
         try:
             job.launch()

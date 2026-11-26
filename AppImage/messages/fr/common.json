@@ -4838,7 +4838,7 @@
     },
     "deleteJob": {
       "attachedToStorage": "Rattachée au stockage PVE",
-      "attachedWarning": "Cette tâche est rattachée à un hook de stockage PVE. Sa suppression retire également le hook Monitor de ce stockage.",
+      "attachedWarning": "Cette tâche s’exécute à la fin de la tâche de sauvegarde Proxmox de son stockage. La supprimer arrête cette sauvegarde de l’hôte ; la tâche Proxmox continue de sauvegarder ses invités.",
       "description": "Le timer et les métadonnées Monitor de cette tâche seront supprimés.",
       "timerWarning": "Le timer systemd sera supprimé. Les sauvegardes déjà créées restent dans leur destination.",
       "title": "Supprimer la tâche de sauvegarde"
@@ -5419,7 +5419,7 @@
     "usb": {
       "description": "Montez des disques USB pour pouvoir les choisir comme cible locale ou Borg. Les disques qui avaient déjà un système de fichiers peuvent être remontés tels quels ; les disques bruts (sans table de partition) peuvent être effacés et formatés en",
       "drivesDetected": "{count} disques détectés",
-      "empty": "Aucun disque USB détecté. Branchez-en un et actualisez — Monitor les recherche automatiquement toutes les 30 s.",
+      "empty": "Aucun disque USB détecté. Branchez-en un et cliquez sur Actualiser.",
       "formatAndUse": "Formater et utiliser",
       "formatDescription": "Cela effacera le disque sélectionné et créera une seule partition ext4.",
       "formatDrive": "Formater le disque",

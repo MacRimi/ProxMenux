@@ -14,6 +14,7 @@ import tempfile
 
 PYTHON_FILES = (
     "tests/test_host_update_jobs.py",
+    "tests/test_host_update_platform.py",
     "tests/test_host_update_transport.py",
     "tests/test_host_update_shell.py",
     "tests/test_host_update_auth.py",

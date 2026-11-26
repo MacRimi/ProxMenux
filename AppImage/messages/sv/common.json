@@ -4838,7 +4838,7 @@
     },
     "deleteJob": {
       "attachedToStorage": "Kopplad till PVE-lagring",
-      "attachedWarning": "Detta jobb är fäst vid en PVE-lagringskrok. Om du raderar den tar du också bort monitorkroken från lagringen.",
+      "attachedWarning": "Det här jobbet körs när Proxmox-backupjobbet för dess lagring avslutas. Om du tar bort det slutar den här värdbackupen att göras; Proxmox-jobbet fortsätter att säkerhetskopiera sina gäster.",
       "description": "Timern och Monitor-metadata för det här jobbet kommer att tas bort.",
       "timerWarning": "Systemtimern kommer att tas bort. Redan skapade säkerhetskopior stannar på sin destination.",
       "title": "Ta bort backupjobb"
@@ -5419,7 +5419,7 @@
     "usb": {
       "description": "Montera USB-enheter så att de kan väljas som ett lokalt eller Borg-mål. Enheter som redan hade ett filsystem kan monteras om som de är; råenheter (ingen partitionstabell) kan torkas och formateras till",
       "drivesDetected": "{count} enheter har upptäckts",
-      "empty": "Inga USB-enheter upptäcktes. Anslut en och uppdatera — Monitor söker efter dem automatiskt var 30:e:e.",
+      "empty": "Inga USB-enheter upptäcktes. Anslut en och klicka på Uppdatera.",
       "formatAndUse": "Formatera och använda",
       "formatDescription": "Detta kommer att torka den valda disken och skapa en enda ext4-partition.",
       "formatDrive": "Formatera enheten",

@@ -4989,7 +4989,7 @@
     },
     "deleteJob": {
       "attachedToStorage": "Pripojené k PVE úložisku",
-      "attachedWarning": "Táto úloha je prepojená so zálohovaním úložiska PVE. Vymazaním sa z úložiska odstráni aj prepojenie s Monitorom.",
+      "attachedWarning": "Táto úloha sa spustí po skončení zálohovacej úlohy Proxmoxu pre jej úložisko. Jej odstránením sa táto záloha hostiteľa prestane vytvárať; úloha Proxmoxu bude ďalej zálohovať svojich hostí.",
       "description": "Časovač a údaje Monitora pre túto úlohu sa odstránia.",
       "timerWarning": "Časovač systemd sa odstráni. Už vytvorené zálohy zostanú vo svojom cieli.",
       "title": "Vymazať úlohu zálohovania"
@@ -5688,7 +5688,7 @@
     "usb": {
       "description": "Pripojte USB disky, aby sa dali vybrať ako lokálny alebo Borg cieľ. Disky, ktoré už majú súborový systém, sa dajú pripojiť bez zmeny; prázdne disky bez tabuľky oddielov je možné vymazať a naformátovať na",
       "drivesDetected": "{count} nájdených diskov",
-      "empty": "Nenašli sa žiadne USB disky. Pripojte disk a obnovte stránku — Monitor ich automaticky kontroluje každých 30 s.",
+      "empty": "Nenašli sa žiadne USB disky. Pripojte disk a stlačte Obnoviť.",
       "formatAndUse": "Naformátovať a použiť",
       "formatDescription": "Týmto sa vymaže vybraný disk a vytvorí sa jeden oddiel ext4.",
       "formatDrive": "Formátovať disk",
