@@ -367,8 +367,10 @@ export default function DocSidebar() {
     }
   }
 
-  const toggleSection = (title: string) => {
-    setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }))
+  // A section opens on its own when it holds the current page, so toggle from
+  // what is shown, not from what was clicked before.
+  const toggleSection = (title: string, isOpen: boolean) => {
+    setOpenSections((prev) => ({ ...prev, [title]: !isOpen }))
   }
 
   const toggleMobileMenu = () => {
@@ -414,7 +416,7 @@ export default function DocSidebar() {
             <button
               type="button"
               aria-label={isOpen ? "Collapse" : "Expand"}
-              onClick={() => toggleSection(sectionKey)}
+              onClick={() => toggleSection(sectionKey, isOpen)}
               className={`px-2 flex items-center rounded-r ${
                 containsActivePage && currentPath !== subItemPath
                   ? "bg-blue-50 text-blue-900 hover:bg-blue-100"
@@ -457,7 +459,7 @@ export default function DocSidebar() {
       return (
         <li key={item.title} className="mb-2">
           <button
-            onClick={() => toggleSection(item.title)}
+            onClick={() => toggleSection(item.title, isOpen)}
             className={`flex items-center justify-between w-full text-left p-2 rounded transition-colors ${
               containsActivePage
                 ? "bg-blue-100 text-blue-900 font-semibold hover:bg-blue-200"
