@@ -18,6 +18,7 @@ import { fetchApi } from "../lib/api-config"
 import { formatNetworkTraffic, getNetworkUnit } from "../lib/format-network"
 import { formatBytes as formatByteSize, formatStorage } from "../lib/utils"
 import { getCountFormKey, useI18n, useT } from "../lib/i18n/provider"
+import { isOciGuest } from "../lib/guest-type"
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
 
 interface TempDataPoint {
@@ -72,6 +73,7 @@ interface VMData {
   maxdisk: number
   uptime: number
   type?: string
+  update_check?: { is_oci_lxc?: boolean } | null
 }
 
 interface StorageData {
@@ -347,7 +349,8 @@ export function SystemOverview({ product = "pve", active = true }: { product?: "
     total: vmData.length,
     running: vmData.filter((vm) => vm.status === "running").length,
     stopped: vmData.filter((vm) => vm.status === "stopped").length,
-    lxc: vmData.filter((vm) => vm.type === "lxc").length,
+    lxc: vmData.filter((vm) => vm.type === "lxc" && !isOciGuest(vm)).length,
+    oci: vmData.filter(isOciGuest).length,
     vms: vmData.filter((vm) => vm.type === "qemu" || !vm.type).length,
   }
 
@@ -615,7 +618,7 @@ export function SystemOverview({ product = "pve", active = true }: { product?: "
                 <div className="flex items-end justify-between">
                   <div>
                     <span className="text-4xl font-bold leading-none text-foreground">{vmStats.running}</span>
-                    <span className="text-lg font-medium ml-1 text-muted-foreground">/ {vmStats.vms + vmStats.lxc}</span>
+                    <span className="text-lg font-medium ml-1 text-muted-foreground">/ {vmStats.vms + vmStats.lxc + vmStats.oci}</span>
                   </div>
                   <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                     {t(getCountFormKey(language, "overview.runningCount", vmStats.running), { count: vmStats.running })}
@@ -626,6 +629,9 @@ export function SystemOverview({ product = "pve", active = true }: { product?: "
                     {t("overview.vmsCount", { count: vmStats.vms })}
                   </Badge>
                   <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">{vmStats.lxc} LXC</Badge>
+                  {vmStats.oci > 0 && (
+                    <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">{vmStats.oci} OCI</Badge>
+                  )}
                   {vmStats.stopped > 0 && (
                     <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
                       {t("overview.stoppedCount", { count: vmStats.stopped })}

@@ -1,3 +1,5 @@
+import { isOciGuest } from "./guest-type"
+
 export interface VMSearchable {
   vmid: number
   name: string
@@ -7,6 +9,7 @@ export interface VMSearchable {
   ip?: string
   ips?: string[]
   app_watches?: Array<{ name?: string | null }>
+  update_check?: { is_oci_lxc?: boolean } | null
 }
 
 export interface VMTypeSynonyms {
@@ -32,6 +35,7 @@ export function matchesVmSearch(
     vm.vmid,
     vm.type,
     vm.type === "lxc" ? typeSynonyms.lxc : typeSynonyms.qemu,
+    isOciGuest(vm) ? "oci" : "",
     vm.tags,
     vm.description,
     vm.ip,

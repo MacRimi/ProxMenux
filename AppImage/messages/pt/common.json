@@ -5097,7 +5097,7 @@
       "loadingJob": "Carregando trabalho...",
       "manualOneShot": "manual / único",
       "manualOneShotDescription": "Backup único – capturado no momento do disparo. Não pode ser executado novamente ou editado.",
-      "neverRun": "nunca corra",
+      "neverRun": "ainda não executado",
       "newScheduledJob": "Novo trabalho agendado",
       "newScheduledJobDescription": "Crie uma tarefa de backup de host recorrente.",
       "nextRun": "Próxima execução",
@@ -5393,7 +5393,7 @@
       "pickAtLeastOneDay": "Escolha pelo menos um dia.",
       "pickFrequency": "Escolha a frequência",
       "preview": "Visualização",
-      "rawOnCalendar": "{value} (sistema OnCalendar)",
+      "rawOnCalendar": "{value} (OnCalendar do systemd)",
       "title": "Agendar",
       "weekdaysAt": "{days} às {time}",
       "weeklyOption": "Semanalmente"

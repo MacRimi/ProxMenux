@@ -42,6 +42,7 @@ import { useAccess } from "../lib/access"
 import { useIsPbs } from "../lib/use-platform"
 import { waitForVmControlTask } from "../lib/vm-control"
 import { matchesVmSearch, normalizeVmSearchValue } from "../lib/vm-search"
+import { isOciGuest, type GuestTypeSource } from "../lib/guest-type"
 import { refreshCheckLxcUpdates, getLxcOsUpdateState, isLxcUpdateStale } from "../lib/lxc-update-observation"
 import DOMPurify from "dompurify"
 import { marked } from "marked"
@@ -292,8 +293,9 @@ interface VMData {
   modal_cache_revision?: number
 }
 
-const inventoryTypes = ["all", "lxc", "qemu"] as const
+const inventoryTypes = ["all", "lxc", "oci", "qemu"] as const
 type InventoryType = (typeof inventoryTypes)[number]
+const inventoryTypeOf = (vm: GuestTypeSource) => isOciGuest(vm) ? "oci" : vm.type
 const inventoryTypeKey = "proxmenux.vmListType"
 const inventoryFilterButton = "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:w-auto"
 const inventoryFilterActive = "bg-blue-500 text-white shadow-sm"
@@ -1959,16 +1961,27 @@ export function VirtualMachines() {
     return uppercase ? label.toUpperCase() : label
   }
 
-  const getTypeBadge = (type: string) => {
-    if (type === "lxc") {
+  // A container created from an OCI image reads OCI, in its own colour.
+  const getTypeBadge = (vm: Pick<VMData, "type" | "update_check">) => {
+    if (isOciGuest(vm)) {
+      return {
+        color: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+        text: "text-orange-600 dark:text-orange-400",
+        label: "OCI",
+        icon: <Container className="h-3 w-3 mr-1" />,
+      }
+    }
+    if (vm.type === "lxc") {
       return {
         color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+        text: "text-cyan-600 dark:text-cyan-400",
         label: "LXC",
         icon: <Container className="h-3 w-3 mr-1" />,
       }
     }
     return {
       color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+      text: "text-purple-600 dark:text-purple-400",
       label: "VM",
       icon: <Server className="h-3 w-3 mr-1" />,
     }
@@ -1980,7 +1993,7 @@ export function VirtualMachines() {
   const [typeFilter, setTypeFilter] = useState<InventoryType>(() => {
     try {
       const saved = window.localStorage.getItem(inventoryTypeKey)
-      return saved === "qemu" || saved === "lxc" ? saved : "all"
+      return saved === "qemu" || saved === "lxc" || saved === "oci" ? saved : "all"
     } catch {
       return "all"
     }
@@ -2027,7 +2040,7 @@ export function VirtualMachines() {
 
   const typeMatchedVMs = useMemo(() => typeFilter === "all"
     ? safeVMData
-    : safeVMData.filter((vm) => vm.type === typeFilter), [safeVMData, typeFilter])
+    : safeVMData.filter((vm) => inventoryTypeOf(vm) === typeFilter), [safeVMData, typeFilter])
   const statusCounts = useMemo(() => ({
     all: typeMatchedVMs.length,
     running: typeMatchedVMs.filter((vm) => vm.status === "running").length,
@@ -3295,7 +3308,8 @@ export function VirtualMachines() {
           const stopped = safeVMData.filter((vm) => vm.status === "stopped").length
           const total = safeVMData.length
           const vms = safeVMData.filter((vm) => vm.type === "qemu" || vm.type === "vm").length
-          const lxc = safeVMData.filter((vm) => vm.type === "lxc").length
+          const oci = safeVMData.filter(isOciGuest).length
+          const lxc = safeVMData.filter((vm) => vm.type === "lxc").length - oci
           return (
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -3320,6 +3334,9 @@ export function VirtualMachines() {
                   )}
                   {lxc > 0 && (
                     <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">{lxc} LXC</Badge>
+                  )}
+                  {oci > 0 && (
+                    <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">{oci} OCI</Badge>
                   )}
                   {stopped > 0 && (
                     <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
@@ -3514,12 +3531,12 @@ export function VirtualMachines() {
             }
             types={
             <div key="types" role="group" aria-label={t("vmLxc.typeFilter.ariaLabel")}
-              className="grid w-full grid-cols-[auto_1fr_1fr] gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto">
+              className="grid w-full grid-cols-[auto_1fr_1fr_1fr] gap-1 rounded-lg border border-border bg-muted/40 p-1 md:inline-flex md:w-auto">
               {inventoryTypes.map((type) => (
                 <button key={type} type="button" aria-pressed={typeFilter === type}
                   onClick={() => selectInventoryType(type)}
                   className={`${inventoryFilterButton} whitespace-nowrap ${typeFilter === type ? inventoryFilterActive : inventoryFilterIdle}`}>
-                  {type === "all" ? t("vmLxc.typeFilter.all") : type === "qemu" ? "VM" : "LXC"}
+                  {type === "all" ? t("vmLxc.typeFilter.all") : type === "qemu" ? "VM" : type === "oci" ? "OCI" : "LXC"}
                 </button>
               ))}
             </div>
@@ -3610,7 +3627,7 @@ export function VirtualMachines() {
                 const diskPercent = vm.maxdisk > 0 ? ((vm.disk / vm.maxdisk) * 100).toFixed(1) : "0"
                 const diskGB = (vm.disk / 1024 ** 3).toFixed(1)
                 const maxDiskGB = (vm.maxdisk / 1024 ** 3).toFixed(1)
-                const typeBadge = getTypeBadge(vm.type)
+                const typeBadge = getTypeBadge(vm)
                 const additionalIpCount = lxcIP
                   ? (vm.ips || []).filter((ip) => ip !== lxcIP).length
                   : 0
@@ -3629,7 +3646,7 @@ export function VirtualMachines() {
                     updates={values.updates}
                     layout={listLayout} onOpen={(trigger) => handleVMClick(vm, trigger)} onPreview={() => prefetchVM(vm)} cells={{
                     name: <span className="font-semibold">{vm.name}</span>,
-                    type: <span className={vm.type === "lxc" ? "text-cyan-600 dark:text-cyan-400" : "text-purple-600 dark:text-purple-400"}>{typeBadge.label} · {vm.vmid}</span>,
+                    type: <span className={typeBadge.text}>{typeBadge.label} · {vm.vmid}</span>,
                     state: <span className={getStatusColor(vm.status)}>{statusLabel}</span>,
                     tags: tags.length > 0 ? <span className="flex items-center gap-1.5" role="img" aria-label={values.tags}>{tagDots("size-2")}</span> : null,
                     ip: values.ip
@@ -3846,8 +3863,8 @@ export function VirtualMachines() {
                           <Square className="h-5 w-5 text-red-500 fill-current flex-shrink-0" />
                         )}
 
-                        <Badge variant="outline" className={`${getTypeBadge(vm.type).color} flex-shrink-0`}>
-                          {getTypeBadge(vm.type).label}
+                        <Badge variant="outline" className={`${getTypeBadge(vm).color} flex-shrink-0`}>
+                          {getTypeBadge(vm).label}
                         </Badge>
 
                         {/* Name and ID.
@@ -4001,9 +4018,9 @@ export function VirtualMachines() {
                     {selectedVM && (
                       <>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
-                            {getTypeBadge(selectedVM.type).icon}
-                            {getTypeBadge(selectedVM.type).label}
+                          <Badge variant="outline" className={`${getTypeBadge(selectedVM).color} flex-shrink-0`}>
+                            {getTypeBadge(selectedVM).icon}
+                            {getTypeBadge(selectedVM).label}
                           </Badge>
                           <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
                             {getStatusLabel(selectedVM.status)}
@@ -4053,9 +4070,9 @@ export function VirtualMachines() {
                     </div>
                     {selectedVM && (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className={`${getTypeBadge(selectedVM.type).color} flex-shrink-0`}>
-                          {getTypeBadge(selectedVM.type).icon}
-                          {getTypeBadge(selectedVM.type).label}
+                        <Badge variant="outline" className={`${getTypeBadge(selectedVM).color} flex-shrink-0`}>
+                          {getTypeBadge(selectedVM).icon}
+                          {getTypeBadge(selectedVM).label}
                         </Badge>
                         <Badge variant="outline" className={`${getStatusColor(selectedVM.status)} flex-shrink-0`}>
                           {getStatusLabel(selectedVM.status)}

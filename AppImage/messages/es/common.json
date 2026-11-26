@@ -5250,7 +5250,7 @@
       "loadingJob": "Cargando tarea...",
       "manualOneShot": "manual / de una sola vez",
       "manualOneShotDescription": "Backup puntual: capturado en el momento en que se lanzó. No se puede volver a ejecutar ni editar.",
-      "neverRun": "nunca corras",
+      "neverRun": "aún no se ha ejecutado",
       "newScheduledJob": "Nueva tarea programada",
       "newScheduledJobDescription": "Crea un trabajo de backup del host recurrente.",
       "nextRun": "Próxima ejecución",
@@ -5546,7 +5546,7 @@
       "pickAtLeastOneDay": "Elige al menos un día.",
       "pickFrequency": "Frecuencia de selección",
       "preview": "Avance",
-      "rawOnCalendar": "{value} (sistema en Calendario)",
+      "rawOnCalendar": "{value} (OnCalendar de systemd)",
       "title": "Programación",
       "weekdaysAt": "{days} en {time}",
       "weeklyOption": "Semanalmente"

@@ -5097,7 +5097,7 @@
       "loadingJob": "Job wird geladen...",
       "manualOneShot": "manuell / One-Shot",
       "manualOneShotDescription": "One-Shot-Backup – zum Zeitpunkt des Auslösers erfasst. Kann nicht erneut ausgeführt oder bearbeitet werden.",
-      "neverRun": "niemals laufen",
+      "neverRun": "noch nie ausgeführt",
       "newScheduledJob": "Neuer geplanter Auftrag",
       "newScheduledJobDescription": "Erstellen Sie einen wiederkehrenden Host-Backup-Aauftrag.",
       "nextRun": "Nächster Lauf",
