@@ -28,7 +28,7 @@
               ],
               [
                 "Katalóg Monitora",
-                "Položka <strong>Vytvoriť LXC zo šablóny</strong> v katalógu <appsLink>Aplikácie</appsLink> otvorí toho istého sprievodcu."
+                "Položka <strong>Vytvoriť LXC zo šablóny</strong> na karte <catalogLink>Katalóg</catalogLink>, ktorá sa v hornej lište zobrazuje ako Menux, otvorí toho istého sprievodcu."
               ],
               [
                 "Konzolové menu",
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Kto ho môže použiť",
-            "body": "V Monitore sprievodca vyžaduje profil <strong>Administrátor</strong>: pri iných profiloch sa tlačidlo nezobrazí a položka katalógu ukazuje len svoj popis. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Konzolový sprievodca beží ako root. Ani jeden nie je dostupný na hostiteľovi Proxmox Backup Server."
+            "body": "V Monitore sprievodca vyžaduje profil <strong>Administrátor</strong> a pri iných profiloch sa tlačidlo nezobrazí. V Katalógu dostane profil s akciou <strong>Spúšťať skripty a nástroje</strong>, ktorý nie je Administrátor, v položke tlačidlo <strong>Otvoriť</strong>, ktoré spustí konzolového sprievodcu v termináli; bez tejto akcie položka ukazuje len svoj popis. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Konzolový sprievodca beží ako root. Ani jeden nie je dostupný na hostiteľovi Proxmox Backup Server."
           }
         }
       ]

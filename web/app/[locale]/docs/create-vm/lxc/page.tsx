@@ -7,7 +7,7 @@ const URL = "https://proxmenux.com/docs/create-vm/lxc"
 
 const LINKS = {
   vmsLxcsLink: "/docs/monitor/dashboard/vms-lxcs",
-  appsLink: "/docs/monitor/dashboard/apps",
+  catalogLink: "/docs/monitor/dashboard/catalog",
   terminalLink: "/docs/monitor/dashboard/terminal",
   accessLink: "/docs/monitor/access-auth#users-profiles",
   mountPointsLink: "/docs/storage-share/lxc-mount-points",

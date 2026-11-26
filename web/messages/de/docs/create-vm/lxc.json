@@ -28,7 +28,7 @@
               ],
               [
                 "Katalog des Monitors",
-                "Der Eintrag <strong>LXC aus einer Vorlage erstellen</strong> im Katalog <appsLink>Apps</appsLink> öffnet denselben Assistenten."
+                "Der Eintrag <strong>LXC aus einer Vorlage erstellen</strong> in der Registerkarte <catalogLink>Katalog</catalogLink>, die in der oberen Leiste als Menux angezeigt wird, öffnet denselben Assistenten."
               ],
               [
                 "Konsolenmenü",
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Wer ihn verwenden kann",
-            "body": "Im Monitor erfordert der Assistent das Profil <strong>Administrator</strong>: Bei anderen Profilen erscheint die Schaltfläche nicht, und der Katalogeintrag zeigt nur seine Beschreibung. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Konsolenassistent läuft als root. Keiner der beiden ist auf einem Proxmox-Backup-Server-Host verfügbar."
+            "body": "Im Monitor erfordert der Assistent das Profil <strong>Administrator</strong>, und bei anderen Profilen erscheint die Schaltfläche nicht. Im Katalog erhält ein Profil mit <strong>Skripte und Werkzeuge ausführen</strong>, das nicht Administrator ist, im Eintrag eine Schaltfläche <strong>Öffnen</strong>, die den Konsolenassistenten in einem Terminal ausführt; ohne diese Aktion zeigt der Eintrag nur seine Beschreibung. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Konsolenassistent läuft als root. Keiner der beiden ist auf einem Proxmox-Backup-Server-Host verfügbar."
           }
         }
       ]

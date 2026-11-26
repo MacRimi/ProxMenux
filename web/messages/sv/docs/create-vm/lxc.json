@@ -28,7 +28,7 @@
               ],
               [
                 "Monitors katalog",
-                "Posten <strong>Skapa LXC från mall</strong> i katalogen <appsLink>Apps</appsLink> öppnar samma guide."
+                "Posten <strong>Skapa LXC från mall</strong> på fliken <catalogLink>Katalog</catalogLink>, som visas som Menux i det övre fältet, öppnar samma guide."
               ],
               [
                 "Konsolmeny",
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Vem som kan använda den",
-            "body": "I Monitor kräver guiden profilen <strong>Administratör</strong>: knappen visas inte för andra profiler, och katalogposten visar bara sin beskrivning. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Konsolguiden körs som root. Ingen av dem är tillgänglig på en värd med Proxmox Backup Server."
+            "body": "I Monitor kräver guiden profilen <strong>Administratör</strong>, och knappen visas inte för andra profiler. I Katalog får en profil med <strong>Köra skript och verktyg</strong> som inte är Administratör en knapp <strong>Öppna</strong> i posten, som kör konsolguiden i en terminal; utan den åtgärden visar posten bara sin beskrivning. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Konsolguiden körs som root. Ingen av dem är tillgänglig på en värd med Proxmox Backup Server."
           }
         }
       ]

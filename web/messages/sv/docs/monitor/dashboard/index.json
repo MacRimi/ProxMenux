@@ -29,6 +29,11 @@
         "owns": "Gemensam startvy för registrerade LXC-webblänkar och egna länkar, med kategorier, sökning, gästgenvägar och uppdateringsindikatorer per applikation."
       },
       {
+        "name": "Katalog (Menux)",
+        "linksTo": "/docs/monitor/dashboard/catalog",
+        "owns": "Allt som ProxMenux kan installera eller köra: OCI-program, verktyg från konsolmenyn, de VM som skapas och Community Scripts, var och en med sitt blad, och de körs med samma steg som konsolmenyn."
+      },
+      {
         "name": "Lagring",
         "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Proxmox pooler, fysiska diskar, SMART data, ZFS tillstånd, slitage och livstid, observationshistorik."

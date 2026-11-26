@@ -66,6 +66,7 @@
       "dashboard": "Instrumentpanel",
       "dashboardSystemOverview": "Fliken Systemöversikt",
       "dashboardApps": "Fliken Program",
+      "dashboardCatalog": "Fliken Katalog",
       "dashboardStorage": "Fliken Lagring",
       "dashboardNetwork": "Fliken Nätverk",
       "dashboardVmsLxcs": "Fliken VM och LXC",

@@ -1,0 +1,281 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Översikt: fliken Katalog | ProxMenux-dokumentation",
+    "description": "Fliken Katalog i ProxMenux Monitor, som visas som Menux: OCI-programmen, ProxMenux-verktygen, de VM som ProxMenux skapar och Community Scripts på ett ställe, var och en med sitt blad, och de körs med samma steg som konsolmenyn."
+  },
+  "header": {
+    "title": "Översikt: fliken Katalog",
+    "description": "Allt som ProxMenux kan installera eller köra, samlat i en flik: program, verktyg från menyn och skript, var och en med ett blad som beskriver den innan något körs.",
+    "section": "ProxMenux Monitor · Översikt"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "Fliken Katalog visas i det övre fältet som <strong>Menux</strong>. Den samlar det som konsolmenyn i ProxMenux erbjuder och de program den installerar, så att de kan hittas, läsas om och köras från Monitor. När ett objekt körs öppnas en terminal i Monitor med samma steg som konsolmenyn. Fliken innehåller fyra sorters objekt:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Sort",
+              "Vad det är",
+              "Vad bladet erbjuder"
+            ],
+            "rows": [
+              [
+                "OCI-program",
+                "Programmen i <ociLink>OCI manager Apps</ociLink>, märkta <strong>OCI</strong>, med sin utgivare.",
+                "<strong>Installera</strong> och <strong>Avancerad installation</strong>, de två lägen som beskrivs i <ociModesLink>OCI manager Apps</ociModesLink>."
+              ],
+              [
+                "ProxMenux-verktyg",
+                "Alternativen i konsolmenyn, grupperade efter dess avsnitt: inställningar efter installationen, GPU:er, diskar, lagring, nätverk, säkerhet, verktyg, säkerhetskopior och hjälp.",
+                "<strong>Öppna</strong>, som startar det alternativet."
+              ],
+              [
+                "VM",
+                "De virtuella maskiner som ProxMenux skapar, till exempel NAS-system eller Linuxdistributioner.",
+                "<strong>Skapa VM</strong>, som startar guiden för det systemet. Se <createVmLink>Skapa en VM och en LXC</createVmLink>."
+              ],
+              [
+                "Community Scripts",
+                "Skripten från projektet Community Scripts, märkta med dess logotyp. De kan döljas i flikens inställningar.",
+                "<strong>Kör skriptet</strong>, som kör skriptet från Community Scripts."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-home.png",
+            "alt": "Fliken Katalog med sökrutan, inställningsknappen, ett utvalt program och ProxMenux-verktygen",
+            "caption": "Fliken Katalog, som visas som Menux i det övre fältet."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Vem som ser fliken",
+            "body": "Fliken visas när kontots profil omfattar området <strong>Menux</strong>. För att installera, köra eller öppna ett objekt krävs åtgärden <strong>Köra skript och verktyg</strong>; utan den är bladen skrivskyddade och saknar knappar. Så ser profilen <strong>Observatör</strong> fliken. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Monitor på en värd med Proxmox Backup Server har ingen flik Katalog."
+          }
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "title": "Huvudvy",
+      "intro": "Utan sökning visar fliken, uppifrån och ned:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Del",
+              "Vad den visar"
+            ],
+            "rows": [
+              [
+                "Utvalda",
+                "Sex program som väljs slumpmässigt vid varje besök, de med skärmbilder först. De byts med några sekunders mellanrum och stannar medan pekaren är över dem. <strong>Visa detaljer</strong> öppnar bladet."
+              ],
+              [
+                "ProxMenux-verktyg",
+                "En ruta per avsnitt i konsolmenyn. <strong>ProxMenux-tillägg</strong> visas som <strong>Kommer snart</strong>."
+              ],
+              [
+                "Verktyg från Community Scripts",
+                "Skripten från Community Scripts som verkar på Proxmox-värden, grupperade efter kategori."
+              ],
+              [
+                "Appkategorier",
+                "<strong>Alla appar</strong> och en ruta per kategori, med början i den som har flest program."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "En ruta öppnar sitt avsnitt eller sin kategori: en lista med kort, en knapp <strong>Katalog</strong> för att gå tillbaka och antalet objekt. Ett avsnitt i menyn behåller menyns ordning och listar separat, under <strong>Externa skript</strong>, de skript från andra projekt som menyn kör. En kategori sorteras efter namn."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-category.png",
+            "alt": "Kategorin Media & Streaming med 87 objekt, varje kort med sin ikon, OCI-märket, kategorin, utgivaren och arkitekturerna",
+            "caption": "En kategori, med Community Scripts dolda."
+          }
+        },
+        {
+          "p": "Varje kort visar ikonen, namnet, en sammanfattning och kategorin eller avsnittet. OCI-program lägger till märket <strong>OCI</strong> och sin utgivare: <strong>Officiell</strong> när avbilden publiceras av projektet självt, LinuxServer.io eller namnet på en annan utgivare. Community Scripts lägger till sin logotyp och det de skapar: <strong>LXC</strong>, <strong>VM</strong>, en ändring på värden eller ett tillägg för en befintlig gäst. Alternativ i menyn som kör ett skript från ett annat projekt märks <strong>Tredje part</strong>, med projektets namn. Program visar de arkitekturer de stöder, <code>amd64</code> och <code>arm64</code>; på en ARM64-värd listas bara de program och skript som stöder den."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-tools.png",
+            "alt": "Avsnittet Disk Manager med sju verktyg från konsolmenyn, vart och ett med ProxMenux-logotypen och etiketten Disk Manager",
+            "caption": "Avsnittet Disk Manager, med samma alternativ som konsolmenyn."
+          }
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Sökning och inställningar",
+      "blocks": [
+        {
+          "p": "Sökrutan hittar program och verktyg efter början av varje ord i namnet, utan hänsyn till accenter eller skiftläge, och även efter utgivare, till exempel <code>official</code> eller <code>linuxserver</code>. Resultaten delas upp i <strong>Appar</strong> och <strong>Verktyg</strong>, med ProxMenux-objekten först, sedan OCI-programmen och därefter Community Scripts."
+        },
+        {
+          "p": "Knappen bredvid sökrutan öppnar <strong>Kataloginställningar</strong>. De sparas i webbläsaren, så varje webbläsare har sina egna:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Inställning",
+              "Standard",
+              "Vad den ändrar"
+            ],
+            "rows": [
+              [
+                "Inkludera Community Scripts",
+                "På",
+                "Visar Community Scripts i sökningen, avsnitten, kategorierna och de utvalda programmen. Avstängd listar fliken bara ProxMenux- och OCI-objekt."
+              ],
+              [
+                "Bred sökning",
+                "Av",
+                "Hittar också det som nämner orden i sin beskrivning eller kategori, efter träffarna på namn."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-settings.png",
+            "alt": "Panelen Kataloginställningar med reglagen Inkludera Community Scripts och Bred sökning",
+            "caption": "Kataloginställningar."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sheet",
+      "title": "Ett objekts blad",
+      "blocks": [
+        {
+          "p": "Ett kort öppnar objektets blad, som beskriver det innan något körs. Dess sidhuvud visar namnet, sammanfattningen och märken: kategorin, <strong>1 container</strong> eller <strong>Flera containrar</strong>, <strong>Oprivilegierad LXC</strong> eller <strong>Privilegierad LXC</strong>, <strong>Testad</strong> för OCI-program som redan testats i verkliga installationer, <strong>Uppdateringsbar</strong> för Community Scripts som kan uppdatera det de installerar, och arkitekturerna. Under det, beroende på objekt:"
+        },
+        {
+          "list": {
+            "items": [
+              "Skärmbilder av programmet, var och en med sin källa.",
+              "<strong>Vad det är</strong> eller <strong>Vad det gör</strong>, och de <strong>Anteckningar</strong> du bör läsa före installationen, till exempel behovet av en GPU eller de första stegen efter installationen.",
+              "<strong>Containrar som skapas</strong>, för program som består av flera tjänster, var och en i sin egen LXC. Se <stacksLink>Program med flera containrar</stacksLink>.",
+              "<strong>Inställningar som tillämpas</strong> eller <strong>Inställningar att välja</strong>, för alternativen efter installationen.",
+              "<strong>Föreslagen installation</strong>, <strong>Standardinställningar</strong> eller <strong>Skriptets resurser</strong>: kärnor, RAM, swap, disk och system, med portarna för att nå programmet, dess lagring, avbilden eller skriptet och dess version.",
+              "Knapparna för att installera eller köra det, och <strong>Länkar</strong> till den officiella webbplatsen, dokumentationen, källkoden och ProxMenux-dokumentationen."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-sheet-oci.png",
+            "alt": "Bladet för OCI-programmet Jellyfin med skärmbilder, beskrivning, anteckningar, föreslagen installation, portar, lagring, utgivare, avbild, knapparna Installera och Avancerad installation och länkarna",
+            "caption": "Bladet för ett OCI-program."
+          }
+        },
+        {
+          "p": "När samma program erbjuds från flera källor, till exempel som OCI-program och som skript från Community Scripts, listar bladet de andra under <strong>Finns även</strong>."
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "title": "Köra ett objekt",
+      "blocks": [
+        {
+          "p": "Bladets knappar öppnar en terminal i Monitor, med titeln <strong>Installera</strong>, <strong>Kör</strong> eller <strong>Öppna</strong> och objektets namn, som kör samma steg som konsolmenyn. Frågorna i varje flöde, till exempel om lagringen eller bekräftelsen innan något ändras, visas i den terminalen precis som i konsolen."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-run.png",
+            "alt": "Terminal med titeln Open SMART Disk Health & Test som kör dialogen för diskval från konsolmenyn",
+            "caption": "Ett verktyg från menyn, öppnat från Katalog i en egen terminal."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Objekt",
+              "Vad som körs"
+            ],
+            "rows": [
+              [
+                "OCI-program",
+                "Installationen i OCI manager Apps, i standardläge eller avancerat läge. Den kräver Proxmox VE 9.1 eller senare; på en äldre version stoppar installationen i terminalen med det meddelandet. Det installerade programmet hanteras sedan enligt beskrivningen i <ociMonitorLink>OCI manager Apps i ProxMenux Monitor</ociMonitorLink>."
+              ],
+              [
+                "ProxMenux-verktyg eller VM",
+                "Det alternativet i konsolmenyn, utan resten av menyn runt omkring."
+              ],
+              [
+                "Skapa LXC från mall",
+                "För administratörer öppnar det guiden <lxcLink>Skapa LXC</lxcLink> i Monitor i stället för en terminal. Andra profiler med <strong>Köra skript och verktyg</strong> får en knapp <strong>Öppna</strong> i bladet, som kör konsolguiden i en terminal."
+              ],
+              [
+                "Skript från Community Scripts",
+                "Skriptet från projektet Community Scripts, som laddas ned från dess arkiv när det körs. Det frågar i terminalen efter systemets variant och, för ett tillägg, var det ska köras."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Allt körs på värden som root",
+            "body": "Varje objekt körs på Proxmox-värden med Monitors behörigheter, precis som från konsolmenyn. Community Scripts är kod från ett annat projekt och laddas ned från internet varje gång de körs, så de behöver en anslutning även när fliken visar dem från sin sparade lista."
+          }
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Var listan kommer ifrån",
+      "blocks": [
+        {
+          "p": "OCI-programmen kommer från katalogen i OCI manager Apps som installeras med ProxMenux. När fliken öppnas kontrollerar Monitor i bakgrunden, högst var sjätte timme, om katalogen har ändrats på GitHub och hämtar de nya programmen med deras översättningar. Listan över Community Scripts sparas på värden och förnyas i bakgrunden var sjätte timme, så fliken visar den direkt, även utan anslutning."
+        },
+        {
+          "p": "Texterna för ProxMenux-verktygen och OCI-programmen följer språket i Monitor. Texterna för Community Scripts kommer från deras projekt och visas på engelska."
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Relaterade sidor",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/oci-manager",
+                "label": "OCI manager Apps",
+                "tail": "hur en OCI-avbild blir en LXC och hur den installeras."
+              },
+              {
+                "href": "/docs/monitor/dashboard/apps",
+                "label": "Fliken Program",
+                "tail": "de program som redan är installerade, med deras länkar och uppdateringar."
+              },
+              {
+                "href": "/docs/create-vm/lxc",
+                "label": "Skapa LXC från mall",
+                "tail": "guiden som öppnas från Katalog."
+              },
+              {
+                "href": "/docs/monitor/dashboard/settings#navigation-order",
+                "label": "Fliken Inställningar",
+                "tail": "flikarnas ordning i det övre fältet."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

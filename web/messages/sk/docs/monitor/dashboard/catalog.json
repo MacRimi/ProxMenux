@@ -1,0 +1,281 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Prehľad: karta Katalóg | Dokumentácia ProxMenux",
+    "description": "Karta Katalóg v ProxMenux Monitor, zobrazená ako Menux: aplikácie OCI, nástroje ProxMenux, VM, ktoré ProxMenux vytvára, a Community Scripts na jednom mieste, každá položka so svojím panelom podrobností a spúšťaná rovnakými krokmi ako konzolové menu."
+  },
+  "header": {
+    "title": "Prehľad: karta Katalóg",
+    "description": "Všetko, čo ProxMenux dokáže nainštalovať alebo spustiť, zhromaždené na jednej karte: aplikácie, nástroje menu a skripty, každá položka s panelom podrobností, ktorý ju opíše skôr, ako sa čokoľvek spustí.",
+    "section": "ProxMenux Monitor · Prehľad"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "Karta Katalóg sa v hornej lište zobrazuje ako <strong>Menux</strong>. Spája to, čo ponúka konzolové menu ProxMenux, s aplikáciami, ktoré inštaluje, aby sa dali v Monitore nájsť, preštudovať a spustiť. Spustenie položky otvorí v Monitore terminál s rovnakými krokmi ako konzolové menu. Karta obsahuje štyri druhy položiek:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Druh",
+              "Čo to je",
+              "Čo ponúka jej panel podrobností"
+            ],
+            "rows": [
+              [
+                "Aplikácie OCI",
+                "Aplikácie <ociLink>OCI manager Apps</ociLink> označené ako <strong>OCI</strong>, s ich vydavateľom.",
+                "<strong>Inštalovať</strong> a <strong>Pokročilá inštalácia</strong>, dva režimy opísané v časti <ociModesLink>OCI manager Apps</ociModesLink>."
+              ],
+              [
+                "Nástroje ProxMenux",
+                "Možnosti konzolového menu zoskupené podľa jeho sekcií: nastavenia po inštalácii, GPU, disky, úložisko, sieť, zabezpečenie, nástroje, zálohy a pomoc.",
+                "<strong>Otvoriť</strong>, ktoré spustí danú možnosť."
+              ],
+              [
+                "VM",
+                "Virtuálne počítače, ktoré ProxMenux vytvára, napríklad systémy NAS alebo distribúcie Linuxu.",
+                "<strong>Vytvoriť VM</strong>, ktoré spustí sprievodcu daného systému. Pozrite <createVmLink>Vytvoriť VM a LXC</createVmLink>."
+              ],
+              [
+                "Community Scripts",
+                "Skripty projektu Community Scripts označené jeho logom. Dajú sa skryť v nastaveniach karty.",
+                "<strong>Spustiť skript</strong>, ktoré spustí skript Community Scripts."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-home.png",
+            "alt": "Karta Katalóg s vyhľadávacím poľom, tlačidlom nastavení, odporúčanou aplikáciou a nástrojmi ProxMenux",
+            "caption": "Karta Katalóg, v hornej lište zobrazená ako Menux."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Kto kartu vidí",
+            "body": "Karta sa zobrazí, keď profil účtu obsahuje oblasť <strong>Menux</strong>. Inštalácia, spustenie alebo otvorenie položky vyžaduje akciu <strong>Spúšťať skripty a nástroje</strong>; bez nej sú panely podrobností len na čítanie a nemajú tlačidlá. Takto kartu vidí profil <strong>Pozorovateľ</strong>. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Monitor na hostiteľovi Proxmox Backup Server kartu Katalóg nemá."
+          }
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "title": "Hlavné zobrazenie",
+      "intro": "Bez vyhľadávania karta zobrazuje zhora nadol:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Časť",
+              "Čo zobrazuje"
+            ],
+            "rows": [
+              [
+                "Odporúčané",
+                "Šesť aplikácií vybraných náhodne pri každej návšteve, najprv tie so snímkami obrazovky. Menia sa každých niekoľko sekúnd a zastavia sa, kým je nad nimi ukazovateľ. <strong>Zobraziť podrobnosti</strong> otvorí panel podrobností."
+              ],
+              [
+                "Nástroje ProxMenux",
+                "Jedna dlaždica pre každú sekciu konzolového menu. <strong>Doplnky ProxMenux</strong> sa zobrazujú ako <strong>Už čoskoro</strong>."
+              ],
+              [
+                "Nástroje Community Scripts",
+                "Skripty Community Scripts, ktoré pracujú s hostiteľom Proxmox, zoskupené podľa kategórie."
+              ],
+              [
+                "Kategórie aplikácií",
+                "<strong>Všetky aplikácie</strong> a jedna dlaždica pre každú kategóriu, od tej s najväčším počtom aplikácií."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Dlaždica otvorí svoju sekciu alebo kategóriu: zoznam kartičiek s tlačidlom <strong>Katalóg</strong> na návrat a počtom položiek. Sekcia menu zachováva poradie menu a osobitne, v časti <strong>Externé skripty</strong>, uvádza skripty iných projektov, ktoré menu spúšťa. Kategória je zoradená podľa názvu."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-category.png",
+            "alt": "Kategória Media & Streaming so 87 položkami, každá kartička s ikonou, označením OCI, kategóriou, vydavateľom a architektúrami",
+            "caption": "Kategória so skrytými Community Scripts."
+          }
+        },
+        {
+          "p": "Každá kartička zobrazuje ikonu, názov, zhrnutie a kategóriu alebo sekciu. Aplikácie OCI pridávajú označenie <strong>OCI</strong> a svojho vydavateľa: <strong>Oficiálny</strong>, keď obraz zverejňuje samotný projekt, LinuxServer.io alebo názov iného vydavateľa. Community Scripts pridávajú svoje logo a to, čo vytvárajú: <strong>LXC</strong>, <strong>VM</strong>, zmenu na hostiteľovi alebo doplnok pre existujúci hosťovský systém. Možnosti menu, ktoré spúšťajú skript iného projektu, sú označené ako <strong>Tretia strana</strong> s jeho názvom. Aplikácie zobrazujú podporované architektúry, <code>amd64</code> a <code>arm64</code>; na hostiteľovi ARM64 sa zobrazia len aplikácie a skripty, ktoré ju podporujú."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-tools.png",
+            "alt": "Sekcia Disk Manager so siedmimi nástrojmi konzolového menu, každý s logom ProxMenux a štítkom Disk Manager",
+            "caption": "Sekcia Disk Manager s rovnakými možnosťami ako konzolové menu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Vyhľadávanie a nastavenia",
+      "blocks": [
+        {
+          "p": "Vyhľadávacie pole nájde aplikácie a nástroje podľa začiatku každého slova v ich názve bez ohľadu na diakritiku a veľkosť písmen a tiež podľa vydavateľa, napríklad <code>official</code> alebo <code>linuxserver</code>. Výsledky sú rozdelené na <strong>Aplikácie</strong> a <strong>Nástroje</strong>, najprv položky ProxMenux, potom aplikácie OCI a nakoniec Community Scripts."
+        },
+        {
+          "p": "Tlačidlo vedľa vyhľadávacieho poľa otvorí <strong>Nastavenia katalógu</strong>. Ukladajú sa v prehliadači, takže každý prehliadač má vlastné:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Nastavenie",
+              "Predvolené",
+              "Čo mení"
+            ],
+            "rows": [
+              [
+                "Zahrnúť Community Scripts",
+                "Zapnuté",
+                "Zobrazuje Community Scripts vo vyhľadávaní, sekciách, kategóriách a odporúčaných aplikáciách. Keď je vypnuté, karta uvádza len položky ProxMenux a OCI."
+              ],
+              [
+                "Rozšírené vyhľadávanie",
+                "Vypnuté",
+                "Po zhodách v názve nájde aj položky, ktoré slová spomínajú v popise alebo kategórii."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-settings.png",
+            "alt": "Panel Nastavenia katalógu s prepínačmi Zahrnúť Community Scripts a Rozšírené vyhľadávanie",
+            "caption": "Nastavenia katalógu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sheet",
+      "title": "Panel podrobností položky",
+      "blocks": [
+        {
+          "p": "Kartička otvorí panel podrobností položky, ktorý ju opíše skôr, ako sa čokoľvek spustí. Jeho hlavička zobrazuje názov, zhrnutie a štítky: kategóriu, <strong>1 kontajner</strong> alebo <strong>Viac kontajnerov</strong>, <strong>Neprivilegovaný LXC</strong> alebo <strong>Privilegovaný LXC</strong>, <strong>Otestované</strong> pri aplikáciách OCI už otestovaných v reálnych inštaláciách, <strong>Aktualizovateľné</strong> pri Community Scripts, ktoré dokážu aktualizovať to, čo inštalujú, a architektúry. Pod ňou podľa položky:"
+        },
+        {
+          "list": {
+            "items": [
+              "Snímky obrazovky aplikácie, každá so svojím zdrojom.",
+              "<strong>Čo to je</strong> alebo <strong>Čo robí</strong> a <strong>Poznámky</strong>, ktoré si treba prečítať pred inštaláciou, napríklad potrebu GPU alebo prvé kroky po inštalácii.",
+              "<strong>Vytvorené kontajnery</strong> pri aplikáciách z viacerých služieb, každá vo vlastnom LXC. Pozrite <stacksLink>Aplikácie s viacerými kontajnermi</stacksLink>.",
+              "<strong>Použité nastavenia</strong> alebo <strong>Nastavenia na výber</strong> pri možnostiach po inštalácii.",
+              "<strong>Odporúčaná inštalácia</strong>, <strong>Predvolené nastavenia</strong> alebo <strong>Prostriedky skriptu</strong>: jadrá, RAM, swap, disk a systém, s portami na prístup k aplikácii, jej úložiskom, obrazom alebo skriptom a jeho verziou.",
+              "Tlačidlá na inštaláciu alebo spustenie a <strong>Odkazy</strong> na oficiálnu webovú stránku, dokumentáciu, zdrojový kód a dokumentáciu ProxMenux."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-sheet-oci.png",
+            "alt": "Panel podrobností aplikácie OCI Jellyfin so snímkami obrazovky, popisom, poznámkami, odporúčanou inštaláciou, portami, úložiskom, vydavateľom, obrazom, tlačidlami Inštalovať a Pokročilá inštalácia a odkazmi",
+            "caption": "Panel podrobností aplikácie OCI."
+          }
+        },
+        {
+          "p": "Keď sa tá istá aplikácia ponúka z viacerých zdrojov, napríklad ako aplikácia OCI a ako skript Community Scripts, panel podrobností uvádza ostatné v časti <strong>Dostupné aj</strong>."
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "title": "Spustenie položky",
+      "blocks": [
+        {
+          "p": "Tlačidlá panela podrobností otvoria v Monitore terminál s názvom <strong>Inštalovať</strong>, <strong>Spustiť</strong> alebo <strong>Otvoriť</strong> a názvom položky, ktorý vykoná rovnaké kroky ako konzolové menu. Otázky každého postupu, napríklad výber úložiska alebo potvrdenie pred akoukoľvek zmenou, sa v tomto termináli zobrazia rovnako ako v konzole."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-run.png",
+            "alt": "Terminál s názvom Open SMART Disk Health & Test, v ktorom beží dialóg výberu disku z konzolového menu",
+            "caption": "Nástroj menu otvorený z Katalógu vo vlastnom termináli."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Položka",
+              "Čo sa spustí"
+            ],
+            "rows": [
+              [
+                "Aplikácia OCI",
+                "Inštalácia OCI manager Apps v predvolenom alebo pokročilom režime. Vyžaduje Proxmox VE 9.1 alebo novší; na staršej verzii sa inštalácia zastaví v termináli s touto správou. Nainštalovaná aplikácia sa potom spravuje tak, ako je opísané v časti <ociMonitorLink>OCI manager Apps v ProxMenux Monitore</ociMonitorLink>."
+              ],
+              [
+                "Nástroj ProxMenux alebo VM",
+                "Daná možnosť konzolového menu bez zvyšku menu okolo nej."
+              ],
+              [
+                "Vytvoriť LXC zo šablóny",
+                "Pre administrátorov otvorí namiesto terminálu sprievodcu <lxcLink>Vytvoriť LXC</lxcLink> v Monitore. Ostatné profily s akciou <strong>Spúšťať skripty a nástroje</strong> dostanú v jej paneli podrobností tlačidlo <strong>Otvoriť</strong>, ktoré spustí konzolového sprievodcu v termináli."
+              ],
+              [
+                "Skript Community Scripts",
+                "Skript projektu Community Scripts, ktorý sa pri spustení stiahne z jeho repozitára. V termináli sa opýta na variant systému a pri doplnku na to, kde ho spustiť."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Všetko beží na hostiteľovi ako root",
+            "body": "Každá položka beží na hostiteľovi Proxmox s oprávneniami Monitora, rovnako ako z konzolového menu. Community Scripts sú kód iného projektu a pri každom spustení sa sťahujú z internetu, takže potrebujú pripojenie, aj keď ich karta zobrazuje zo svojho uloženého zoznamu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Odkiaľ zoznam pochádza",
+      "blocks": [
+        {
+          "p": "Aplikácie OCI pochádzajú z katalógu OCI manager Apps nainštalovaného s ProxMenux. Pri otvorení karty Monitor na pozadí, najviac raz za šesť hodín, skontroluje, či sa katalóg na GitHube zmenil, a prinesie nové aplikácie s ich prekladmi. Zoznam Community Scripts sa uchováva na hostiteľovi a na pozadí sa obnovuje každých šesť hodín, takže ho karta zobrazí okamžite, aj bez pripojenia."
+        },
+        {
+          "p": "Texty nástrojov ProxMenux a aplikácií OCI sa riadia jazykom Monitora. Texty Community Scripts pochádzajú z ich projektu a zobrazujú sa v angličtine."
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Súvisiace stránky",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/oci-manager",
+                "label": "Správca OCI aplikácií",
+                "tail": "ako sa z obrazu OCI stane LXC a ako sa inštaluje."
+              },
+              {
+                "href": "/docs/monitor/dashboard/apps",
+                "label": "Karta Aplikácie",
+                "tail": "už nainštalované aplikácie s ich odkazmi a aktualizáciami."
+              },
+              {
+                "href": "/docs/create-vm/lxc",
+                "label": "Vytvoriť LXC zo šablóny",
+                "tail": "sprievodca otváraný z Katalógu."
+              },
+              {
+                "href": "/docs/monitor/dashboard/settings#navigation-order",
+                "label": "Karta Nastavenia",
+                "tail": "poradie kariet v hornej lište."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

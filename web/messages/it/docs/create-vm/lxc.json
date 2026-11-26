@@ -28,7 +28,7 @@
               ],
               [
                 "Catalogo del Monitor",
-                "La voce <strong>Crea LXC da modello</strong> del catalogo <appsLink>Applicazioni</appsLink> apre la stessa procedura."
+                "La voce <strong>Crea LXC da modello</strong> della scheda <catalogLink>Catalogo</catalogLink>, mostrata come Menux nella barra superiore, apre la stessa procedura."
               ],
               [
                 "Menu della console",
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Chi può usarla",
-            "body": "Nel Monitor la procedura richiede il profilo <strong>Amministratore</strong>: per gli altri profili il pulsante non compare e la voce del catalogo mostra solo la descrizione. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. La procedura della console viene eseguita come root. Nessuna delle due è disponibile su un host Proxmox Backup Server."
+            "body": "Nel Monitor la procedura richiede il profilo <strong>Amministratore</strong>, e per gli altri profili il pulsante non compare. Nel Catalogo, un profilo con <strong>Eseguire script e strumenti</strong> che non è Amministratore ha un pulsante <strong>Apri</strong> nella voce, che esegue la procedura della console in un terminale; senza quell’azione la voce mostra solo la descrizione. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. La procedura della console viene eseguita come root. Nessuna delle due è disponibile su un host Proxmox Backup Server."
           }
         }
       ]

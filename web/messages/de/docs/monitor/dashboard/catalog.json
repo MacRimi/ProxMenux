@@ -1,0 +1,281 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Registerkarte Katalog | ProxMenux-Dokumentation",
+    "description": "Die Registerkarte Katalog von ProxMenux Monitor, angezeigt als Menux: die OCI-Anwendungen, die ProxMenux-Werkzeuge, die VMs, die ProxMenux erstellt, und die Community Scripts an einem Ort, jeweils mit eigenem Datenblatt und mit denselben Schritten ausgeführt wie im Konsolenmenü."
+  },
+  "header": {
+    "title": "Dashboard: Registerkarte Katalog",
+    "description": "Alles, was ProxMenux installieren oder ausführen kann, in einer Registerkarte: Anwendungen, Werkzeuge des Menüs und Skripte, jeweils mit einem Datenblatt, das sie beschreibt, bevor etwas ausgeführt wird.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "Die Registerkarte Katalog erscheint in der oberen Leiste als <strong>Menux</strong>. Sie vereint, was das Konsolenmenü von ProxMenux bietet, und die Anwendungen, die es installiert, sodass sie im Monitor gefunden, nachgelesen und ausgeführt werden können. Beim Ausführen eines Eintrags öffnet sich im Monitor ein Terminal mit denselben Schritten wie im Konsolenmenü. Die Registerkarte enthält vier Arten von Einträgen:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Art",
+              "Was es ist",
+              "Was sein Datenblatt bietet"
+            ],
+            "rows": [
+              [
+                "OCI-Anwendungen",
+                "Die Anwendungen von <ociLink>OCI manager Apps</ociLink>, gekennzeichnet mit <strong>OCI</strong>, mit ihrem Herausgeber.",
+                "<strong>Installieren</strong> und <strong>Erweiterte Installation</strong>, die beiden unter <ociModesLink>OCI manager Apps</ociModesLink> beschriebenen Modi."
+              ],
+              [
+                "ProxMenux-Werkzeuge",
+                "Die Optionen des Konsolenmenüs, gruppiert nach seinen Abschnitten: Einstellungen nach der Installation, GPUs, Festplatten, Speicher, Netzwerk, Sicherheit, Dienstprogramme, Backups und Hilfe.",
+                "<strong>Öffnen</strong>, das diese Option startet."
+              ],
+              [
+                "VMs",
+                "Die virtuellen Maschinen, die ProxMenux erstellt, etwa NAS-Systeme oder Linux-Distributionen.",
+                "<strong>VM erstellen</strong>, das den Assistenten dieses Systems startet. Siehe <createVmLink>VM und LXC erstellen</createVmLink>."
+              ],
+              [
+                "Community Scripts",
+                "Die Skripte des Projekts Community Scripts, gekennzeichnet mit dessen Logo. Sie lassen sich in den Einstellungen der Registerkarte ausblenden.",
+                "<strong>Skript ausführen</strong>, das das Skript von Community Scripts ausführt."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-home.png",
+            "alt": "Registerkarte Katalog mit dem Suchfeld, der Einstellungsschaltfläche, einer empfohlenen Anwendung und den ProxMenux-Werkzeugen",
+            "caption": "Die Registerkarte Katalog, in der oberen Leiste als Menux angezeigt."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Wer die Registerkarte sieht",
+            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Menux</strong> enthält. Zum Installieren, Ausführen oder Öffnen eines Eintrags ist die Aktion <strong>Skripte und Werkzeuge ausführen</strong> nötig; ohne sie sind die Datenblätter schreibgeschützt und haben keine Schaltflächen. So sieht das Profil <strong>Beobachter</strong> die Registerkarte. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Monitor eines Proxmox-Backup-Server-Hosts hat keine Registerkarte Katalog."
+          }
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "title": "Hauptansicht",
+      "intro": "Ohne Suche zeigt die Registerkarte von oben nach unten:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Bereich",
+              "Was er zeigt"
+            ],
+            "rows": [
+              [
+                "Empfohlen",
+                "Sechs bei jedem Besuch zufällig gewählte Anwendungen, die mit Screenshots zuerst. Sie wechseln alle paar Sekunden und halten an, solange der Mauszeiger darüber steht. <strong>Details anzeigen</strong> öffnet das Datenblatt."
+              ],
+              [
+                "ProxMenux-Werkzeuge",
+                "Eine Kachel pro Abschnitt des Konsolenmenüs. <strong>ProxMenux-Plugins</strong> wird als <strong>Demnächst</strong> angezeigt."
+              ],
+              [
+                "Werkzeuge von Community Scripts",
+                "Die Skripte von Community Scripts, die auf den Proxmox-Host wirken, gruppiert nach ihrer Kategorie."
+              ],
+              [
+                "App-Kategorien",
+                "<strong>Alle Apps</strong> und eine Kachel pro Kategorie, beginnend mit der Kategorie mit den meisten Anwendungen."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Eine Kachel öffnet ihren Abschnitt oder ihre Kategorie: eine Liste von Karten mit einer Schaltfläche <strong>Katalog</strong> zum Zurückgehen und der Anzahl der Einträge. Ein Abschnitt des Menüs behält die Reihenfolge des Menüs bei und listet unter <strong>Externe Skripte</strong> getrennt die Skripte anderer Projekte auf, die das Menü ausführt. Eine Kategorie ist nach Namen sortiert."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-category.png",
+            "alt": "Kategorie Media & Streaming mit 87 Einträgen, jede Karte mit Symbol, OCI-Kennzeichen, Kategorie, Herausgeber und Architekturen",
+            "caption": "Eine Kategorie, mit ausgeblendeten Community Scripts."
+          }
+        },
+        {
+          "p": "Jede Karte zeigt Symbol, Namen, eine Zusammenfassung und die Kategorie oder den Abschnitt. OCI-Anwendungen ergänzen das Kennzeichen <strong>OCI</strong> und ihren Herausgeber: <strong>Offiziell</strong>, wenn das Image vom Projekt selbst veröffentlicht wird, LinuxServer.io oder den Namen eines anderen Herausgebers. Community Scripts ergänzen ihr Logo und das, was sie erstellen: <strong>LXC</strong>, <strong>VM</strong>, eine Änderung am Host oder ein Add-on für einen vorhandenen Gast. Optionen des Menüs, die ein Skript eines anderen Projekts ausführen, sind mit <strong>Drittanbieter</strong> und dessen Namen gekennzeichnet. Anwendungen zeigen die unterstützten Architekturen, <code>amd64</code> und <code>arm64</code>; auf einem ARM64-Host werden nur die Anwendungen und Skripte aufgeführt, die sie unterstützen."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-tools.png",
+            "alt": "Abschnitt Disk Manager mit sieben Werkzeugen des Konsolenmenüs, jedes mit dem ProxMenux-Logo und dem Chip Disk Manager",
+            "caption": "Der Abschnitt Disk Manager, mit denselben Optionen wie das Konsolenmenü."
+          }
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Suche und Einstellungen",
+      "blocks": [
+        {
+          "p": "Das Suchfeld findet Anwendungen und Werkzeuge über den Anfang jedes Worts ihres Namens, ohne Rücksicht auf Akzente oder Groß- und Kleinschreibung, und auch über den Herausgeber, etwa <code>official</code> oder <code>linuxserver</code>. Die Ergebnisse sind in <strong>Apps</strong> und <strong>Werkzeuge</strong> aufgeteilt, mit den ProxMenux-Einträgen zuerst, dann den OCI-Anwendungen und danach den Community Scripts."
+        },
+        {
+          "p": "Die Schaltfläche neben dem Suchfeld öffnet die <strong>Katalogeinstellungen</strong>. Sie werden im Browser gespeichert, sodass jeder Browser eigene hat:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Einstellung",
+              "Standard",
+              "Was sie ändert"
+            ],
+            "rows": [
+              [
+                "Community Scripts einbeziehen",
+                "Ein",
+                "Zeigt die Community Scripts in der Suche, den Abschnitten, den Kategorien und den empfohlenen Anwendungen. Ausgeschaltet listet die Registerkarte nur ProxMenux- und OCI-Einträge."
+              ],
+              [
+                "Erweiterte Suche",
+                "Aus",
+                "Findet nach den Treffern im Namen auch Einträge, deren Beschreibung oder Kategorie die Wörter erwähnt."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-settings.png",
+            "alt": "Bereich Katalogeinstellungen mit den Schaltern Community Scripts einbeziehen und Erweiterte Suche",
+            "caption": "Katalogeinstellungen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sheet",
+      "title": "Das Datenblatt eines Eintrags",
+      "blocks": [
+        {
+          "p": "Eine Karte öffnet das Datenblatt des Eintrags, das ihn beschreibt, bevor etwas ausgeführt wird. Sein Kopf zeigt den Namen, die Zusammenfassung und Badges: die Kategorie, <strong>1 Container</strong> oder <strong>Mehrere Container</strong>, <strong>Unprivilegierter LXC</strong> oder <strong>Privilegierter LXC</strong>, <strong>Getestet</strong> für OCI-Anwendungen, die bereits in echten Installationen getestet wurden, <strong>Aktualisierbar</strong> für Community Scripts, die das Installierte aktualisieren können, und die Architekturen. Darunter, je nach Eintrag:"
+        },
+        {
+          "list": {
+            "items": [
+              "Screenshots der Anwendung, jeweils mit ihrer Quelle.",
+              "<strong>Was es ist</strong> oder <strong>Was es macht</strong> und die <strong>Hinweise</strong>, die vor der Installation zu lesen sind, etwa der Bedarf an einer GPU oder die ersten Schritte nach der Installation.",
+              "<strong>Erstellte Container</strong> bei Anwendungen aus mehreren Diensten, jeder in einem eigenen LXC. Siehe <stacksLink>Anwendungen mit mehreren Containern</stacksLink>.",
+              "<strong>Angewendete Einstellungen</strong> oder <strong>Wählbare Einstellungen</strong> bei den Optionen nach der Installation.",
+              "<strong>Empfohlene Installation</strong>, <strong>Standardeinstellungen</strong> oder <strong>Ressourcen des Skripts</strong>: Kerne, RAM, Swap, Festplatte und System, mit den Ports zum Erreichen der Anwendung, ihrem Speicher, dem Image oder dem Skript und seiner Version.",
+              "Die Schaltflächen zum Installieren oder Ausführen und <strong>Links</strong> zur offiziellen Website, zur Dokumentation, zum Quellcode und zur ProxMenux-Dokumentation."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-sheet-oci.png",
+            "alt": "Datenblatt der OCI-Anwendung Jellyfin mit Screenshots, Beschreibung, Hinweisen, empfohlener Installation, Ports, Speicher, Herausgeber, Image, den Schaltflächen Installieren und Erweiterte Installation und den Links",
+            "caption": "Das Datenblatt einer OCI-Anwendung."
+          }
+        },
+        {
+          "p": "Wird dieselbe Anwendung aus mehreren Quellen angeboten, etwa als OCI-Anwendung und als Skript von Community Scripts, listet das Datenblatt die anderen unter <strong>Auch verfügbar</strong> auf."
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "title": "Einen Eintrag ausführen",
+      "blocks": [
+        {
+          "p": "Die Schaltflächen des Datenblatts öffnen im Monitor ein Terminal, dessen Titel aus dem Namen des Eintrags und <strong>installieren</strong>, <strong>ausführen</strong> oder <strong>öffnen</strong> besteht und das dieselben Schritte wie das Konsolenmenü ausführt. Die Fragen jedes Ablaufs, etwa nach dem Speicher oder die Bestätigung vor einer Änderung, erscheinen in diesem Terminal wie in der Konsole."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-run.png",
+            "alt": "Terminal mit dem Titel Open SMART Disk Health & Test, in dem der Dialog zur Festplattenauswahl des Konsolenmenüs läuft",
+            "caption": "Ein Werkzeug des Menüs, aus dem Katalog in einem eigenen Terminal geöffnet."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Eintrag",
+              "Was ausgeführt wird"
+            ],
+            "rows": [
+              [
+                "OCI-Anwendung",
+                "Die Installation von OCI manager Apps im Standard- oder erweiterten Modus. Sie erfordert Proxmox VE 9.1 oder neuer; bei einer älteren Version bricht die Installation im Terminal mit dieser Meldung ab. Die installierte Anwendung wird danach wie unter <ociMonitorLink>OCI manager Apps in ProxMenux Monitor</ociMonitorLink> beschrieben verwaltet."
+              ],
+              [
+                "ProxMenux-Werkzeug oder VM",
+                "Diese Option des Konsolenmenüs, ohne den Rest des Menüs drumherum."
+              ],
+              [
+                "LXC aus einer Vorlage erstellen",
+                "Für Administratoren öffnet es statt eines Terminals den Assistenten <lxcLink>LXC erstellen</lxcLink> des Monitors. Andere Profile mit <strong>Skripte und Werkzeuge ausführen</strong> erhalten in seinem Datenblatt eine Schaltfläche <strong>Öffnen</strong>, die den Konsolenassistenten in einem Terminal ausführt."
+              ],
+              [
+                "Skript von Community Scripts",
+                "Das Skript des Projekts Community Scripts, das beim Ausführen aus seinem Repository heruntergeladen wird. Es fragt im Terminal nach der Variante des Systems und bei einem Add-on, wo es ausgeführt werden soll."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Alles läuft als root auf dem Host",
+            "body": "Jeder Eintrag läuft auf dem Proxmox-Host mit den Berechtigungen des Monitors, wie aus dem Konsolenmenü. Die Community Scripts sind Code eines anderen Projekts und werden bei jeder Ausführung aus dem Internet heruntergeladen. Sie benötigen daher eine Verbindung, auch wenn die Registerkarte sie aus ihrer gespeicherten Liste anzeigt."
+          }
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Woher die Liste kommt",
+      "blocks": [
+        {
+          "p": "Die OCI-Anwendungen stammen aus dem Katalog von OCI manager Apps, der mit ProxMenux installiert wird. Beim Öffnen der Registerkarte prüft der Monitor im Hintergrund, höchstens alle sechs Stunden, ob sich der Katalog auf GitHub geändert hat, und holt die neuen Anwendungen mit ihren Übersetzungen. Die Liste der Community Scripts wird auf dem Host gespeichert und im Hintergrund alle sechs Stunden erneuert, sodass die Registerkarte sie sofort anzeigt, auch ohne Verbindung."
+        },
+        {
+          "p": "Die Texte der ProxMenux-Werkzeuge und der OCI-Anwendungen folgen der Sprache des Monitors. Die Texte der Community Scripts stammen aus deren Projekt und werden auf Englisch angezeigt."
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Verwandte Seiten",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/oci-manager",
+                "label": "OCI manager Apps",
+                "tail": "wie ein OCI-Image zu einem LXC wird und wie es installiert wird."
+              },
+              {
+                "href": "/docs/monitor/dashboard/apps",
+                "label": "Registerkarte Apps",
+                "tail": "die bereits installierten Anwendungen mit ihren Links und Updates."
+              },
+              {
+                "href": "/docs/create-vm/lxc",
+                "label": "LXC aus einer Vorlage erstellen",
+                "tail": "der Assistent, der aus dem Katalog geöffnet wird."
+              },
+              {
+                "href": "/docs/monitor/dashboard/settings#navigation-order",
+                "label": "Registerkarte Einstellungen",
+                "tail": "die Reihenfolge der Registerkarten in der oberen Leiste."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

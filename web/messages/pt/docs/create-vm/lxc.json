@@ -28,7 +28,7 @@
               ],
               [
                 "Catálogo do Monitor",
-                "A entrada <strong>Criar LXC a partir de modelo</strong> do catálogo <appsLink>Apps</appsLink> abre o mesmo assistente."
+                "A entrada <strong>Criar LXC a partir de modelo</strong> da aba <catalogLink>Catálogo</catalogLink>, exibida como Menux na barra superior, abre o mesmo assistente."
               ],
               [
                 "Menu do console",
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Quem pode usar",
-            "body": "No Monitor, o assistente exige o perfil <strong>Administrador</strong>: o botão não aparece para outros perfis, e a entrada do catálogo mostra apenas sua descrição. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O assistente do console é executado como root. Nenhum dos dois está disponível em um host Proxmox Backup Server."
+            "body": "No Monitor, o assistente exige o perfil <strong>Administrador</strong>, e o botão não aparece para outros perfis. No Catálogo, um perfil com <strong>Executar scripts e ferramentas</strong> que não seja Administrador recebe um botão <strong>Abrir</strong> na entrada, que executa o assistente do console em um terminal; sem essa ação, a entrada mostra apenas sua descrição. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O assistente do console é executado como root. Nenhum dos dois está disponível em um host Proxmox Backup Server."
           }
         }
       ]

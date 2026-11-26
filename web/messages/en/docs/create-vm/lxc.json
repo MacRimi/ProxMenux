@@ -25,7 +25,7 @@
               ],
               [
                 "Catalog of the Monitor",
-                "The <strong>Create LXC from template</strong> entry of the <appsLink>Apps</appsLink> catalog opens the same wizard."
+                "The <strong>Create LXC from template</strong> entry of the <catalogLink>Catalog</catalogLink> tab, shown as Menux in the top bar, opens the same wizard."
               ],
               [
                 "Console menu",
@@ -37,7 +37,7 @@
         {
           "calloutInfo": {
             "title": "Who can use it",
-            "body": "In the Monitor the wizard needs the <strong>Administrator</strong> profile: the button does not appear for other profiles, and the catalog entry shows only its description. Profiles are described in <accessLink>Users and profiles</accessLink>. The console wizard runs as root. Neither is available on a Proxmox Backup Server host."
+            "body": "In the Monitor the wizard needs the <strong>Administrator</strong> profile, and the button does not appear for other profiles. In the Catalog, a profile with <strong>Run scripts and tools</strong> that is not Administrator gets an <strong>Open</strong> button in the entry, which runs the console wizard in a terminal; without that action the entry shows only its description. Profiles are described in <accessLink>Users and profiles</accessLink>. The console wizard runs as root. Neither is available on a Proxmox Backup Server host."
           }
         }
       ]

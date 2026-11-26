@@ -66,6 +66,7 @@
       "dashboard": "Panel",
       "dashboardSystemOverview": "Pestaña Resumen del sistema",
       "dashboardApps": "Pestaña Apps",
+      "dashboardCatalog": "Pestaña Catálogo",
       "dashboardStorage": "Pestaña Almacenamiento",
       "dashboardNetwork": "Pestaña Red",
       "dashboardVmsLxcs": "Pestaña VMs y LXCs",

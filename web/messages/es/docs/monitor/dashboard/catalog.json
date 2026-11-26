@@ -1,0 +1,281 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Panel: pestaña Catálogo | Documentación de ProxMenux",
+    "description": "La pestaña Catálogo de ProxMenux Monitor, que aparece como Menux: las aplicaciones OCI, las herramientas de ProxMenux, las VMs que crea ProxMenux y los Community Scripts en un mismo sitio, cada uno con su ficha, y se ejecutan con los mismos pasos que en el menú de consola."
+  },
+  "header": {
+    "title": "Panel: pestaña Catálogo",
+    "description": "Todo lo que ProxMenux puede instalar o ejecutar, reunido en una pestaña: aplicaciones, herramientas del menú y scripts, cada uno con una ficha que lo describe antes de ejecutar nada.",
+    "section": "ProxMenux Monitor · Panel"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "La pestaña Catálogo aparece en la barra superior como <strong>Menux</strong>. Reúne lo que ofrece el menú de consola de ProxMenux y las aplicaciones que instala, para poder encontrarlos, consultarlos y ejecutarlos desde el Monitor. Al ejecutar un elemento se abre un terminal en el Monitor con los mismos pasos que en el menú de consola. La pestaña contiene cuatro tipos de elementos:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "Qué es",
+              "Qué ofrece su ficha"
+            ],
+            "rows": [
+              [
+                "Aplicaciones OCI",
+                "Las aplicaciones de <ociLink>OCI manager Apps</ociLink>, marcadas como <strong>OCI</strong>, con quien las publica.",
+                "<strong>Instalar</strong> e <strong>Instalación avanzada</strong>, los dos modos descritos en <ociModesLink>OCI manager Apps</ociModesLink>."
+              ],
+              [
+                "Herramientas de ProxMenux",
+                "Las opciones del menú de consola, agrupadas por sus secciones: ajustes de post-instalación, GPUs, discos, almacenamiento, red, seguridad, utilidades, backups y ayuda.",
+                "<strong>Abrir</strong>, que inicia esa opción."
+              ],
+              [
+                "VMs",
+                "Las máquinas virtuales que crea ProxMenux, como sistemas NAS o distribuciones Linux.",
+                "<strong>Crear VM</strong>, que inicia el asistente de ese sistema. Consulta <createVmLink>Crear VM y LXC</createVmLink>."
+              ],
+              [
+                "Community Scripts",
+                "Los scripts del proyecto Community Scripts, marcados con su logotipo. Se pueden ocultar en los ajustes de la pestaña.",
+                "<strong>Ejecutar script</strong>, que ejecuta el script de Community Scripts."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-home.png",
+            "alt": "Pestaña Catálogo con el cuadro de búsqueda, el botón de ajustes, una aplicación destacada y las herramientas de ProxMenux",
+            "caption": "La pestaña Catálogo, que aparece como Menux en la barra superior."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Quién ve la pestaña",
+            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Menux</strong>. Para instalar, ejecutar o abrir un elemento hace falta la acción <strong>Ejecutar scripts y herramientas</strong>; sin ella, las fichas son de solo lectura y no tienen botones. Así ve la pestaña el perfil <strong>Observador</strong>. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El Monitor de un host con Proxmox Backup Server no tiene pestaña Catálogo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "title": "Vista principal",
+      "intro": "Sin una búsqueda, la pestaña muestra, de arriba abajo:",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Parte",
+              "Qué muestra"
+            ],
+            "rows": [
+              [
+                "Destacadas",
+                "Seis aplicaciones elegidas al azar en cada visita, primero las que tienen capturas. Cambian cada pocos segundos y se detienen mientras el puntero está sobre ellas. <strong>Ver detalles</strong> abre la ficha."
+              ],
+              [
+                "Herramientas de ProxMenux",
+                "Un recuadro por cada sección del menú de consola. <strong>Plugins de ProxMenux</strong> aparece como <strong>Próximamente</strong>."
+              ],
+              [
+                "Herramientas de Community Scripts",
+                "Los scripts de Community Scripts que actúan sobre el host de Proxmox, agrupados por su categoría."
+              ],
+              [
+                "Categorías de apps",
+                "<strong>Todas las apps</strong> y un recuadro por categoría, empezando por la que tiene más aplicaciones."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Un recuadro abre su sección o categoría: una lista de tarjetas con un botón <strong>Catálogo</strong> para volver y el número de elementos. Una sección del menú mantiene el orden del menú y muestra aparte, bajo <strong>Scripts externos</strong>, los scripts de otros proyectos que ejecuta el menú. Una categoría se ordena por nombre."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-category.png",
+            "alt": "Categoría Media & Streaming con 87 elementos, cada tarjeta con su icono, la marca OCI, la categoría, quien la publica y las arquitecturas",
+            "caption": "Una categoría, con los Community Scripts ocultos."
+          }
+        },
+        {
+          "p": "Cada tarjeta muestra el icono, el nombre, un resumen y la categoría o sección. Las aplicaciones OCI añaden la marca <strong>OCI</strong> y quien las publica: <strong>Oficial</strong> cuando la imagen la publica el propio proyecto, LinuxServer.io o el nombre de otro editor. Los Community Scripts añaden su logotipo y lo que crean: <strong>LXC</strong>, <strong>VM</strong>, un cambio en el host o un add-on para un invitado existente. Las opciones del menú que ejecutan un script de otro proyecto se marcan como <strong>Terceros</strong>, con su nombre. Las aplicaciones muestran las arquitecturas que admiten, <code>amd64</code> y <code>arm64</code>; en un host ARM64 solo aparecen las aplicaciones y los scripts que lo admiten."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-tools.png",
+            "alt": "Sección Disk Manager con siete herramientas del menú de consola, cada una con el logotipo de ProxMenux y la etiqueta Disk Manager",
+            "caption": "La sección Disk Manager, con las mismas opciones que el menú de consola."
+          }
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Búsqueda y ajustes",
+      "blocks": [
+        {
+          "p": "El cuadro de búsqueda encuentra aplicaciones y herramientas por el comienzo de cada palabra de su nombre, sin distinguir tildes ni mayúsculas, y también por quien las publica, como <code>official</code> o <code>linuxserver</code>. Los resultados se dividen en <strong>Apps</strong> y <strong>Herramientas</strong>, con los elementos de ProxMenux primero, después las aplicaciones OCI y luego los Community Scripts."
+        },
+        {
+          "p": "El botón junto al cuadro de búsqueda abre <strong>Ajustes del catálogo</strong>. Se guardan en el navegador, así que cada navegador tiene los suyos:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Ajuste",
+              "Por defecto",
+              "Qué cambia"
+            ],
+            "rows": [
+              [
+                "Incluir Community Scripts",
+                "Activado",
+                "Muestra los Community Scripts en la búsqueda, las secciones, las categorías y las aplicaciones destacadas. Desactivado, la pestaña solo muestra elementos de ProxMenux y OCI."
+              ],
+              [
+                "Búsqueda amplia",
+                "Desactivado",
+                "Encuentra también lo que menciona las palabras en su descripción o categoría, después de las coincidencias por nombre."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-settings.png",
+            "alt": "Panel Ajustes del catálogo con los interruptores Incluir Community Scripts y Búsqueda amplia",
+            "caption": "Ajustes del catálogo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sheet",
+      "title": "La ficha de un elemento",
+      "blocks": [
+        {
+          "p": "Una tarjeta abre la ficha del elemento, que lo describe antes de ejecutar nada. Su cabecera muestra el nombre, el resumen y unas insignias: la categoría, <strong>1 contenedor</strong> o <strong>Varios contenedores</strong>, <strong>LXC sin privilegios</strong> o <strong>LXC con privilegios</strong>, <strong>Probada</strong> para las aplicaciones OCI ya probadas en instalaciones reales, <strong>Actualizable</strong> para los Community Scripts que pueden actualizar lo que instalan, y las arquitecturas. Debajo, según el elemento:"
+        },
+        {
+          "list": {
+            "items": [
+              "Capturas de la aplicación, cada una con su fuente.",
+              "<strong>Qué es</strong> o <strong>Qué hace</strong>, y las <strong>Notas</strong> que conviene leer antes de instalar, como la necesidad de una GPU o los primeros pasos tras la instalación.",
+              "<strong>Contenedores que se crean</strong>, en las aplicaciones formadas por varios servicios, cada uno en su propio LXC. Consulta <stacksLink>Aplicaciones multicontenedor</stacksLink>.",
+              "<strong>Ajustes que aplica</strong> o <strong>Ajustes que puedes elegir</strong>, en las opciones de post-instalación.",
+              "<strong>Instalación sugerida</strong>, <strong>Configuración por defecto</strong> o <strong>Recursos del script</strong>: núcleos, RAM, swap, disco y sistema, con los puertos para acceder a la aplicación, su almacenamiento, la imagen o el script y su versión.",
+              "Los botones para instalarlo o ejecutarlo, y <strong>Enlaces</strong> a la web oficial, la documentación, el código fuente y la documentación de ProxMenux."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-sheet-oci.png",
+            "alt": "Ficha de la aplicación OCI Jellyfin con sus capturas, descripción, notas, instalación sugerida, puertos, almacenamiento, quien la publica, imagen, los botones Instalar e Instalación avanzada y los enlaces",
+            "caption": "La ficha de una aplicación OCI."
+          }
+        },
+        {
+          "p": "Cuando la misma aplicación se ofrece desde varias fuentes, por ejemplo como aplicación OCI y como script de Community Scripts, la ficha muestra las demás en <strong>También disponible</strong>."
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "title": "Ejecutar un elemento",
+      "blocks": [
+        {
+          "p": "Los botones de la ficha abren un terminal en el Monitor, con el título <strong>Instalar</strong>, <strong>Ejecutar</strong> o <strong>Abrir</strong> y el nombre del elemento, que ejecuta los mismos pasos que el menú de consola. Las preguntas de cada flujo, como el almacenamiento o la confirmación antes de cambiar nada, aparecen en ese terminal igual que en la consola."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-run.png",
+            "alt": "Terminal con el título Open SMART Disk Health & Test que ejecuta el diálogo de selección de discos del menú de consola",
+            "caption": "Una herramienta del menú abierta desde el Catálogo, en su propio terminal."
+          }
+        },
+        {
+          "table": {
+            "headers": [
+              "Elemento",
+              "Qué se ejecuta"
+            ],
+            "rows": [
+              [
+                "Aplicación OCI",
+                "La instalación de OCI manager Apps, en su modo por defecto o avanzado. Requiere Proxmox VE 9.1 o posterior; en una versión anterior la instalación se detiene en el terminal con ese mensaje. La aplicación instalada se gestiona después como se describe en <ociMonitorLink>OCI manager Apps en ProxMenux Monitor</ociMonitorLink>."
+              ],
+              [
+                "Herramienta de ProxMenux o VM",
+                "Esa opción del menú de consola, sin el resto del menú alrededor."
+              ],
+              [
+                "Crear LXC a partir de una plantilla",
+                "Para los administradores abre el asistente <lxcLink>Crear LXC</lxcLink> del Monitor en lugar de un terminal. Los demás perfiles con <strong>Ejecutar scripts y herramientas</strong> tienen un botón <strong>Abrir</strong> en su ficha, que ejecuta el asistente de consola en un terminal."
+              ],
+              [
+                "Script de Community Scripts",
+                "El script del proyecto Community Scripts, que se descarga de su repositorio al ejecutarse. Pregunta en el terminal por la variante del sistema y, si es un add-on, dónde ejecutarlo."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Todo se ejecuta en el host como root",
+            "body": "Cada elemento se ejecuta en el host de Proxmox con los permisos del Monitor, igual que desde el menú de consola. Los Community Scripts son código de otro proyecto y se descargan de internet cada vez que se ejecutan, así que necesitan conexión aunque la pestaña los muestre desde su lista guardada."
+          }
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "De dónde sale la lista",
+      "blocks": [
+        {
+          "p": "Las aplicaciones OCI vienen del catálogo de OCI manager Apps instalado con ProxMenux. Al abrir la pestaña, el Monitor comprueba en segundo plano, como mucho cada seis horas, si el catálogo ha cambiado en GitHub, y trae las nuevas aplicaciones con sus traducciones. La lista de Community Scripts se guarda en el host y se renueva en segundo plano cada seis horas, así que la pestaña la muestra al momento, también sin conexión."
+        },
+        {
+          "p": "Los textos de las herramientas de ProxMenux y de las aplicaciones OCI siguen el idioma del Monitor. Los textos de los Community Scripts vienen de su proyecto y se muestran en inglés."
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Páginas relacionadas",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/oci-manager",
+                "label": "OCI manager Apps",
+                "tail": "cómo una imagen OCI se convierte en un LXC y cómo se instala."
+              },
+              {
+                "href": "/docs/monitor/dashboard/apps",
+                "label": "Pestaña Apps",
+                "tail": "las aplicaciones ya instaladas, con sus enlaces y actualizaciones."
+              },
+              {
+                "href": "/docs/create-vm/lxc",
+                "label": "Crear LXC a partir de una plantilla",
+                "tail": "el asistente que se abre desde el Catálogo."
+              },
+              {
+                "href": "/docs/monitor/dashboard/settings#navigation-order",
+                "label": "Pestaña Ajustes",
+                "tail": "el orden de las pestañas en la barra superior."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

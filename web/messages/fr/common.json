@@ -66,6 +66,7 @@
       "dashboard": "Tableau de bord",
       "dashboardSystemOverview": "Onglet Vue d’ensemble du système",
       "dashboardApps": "Onglet Applications",
+      "dashboardCatalog": "Onglet Catalogue",
       "dashboardStorage": "Onglet Stockage",
       "dashboardNetwork": "Onglet Réseau",
       "dashboardVmsLxcs": "Onglet VM et LXC",

@@ -66,6 +66,7 @@
       "dashboard": "Dashboard",
       "dashboardSystemOverview": "Scheda Panoramica del sistema",
       "dashboardApps": "Scheda App",
+      "dashboardCatalog": "Scheda Catalogo",
       "dashboardStorage": "Scheda Archiviazione",
       "dashboardNetwork": "Scheda Rete",
       "dashboardVmsLxcs": "Scheda VM e LXC",

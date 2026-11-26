@@ -66,6 +66,7 @@
       "dashboard": "Dashboard",
       "dashboardSystemOverview": "System Overview tab",
       "dashboardApps": "Apps tab",
+      "dashboardCatalog": "Catalog tab",
       "dashboardStorage": "Storage tab",
       "dashboardNetwork": "Network tab",
       "dashboardVmsLxcs": "VMs & LXCs tab",

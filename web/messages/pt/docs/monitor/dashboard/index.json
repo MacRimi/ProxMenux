@@ -29,6 +29,11 @@
         "owns": "Lançador unificado de links web LXC registradas e links personalizados, com categorias, pesquisa, atalhos dos sistemas convidados e indicadores de atualização por aplicação."
       },
       {
+        "name": "Catálogo (Menux)",
+        "linksTo": "/docs/monitor/dashboard/catalog",
+        "owns": "Tudo o que o ProxMenux pode instalar ou executar: aplicativos OCI, ferramentas do menu do console, as VMs que ele cria e Community Scripts, cada um com sua ficha, executados com os mesmos passos do menu do console."
+      },
+      {
         "name": "Armazenamento",
         "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "pools Proxmox, discos físicos, dados SMART, estado ZFS, desgaste & vida útil, histórico de observação."

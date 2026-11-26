@@ -1,0 +1,251 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor Dashboard: Catalog tab | ProxMenux Documentation",
+    "description": "The Catalog tab of ProxMenux Monitor, shown as Menux: the OCI applications, the ProxMenux tools, the VMs ProxMenux creates and the Community Scripts in one place, each with its sheet, and run with the same steps as the console menu."
+  },
+  "header": {
+    "title": "Dashboard: Catalog tab",
+    "description": "Everything ProxMenux can install or run, gathered in one tab: applications, tools of the menu and scripts, each with a sheet that describes it before anything is run.",
+    "section": "ProxMenux Monitor · Dashboard"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "The Catalog tab appears in the top bar as <strong>Menux</strong>. It brings together what the console menu of ProxMenux offers and the applications it installs, so they can be found, read about and run from the Monitor. Running an item opens a terminal in the Monitor with the same steps as the console menu. The tab holds four kinds of items:"
+        },
+        {
+          "table": {
+            "headers": ["Kind", "What it is", "What its sheet offers"],
+            "rows": [
+              [
+                "OCI applications",
+                "The applications of <ociLink>OCI manager Apps</ociLink>, marked <strong>OCI</strong>, with their publisher.",
+                "<strong>Install</strong> and <strong>Advanced installation</strong>, the two modes described in <ociModesLink>OCI manager Apps</ociModesLink>."
+              ],
+              [
+                "ProxMenux tools",
+                "The options of the console menu, grouped by its sections: post-install settings, GPUs, disks, storage, network, security, utilities, backups and help.",
+                "<strong>Open</strong>, which starts that option."
+              ],
+              [
+                "VMs",
+                "The virtual machines ProxMenux creates, such as NAS systems or Linux distributions.",
+                "<strong>Create VM</strong>, which starts the wizard of that system. See <createVmLink>Create VM and LXC</createVmLink>."
+              ],
+              [
+                "Community Scripts",
+                "The scripts of the Community Scripts project, marked with its logo. They can be hidden in the settings of the tab.",
+                "<strong>Run script</strong>, which runs the Community Scripts script."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-home.png",
+            "alt": "Catalog tab with the search box, the settings button, a featured application and the ProxMenux tools",
+            "caption": "The Catalog tab, shown as Menux in the top bar."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Who sees the tab",
+            "body": "The tab appears when the profile of the account includes the <strong>Menux</strong> area. Installing, running or opening an item needs the action <strong>Run scripts and tools</strong>; without it the sheets are read-only and have no buttons. The <strong>Observer</strong> profile sees the tab this way. Profiles are described in <accessLink>Users and profiles</accessLink>. The Monitor of a Proxmox Backup Server host has no Catalog tab."
+          }
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "title": "Main view",
+      "intro": "Without a search, the tab shows, from top to bottom:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Part", "What it shows"],
+            "rows": [
+              [
+                "Featured",
+                "Six applications chosen at random on each visit, those with screenshots first. They change every few seconds and stop while the pointer is over them. <strong>View details</strong> opens the sheet."
+              ],
+              [
+                "ProxMenux tools",
+                "One tile per section of the console menu. <strong>ProxMenux plugins</strong> is shown as <strong>Coming soon</strong>."
+              ],
+              [
+                "Community Scripts tools",
+                "The Community Scripts scripts that act on the Proxmox host, grouped by their category."
+              ],
+              [
+                "App categories",
+                "<strong>All apps</strong> and one tile per category, from the one with most applications."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "A tile opens its section or category: a list of cards with a <strong>Catalog</strong> button to go back and the number of items. A section of the menu keeps the order of the menu, and lists apart, under <strong>External scripts</strong>, the scripts of other projects that the menu runs. A category is sorted by name."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-category.png",
+            "alt": "Media & Streaming category with 87 items, each card with its icon, the OCI mark, the category, the publisher and the architectures",
+            "caption": "A category, with the Community Scripts hidden."
+          }
+        },
+        {
+          "p": "Each card shows the icon, the name, a summary and the category or section. OCI applications add the <strong>OCI</strong> mark and their publisher: <strong>Official</strong> when the image is published by the project itself, LinuxServer.io or the name of another publisher. Community Scripts add their logo and what they create: <strong>LXC</strong>, <strong>VM</strong>, a change on the host or an add-on for an existing guest. Options of the menu that run a script of another project are marked <strong>Third party</strong>, with its name. Applications show the architectures they support, <code>amd64</code> and <code>arm64</code>; on an ARM64 host only the applications and scripts that support it are listed."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-tools.png",
+            "alt": "Disk Manager section with seven tools of the console menu, each with the ProxMenux logo and the Disk Manager chip",
+            "caption": "The Disk Manager section, with the same options as the console menu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Search and settings",
+      "blocks": [
+        {
+          "p": "The search box finds applications and tools by the start of each word of their name, without regard to accents or case, and also by publisher, such as <code>official</code> or <code>linuxserver</code>. The results are split into <strong>Apps</strong> and <strong>Tools</strong>, with ProxMenux items first, then OCI applications and then Community Scripts."
+        },
+        {
+          "p": "The button next to the search box opens <strong>Catalog settings</strong>. They are kept in the browser, so each browser has its own:"
+        },
+        {
+          "table": {
+            "headers": ["Setting", "Default", "What it changes"],
+            "rows": [
+              [
+                "Include Community Scripts",
+                "On",
+                "Shows the Community Scripts in the search, the sections, the categories and the featured applications. Off, the tab lists only ProxMenux and OCI items."
+              ],
+              [
+                "Broad search",
+                "Off",
+                "Also finds what mentions the words in its description or category, after the matches by name."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-settings.png",
+            "alt": "Catalog settings panel with the Include Community Scripts and Broad search switches",
+            "caption": "Catalog settings."
+          }
+        }
+      ]
+    },
+    {
+      "id": "sheet",
+      "title": "The sheet of an item",
+      "blocks": [
+        {
+          "p": "A card opens the sheet of the item, which describes it before anything is run. Its header shows the name, the summary and badges: the category, <strong>1 container</strong> or <strong>Several containers</strong>, <strong>Unprivileged LXC</strong> or <strong>Privileged LXC</strong>, <strong>Tested</strong> for the OCI applications already tested in real installations, <strong>Updatable</strong> for the Community Scripts that can update what they install, and the architectures. Below it, depending on the item:"
+        },
+        {
+          "list": {
+            "items": [
+              "Screenshots of the application, each with its source.",
+              "<strong>What it is</strong> or <strong>What it does</strong>, and the <strong>Notes</strong> to read before installing, such as the need for a GPU or the first steps after the installation.",
+              "<strong>Containers it creates</strong>, for applications made of several services, each in its own LXC. See <stacksLink>Multi-container applications</stacksLink>.",
+              "<strong>Settings it applies</strong> or <strong>Settings you can choose</strong>, for the post-install options.",
+              "<strong>Suggested installation</strong>, <strong>Default settings</strong> or <strong>Script resources</strong>: cores, RAM, swap, disk and system, with the ports to reach the application, its storage, the image or the script and its version.",
+              "The buttons to install or run it, and <strong>Links</strong> to the official website, the documentation, the source code and the ProxMenux documentation."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-sheet-oci.png",
+            "alt": "Sheet of the Jellyfin OCI application with its screenshots, description, notes, suggested installation, ports, storage, publisher, image, the Install and Advanced installation buttons and the links",
+            "caption": "The sheet of an OCI application."
+          }
+        },
+        {
+          "p": "When the same application is offered from several sources, for example as an OCI application and as a Community Scripts script, the sheet lists the others under <strong>Also available</strong>."
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "title": "Running an item",
+      "blocks": [
+        {
+          "p": "The buttons of the sheet open a terminal in the Monitor, titled <strong>Install</strong>, <strong>Run</strong> or <strong>Open</strong> and the name of the item, which runs the same steps as the console menu. The questions of each flow, such as the storage or the confirmation before changing anything, appear in that terminal as in the console."
+        },
+        {
+          "figure": {
+            "src": "/monitor/catalog/catalog-run.png",
+            "alt": "Terminal titled Open SMART Disk Health & Test running the disk selection dialog of the console menu",
+            "caption": "A tool of the menu opened from the Catalog, in its own terminal."
+          }
+        },
+        {
+          "table": {
+            "headers": ["Item", "What runs"],
+            "rows": [
+              [
+                "OCI application",
+                "The installation of OCI manager Apps, in its default or advanced mode. It needs Proxmox VE 9.1 or later; on an older version the installation stops in the terminal with that message. The installed application is then managed as described in <ociMonitorLink>OCI manager Apps in ProxMenux Monitor</ociMonitorLink>."
+              ],
+              [
+                "ProxMenux tool or VM",
+                "That option of the console menu, without the rest of the menu around it."
+              ],
+              [
+                "Create LXC from template",
+                "For Administrators it opens the <lxcLink>Create LXC</lxcLink> wizard of the Monitor instead of a terminal. Other profiles with <strong>Run scripts and tools</strong> get an <strong>Open</strong> button in its sheet, which runs the console wizard in a terminal."
+              ],
+              [
+                "Community Scripts script",
+                "The script of the Community Scripts project, downloaded from its repository when it runs. It asks in the terminal for the variant of the system and, for an add-on, where to run it."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutWarning": {
+            "title": "Everything runs on the host as root",
+            "body": "Every item runs on the Proxmox host with the permissions of the Monitor, as it does from the console menu. The Community Scripts are code of another project and are downloaded from the internet each time they run, so they need a connection even when the tab shows them from its saved list."
+          }
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": "Where the list comes from",
+      "blocks": [
+        {
+          "p": "The OCI applications come from the catalog of OCI manager Apps installed with ProxMenux. When the tab is opened, the Monitor checks in the background, at most every six hours, whether the catalog has changed on GitHub, and brings the new applications with their translations. The list of Community Scripts is kept on the host and renewed in the background every six hours, so the tab shows it at once, also without a connection."
+        },
+        {
+          "p": "The texts of the ProxMenux tools and the OCI applications follow the language of the Monitor. The texts of the Community Scripts come from their project and are shown in English."
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Related",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              { "href": "/docs/oci-manager", "label": "OCI manager Apps", "tail": "how an OCI image becomes an LXC and how it is installed." },
+              { "href": "/docs/monitor/dashboard/apps", "label": "Apps tab", "tail": "the applications already installed, with their links and updates." },
+              { "href": "/docs/create-vm/lxc", "label": "Create LXC from template", "tail": "the wizard opened from the Catalog." },
+              { "href": "/docs/monitor/dashboard/settings#navigation-order", "label": "Settings tab", "tail": "the order of the tabs in the top bar." }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

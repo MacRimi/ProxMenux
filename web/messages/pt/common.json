@@ -66,6 +66,7 @@
       "dashboard": "Painel",
       "dashboardSystemOverview": "Aba Visão geral do sistema",
       "dashboardApps": "Aba Aplicações",
+      "dashboardCatalog": "Aba Catálogo",
       "dashboardStorage": "Aba Armazenamento",
       "dashboardNetwork": "Aba Rede",
       "dashboardVmsLxcs": "Aba VM e LXC",

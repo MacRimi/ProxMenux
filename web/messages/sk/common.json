@@ -66,6 +66,7 @@
       "dashboard": "Panel",
       "dashboardSystemOverview": "Karta Prehľad systému",
       "dashboardApps": "Karta Aplikácie",
+      "dashboardCatalog": "Karta Katalóg",
       "dashboardStorage": "Karta Úložisko",
       "dashboardNetwork": "Karta Sieť",
       "dashboardVmsLxcs": "Karta VM a LXC",

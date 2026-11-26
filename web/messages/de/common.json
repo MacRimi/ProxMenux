@@ -66,6 +66,7 @@
       "dashboard": "Dashboard",
       "dashboardSystemOverview": "Registerkarte Systemübersicht",
       "dashboardApps": "Registerkarte Apps",
+      "dashboardCatalog": "Registerkarte Katalog",
       "dashboardStorage": "Registerkarte Speicher",
       "dashboardNetwork": "Registerkarte Netzwerk",
       "dashboardVmsLxcs": "Registerkarte VMs und LXCs",

@@ -29,6 +29,11 @@
         "owns": "Unified launcher for registered LXC Web Links and custom links, with categories, search, guest shortcuts and per-application update signals."
       },
       {
+        "name": "Catalog (Menux)",
+        "linksTo": "/docs/monitor/dashboard/catalog",
+        "owns": "Everything ProxMenux can install or run: OCI applications, tools of the console menu, the VMs it creates and Community Scripts, each with its sheet, run with the same steps as the console menu."
+      },
+      {
         "name": "Storage",
         "linksTo": "/docs/monitor/dashboard/storage",
         "owns": "Proxmox pools, physical disks, SMART data, ZFS state, wear & lifetime, observation history."
