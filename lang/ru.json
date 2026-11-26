@@ -1934,6 +1934,7 @@
   "Could not resolve the Compose user:": "Не удалось определить пользователя Compose:",
   "Could not resolve the OCI manifest of the image:": "Не удалось определить манифест OCI образа:",
   "Could not resolve the OCI manifest:": "Не удалось определить манифест OCI:",
+  "Could not resolve the application user": "Не удалось определить пользователя приложения",
   "Could not restart ProxMenux Monitor service.": "Не удалось перезапустить службу ProxMenux Monitor.",
   "Could not restart the service — start it manually with systemctl start": "Не удалось перезапустить службу — запустите её вручную командой systemctl start",
   "Could not restore the container setting:": "Не удалось восстановить настройку контейнера:",

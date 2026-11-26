@@ -656,7 +656,7 @@ The variable is declared in `environment` with `"sensitive": true`. In default m
 ]
 ```
 
-A new container disk is an empty filesystem owned by root that carries a `lost+found` directory. `owner_strategy` gives it to `mapped-root`, the root of the container, for an image that starts as root and takes ownership of its directories itself, or to `mapped-application-user`, the user 1000 the application writes with. Without this list every volume is prepared for `mapped-application-user`.
+A new container disk is an empty filesystem owned by root that carries a `lost+found` directory. `owner_strategy` gives it to `mapped-root`, the root of the container, for an image that starts as root and takes ownership of its directories itself, or to `mapped-application-user`, the user the application writes with: the user of the image, replaced by the `user` of the oci-compose, then by `PUID`/`PGID`-style variables and last by `volume_owner`. Without this list every volume is prepared for `mapped-application-user`.
 
 **`startup_healthcheck`**: how the first start is checked.
 
@@ -718,7 +718,7 @@ A profile may also change the image, with `image`, for projects that publish one
 | `completion_notes` | A list of texts printed when the installation ends, for what is left to do by hand |
 | `external_services` | Names of services the application needs already running, such as `["MariaDB"]`. They are announced before the installation asks how to reach them |
 | `generated_files` | Files written in the container before its first start, each with `container_path`, `content`, `owner` and `mode`. With `"only_if_missing": true` a file that already exists in a kept volume is not replaced |
-| `volume_owner` | `uid` and `gid` of the user the application writes with, when it is not 1000 |
+| `volume_owner` | `uid` and `gid` of the user the application writes with, when it is not the user of the image or the one its variables name |
 | `tmpfs_mounts` | Volatile paths with a size and mount options. An optional `owner_strategy` sets ownership to `mapped-root`, `mapped-application-user` (using `uid`/`gid` or `PUID`/`PGID`-style variables), or `image-user` (the effective `lxc.init.uid`/`lxc.init.gid`); `mode` sets permissions. The exact `/run` path requires an owner strategy. |
 | `non_persistent_image_volumes` | Paths the image declares as volumes that are left inside the rootfs |
 | `runtime`, `resources`, `security`, `device_requests`, `extra_hosts` | What the Compose keys of the [translation table](#from-a-compose-file-or-a-docker-run-command-to-an-oci-compose) become |

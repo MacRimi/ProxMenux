@@ -1937,6 +1937,7 @@
   "Could not resolve the Compose user:": "Kunde inte lösa Compose-användaren:",
   "Could not resolve the OCI manifest of the image:": "Kunde inte lösa OCI-manifestet av bilden:",
   "Could not resolve the OCI manifest:": "Kunde inte lösa OCI-manifestet:",
+  "Could not resolve the application user": "Det gick inte att avgöra programmets användare",
   "Could not restart ProxMenux Monitor service.": "Kunde inte starta om tjänsten ProxMenux Monitor.",
   "Could not restart the service — start it manually with systemctl start": "Kunde inte starta om tjänsten — starta den manuellt med systemctl start",
   "Could not restore the container setting:": "Kunde inte återställa behållarinställningen:",

@@ -1937,6 +1937,7 @@
   "Could not resolve the Compose user:": "Impossible de résoudre l'utilisateur Composer :",
   "Could not resolve the OCI manifest of the image:": "Impossible de résoudre le manifeste OCI de l'image :",
   "Could not resolve the OCI manifest:": "Impossible de résoudre le manifeste OCI :",
+  "Could not resolve the application user": "Impossible de déterminer l'utilisateur de l'application",
   "Could not restart ProxMenux Monitor service.": "Impossible de redémarrer le service ProxMenux Monitor.",
   "Could not restart the service — start it manually with systemctl start": "Impossible de redémarrer le service - démarrez-le manuellement avec systemctl start",
   "Could not restore the container setting:": "Impossible de restaurer le paramètre du conteneur :",

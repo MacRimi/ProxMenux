@@ -240,7 +240,7 @@ def create_host_directory(mount,deployment,template=None,config=None):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('operation',choices=('validate','owners'))
+    parser.add_argument('operation',choices=('validate','owners','application-ids'))
     parser.add_argument('--deployment',type=Path,required=True)
     parser.add_argument('--template',type=Path)
     parser.add_argument('--config',type=Path)
@@ -250,6 +250,9 @@ def main():
     plan=json.loads(args.deployment.read_text())
     template=json.loads(args.template.read_text()) if args.template else None
     config=args.config.read_bytes() if args.config else None
+    if args.operation=='application-ids':
+        print('\t'.join(map(str,application_ids(plan,template,config))))
+        return
     if args.archive and any(m.get('idmap') for m in plan.get('mounts',[])):
         config=_archive_config(plan,template,args.archive)
     check_deployment(plan,template,config,require_supported=True)

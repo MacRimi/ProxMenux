@@ -1905,14 +1905,14 @@ if [[ $UNPRIVILEGED_FLAG == 0 ]]; then
 fi
 capture_volume_seeds
 MOUNT_INDEX=0
-CONTAINER_PUID=$(jq -r '[.environment[]? | select(.name == "PUID" or .name == "USER_ID" or .name == "UID") | .value] | last // "0"' "$DEPLOYMENT_FILE")
-CONTAINER_PGID=$(jq -r '[.environment[]? | select(.name == "PGID" or .name == "GROUP_ID" or .name == "GID") | .value] | last // "0"' "$DEPLOYMENT_FILE")
-IMAGE_VOLUME_UID=$(jq -r '.proxmox.installer_profile.volume_owner.uid // empty' "$TEMPLATE_FILE")
-IMAGE_VOLUME_GID=$(jq -r '.proxmox.installer_profile.volume_owner.gid // empty' "$TEMPLATE_FILE")
-[[ -z $IMAGE_VOLUME_UID ]] || CONTAINER_PUID=$IMAGE_VOLUME_UID
-[[ -z $IMAGE_VOLUME_GID ]] || CONTAINER_PGID=$IMAGE_VOLUME_GID
-[[ $CONTAINER_PUID =~ ^[0-9]+$ ]] || CONTAINER_PUID=0
-[[ $CONTAINER_PGID =~ ^[0-9]+$ ]] || CONTAINER_PGID=0
+# The application user starts as the image user and can be replaced by the
+# oci-compose user, PUID/PGID-style variables and volume_owner, in that order.
+APPLICATION_IDS=$(python3 "${SCRIPT_DIR}/oci_mount_idmap.py" application-ids \
+  --deployment "$DEPLOYMENT_FILE" --template "$TEMPLATE_FILE" --config "$CONF" 2>>"${OCI_LOG:-/dev/stderr}") \
+  || die "$(translate "Could not resolve the application user")"
+IFS=$'\t' read -r CONTAINER_PUID CONTAINER_PGID <<<"$APPLICATION_IDS"
+[[ $CONTAINER_PUID =~ ^[0-9]+$ && $CONTAINER_PGID =~ ^[0-9]+$ ]] \
+  || die "$(translate "Could not resolve the application user")"
 if [[ $UNPRIVILEGED_FLAG == 1 ]]; then
   HOST_ROOT_UID=100000
   HOST_ROOT_GID=100000
