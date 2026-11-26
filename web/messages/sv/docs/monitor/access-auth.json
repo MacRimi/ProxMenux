@@ -155,7 +155,7 @@
     "publicIntro": "Inloggning, autentiseringsstatus, första konfigurationen och den lätta slutpunkten <code>/api/system-info</code> är offentliga:",
     "publicItems": [
       "<code>/api/auth/login</code> och <code>/api/auth/status</code> är offentliga. <code>/api/auth/setup</code> skapar första kontot och vägrar skriva över befintliga inloggningsuppgifter.",
-      "<code>/api/system-info</code> är en offentlig ändpunkt med grundläggande systeminformation, inklusive <code>health.status</code>. Den kräver ingen token. Även /api/auth/status är offentlig och passar för en tillgänglighetskontroll."
+      "<code>/api/system-info</code> svarar utan token endast med <code>health.status</code>; värdnamn, drifttid och övriga fält kräver en session eller en token. Även /api/auth/status är offentlig och passar för en tillgänglighetskontroll."
     ],
     "cryptoTitle": "Kryptografi och lagring",
     "cryptoIntro": "ProxMenux Monitor har öppen källkod. Här beskrivs skyddet för uppgifter på värden så att du kan bedöma det innan du väljer att lita på det. Algoritmerna används i <code>scripts/auth_manager.py</code>; avsnittet beskriver koden.",

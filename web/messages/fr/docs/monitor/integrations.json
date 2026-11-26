@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma et autres vérificateurs de statut",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "Pour un contrôle par mot-clé, utilisez <code>GET /api/system-info</code>. Cette route n’exige pas de jeton et renvoie nom d’hôte, durée de fonctionnement et santé : <code>healthy</code>, <code>warning</code> ou <code>critical</code>. Elle est publique, contrairement aux points d’accès détaillés protégés.",
+    "intro": "Pour un contrôle par mot-clé, utilisez <code>GET /api/system-info</code>. Sans jeton, cette route ne renvoie que l’état de santé : <code>healthy</code>, <code>warning</code> ou <code>critical</code> ; avec un jeton, elle ajoute le nom d’hôte et la durée de fonctionnement. Elle est publique, contrairement aux points d’accès détaillés protégés.",
     "kumaTitle": "Uptime Kuma — moniteur de mots clés HTTP",
     "kumaSteps": [
       "Dans Uptime Kuma, cliquez sur <em>+ Ajouter un nouveau moniteur</em>.",

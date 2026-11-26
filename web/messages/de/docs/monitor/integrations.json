@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma und andere Statuschecker",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "Für Schlüsselwortprüfungen nutzen Sie <code>GET /api/system-info</code>. Diese Route verlangt kein Token und liefert Hostname, Laufzeit und Zustand als <code>healthy</code>, <code>warning</code> oder <code>critical</code>. Sie ist öffentlich, anders als die geschützten detaillierten Zustandsendpunkte.",
+    "intro": "Für Schlüsselwortprüfungen nutzen Sie <code>GET /api/system-info</code>. Ohne Token liefert diese Route nur den Zustand als <code>healthy</code>, <code>warning</code> oder <code>critical</code>; mit Token kommen Hostname und Laufzeit hinzu. Sie ist öffentlich, anders als die geschützten detaillierten Zustandsendpunkte.",
     "kumaTitle": "Uptime Kuma — HTTP Keyword Monitor",
     "kumaSteps": [
       "Klicken Sie in Uptime Kuma auf <em>+ Neuen Monitor hinzufügen</em>.",

@@ -155,7 +155,7 @@
     "publicIntro": "El inicio de sesión, su estado, la configuración inicial y el endpoint ligero <code>/api/system-info</code> son públicos:",
     "publicItems": [
       "<code>/api/auth/login</code> y <code>/api/auth/status</code> son públicos. <code>/api/auth/setup</code> crea la cuenta inicial y rechaza sobrescribir credenciales existentes.",
-      "<code>/api/system-info</code> es un endpoint público de información básica del sistema, incluido <code>health.status</code>. No lleva el requisito de token. /api/auth/status también es público y sirve para comprobar disponibilidad."
+      "<code>/api/system-info</code> responde sin token solo con <code>health.status</code>; el nombre del host, el tiempo de actividad y el resto de sus campos requieren una sesión o un token. /api/auth/status también es público y sirve para comprobar disponibilidad."
     ],
     "cryptoTitle": "Criptografía y almacenamiento",
     "cryptoIntro": "ProxMenux Monitor es código abierto — nada de esto es secreto. Documentar el stack aquí de forma explícita es una decisión deliberada: los usuarios que guardan credenciales en su host merecen saber cómo se protegen esas credenciales antes de decidir confiar en ellas. Los algoritmos de abajo son los mismos que usa el código en <code>scripts/auth_manager.py</code>; esta sección es un contrato, no una promesa de marketing.",

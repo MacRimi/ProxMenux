@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma and other status checkers",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "For a keyword-based check, use <code>GET /api/system-info</code>. This route has no token decorator and returns hostname, uptime and a health status mapped to <code>healthy</code>, <code>warning</code> or <code>critical</code>. It is a public probe, unlike the authenticated detailed health endpoints.",
+    "intro": "For a keyword-based check, use <code>GET /api/system-info</code>. Without a token it returns only the health status, mapped to <code>healthy</code>, <code>warning</code> or <code>critical</code>; with one it adds the host name and uptime. It is a public probe, unlike the authenticated detailed health endpoints.",
     "kumaTitle": "Uptime Kuma — HTTP keyword monitor",
     "kumaSteps": [
       "In Uptime Kuma, click <em>+ Add New Monitor</em>.",

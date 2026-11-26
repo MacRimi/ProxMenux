@@ -190,6 +190,9 @@ def auth_status():
                     user = auth_manager.find_user(username)
                     status['local_user'] = user is not None
                     status['totp_enabled'] = bool(user and user.get("totp_enabled"))
+            if not status.get('authenticated'):
+                # Before signing in, nothing about the account is told.
+                status.pop('totp_enabled', None)
 
         return jsonify(status)
     except Exception as e:

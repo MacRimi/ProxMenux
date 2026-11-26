@@ -5,7 +5,7 @@
 
 ![ProxMenux 1.2.9](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/ProxMenux_129.png)
 
-ProxMenux 1.2.9 pasa directamente a estable, sin beta, para que todos reciban sus correcciones a la vez: Proxmox VE 9.2.33 y posteriores mantienen una nueva línea de identidad en cada contenedor, y OCI manager Apps necesita esta versión para seguir actualizando y modificando aplicaciones allí. También corrige tres problemas de seguridad en ProxMenux Monitor, por lo que se recomienda actualizar.
+ProxMenux 1.2.9 pasa directamente a estable, sin beta, para que todos reciban sus correcciones a la vez: Proxmox VE 9.2.33 y posteriores mantienen una nueva línea de identidad en cada contenedor, y OCI manager Apps necesita esta versión para seguir actualizando y modificando aplicaciones allí. También corrige cuatro problemas de seguridad en ProxMenux Monitor, por lo que se recomienda actualizar.
 
 **ProxMenux Monitor** incorpora varios usuarios con perfiles, inicio de sesión con cuentas de Proxmox VE y de OpenID Connect, una pestaña Catálogo con todo lo que ProxMenux puede instalar o ejecutar, y asistentes para crear y eliminar LXC. **OCI manager Apps** añade decenas de aplicaciones, pasa los dispositivos USB por su identidad, actualiza más rápido y conserva lo que cambias en Proxmox, también en las pilas. ProxMenux Monitor funciona ahora en hosts ARM64, y ProxMenux habla ruso.
 
@@ -18,6 +18,7 @@ Un agradecimiento especial a [@jcastro](https://github.com/jcastro), [@Vaso73](h
 - **ProxMenux Monitor sirve sus archivos estáticos solo desde su propia carpeta** (reportado por Rajan Nagarajan): una petición manipulada a la ruta de los archivos estáticos de la interfaz web podía leer un archivo de fuera de esa carpeta sin iniciar sesión. La ruta rechaza ahora cualquier ruta que salga de ella. Afecta a ProxMenux Monitor de la 1.1.7 a la 1.2.8; se recomienda actualizar.
 - **Un Monitor nuevo ya no se abre a cualquiera que llegue a él** (reportado por hackchang): hasta que su propietario establece una contraseña, o elige el acceso de solo lectura o el acceso abierto conociendo el riesgo, una instalación nueva solo sirve su pantalla de primer arranque, protegida por el código de configuración que muestra el instalador. Afecta a ProxMenux Monitor de la 1.1.7 a la 1.2.8; consulta *El propietario elige cómo se accede al Monitor* más abajo.
 - **Leer el almacenamiento de snippets ya no lo modifica** (reportado por Liam Giannini): la petición que lista los almacenamientos que pueden guardar snippets requiere un administrador y solo lee, así que ya no activa los snippets en el almacenamiento `local`. Afecta a ProxMenux Monitor de la 1.2.1.1 a la 1.2.8.
+- **El Monitor no revela nada del host ni de la cuenta antes de iniciar sesión**: la página de inicio de sesión ya no recibe el nombre de la cuenta ni si usa la verificación en dos pasos, y `/api/system-info` solo responde si el host está sano, que es lo que leen comprobadores como Uptime Kuma. El nombre del host, el tiempo de actividad y los datos de seguridad requieren una sesión o un token. Afecta a ProxMenux Monitor 1.2.8 y anteriores.
 
 ## 📦 OCI manager Apps — instalación y actualizaciones
 
@@ -301,7 +302,7 @@ Un agradecimiento especial a [@jcastro](https://github.com/jcastro), [@Vaso73](h
 - **[@danibauti94](https://github.com/danibauti94)** — TP-Link Omada Controller, Nutify y Dell iDRAC Fan Controller.
 - **[@phyrexia](https://github.com/phyrexia)** — el panel de consola en la propia pantalla del nodo.
 - **[@gskbyte](https://github.com/gskbyte)** — los intervalos de lectura del Monitor de salud.
-- **Rajan Nagarajan, Liam Giannini y hackchang** — los reportes responsables de los tres problemas de seguridad corregidos en esta versión.
+- **Rajan Nagarajan, Liam Giannini y hackchang** — los reportes responsables de problemas de seguridad corregidos en esta versión.
 - **[@matferna](https://github.com/matferna)**, **[@itasli](https://github.com/itasli)**, **[@ajmasia](https://github.com/ajmasia)** y **[@jarvislamejor](https://github.com/jarvislamejor)** — las mediciones y los diagnósticos detrás de un Monitor más ligero y de las correcciones de OCI para Proxmox VE 9.2.33.
 - **Todos los que han reportado un problema o sugerido una aplicación**, citados junto a cada cambio.
 

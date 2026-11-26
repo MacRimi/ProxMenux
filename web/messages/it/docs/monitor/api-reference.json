@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Informazioni leggere di intestazione: hostname, uptime e stato di integrità in cache. Pubblico, nessun token necessario."
+        "use": "Informazioni leggere di intestazione: hostname, uptime e stato di integrità in cache. Senza token restituisce solo lo stato di integrità."
       },
       {
         "endpoint": "/api/hardware",

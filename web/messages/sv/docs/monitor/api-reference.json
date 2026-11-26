@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Lättviktig sidhuvudinformation: värdnamn, drifttid och cachad hälsostatus. Offentlig, ingen token behövs."
+        "use": "Lättviktig sidhuvudinformation: värdnamn, drifttid och cachad hälsostatus. Utan token returneras endast hälsostatus."
       },
       {
         "endpoint": "/api/hardware",

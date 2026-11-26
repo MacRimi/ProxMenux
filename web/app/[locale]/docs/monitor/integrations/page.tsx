@@ -1089,7 +1089,7 @@ scrape_configs:
       <CopyableCode
         code={`# Verify the public system-info response shape
 curl -fsS http://pve01.lan:8008/api/system-info | jq
-# → { "hostname": "...", "uptime": "...", "health": { "status": "healthy", ... }, ... }
+# → { "health": { "status": "healthy" } }
 
 # A failing scriptable check (non-zero when the Monitor isn't reporting healthy)
 curl -fsS http://pve01.lan:8008/api/system-info | jq -e '.health.status == "healthy"'`}

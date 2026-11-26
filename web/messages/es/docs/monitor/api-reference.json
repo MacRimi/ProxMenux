@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Información ligera de cabecera: hostname, uptime y estado de salud en caché. Público, no necesita token."
+        "use": "Información ligera de cabecera: hostname, uptime y estado de salud en caché. Sin token, solo devuelve el estado de salud."
       },
       {
         "endpoint": "/api/hardware",

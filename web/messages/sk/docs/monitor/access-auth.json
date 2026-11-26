@@ -155,7 +155,7 @@
     "publicIntro": "Prihlásenie, stav overenia, počiatočné nastavenie a ľahký koncový bod <code>/api/system-info</code> sú verejné:",
     "publicItems": [
       "<code>/api/auth/login</code> a <code>/api/auth/status</code> sú verejné. <code>/api/auth/setup</code> vytvorí prvý účet a odmietne prepísať existujúce prihlasovacie údaje.",
-      "<code>/api/system-info</code> je verejný endpoint so základnými údajmi systému vrátane <code>health.status</code>. Nevyžaduje token. Aj /api/auth/status je verejný a hodí sa na kontrolu dostupnosti."
+      "<code>/api/system-info</code> bez tokenu odpovedá iba hodnotou <code>health.status</code>; názov hostiteľa, čas prevádzky a ostatné polia vyžadujú reláciu alebo token. Aj /api/auth/status je verejný a hodí sa na kontrolu dostupnosti."
     ],
     "cryptoTitle": "Kryptografia a ukladanie",
     "cryptoIntro": "ProxMenux Monitor má otvorený zdrojový kód. Táto časť vysvetľuje ochranu prihlasovacích údajov uložených na hostiteľovi, aby ste sa mohli rozhodnúť, či jej dôverujete. Uvedené algoritmy používa <code>scripts/auth_manager.py</code>; ide o opis kódu, nie marketingový sľub.",

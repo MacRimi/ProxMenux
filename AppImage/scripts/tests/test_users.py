@@ -337,6 +337,9 @@ class Users(unittest.TestCase):
         self.assertEqual(self.call("POST", "/api/auth/totp/enable", observer, json={"token": code}).status_code, 200)
         self.assertTrue(self.call("GET", "/api/auth/status", observer).json["totp_enabled"])
         self.assertFalse(self.call("GET", "/api/auth/status", admin).json["totp_enabled"])
+        anonymous = self.call("GET", "/api/auth/status").json
+        self.assertIsNone(anonymous["username"])
+        self.assertNotIn("totp_enabled", anonymous)
         self.assertTrue(self.client.post("/api/auth/login", json={"username": "maria", "password": "Third-Passw0rd!"})
                         .json["requires_totp"])
 

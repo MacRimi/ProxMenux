@@ -5,7 +5,7 @@ Flask routes for health monitoring with persistence support
 from flask import Blueprint, jsonify, request, current_app
 from health_monitor import health_monitor
 from health_persistence import health_persistence
-from jwt_middleware import require_auth, require_admin_scope
+from jwt_middleware import permission_error, require_auth, require_admin_scope
 
 # Sprint 13: remote-mount monitor (NFS/CIFS/SMB) — separate module so a
 # missing helper doesn't crash the health blueprint.
@@ -89,6 +89,8 @@ def get_system_info():
     """
     Get lightweight system info for header display.
     Returns: hostname, uptime, and health status with proper structure.
+    Without a session or a token it only says whether the host is healthy,
+    for status checkers such as Uptime Kuma.
     """
     try:
         info = health_monitor.get_system_info()
@@ -102,7 +104,8 @@ def get_system_info():
             }
             current_status = info['health'].get('status', 'OK').upper()
             info['health']['status'] = status_map.get(current_status, 'healthy')
-        
+        if permission_error('view') is not None:
+            return jsonify({'health': {'status': info.get('health', {}).get('status', 'warning')}})
         return jsonify(info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

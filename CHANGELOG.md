@@ -5,7 +5,7 @@
 
 ![ProxMenux 1.2.9](https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/ProxMenux_129.png)
 
-ProxMenux 1.2.9 goes straight to stable instead of a beta, so that everyone gets its fixes at once: Proxmox VE 9.2.33 and later keep a new identity line in every container, and OCI manager Apps needs this release to go on updating and modifying applications there. It also fixes three security issues in ProxMenux Monitor, so updating is recommended.
+ProxMenux 1.2.9 goes straight to stable instead of a beta, so that everyone gets its fixes at once: Proxmox VE 9.2.33 and later keep a new identity line in every container, and OCI manager Apps needs this release to go on updating and modifying applications there. It also fixes four security issues in ProxMenux Monitor, so updating is recommended.
 
 **ProxMenux Monitor** gains several users with profiles, sign-in with Proxmox VE and OpenID Connect accounts, a Catalog tab with everything ProxMenux can install or run, and wizards to create and remove LXC. **OCI manager Apps** adds dozens of applications, passes USB devices by their identity, updates faster and keeps what you change in Proxmox, also in stacks. ProxMenux Monitor now runs on ARM64 hosts, and ProxMenux speaks Russian.
 
@@ -18,6 +18,7 @@ A special thank you goes to [@jcastro](https://github.com/jcastro), [@Vaso73](ht
 - **ProxMenux Monitor serves its static files only from their own folder** (reported by Rajan Nagarajan): a crafted request to the route of the web interface's static files could read a file from outside that folder without signing in. The route now refuses any path that leaves it. Affects ProxMenux Monitor 1.1.7 to 1.2.8; updating is recommended.
 - **A new Monitor no longer opens to anyone who reaches it** (reported by hackchang): until its owner sets a password, or chooses read-only or open access knowing the risk, a new installation serves only its first-run screen, protected by the setup code the installer shows. Affects ProxMenux Monitor 1.1.7 to 1.2.8; see *The owner chooses how the Monitor is reached* below.
 - **Reading the snippets storage no longer changes it** (reported by Liam Giannini): the request that lists the storages able to hold snippets requires an administrator and only reads, so it no longer turns on snippets on the `local` storage. Affects ProxMenux Monitor 1.2.1.1 to 1.2.8.
+- **The Monitor tells nothing about the host or the account before signing in**: the sign-in page no longer learns the name of the account or whether it uses two-factor authentication, and `/api/system-info` answers only whether the host is healthy, which is what status checkers such as Uptime Kuma read. The host name, uptime and security details need a session or a token. Affects ProxMenux Monitor 1.2.8 and earlier.
 
 ## 📦 OCI manager Apps — installing and updating
 
@@ -301,7 +302,7 @@ A special thank you goes to [@jcastro](https://github.com/jcastro), [@Vaso73](ht
 - **[@danibauti94](https://github.com/danibauti94)** — TP-Link Omada Controller, Nutify and Dell iDRAC Fan Controller.
 - **[@phyrexia](https://github.com/phyrexia)** — the console dashboard on the node's own screen.
 - **[@gskbyte](https://github.com/gskbyte)** — the reading intervals of the Health Monitor.
-- **Rajan Nagarajan, Liam Giannini and hackchang** — the responsible reports of the three security issues fixed in this release.
+- **Rajan Nagarajan, Liam Giannini and hackchang** — the responsible reports of security issues fixed in this release.
 - **[@matferna](https://github.com/matferna)**, **[@itasli](https://github.com/itasli)**, **[@ajmasia](https://github.com/ajmasia)** and **[@jarvislamejor](https://github.com/jarvislamejor)** — the measurements and diagnoses behind the lighter Monitor and the OCI fixes for Proxmox VE 9.2.33.
 - **Everyone who reported a problem or suggested an application**, named next to each change.
 

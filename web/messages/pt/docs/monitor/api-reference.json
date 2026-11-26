@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Informação leve do cabeçalho: nome do host, tempo de atividade e estado de saúde em cache. Público, sem necessidade de token."
+        "use": "Informação leve do cabeçalho: nome do host, tempo de atividade e estado de saúde em cache. Sem token, retorna apenas o estado de saúde."
       },
       {
         "endpoint": "/api/hardware",

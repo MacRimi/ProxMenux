@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Lightweight header info: hostname, uptime and cached health status. Public, no token needed."
+        "use": "Lightweight header info: hostname, uptime and cached health status. Without a token it returns only the health status."
       },
       {
         "endpoint": "/api/hardware",

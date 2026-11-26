@@ -437,7 +437,7 @@ Below is a complete list of all API endpoints with descriptions and example resp
 | Endpoint | Method | Auth Required | Description |
 |----------|--------|---------------|-------------|
 | `/api/system` | GET | Yes | Complete system information (CPU, memory, temperature, uptime) |
-| `/api/system-info` | GET | No | Lightweight system info for header (hostname, uptime, health) |
+| `/api/system-info` | GET | No (health status only) | Lightweight system info for header (hostname, uptime, health); without a token, only the health status |
 | `/api/node/metrics` | GET | Yes | Historical metrics data (RRD) for CPU, memory, disk I/O |
 | `/api/prometheus` | GET | Yes | Export metrics in Prometheus format |
 

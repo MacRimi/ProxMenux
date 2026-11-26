@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Schlanke Kopfzeileninfos: Hostname, Betriebszeit und zwischengespeicherter Gesundheitsstatus. Öffentlich, kein Token nötig."
+        "use": "Schlanke Kopfzeileninfos: Hostname, Betriebszeit und zwischengespeicherter Gesundheitsstatus. Ohne Token wird nur der Gesundheitsstatus geliefert."
       },
       {
         "endpoint": "/api/hardware",

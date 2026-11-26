@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Informations d’en-tête légères : nom d’hôte, durée de fonctionnement et état de santé en cache. Public, aucun jeton requis."
+        "use": "Informations d’en-tête légères : nom d’hôte, durée de fonctionnement et état de santé en cache. Sans jeton, il ne renvoie que l’état de santé."
       },
       {
         "endpoint": "/api/hardware",

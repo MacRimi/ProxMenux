@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma e outras ferramentas de verificação de estado",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "Para verificar uma palavra-chave, use <code>GET /api/system-info</code>. Esta rota não exige token e devolve nome, tempo de funcionamento e estado como <code>healthy</code>, <code>warning</code> ou <code>critical</code>. É pública, ao contrário dos endpoints detalhados protegidos.",
+    "intro": "Para verificar uma palavra-chave, use <code>GET /api/system-info</code>. Sem token, esta rota retorna apenas o estado, como <code>healthy</code>, <code>warning</code> ou <code>critical</code>; com token, adiciona o nome do host e o tempo de funcionamento. É pública, ao contrário dos endpoints detalhados protegidos.",
     "kumaTitle": "Uptime Kuma — Monitor de palavras-chave HTTP",
     "kumaSteps": [
       "Em Uptime Kuma, clique em <em>+ Adicionar Novo Monitor</em>.",

@@ -76,7 +76,7 @@
       {
         "endpoint": "/api/system-info",
         "method": "GET",
-        "use": "Ľahké informácie hlavičky: názov hostiteľa, uptime a vyrovnávací stav zdravia. Verejné, token nie je potrebný."
+        "use": "Ľahké informácie hlavičky: názov hostiteľa, uptime a vyrovnávací stav zdravia. Bez tokenu vracia iba stav zdravia."
       },
       {
         "endpoint": "/api/hardware",

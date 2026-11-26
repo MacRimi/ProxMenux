@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma a iné kontroly stavu",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "Na kontrolu kľúčového slova použite <code>GET /api/system-info</code>. Táto cesta nevyžaduje token a vracia názov hostiteľa, čas prevádzky a stav <code>healthy</code>, <code>warning</code> alebo <code>critical</code>. Je verejná, na rozdiel od chránených podrobných koncových bodov.",
+    "intro": "Na kontrolu kľúčového slova použite <code>GET /api/system-info</code>. Bez tokenu táto cesta vracia iba stav <code>healthy</code>, <code>warning</code> alebo <code>critical</code>; s tokenom pridáva názov hostiteľa a čas prevádzky. Je verejná, na rozdiel od chránených podrobných koncových bodov.",
     "kumaTitle": "Uptime Kuma — HTTP monitor kľúčových slov",
     "kumaSteps": [
       "V Uptime Kuma, kliknite na <em>+ Pridať nový monitor</em>.",

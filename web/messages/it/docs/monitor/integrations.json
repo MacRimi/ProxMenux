@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma e altri controlli di stato",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "Per un controllo per parola chiave usa <code>GET /api/system-info</code>. La route non richiede token e restituisce nome host, uptime e stato come <code>healthy</code>, <code>warning</code> o <code>critical</code>. È pubblica, a differenza degli endpoint di stato dettagliati protetti.",
+    "intro": "Per un controllo per parola chiave usa <code>GET /api/system-info</code>. Senza token la route restituisce solo lo stato, come <code>healthy</code>, <code>warning</code> o <code>critical</code>; con un token aggiunge nome host e uptime. È pubblica, a differenza degli endpoint di stato dettagliati protetti.",
     "kumaTitle": "Uptime Kuma — Monitor di parole chiave HTTP",
     "kumaSteps": [
       "In Uptime Kuma, fare clic su <em>+ Aggiungi nuovo monitor</em>.",

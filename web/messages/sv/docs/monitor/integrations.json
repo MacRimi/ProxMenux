@@ -200,7 +200,7 @@
   "uptimeKuma": {
     "heading": "Uptime Kuma och andra statuskontroller",
     "href": "https://github.com/louislam/uptime-kuma",
-    "intro": "Använd <code>GET /api/system-info</code> för en nyckelordskontroll. Denna route kräver ingen token och ger värdnamn, upptid och hälsa som <code>healthy</code>, <code>warning</code> eller <code>critical</code>. Den är offentlig, till skillnad från de skyddade detaljerade hälsoendpoints.",
+    "intro": "Använd <code>GET /api/system-info</code> för en nyckelordskontroll. Utan token ger denna route endast hälsostatus som <code>healthy</code>, <code>warning</code> eller <code>critical</code>; med token läggs värdnamn och upptid till. Den är offentlig, till skillnad från de skyddade detaljerade hälsoendpoints.",
     "kumaTitle": "Uptime Kuma - HTTP nyckelordsövervakning",
     "kumaSteps": [
       "I Uptime Kuma klickar du på <em>+ Lägg till ny Monitor</em>.",
