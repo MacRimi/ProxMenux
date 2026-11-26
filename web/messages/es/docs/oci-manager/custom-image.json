@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "El mismo conversor y el mismo instalador",
-            "body": "La opción <strong>Instalar una imagen que no esté en el catálogo</strong> utiliza el mismo conversor y el mismo instalador que las plantillas del catálogo. La diferencia es que el contrato se genera en ese momento a partir de la definición proporcionada y se valida antes de crear ningún LXC."
+            "body": "La opción <strong>Instalar una imagen que no está en el catálogo</strong> utiliza el mismo conversor y el mismo instalador que las plantillas del catálogo. La diferencia es que el contrato se genera en ese momento a partir de la definición proporcionada y se valida antes de crear ningún LXC."
           }
         }
       ]
@@ -311,7 +311,7 @@
                 "El servicio al que apunta la URL tiene una dirección DHCP."
               ],
               [
-                "<strong>Registro de servicio inválido URL</strong>",
+                "<strong>URL de comprobación del servicio no válida</strong>",
                 "La URL está mal formada o su puerto no es válido."
               ]
             ]
@@ -343,7 +343,7 @@
           }
         },
         {
-          "p": "<strong>Cuentas de registros</strong>, en el menú principal de OCI manager Apps, muestra las cuentas guardadas por registro y usuario, nunca sus secretos. Desde cada cuenta puedes comprobar, descargar o instalar una imagen, actualizar las credenciales o eliminarlas."
+          "p": "<strong>Cuentas de registro</strong>, en el menú principal de OCI manager Apps, muestra las cuentas guardadas por registro y usuario, nunca sus secretos. Desde cada cuenta puedes comprobar, descargar o instalar una imagen, actualizar las credenciales o eliminarlas."
         },
         {
           "list": {

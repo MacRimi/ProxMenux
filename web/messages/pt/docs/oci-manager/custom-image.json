@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "O mesmo conversor e o mesmo instalador",
-            "body": "A opção <strong>Instalar uma imagem fora do catálogo</strong> utiliza o mesmo conversor e instalador dos modelos do catálogo. A diferença é que o contrato é gerado nesse momento a partir da definição fornecida e validado antes de criar qualquer LXC."
+            "body": "A opção <strong>Instalar uma imagem que não está no catálogo</strong> utiliza o mesmo conversor e instalador dos modelos do catálogo. A diferença é que o contrato é gerado nesse momento a partir da definição fornecida e validado antes de criar qualquer LXC."
           }
         }
       ]
@@ -343,7 +343,7 @@
           }
         },
         {
-          "p": "<strong>Contas de registros</strong>, no menu principal do OCI manager Apps, apresenta as contas salvas por registro e usuário, nunca seus segredos. Cada conta permite verificar, baixar ou instalar uma imagem, atualizar as credenciais ou removê-las."
+          "p": "<strong>Contas de registro</strong>, no menu principal do OCI manager Apps, apresenta as contas salvas por registro e usuário, nunca seus segredos. Cada conta permite verificar, baixar ou instalar uma imagem, atualizar as credenciais ou removê-las."
         },
         {
           "list": {

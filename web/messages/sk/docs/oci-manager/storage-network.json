@@ -170,7 +170,7 @@
     {
       "id": "rclone",
       "title": "Cloudové úložisko cez aplikáciu rclone",
-      "intro": "Položka rclone v katalógu okrem inštalácie ponúka aj možnosť <strong>Aktivovať pripojenie v existujúcom kontajneri OCI s rclone</strong>. Pripojí sa vzdialené úložisko, ktoré už bolo vytvorené a autorizované vo webovom rozhraní rclone, a sprístupní sa na hostiteľovi. Ostatné kontajnery ho môžu používať ako adresár hostiteľa.",
+      "intro": "Položka rclone v katalógu okrem inštalácie ponúka aj možnosť <strong>Nastaviť pripojenie na existujúcom OCI kontajneri Rclone</strong>. Pripojí sa vzdialené úložisko, ktoré už bolo vytvorené a autorizované vo webovom rozhraní rclone, a sprístupní sa na hostiteľovi. Ostatné kontajnery ho môžu používať ako adresár hostiteľa.",
       "blocks": [
         {
           "steps": {

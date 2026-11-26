@@ -170,7 +170,7 @@
     {
       "id": "rclone",
       "title": "Stockage cloud avec l’application rclone",
-      "intro": "Outre son installation, la fiche rclone du catalogue propose <strong>Activer un montage dans un conteneur OCI rclone existant</strong>. Un stockage distant déjà créé et autorisé dans l’interface web de rclone est monté et rendu accessible sur l’hôte. D’autres conteneurs peuvent alors l’utiliser comme un répertoire de l’hôte.",
+      "intro": "Outre son installation, la fiche rclone du catalogue propose <strong>Activer un montage sur un conteneur existant Rclone OCI</strong>. Un stockage distant déjà créé et autorisé dans l’interface web de rclone est monté et rendu accessible sur l’hôte. D’autres conteneurs peuvent alors l’utiliser comme un répertoire de l’hôte.",
       "blocks": [
         {
           "steps": {

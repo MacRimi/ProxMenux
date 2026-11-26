@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Samma konverterare och installationsflöde",
-            "body": "Alternativet <strong>Installera en avbildning utanför katalogen</strong> använder samma konverterare och installationsflöde som katalogmallarna. Skillnaden är att kontraktet skapas vid det tillfället från den angivna definitionen och valideras innan någon LXC-container skapas."
+            "body": "Alternativet <strong>Installera en bild som inte finns i katalogen</strong> använder samma konverterare och installationsflöde som katalogmallarna. Skillnaden är att kontraktet skapas vid det tillfället från den angivna definitionen och valideras innan någon LXC-container skapas."
           }
         }
       ]
@@ -311,7 +311,7 @@
                 "Tjänsten som URL:en pekar på har en DHCP-adress."
               ],
               [
-                "<strong>Ogiltig service check URL</strong>",
+                "<strong>Ogiltig URL för tjänstkontroll</strong>",
                 "URL:en är felaktig eller dess port är ogiltig."
               ]
             ]
@@ -371,7 +371,7 @@
             "items": [
               "En Dockerfile utan publicerad avbildning: avbildningen måste först byggas och publiceras i ett OCI-register.",
               "En Compose-fil med flera tjänster installeras som beskrivs i <sectionLink>Compose-filer med flera tjänster</sectionLink>, utom när den deklarerar mer än ett nätverk, ett externt nätverk, alternativ på volymer på toppnivå, valfria beroenden (<code>required: false</code>) eller tjänster som är beroende av huvudtjänsten.",
-              "I en stack markeras en tjänst som använder <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> eller <code>extra_hosts</code> med ”behov stack review”, och stacken installeras inte.",
+              "I en stack markeras en tjänst som använder <code>profiles</code>, <code>build</code>, <code>configs</code>, <code>secrets</code>, <code>env_file</code>, <code>pid</code>, <code>privileged</code>, <code>devices</code>, <code>runtime</code>, <code>cap_add</code>, <code>security_opt</code>, <code>network_mode</code> eller <code>extra_hosts</code> med ”kräver granskning av stacken”, och stacken installeras inte.",
               "<code>configs</code>, externa hemligheter eller enhetsformat som inte kan anpassas entydigt.",
               "Skalsubstitutioner som <code>$(command)</code>: ange det resulterande värdet direkt i stället.",
               "Okända <code>docker run</code>-alternativ och <code>--env-file</code>: använd en Compose-fil med uttryckliga värden i stället."

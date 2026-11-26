@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Rovnaký konvertor a inštalátor",
-            "body": "Voľba <strong>Nainštalovať obraz mimo katalógu</strong> používa rovnaký konvertor a inštalátor ako šablóny katalógu. Rozdiel je v tom, že konfigurácia inštalácie sa vytvorí až zo zadanej definície a overí sa pred vytvorením akéhokoľvek LXC."
+            "body": "Voľba <strong>Inštalovať obraz, ktorý nie je v katalógu</strong> používa rovnaký konvertor a inštalátor ako šablóny katalógu. Rozdiel je v tom, že konfigurácia inštalácie sa vytvorí až zo zadanej definície a overí sa pred vytvorením akéhokoľvek LXC."
           }
         }
       ]

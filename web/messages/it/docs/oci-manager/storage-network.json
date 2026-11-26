@@ -170,7 +170,7 @@
     {
       "id": "rclone",
       "title": "Storage cloud tramite l’applicazione rclone",
-      "intro": "Oltre all’installazione, la scheda di rclone nel catalogo offre <strong>Abilita un mount in un container OCI rclone esistente</strong>. Viene montato un remote già creato e autorizzato nell’interfaccia web di rclone, che viene poi reso disponibile sull’host. Gli altri container possono usarlo come una directory dell’host.",
+      "intro": "Oltre all’installazione, la scheda di rclone nel catalogo offre <strong>Abilita un mount su un container OCI Rclone esistente</strong>. Viene montato un remote già creato e autorizzato nell’interfaccia web di rclone, che viene poi reso disponibile sull’host. Gli altri container possono usarlo come una directory dell’host.",
       "blocks": [
         {
           "steps": {
