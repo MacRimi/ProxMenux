@@ -12,11 +12,12 @@
   },
   "active": {
     "heading": "Sviluppo, revisione e collaborazione continuativa",
-    "intro": "Vaso73, f3rs3n e jcastro partecipano regolarmente con miglioramenti, correzioni e revisioni. Il loro lavoro va oltre le prove di una versione: contribuisce anche a sviluppare e correggere quelle successive.",
+    "intro": "Vaso73, f3rs3n, jcastro e MaEscalanteHe partecipano regolarmente con miglioramenti, correzioni e revisioni. Il loro lavoro va oltre le prove di una versione: contribuisce anche a sviluppare e correggere quelle successive.",
     "people": {
       "Vaso73": "Miglioramenti e correzioni in OCI manager e ProxMenux Monitor, insieme alla traduzione e revisione dei testi in slovacco.",
       "f3rs3n": "Correzioni e revisione del comportamento degli script e del Monitor, insieme a continui miglioramenti della traduzione italiana.",
-      "jcastro": "Sviluppo e correzione delle funzioni OCI, di backup e del Monitor, oltre alla revisione della documentazione e alle prove fin dagli inizi del progetto."
+      "jcastro": "Sviluppo e correzione delle funzioni OCI, di backup e del Monitor, oltre alla revisione della documentazione e alle prove fin dagli inizi del progetto.",
+      "MaEscalanteHe": "Manutenzione del sito e della sua documentazione: pagine aggiornate a ogni versione, il passaggio a Next 16 e Tailwind 4 e correzioni alla ricerca, alla mappa del sito e ai link."
     }
   },
   "code": {

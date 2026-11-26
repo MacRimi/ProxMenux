@@ -12,11 +12,12 @@
   },
   "active": {
     "heading": "Vývoj, kontrola a pravidelná spolupráca",
-    "intro": "Vaso73, f3rs3n a jcastro pravidelne prispievajú vylepšeniami, opravami a kontrolami. Ich práca presahuje testovanie verzie: pomáha aj vytvárať a odlaďovať tie nasledujúce.",
+    "intro": "Vaso73, f3rs3n, jcastro a MaEscalanteHe pravidelne prispievajú vylepšeniami, opravami a kontrolami. Ich práca presahuje testovanie verzie: pomáha aj vytvárať a odlaďovať tie nasledujúce.",
     "people": {
       "Vaso73": "Vylepšenia a opravy v OCI manager a ProxMenux Monitor, ako aj preklad a kontrola slovenských textov.",
       "f3rs3n": "Opravy a kontrola správania skriptov a Monitora spolu s priebežným zlepšovaním talianskeho prekladu.",
-      "jcastro": "Vývoj a ladenie funkcií OCI, zálohovania a Monitora, ako aj kontrola dokumentácie a testovanie od začiatkov projektu."
+      "jcastro": "Vývoj a ladenie funkcií OCI, zálohovania a Monitora, ako aj kontrola dokumentácie a testovanie od začiatkov projektu.",
+      "MaEscalanteHe": "Údržba webu a jeho dokumentácie: stránky aktualizované s každou verziou, prechod na Next 16 a Tailwind 4 a opravy vyhľadávania, mapy stránok a odkazov."
     }
   },
   "code": {

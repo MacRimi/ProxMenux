@@ -12,11 +12,12 @@
   },
   "active": {
     "heading": "Utveckling, granskning och löpande samarbete",
-    "intro": "Vaso73, f3rs3n och jcastro bidrar regelbundet med förbättringar, rättningar och granskningar. Arbetet handlar om mer än att testa en version: de hjälper också till att bygga och felsöka nästa.",
+    "intro": "Vaso73, f3rs3n, jcastro och MaEscalanteHe bidrar regelbundet med förbättringar, rättningar och granskningar. Arbetet handlar om mer än att testa en version: de hjälper också till att bygga och felsöka nästa.",
     "people": {
       "Vaso73": "Förbättringar och rättningar i OCI manager och ProxMenux Monitor samt översättning och granskning av slovakiska texter.",
       "f3rs3n": "Rättningar och granskning av skriptens och Monitors beteende tillsammans med löpande förbättringar av den italienska översättningen.",
-      "jcastro": "Utveckling och felsökning av OCI-, säkerhetskopierings- och Monitor-funktioner samt dokumentationsgranskning och tester sedan projektets början."
+      "jcastro": "Utveckling och felsökning av OCI-, säkerhetskopierings- och Monitor-funktioner samt dokumentationsgranskning och tester sedan projektets början.",
+      "MaEscalanteHe": "Underhåll av webbplatsen och dess dokumentation: sidor som hålls aktuella med varje version, flytten till Next 16 och Tailwind 4 samt rättningar av sökningen, webbplatskartan och länkarna."
     }
   },
   "code": {

@@ -12,11 +12,12 @@
   },
   "active": {
     "heading": "Development, review and ongoing collaboration",
-    "intro": "Vaso73, f3rs3n and jcastro contribute regularly through improvements, fixes and reviews. Their work goes beyond testing a release: it also helps build and debug the next ones.",
+    "intro": "Vaso73, f3rs3n, jcastro and MaEscalanteHe contribute regularly through improvements, fixes and reviews. Their work goes beyond testing a release: it also helps build and debug the next ones.",
     "people": {
       "Vaso73": "Improvements and fixes in OCI manager and ProxMenux Monitor, alongside Slovak translations and language reviews.",
       "f3rs3n": "Fixes and reviews of script and Monitor behavior, together with ongoing improvements to the Italian translation.",
-      "jcastro": "Development and debugging of OCI, backup and Monitor features, alongside documentation reviews and testing since the project's early days."
+      "jcastro": "Development and debugging of OCI, backup and Monitor features, alongside documentation reviews and testing since the project's early days.",
+      "MaEscalanteHe": "Maintenance of the website and its documentation: pages kept in line with every release, the move to Next 16 and Tailwind 4, and fixes to search, the sitemap and links."
     }
   },
   "code": {

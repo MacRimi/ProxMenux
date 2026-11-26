@@ -8,13 +8,14 @@ import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 
 const REPOSITORY = "https://github.com/MacRimi/ProxMenux"
-const activeContributors = ["Vaso73", "f3rs3n", "jcastro"] as const
+const activeContributors = ["Vaso73", "f3rs3n", "jcastro", "MaEscalanteHe"] as const
 
-// Human authors of merged PRs and code contributions, checked on 2026-10-26.
+// Human authors of merged PRs and code contributions, checked on 2026-11-26.
 // Alphabetical, without commit rankings. Ongoing contributors are credited above.
 const codeContributors = [
-  "byGarcia", "cod378", "detlefs", "fklnc94", "MaEscalanteHe",
-  "MrCaringi", "pbr85", "pespinel", "phyrexia", "riri-314", "yeager",
+  "byGarcia", "cod378", "danibauti94", "detlefs", "devil1210", "dodog",
+  "domotick", "fklnc94", "gskbyte", "MrCaringi", "pbr85", "pespinel",
+  "phyrexia", "riri-314", "Umnov91", "yeager",
 ]
 const earlyContributors = [
   { name: "MALOW", avatar: "malow.png" },
@@ -65,7 +66,7 @@ export default async function ContributorsPage({ params }: { params: Promise<{ l
       <section aria-labelledby="ongoing-contributors" className="mt-10">
         <h2 id="ongoing-contributors" className={heading}>{t("active.heading")}</h2>
         <p className={paragraph}>{t("active.intro")}</p>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           {activeContributors.map((login) => (
             <article key={login} className="flex min-w-0 flex-col rounded-xl border border-blue-100 bg-linear-to-b from-blue-50/70 to-white p-5">
               <External href={"https://github.com/" + login} className="group flex items-center gap-3">
