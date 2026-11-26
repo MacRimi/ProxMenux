@@ -600,6 +600,7 @@
   "An accelerated video generation framework that speeds up end-to-end diffusion while preserving video quality": "Um framework acelerado de geração de vídeo que acelera a difusão de ponta a ponta, preservando a qualidade de vídeo",
   "An application changed since the update check. Check for updates again.": "Uma aplicação foi alterada desde a última verificação. Procure atualizações novamente.",
   "An application for launching HTML5 Network Speed Test Server. You can test download & upload speed from any device within your network with a web browser that is IE10 or new.": "Um aplicativo para iniciar um servidor de teste de velocidade de rede em HTML5. Você pode testar a velocidade de download e upload de qualquer dispositivo em sua rede usando um navegador web compatível com IE10 ou superior.",
+  "An argument of the command uses both single and double quotes, which LXC cannot start:": "Um argumento do comando usa aspas simples e duplas ao mesmo tempo, e o LXC não consegue iniciá-lo:",
   "An automatic HTTPS web server and reverse proxy.": "Um servidor web HTTPS e proxy reverso com configuração automática.",
   "An earlier operation for this target still needs to be checked.": "Uma operação anterior neste destino ainda precisa ser verificada.",
   "An earlier operation needs to be checked.": "Uma operação anterior precisa ser verificada.",

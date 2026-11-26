@@ -2400,6 +2400,17 @@ if [[ $START_AFTER == 1 ]]; then
     done < <(jq -r '.[] | select(.retrieval.method? == "container-file") | @base64' <<<"$CREDENTIALS")
   fi
   detect_container_ipv4 "$(translate "Container started")"
+  # Without a health check, the application at least has to stay up.
+  if [[ $HAS_STARTUP_HEALTHCHECK == 0 && $HAOS_HEALTHCHECK == 0 ]]; then
+    for attempt in 1 2 3 4 5; do
+      if ! container_is_running; then
+        oci_log "The container stopped during its first start. Last console messages:"
+        [[ -s $RUNTIME_CONSOLE_LOG ]] && tr -d '\r' <"$RUNTIME_CONSOLE_LOG" | tail -n 100 >>"${OCI_LOG:-/dev/stderr}"
+        die "$(translate "The application stopped during its first start:") CT $VMID"
+      fi
+      sleep 1
+    done
+  fi
   case "$PASSWORD_STATE" in
     retrieved) msg_ok "$(translate "Temporary password retrieved")" ;;
     missing) msg_warn "$(translate "The temporary password could not be retrieved.")" ;;

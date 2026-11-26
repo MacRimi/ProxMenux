@@ -600,6 +600,7 @@
   "An accelerated video generation framework that speeds up end-to-end diffusion while preserving video quality": "En accelererad videogenereringsram som påskyndar end-to-end diffusion samtidigt som videokvaliteten bevaras",
   "An application changed since the update check. Check for updates again.": "Ett program har ändrats sedan den senaste kontrollen. Sök efter uppdateringar igen.",
   "An application for launching HTML5 Network Speed Test Server. You can test download & upload speed from any device within your network with a web browser that is IE10 or new.": "En applikation för att köra en HTML5 Network Speed Test Server. Du kan testa nedladdnings- och uppladdningshastighet från vilken enhet som helst i ditt nätverk med en webbläsare som är IE10 eller nyare.",
+  "An argument of the command uses both single and double quotes, which LXC cannot start:": "Ett argument i kommandot använder både enkla och dubbla citattecken, vilket LXC inte kan starta:",
   "An automatic HTTPS web server and reverse proxy.": "En webbserver och omvänd proxy med automatisk HTTPS-konfiguration.",
   "An earlier operation for this target still needs to be checked.": "En tidigare åtgärd för det här målet behöver fortfarande kontrolleras.",
   "An earlier operation needs to be checked.": "En tidigare åtgärd behöver kontrolleras.",

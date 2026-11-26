@@ -600,6 +600,7 @@
   "An accelerated video generation framework that speeds up end-to-end diffusion while preserving video quality": "Rámec na zrýchlené generovanie videa, ktorý urýchľuje celý difúzny proces pri zachovaní kvality videa",
   "An application changed since the update check. Check for updates again.": "Od poslednej kontroly sa aplikácia zmenila. Znova vyhľadajte aktualizácie.",
   "An application for launching HTML5 Network Speed Test Server. You can test download & upload speed from any device within your network with a web browser that is IE10 or new.": "Aplikácia na spustenie servera HTML5 Network Speed Test. Rýchlosť sťahovania a odosielania môžete testovať z akéhokoľvek zariadenia vo vašej sieti pomocou webového prehliadača verzie IE10 alebo novšej.",
+  "An argument of the command uses both single and double quotes, which LXC cannot start:": "Argument príkazu obsahuje jednoduché aj dvojité úvodzovky naraz, LXC ho nedokáže spustiť:",
   "An automatic HTTPS web server and reverse proxy.": "Webový server a reverzný proxy server s automatickou konfiguráciou HTTPS.",
   "An earlier operation for this target still needs to be checked.": "Najprv skontroluj stav predchádzajúcej operácie pre tento cieľ.",
   "An earlier operation needs to be checked.": "Predchádzajúcu operáciu treba overiť.",

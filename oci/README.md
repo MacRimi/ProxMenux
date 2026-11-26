@@ -340,7 +340,7 @@ each key becomes a field of the oci-compose:
 | `ulimits` | `proxmox.installer_profile.resources.rlimits` | `lxc.prlimit.*` |
 | `shm_size` | `proxmox.installer_profile.tmpfs_mounts` | A tmpfs at `/dev/shm` of that size |
 | `tmpfs`, `volumes` with `type: tmpfs` | `proxmox.installer_profile.tmpfs_mounts` | A volatile native LXC mount, with no persistent disk or host directory |
-| `user`, `working_dir`, `entrypoint`, `command`, `hostname`, `group_add` | `proxmox.installer_profile.runtime` | The process the LXC starts, its user, directory and groups |
+| `user`, `working_dir`, `entrypoint`, `command`, `hostname`, `group_add` | `proxmox.installer_profile.runtime` | The process the LXC starts, its user, directory and groups. LXC reads each argument whole between single or double quotes, so one argument cannot hold both kinds |
 | `extra_hosts` | `proxmox.installer_profile.extra_hosts` | Entries of `/etc/hosts` in the container |
 | `devices` | `proxmox.installer_profile.device_requests` | A `devN` entry for each device, confirmed during the installation |
 | `runtime: nvidia` | `proxmox.installer_profile.device_requests` | The NVIDIA devices and the driver files of the host |

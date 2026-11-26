@@ -596,6 +596,7 @@
   "An accelerated video generation framework that speeds up end-to-end diffusion while preserving video quality": "Платформа ускоренной генерации видео, которая ускоряет весь процесс диффузии, сохраняя качество видео",
   "An application changed since the update check. Check for updates again.": "Приложение изменилось с момента проверки обновлений. Проверьте наличие обновлений ещё раз.",
   "An application for launching HTML5 Network Speed Test Server. You can test download & upload speed from any device within your network with a web browser that is IE10 or new.": "Приложение для запуска сервера тестирования скорости сети на базе HTML5. Вы можете проверять скорость входящего и исходящего соединения с любого устройства в вашей сети через веб-браузер версии IE10 или новее.",
+  "An argument of the command uses both single and double quotes, which LXC cannot start:": "Аргумент команды содержит одновременно одинарные и двойные кавычки, LXC не может его запустить:",
   "An automatic HTTPS web server and reverse proxy.": "Веб-сервер с автоматической настройкой HTTPS и обратный прокси.",
   "An earlier operation for this target still needs to be checked.": "Предыдущую операцию для этого объекта ещё нужно проверить.",
   "An earlier operation needs to be checked.": "Нужно проверить предыдущую операцию.",

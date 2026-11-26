@@ -256,7 +256,20 @@ def effective_entrypoint(
     process = entrypoint + arguments
     if not process:
         raise RuntimeResolutionError(translate("The Entrypoint/Cmd combination is empty"))
-    return " ".join(shlex.quote(item) for item in process)
+    return " ".join(lxc_init_word(item) for item in process)
+
+
+def lxc_init_word(item: str) -> str:
+    """One argument as LXC splits lxc.init.cmd: a word is either bare or
+    wrapped whole in one kind of quote, with no escapes and no joined parts."""
+    if item and shlex.quote(item) == item:
+        return item
+    if "'" not in item:
+        return f"'{item}'"
+    if '"' not in item:
+        return f'"{item}"'
+    raise RuntimeResolutionError(
+        f"{translate('An argument of the command uses both single and double quotes, which LXC cannot start:')} {item}")
 
 
 def home_directory(passwd_path: Path, uid: int) -> str | None:
