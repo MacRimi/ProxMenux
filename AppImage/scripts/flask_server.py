@@ -78,6 +78,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 import pve_mirror  # noqa: E402
+import guest_exec  # noqa: E402
 import vital_signs  # noqa: E402
 
 from smartctl_resolver import (  # noqa: E402
@@ -693,7 +694,7 @@ def _lxc_runtime_details(payload):
         os_info = {}
         try:
             probe = subprocess.run(
-                ['pct', 'exec', str(vmid), '--', 'cat', '/etc/os-release'],
+                guest_exec.command(vmid, ['cat', '/etc/os-release']),
                 capture_output=True, text=True, timeout=5)
             if probe.returncode == 0:
                 keys = {'ID': 'id', 'VERSION_ID': 'version_id',
@@ -12769,6 +12770,17 @@ def _vm_modal_prewarmer_pass():
     except Exception as exc:
         print(f'[ProxMenux] could not check the applications of removed guests: {exc}', flush=True)
     resources = get_cached_pvesh_cluster_resources_vm() or []
+    # One read of each backup storage fills the backups of every guest.
+    missing = [r['vmid'] for r in resources if r.get('vmid') is not None
+               and _vm_cache_get(_vm_backups_cache, r['vmid'], _VM_BACKUPS_TTL) is None]
+    if missing:
+        try:
+            found = _scan_backup_storages()
+            for vmid in missing:
+                _vm_cache_put(_vm_backups_cache, vmid,
+                              _guest_backups_payload(vmid, found.get(int(vmid), [])))
+        except Exception as e:
+            print(f"[ProxMenux] vm-modal prewarmer backups: {e}", file=sys.stderr, flush=True)
     for r in resources:
         vmid = r.get('vmid')
         vm_type = r.get('type')  # 'qemu' or 'lxc'
@@ -13672,6 +13684,83 @@ def api_vm_backup_deletion_status(vmid):
         return jsonify({'error': str(error)}), error.code
 
 
+def _backup_entry(item, storage_id):
+    """One backup of `pvesh get .../content`, as the backups tab shows it."""
+    backup_type = item.get('subtype', '')
+    if not backup_type:
+        volid = item.get('volid', '')
+        if 'vzdump-qemu-' in volid:
+            backup_type = 'qemu'
+        elif 'vzdump-lxc-' in volid:
+            backup_type = 'lxc'
+    size = item.get('size', 0)
+    ctime = item.get('ctime', 0)
+    return {
+        'volid': item.get('volid', ''),
+        'storage': storage_id,
+        'type': backup_type,
+        'size': size,
+        'size_human': format_bytes(size),
+        'timestamp': ctime,
+        'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else '',
+        'notes': item.get('notes', ''),
+        'protected': item.get('protected', False) not in (False, 0, '0', '', None),
+    }
+
+
+def _scan_backup_storages(vmid=None):
+    """Backups on every storage that can hold them, grouped by guest ID.
+
+    With a VMID each storage is asked only for that guest; without one, each
+    storage is read once for every guest. Every `pvesh` call starts a Perl
+    client, so warming all guests reads each storage once, not once per guest.
+    """
+    node = get_proxmox_node_name() or 'localhost'
+    candidate_storages = [
+        s for s in (get_cached_pvesh_storage_list() or [])
+        if 'backup' in s.get('content', '') or s.get('type') == 'pbs'
+    ]
+
+    def _scan_storage(storage):
+        storage_id = storage.get('storage')
+        command = ['pvesh', 'get', f'/nodes/{node}/storage/{storage_id}/content', '--content', 'backup']
+        if vmid is not None:
+            command += ['--vmid', str(vmid)]
+        found = []
+        try:
+            result = subprocess.run(command + ['--output-format', 'json'],
+                                    capture_output=True, text=True, timeout=15)
+            if result.returncode != 0:
+                return found
+            for item in json.loads(result.stdout):
+                if item.get('content') != 'backup':
+                    continue
+                try:
+                    owner = int(item.get('vmid') if vmid is None else vmid)
+                except (TypeError, ValueError):
+                    continue
+                found.append((owner, _backup_entry(item, storage_id)))
+        except Exception:
+            pass
+        return found
+
+    grouped = {}
+    if candidate_storages:
+        from concurrent.futures import ThreadPoolExecutor
+        # Backup scans wait on disks and the network; at most 8 at once.
+        workers = min(8, len(candidate_storages))
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='vmbkp') as pool:
+            for result in pool.map(_scan_storage, candidate_storages):
+                for owner, entry in result:
+                    grouped.setdefault(owner, []).append(entry)
+    return grouped
+
+
+def _guest_backups_payload(vmid, backups):
+    backups = sorted(backups, key=lambda x: x['timestamp'], reverse=True)
+    return {'backups': backups, 'vmid': vmid, 'total': len(backups)}
+
+
 @app.route('/api/vms/<int:vmid>/backups', methods=['GET'])
 @require_auth
 def api_vm_backups(vmid):
@@ -13696,87 +13785,7 @@ def api_vm_backups(vmid):
             if cached is not None:
                 return jsonify(cached)
 
-        backups = []
-
-        # Get current node name
-        node_result = subprocess.run(['hostname'], capture_output=True, text=True, timeout=5)
-        node = node_result.stdout.strip() if node_result.returncode == 0 else 'localhost'
-
-        # Get list of storage locations (shared 30s cache)
-        storages = get_cached_pvesh_storage_list()
-        if storages:
-            # Only scan storages that can hold backups.
-            candidate_storages = [
-                s for s in storages
-                if 'backup' in s.get('content', '') or s.get('type') == 'pbs'
-            ]
-
-            def _scan_storage(storage: dict) -> list:
-                storage_id = storage.get('storage')
-                out: list = []
-                try:
-                    # `pvesh get storage/content --vmid X` still forks
-                    # a Perl client per call. Individually each is
-                    # ~0.7-2 s, so scanning 5+ storages sequentially
-                    # made the Backups tab spin 5-10 s. We keep the
-                    # command (its shape includes `notes` and `subtype`
-                    # that `pvesm list` drops) but fan them out in
-                    # parallel — tab load time collapses to the
-                    # slowest single storage.
-                    content_result = subprocess.run(
-                        ['pvesh', 'get', f'/nodes/{node}/storage/{storage_id}/content',
-                         '--vmid', str(vmid), '--output-format', 'json'],
-                        capture_output=True, text=True, timeout=15,
-                    )
-                    if content_result.returncode != 0:
-                        return out
-                    contents = json.loads(content_result.stdout)
-                    for item in contents:
-                        if item.get('content') != 'backup':
-                            continue
-                        backup_type = item.get('subtype', '')
-                        if not backup_type:
-                            volid = item.get('volid', '')
-                            if 'vzdump-qemu-' in volid:
-                                backup_type = 'qemu'
-                            elif 'vzdump-lxc-' in volid:
-                                backup_type = 'lxc'
-                        size = item.get('size', 0)
-                        ctime = item.get('ctime', 0)
-                        out.append({
-                            'volid': item.get('volid', ''),
-                            'storage': storage_id,
-                            'type': backup_type,
-                            'size': size,
-                            'size_human': format_bytes(size),
-                            'timestamp': ctime,
-                            'date': datetime.fromtimestamp(ctime).strftime('%Y-%m-%d %H:%M') if ctime else '',
-                            'notes': item.get('notes', ''),
-                            'protected': item.get('protected', False) not in (False, 0, '0', '', None),
-                        })
-                except Exception:
-                    pass
-                return out
-
-            if candidate_storages:
-                from concurrent.futures import ThreadPoolExecutor
-                # `min(8, N)` — capped so a wildly misconfigured host
-                # with 20 backup storages doesn't spawn 20 threads.
-                # PVE backup scans are IO/network-bound, so the GIL
-                # isn't a factor.
-                workers = min(8, len(candidate_storages))
-                with ThreadPoolExecutor(max_workers=workers, thread_name_prefix='vmbkp') as pool:
-                    for result in pool.map(_scan_storage, candidate_storages):
-                        backups.extend(result)
-        
-        # Sort by timestamp (newest first)
-        backups.sort(key=lambda x: x['timestamp'], reverse=True)
-
-        payload = {
-            'backups': backups,
-            'vmid': vmid,
-            'total': len(backups)
-        }
+        payload = _guest_backups_payload(vmid, _scan_backup_storages(vmid).get(int(vmid), []))
         _vm_cache_put(_vm_backups_cache, vmid, payload)
         return jsonify(payload)
 

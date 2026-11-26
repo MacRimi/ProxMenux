@@ -17,6 +17,9 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import native_app_discovery as native
 import lxc_apps
+import guest_exec
+
+INSIDE = len(guest_exec.command('101', []))
 
 
 def service(name='handmade', exe='/opt/handmade/server', directory='/opt/handmade', manager='systemd', script='', source=None):
@@ -52,9 +55,9 @@ class DiscoveryFixtures(unittest.TestCase):
             self.assertLessEqual(deadline - time.monotonic(), native.TOTAL_SECONDS)
             if argv[1] == 'status':
                 return status
-            self.assertEqual(argv[:6], ['pct', 'exec', '101', '--', 'timeout', '-s'])
-            self.assertEqual(argv[6:9], ['KILL', '2', 'sh'])
-            script = argv[10]
+            self.assertEqual(argv[:INSIDE + 2], guest_exec.command('101', ['timeout', '-s']))
+            self.assertEqual(argv[INSIDE + 2:INSIDE + 5], ['KILL', '2', 'sh'])
+            script = argv[INSIDE + 6]
             if script == native.SERVICE_SCRIPT:
                 return services if services is not None else service()
             if script == native.PROCESS_SCRIPT:
@@ -303,7 +306,7 @@ class DiscoveryFixtures(unittest.TestCase):
                 self.calls.clear()
                 with self.assertRaises(native.ProbeError):
                     native.scan(101, self.runner(status='status: stopped' if scenario == 'stopped' else 'status: running'))
-                self.assertFalse(any(call[1] == 'exec' for call in self.calls))
+                self.assertFalse(any(guest_exec.is_command(call) for call in self.calls))
                 if (self.oci / '101').exists():
                     (self.oci / '101' / 'oci-compose.json').unlink()
                     (self.oci / '101').rmdir()
@@ -322,7 +325,7 @@ class DiscoveryFixtures(unittest.TestCase):
         result = native.scan(101, self.runner(service(name='native-app')))
         self.assertEqual(result['status'], 'complete')
         self.assertEqual([item['name'] for item in result['candidates']], ['native-app'])
-        self.assertTrue(any(call[1] == 'exec' for call in self.calls))
+        self.assertTrue(any(guest_exec.is_command(call) for call in self.calls))
 
     def test_current_oci_markers_block_without_a_registry_record(self):
         for hint in ('# proxmenux-instance=ca126dc7-09ca-47ff-bac7-3e23396b7a15',
@@ -354,7 +357,7 @@ class DiscoveryFixtures(unittest.TestCase):
         run = self.runner()
 
         def record_created(argv, deadline):
-            if argv[1] == 'exec':
+            if guest_exec.is_command(argv):
                 instance = self.oci / '101'
                 instance.mkdir(exist_ok=True)
                 (instance / 'oci-compose.json').write_text('{"status": "installing"}')
@@ -369,7 +372,7 @@ class DiscoveryFixtures(unittest.TestCase):
             self.assertEqual(result['status'], 'partial')
         run = self.runner()
         def failed(argv, deadline):
-            if argv[1] == 'exec':
+            if guest_exec.is_command(argv):
                 raise native.ProbeError('read_failed')
             return run(argv, deadline)
         self.assertEqual(native.scan(101, failed)['status'], 'partial')
@@ -492,7 +495,7 @@ class DiscoveryFixtures(unittest.TestCase):
                 runner = self.runner()
                 probes = []
                 def checked(argv, deadline):
-                    if argv[1] == 'exec':
+                    if guest_exec.is_command(argv):
                         attempt = subprocess.run(['flock', '-n', str(path), 'true'])
                         self.assertEqual(attempt.returncode, 1)
                         probes.append(argv)
@@ -510,7 +513,7 @@ class DiscoveryFixtures(unittest.TestCase):
         path.write_bytes(original)
         with self.assertRaisesRegex(native.ProbeError, 'guest_busy'):
             native.scan(101, self.runner())
-        self.assertFalse(any(call[1] == 'exec' for call in self.calls))
+        self.assertFalse(any(guest_exec.is_command(call) for call in self.calls))
         self.assertEqual(path.read_bytes(), original)
 
     def test_reused_id_checks_removal_task_before_native_and_docker_probes(self):
@@ -548,7 +551,7 @@ class DiscoveryFixtures(unittest.TestCase):
                         with patch.object(lxc_check_job.subprocess, 'run', return_value=response) as check:
                             if state == 'stopped':
                                 self.assertEqual(scan()['status'], 'complete')
-                                self.assertTrue(any(call[1] == 'exec' for call in self.calls))
+                                self.assertTrue(any(guest_exec.is_command(call) for call in self.calls))
                                 self.assertEqual(path.read_bytes(), b'')
                             else:
                                 with self.assertRaisesRegex(native.ProbeError, 'guest_busy'):
@@ -568,7 +571,7 @@ class DiscoveryFixtures(unittest.TestCase):
             return next(statuses) if argv[1] == 'status' else runner(argv, deadline)
         with self.assertRaisesRegex(native.ProbeError, 'guest_stopped'):
             native.scan(101, stopped)
-        self.assertTrue(all(call[1] == 'exec' for call in self.calls))
+        self.assertTrue(all(guest_exec.is_command(call) for call in self.calls))
 
     def test_scan_reservation_closes_race_after_guard_and_releases_after_exception(self):
         import lxc_check_job
@@ -583,12 +586,12 @@ class DiscoveryFixtures(unittest.TestCase):
             try:
                 with self.assertRaisesRegex(native.ProbeError, 'guest_busy'):
                     native.scan(101, starts_update)
-                self.assertFalse(any(call[1] == 'exec' for call in self.calls))
+                self.assertFalse(any(guest_exec.is_command(call) for call in self.calls))
             finally:
                 for handle in handles:
                     handle.close()
             def crash(argv, deadline):
-                if argv[1] == 'exec':
+                if guest_exec.is_command(argv):
                     with self.assertRaises(BlockingIOError):
                         lxc_check_job.acquire(101)
                     # Another CT must remain available.

@@ -47,6 +47,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 from typing import Any, Optional
+import guest_exec
 import local_app_icons
 
 _APPS_DIR = "/etc/proxmenux/apps"
@@ -1495,7 +1496,7 @@ def _pct_exec(vmid, argv: list[str], timeout: int = _PROBE_TIMEOUT_SEC) -> tuple
     process group and terminate the complete local execution tree so the
     deadline is real.
     """
-    cmd = [_PCT_BIN, "exec", str(vmid), "--"] + argv
+    cmd = guest_exec.command(vmid, argv)
     process: Optional[subprocess.Popen[str]] = None
     try:
         process = subprocess.Popen(

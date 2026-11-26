@@ -18,6 +18,7 @@ import subprocess
 import threading
 import time
 
+import guest_exec
 import native_app_discovery as native
 
 MAX_CONTAINERS = 50
@@ -178,7 +179,7 @@ def scan(vmid, run=read, guard_run=native.bounded_run):
     deadline = time.monotonic() + TOTAL_SECONDS
     native._guard(vmid, deadline, guard_run)
     with native._scan_reservation(vmid):
-        prefix = ['pct', 'exec', str(vmid), '--']
+        prefix = guest_exec.command(vmid, [])
         # The shell's command lookup may return 127 for an absent executable.
         # Use 1 only when the probe starts and finds no Docker command.
         rc, _ = run(prefix + ['sh', '-c',

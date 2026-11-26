@@ -47,6 +47,8 @@ import time
 import urllib.request
 from typing import Any, Callable, Optional
 
+import guest_exec
+
 # ─── Storage ──────────────────────────────────────────────────────────────────
 
 _DB_DIR = "/usr/local/share/proxmenux"
@@ -778,7 +780,7 @@ def _probe_helper_scripts_slug(vmid: str) -> Optional[str]:
     """
     try:
         r = subprocess.run(
-            [_PCT_BIN, "exec", str(vmid), "--", "cat", "/usr/bin/update"],
+            guest_exec.command(vmid, ["cat", "/usr/bin/update"]),
             capture_output=True, text=True,
             timeout=_LXC_OS_PROBE_TIMEOUT_SEC,
         )
@@ -897,7 +899,7 @@ def _probe_lxc_os(vmid: str, *, raise_on_read_error: bool = False) -> Optional[s
     """
     try:
         r = subprocess.run(
-            [_PCT_BIN, "exec", vmid, "--", "cat", "/etc/os-release"],
+            guest_exec.command(vmid, ["cat", "/etc/os-release"]),
             capture_output=True, text=True,
             timeout=_LXC_OS_PROBE_TIMEOUT_SEC,
         )
@@ -1369,7 +1371,7 @@ def _run_pct_pkg_listing(vmid: str, cmd: str) -> tuple[bool, str, str]:
     """
     try:
         r = subprocess.run(
-            [_PCT_BIN, "exec", vmid, "--", "sh", "-c", cmd],
+            guest_exec.command(vmid, ["sh", "-c", cmd]),
             capture_output=True, text=True,
             timeout=_LXC_EXEC_TIMEOUT_SEC,
         )
@@ -1457,7 +1459,7 @@ def _refresh_lxc_pkg_cache_if_stale(vmid: str, family: str) -> dict:
 
     try:
         r = subprocess.run(
-            [_PCT_BIN, "exec", vmid, "--", "sh", "-c", cmd_refresh],
+            guest_exec.command(vmid, ["sh", "-c", cmd_refresh]),
             capture_output=True, text=True,
             timeout=_LXC_CACHE_REFRESH_TIMEOUT_SEC,
         )

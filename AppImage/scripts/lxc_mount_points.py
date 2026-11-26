@@ -33,8 +33,11 @@ import os
 import re
 import shlex
 import subprocess
+import time
 from pathlib import Path
 from typing import Any, Optional
+
+import guest_exec
 
 _LXC_CONF_DIR = Path("/etc/pve/lxc")
 _PCT = "/usr/sbin/pct"
@@ -142,10 +145,25 @@ def _mount_target_key(target: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+_STORAGES_TTL = 60.0
+_storages_cache: dict[str, Any] = {"at": 0.0, "value": None}
+
+
 def _list_pve_storages() -> dict[str, dict[str, Any]]:
     """Map storage_id → ``{type, content, total_kib, used_kib, avail_kib}``
     from ``pvesm status``. One subprocess call covers every classifier
-    decision below."""
+    decision below. ``pvesm status`` checks every storage, so its answer is
+    shared for a minute by all the containers read in that time."""
+    cached = _storages_cache["value"]
+    if cached is not None and time.monotonic() - _storages_cache["at"] < _STORAGES_TTL:
+        return cached
+    out = _read_pve_storages()
+    if out:
+        _storages_cache.update(at=time.monotonic(), value=out)
+    return out
+
+
+def _read_pve_storages() -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     try:
         proc = subprocess.run(
@@ -373,8 +391,7 @@ def _df_via_pct_exec(vmid: str, ct_target: str,
         return empty
     try:
         proc = subprocess.run(
-            [_PCT, "exec", vmid, "--", "df", "-B1",
-             "--output=size,used,avail", ct_target],
+            guest_exec.command(vmid, ["df", "-B1", "--output=size,used,avail", ct_target]),
             capture_output=True, text=True, timeout=timeout,
         )
         if proc.returncode != 0:
@@ -475,24 +492,7 @@ def _capacity_for(source: str, classification: dict[str, Any],
 
 def _ct_status(vmid: str) -> tuple[bool, str]:
     """Return (running, init_pid). pid is empty string when stopped."""
-    try:
-        proc = subprocess.run(
-            [_PCT, "status", vmid, "--verbose"],
-            capture_output=True, text=True, timeout=_EXEC_TIMEOUT,
-        )
-        if proc.returncode != 0:
-            return False, ""
-        running = False
-        pid = ""
-        for line in proc.stdout.splitlines():
-            low = line.strip().lower()
-            if low.startswith("status:"):
-                running = "running" in low
-            elif low.startswith("pid:"):
-                pid = line.split(":", 1)[1].strip()
-        return running, pid
-    except (subprocess.TimeoutExpired, OSError):
-        return False, ""
+    return guest_exec.status(vmid, timeout=_EXEC_TIMEOUT)
 
 
 def _read_ct_proc_mounts(host_pid: str) -> list[dict[str, Any]]:

@@ -15,6 +15,9 @@ from unittest.mock import patch, Mock
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import docker_app_discovery as docker
+import guest_exec
+
+INSIDE = len(guest_exec.command('101', []))
 import native_app_discovery as native
 import lxc_apps
 
@@ -47,13 +50,13 @@ class Scan(unittest.TestCase):
     def runner(self, records=None, ids=None, inspect_rc=0, docker_present=True):
         def execute(argv, deadline):
             self.calls.append(argv)
-            self.assertEqual(argv[:4], ['pct', 'exec', '101', '--'])
-            if argv[4] == 'sh':
-                self.assertEqual(argv[5], '-c')
+            self.assertEqual(argv[:INSIDE], guest_exec.command('101', []))
+            if argv[INSIDE] == 'sh':
+                self.assertEqual(argv[INSIDE + 1], '-c')
                 return (0 if docker_present else 1), ''
-            if argv[4:6] == ['docker', 'ps']:
+            if argv[INSIDE:INSIDE + 2] == ['docker', 'ps']:
                 return 0, '\n'.join(ids if ids is not None else [ONE])
-            self.assertEqual(argv[4:8], ['docker', 'inspect', '--format', docker.INSPECT_FORMAT])
+            self.assertEqual(argv[INSIDE:INSIDE + 4], ['docker', 'inspect', '--format', docker.INSPECT_FORMAT])
             return inspect_rc, '\n'.join(json.dumps(r) if not isinstance(r, str) else r
                                          for r in (records if records is not None else [record()]))
         return execute
@@ -74,7 +77,7 @@ class Scan(unittest.TestCase):
             self.assertNotIn('repo', item)
         self.assertNotIn('.Env', docker.INSPECT_FORMAT)
         self.assertNotIn('json .}}', docker.INSPECT_FORMAT, 'no whole inspect object')
-        self.assertTrue(all(c[4] == 'sh' or c[4:6] in (['docker', 'ps'], ['docker', 'inspect']) for c in self.calls))
+        self.assertTrue(all(c[INSIDE] == 'sh' or c[INSIDE:INSIDE + 2] in (['docker', 'ps'], ['docker', 'inspect']) for c in self.calls))
 
     def test_known_version_is_display_metadata_and_never_an_updater(self):
         item, = self.scan(records=[record(version='1.11.0')])['candidates']
@@ -124,8 +127,8 @@ class Scan(unittest.TestCase):
 
     def test_docker_absent_in_real_sh_is_empty_but_failed_shell_is_an_error(self):
         def probe(argv, deadline):
-            self.assertEqual(argv[:5], ['pct', 'exec', '101', '--', 'sh'])
-            real = subprocess.run(['/bin/sh', *argv[5:]], env={'PATH': self.temp.name},
+            self.assertEqual(argv[:INSIDE + 1], guest_exec.command('101', ['sh']))
+            real = subprocess.run(['/bin/sh', *argv[INSIDE + 1:]], env={'PATH': self.temp.name},
                                   check=False, capture_output=True, text=True, timeout=2)
             return real.returncode, real.stdout
 
@@ -153,7 +156,7 @@ class Scan(unittest.TestCase):
         ids = [f'{i:064x}' for i in range(51)]
         result = self.scan(ids=ids, records=[record(id=ids[0])])
         self.assertIn('container_limit', result['issues'])
-        self.assertEqual(len(self.calls[-1][8:]), docker.MAX_CONTAINERS)
+        self.assertEqual(len(self.calls[-1][INSIDE + 4:]), docker.MAX_CONTAINERS)
 
     def test_stopped_missing_locked_and_oci_guests_have_zero_guest_probes(self):
         root = Path(self.temp.name)

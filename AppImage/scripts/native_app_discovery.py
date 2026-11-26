@@ -31,6 +31,7 @@ import subprocess
 import threading
 import time
 
+import guest_exec
 from lxc_check_job import check_control_task
 from oci_instance_info import OciStateError, check_plain_lxc
 
@@ -334,9 +335,9 @@ def _manifest_bounds(executable, directory):
 
 def _manifest_footprint(record, run, deadline):
     """Read one of two fixed Node manifest locations without following an escape."""
-    output = run(['pct', 'exec', str(record['vmid']), '--', 'timeout', '-s', 'KILL', '2',
+    output = run(guest_exec.command(record['vmid'], ['timeout', '-s', 'KILL', '2',
                   'sh', '-c', MANIFEST_FOOTPRINT_SCRIPT, 'discovery',
-                  record['root'], record['manifest_anchor'], record['manifest_parent']], deadline)
+                  record['root'], record['manifest_anchor'], record['manifest_parent']]), deadline)
     header, separator, metadata = output.partition('\n')
     if header == 'MISSING':
         if metadata:
@@ -493,7 +494,7 @@ def candidate(vmid, record, footprint):
 
 
 def _guard(vmid, deadline, run):
-    # The local node path rejects QEMU, missing and remote CTs before pct exec.
+    # The local node path rejects QEMU, missing and remote CTs before attaching.
     path = LOCAL_CONFIG / f'{vmid}.conf'
     if not path.is_file():
         raise ProbeError('not_local_lxc')
@@ -586,8 +587,8 @@ def _scan_metadata(vmid, deadline, run):
                 issues.append('metadata_limit')
                 break
             parsed, limited, count = parse_records(run(
-                ['pct', 'exec', str(vmid), '--', 'timeout', '-s', 'KILL', '2',
-                 'sh', '-c', script, 'discovery', str(MAX_RECORDS - consumed)], deadline), kind)
+                guest_exec.command(vmid, ['timeout', '-s', 'KILL', '2',
+                 'sh', '-c', script, 'discovery', str(MAX_RECORDS - consumed)]), deadline), kind)
             if consumed + count > MAX_RECORDS:
                 issues.append('metadata_limit')
                 parsed = parsed[:MAX_RECORDS - consumed]
@@ -608,8 +609,8 @@ def _scan_metadata(vmid, deadline, run):
         # This is outside the generic record budget: it returns only an exact,
         # fixed Hestia signature, not additional arbitrary process metadata.
         hestia_panels, limited, _ = parse_records(run(
-            ['pct', 'exec', str(vmid), '--', 'timeout', '-s', 'KILL', '2',
-             'sh', '-c', HESTIA_PANEL_SCRIPT, 'discovery'], deadline), 'H')
+            guest_exec.command(vmid, ['timeout', '-s', 'KILL', '2',
+             'sh', '-c', HESTIA_PANEL_SCRIPT, 'discovery']), deadline), 'H')
         if limited:
             issues.append('metadata_limit')
     except ProbeError as exc:
@@ -655,9 +656,9 @@ def _scan_metadata(vmid, deadline, run):
                 if probe_record is None:
                     continue
             else:
-                footprint = run(['pct', 'exec', str(vmid), '--', 'timeout', '-s', 'KILL', '2',
+                footprint = run(guest_exec.command(vmid, ['timeout', '-s', 'KILL', '2',
                                  'sh', '-c', FOOTPRINT_SCRIPT,
-                                 'discovery', record['path'], record['root']], deadline)
+                                 'discovery', record['path'], record['root']]), deadline)
             item = candidate(vmid, probe_record, footprint)
             items.append(item)
             if item['metadata_issue']:
