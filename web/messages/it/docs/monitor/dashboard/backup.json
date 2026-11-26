@@ -36,7 +36,7 @@
               [
                 "Proxmox Backup Server",
                 "Lo stato dei server PBS: datastore, attività recenti e pianificazioni di manutenzione.",
-                "L’interfaccia web di PBS. Questa vista è in sola lettura: non modifica mai nulla sul server."
+                "L’interfaccia web di PBS. Questa vista legge lo stato del server; l’unica cosa che vi crea è il token di sola lettura di una connessione effettuata con utente e password."
               ]
             ]
           }
@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Chi vede la scheda",
-            "body": "La scheda compare quando il profilo dell’account include l’area <strong>Backup</strong>. Creare, eseguire, modificare, ripristinare, scaricare, visualizzare il contenuto di un backup o eliminarlo richiede l’azione <strong>Gestire i backup</strong>. Senza di essa le viste sono in sola lettura e questi pulsanti non compaiono. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. Il Monitor di un host Proxmox Backup Server ha le proprie schede e non ha la scheda Backup."
+            "body": "La scheda compare quando il profilo dell’account include l’area <strong>Backup</strong>. Creare, eseguire, modificare, ripristinare, scaricare, visualizzare il contenuto di un backup o eliminarlo richiede l’azione <strong>Gestire i backup</strong>, così come gestire le connessioni PBS e modificare <strong>Conservazione dei backup sullo storage</strong>. Senza di essa le viste sono in sola lettura e questi pulsanti non compaiono. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. Il Monitor di un host Proxmox Backup Server ha le proprie schede e non ha la scheda Backup."
           }
         }
       ]
@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Ogni riga mostra il backend, il badge <strong>collegata</strong>, un lucchetto quando l’attività è cifrata, il profilo (<strong>Predefinito</strong> o <strong>Personalizzato</strong>), la destinazione, la pianificazione, la conservazione e la prossima e l’ultima esecuzione. Un clic apre l’attività con le sue impostazioni, il log dell’ultima esecuzione e i pulsanti <strong>Esegui ora</strong>, <strong>Modifica</strong>, <strong>Disabilita</strong> ed <strong>Elimina</strong>. L’eliminazione rimuove l’attività e il suo timer, mai i backup già creati. Eliminare un’attività collegata rimuove anche l’hook del Monitor da quello storage Proxmox."
+          "p": "Ogni riga mostra il backend, il badge <strong>collegata</strong>, un lucchetto quando l’attività è cifrata, il profilo (<strong>Predefinito</strong> o <strong>Personalizzato</strong>), la destinazione, la pianificazione, la conservazione e la prossima e l’ultima esecuzione. Un clic apre l’attività con le sue impostazioni, il log dell’ultima esecuzione e i pulsanti <strong>Esegui ora</strong>, <strong>Modifica</strong>, <strong>Disabilita</strong> ed <strong>Elimina</strong>. L’eliminazione rimuove l’attività e il suo timer, mai i backup già creati. Eliminare un’attività collegata lascia il job Proxmox così com’è: continua a eseguire il backup dei suoi guest, senza questo backup dell’host."
         },
         {
           "calloutTip": {
@@ -149,7 +149,7 @@
             "rows": [
               [
                 "Locale/USB",
-                "Una cartella su questo host o su un’unità USB montata. <code>/var/lib/vz/dump</code> è sempre presente, come <strong>Predefinito integrato</strong>. La procedura guidata elenca le unità USB, rilevate ogni 30 secondi: <strong>Monta e usa</strong> ne monta una così com’è, mentre <strong>Formatta e usa</strong> la cancella e crea un’unica partizione ext4, dopo che hai digitato il percorso del dispositivo per confermare."
+                "Una cartella su questo host o su un’unità USB montata. <code>/var/lib/vz/dump</code> è sempre presente, come <strong>Predefinito integrato</strong>. La procedura guidata elenca le unità USB all’apertura e di nuovo con <strong>Aggiorna</strong>. Ogni unità offre l’azione consentita dal suo stato: <strong>Usa</strong> per un’unità montata, <strong>Monta e usa</strong> per un’unità non montata con un filesystem, che la monta così com’è, e <strong>Formatta e usa</strong> per un’unità senza filesystem, che crea un’unica partizione ext4 dopo che hai digitato il percorso del dispositivo per confermare."
               ],
               [
                 "PBS",
@@ -341,7 +341,7 @@
     {
       "id": "pbs",
       "title": "Proxmox Backup Server",
-      "intro": "Questa vista legge lo stato dei Proxmox Backup Server tramite la loro API e non modifica mai nulla su di essi. Non è la stessa cosa che usare PBS come destinazione dei backup dell’host, che si configura in <pbsLink>Destinazioni: Proxmox Backup Server</pbsLink>.",
+      "intro": "Questa vista legge lo stato dei Proxmox Backup Server tramite la loro API. Su un server crea solo il token di sola lettura di una connessione effettuata con utente e password. Non è la stessa cosa che usare PBS come destinazione dei backup dell’host, che si configura in <pbsLink>Destinazioni: Proxmox Backup Server</pbsLink>.",
       "blocks": [
         {
           "p": "Il selettore in alto elenca le connessioni salvate e <strong>PBS di questo nodo</strong> quando PBS è installato sullo stesso host di Proxmox VE, caso che non richiede alcuna connessione. I dati si aggiornano ogni 30 secondi e con <strong>Aggiorna</strong>."
@@ -355,7 +355,7 @@
             "rows": [
               [
                 "Riga di riepilogo",
-                "Nome del server, versione di PBS, ora dell’ultimo aggiornamento e se i servizi PBS sono attivi."
+                "Nome del server, versione di PBS, ora dell’ultimo aggiornamento e, per <strong>PBS di questo nodo</strong>, se i servizi PBS sono attivi."
               ],
               [
                 "Datastore",
@@ -401,7 +401,7 @@
           }
         },
         {
-          "p": "L’indirizzo è HTTPS, con <code>:8007</code> per la porta predefinita. L’impronta SHA256 è facoltativa: lasciala vuota per un certificato firmato da un’autorità attendibile e compilala per uno autofirmato. Viene verificata prima di inviare qualsiasi credenziale. Salvare o modificare una connessione richiede l’autenticazione del Monitor attiva. <strong>Rimuovi connessione</strong> elimina la connessione e il suo token solo dal Monitor: il token resta in PBS, dove può essere eliminato."
+          "p": "L’indirizzo è HTTPS, con <code>:8007</code> per la porta predefinita. L’impronta SHA256 è facoltativa: lasciala vuota per un certificato firmato da un’autorità attendibile e compilala per uno autofirmato. Viene verificata prima di inviare qualsiasi credenziale. Salvare una connessione, accedervi e rimuoverla richiedono l’account locale del Monitor, con la sua password; con l’accesso tramite Proxmox VE queste operazioni vengono rifiutate. <strong>Rimuovi connessione</strong> elimina la connessione e il suo token solo dal Monitor: il token resta in PBS, dove può essere eliminato."
         },
         {
           "p": "Quando Proxmox VE ha storage PBS senza una connessione, la scheda <strong>PBS rilevati nello storage di Proxmox</strong> li elenca con <strong>Collega</strong>, che apre il modulo con nome, indirizzo e impronta già compilati."

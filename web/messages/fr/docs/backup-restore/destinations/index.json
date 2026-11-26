@@ -47,8 +47,8 @@
       {
         "feature": "Rétention / purge",
         "local": "Appliquée par tâche programmée avec les six limites <code>KEEP_*</code>, selon la même sélection que vzdump sur les archives de cette tâche. Les anciennes archives (avec leurs fichiers annexes et journaux d’exécution) sont supprimées ensemble. Les sauvegardes interactives ne font pas de purge.",
-        "pbs": "Appliquée par tâche programmée via <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. Les sauvegardes interactives ne font pas de purge.",
-        "borg": "Appliquée par tâche programmée via <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. Les sauvegardes interactives ne font pas de purge."
+        "pbs": "Appliquée par tâche programmée via <code>proxmox-backup-client prune</code> avec les six limites <code>--keep-*</code> : dernières, horaires, quotidiennes, hebdomadaires, mensuelles et annuelles. Les sauvegardes interactives ne font pas de purge.",
+        "borg": "Appliquée par tâche programmée via <code>borg prune</code> avec les six limites <code>--keep-*</code> : dernières, horaires, quotidiennes, hebdomadaires, mensuelles et annuelles. Les sauvegardes interactives ne font pas de purge."
       },
       {
         "feature": "Réseau",

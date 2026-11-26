@@ -32,7 +32,7 @@
               [
                 "Proxmox Backup Server",
                 "The status of PBS servers: datastores, recent tasks and maintenance schedules.",
-                "The PBS web interface. This view only reads: it never changes anything on the server."
+                "The PBS web interface. This view reads the status of the server; the only thing it creates there is the read-only token of a connection made with a user and password."
               ]
             ]
           }
@@ -47,7 +47,7 @@
         {
           "calloutInfo": {
             "title": "Who sees the tab",
-            "body": "The tab appears when the profile of the account includes the <strong>Backup</strong> area. Creating, running, editing, restoring, downloading, viewing the contents of a backup or deleting needs the action <strong>Manage backups</strong>. Without it the views are read-only and those buttons do not appear. Profiles are described in <accessLink>Users and profiles</accessLink>. The Monitor of a Proxmox Backup Server host has its own tabs and no Backup tab."
+            "body": "The tab appears when the profile of the account includes the <strong>Backup</strong> area. Creating, running, editing, restoring, downloading, viewing the contents of a backup or deleting needs the action <strong>Manage backups</strong>, and so do managing the PBS connections and editing <strong>Storage retention</strong>. Without it the views are read-only and those buttons do not appear. Profiles are described in <accessLink>Users and profiles</accessLink>. The Monitor of a Proxmox Backup Server host has its own tabs and no Backup tab."
           }
         }
       ]
@@ -106,7 +106,7 @@
           }
         },
         {
-          "p": "Each row shows the backend, the <strong>attached</strong> badge, a lock when the job is encrypted, the profile (<strong>Default</strong> or <strong>Custom</strong>), the destination, the schedule, the retention, and the next and last run. A click opens the job with its settings, the log of the last run, and <strong>Run now</strong>, <strong>Edit</strong>, <strong>Disable</strong> and <strong>Delete</strong>. Deleting removes the job and its timer, never the backups already made. Deleting an attached job also removes the Monitor hook from that Proxmox storage."
+          "p": "Each row shows the backend, the <strong>attached</strong> badge, a lock when the job is encrypted, the profile (<strong>Default</strong> or <strong>Custom</strong>), the destination, the schedule, the retention, and the next and last run. A click opens the job with its settings, the log of the last run, and <strong>Run now</strong>, <strong>Edit</strong>, <strong>Disable</strong> and <strong>Delete</strong>. Deleting removes the job and its timer, never the backups already made. Deleting an attached job leaves the Proxmox job as it is: it goes on backing up its guests, without this host backup."
         },
         {
           "calloutTip": {
@@ -127,7 +127,7 @@
             "rows": [
               [
                 "Local / USB",
-                "A folder on this host or on a mounted USB drive. <code>/var/lib/vz/dump</code> is always listed, as <strong>Built-in default</strong>. The wizard lists USB drives, scanned every 30 seconds: <strong>Mount and use</strong> mounts one as it is, and <strong>Format and use</strong> wipes it and creates a single ext4 partition, after you type the device path to confirm."
+                "A folder on this host or on a mounted USB drive. <code>/var/lib/vz/dump</code> is always listed, as <strong>Built-in default</strong>. The wizard lists the USB drives when it opens and again with <strong>Refresh</strong>. Each drive offers the action its state allows: <strong>Use</strong> for a mounted drive, <strong>Mount and use</strong> for an unmounted drive with a filesystem, which mounts it as it is, and <strong>Format and use</strong> for a drive with no filesystem, which creates a single ext4 partition after you type the device path to confirm."
               ],
               [
                 "PBS",
@@ -289,7 +289,7 @@
     {
       "id": "pbs",
       "title": "Proxmox Backup Server",
-      "intro": "This view reads the status of Proxmox Backup Servers through their API and never changes anything on them. It is not the same as using PBS as a destination of host backups, which is set up in <pbsLink>PBS destination</pbsLink>.",
+      "intro": "This view reads the status of Proxmox Backup Servers through their API. On a server it only creates the read-only token of a connection made with a user and password. It is not the same as using PBS as a destination of host backups, which is set up in <pbsLink>PBS destination</pbsLink>.",
       "blocks": [
         {
           "p": "The selector at the top lists the saved connections, and <strong>PBS on this node</strong> when PBS is installed on the same host as Proxmox VE, which needs no connection. The data refreshes every 30 seconds and with <strong>Refresh</strong>."
@@ -298,7 +298,7 @@
           "table": {
             "headers": ["Part", "What it shows"],
             "rows": [
-              ["Summary line", "Server name, PBS version, time of the last update and whether the PBS services are active."],
+              ["Summary line", "Server name, PBS version, time of the last update and, for <strong>PBS on this node</strong>, whether the PBS services are active."],
               ["Datastores", "Capacity, used and available space of each datastore, with <strong>Estimated full</strong>."],
               [
                 "Recent tasks",
@@ -334,7 +334,7 @@
           }
         },
         {
-          "p": "The address is HTTPS, with <code>:8007</code> for the default port. The SHA256 fingerprint is optional: leave it empty for a certificate signed by a trusted authority, and fill it in for a self-signed one. It is checked before any credential is sent. Saving or changing a connection needs Monitor authentication enabled. <strong>Remove connection</strong> deletes the connection and its token from the Monitor only: the token stays in PBS, where it can be deleted."
+          "p": "The address is HTTPS, with <code>:8007</code> for the default port. The SHA256 fingerprint is optional: leave it empty for a certificate signed by a trusted authority, and fill it in for a self-signed one. It is checked before any credential is sent. Saving a connection, signing in and removing it need the local account of the Monitor, with its password; with Proxmox VE sign-in they are refused. <strong>Remove connection</strong> deletes the connection and its token from the Monitor only: the token stays in PBS, where it can be deleted."
         },
         {
           "p": "When Proxmox VE has PBS storages without a connection, the card <strong>PBS detected in Proxmox storage</strong> lists them with <strong>Connect</strong>, which opens the form with the name, address and fingerprint already filled in."

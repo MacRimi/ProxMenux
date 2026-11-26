@@ -47,8 +47,8 @@
       {
         "feature": "Conservazione / eliminazione delle vecchie copie",
         "local": "Applicata a ogni attività pianificata con i sei limiti <code>KEEP_*</code>, usando la stessa selezione di vzdump sugli archivi di quell’attività. I vecchi archivi (con i file ausiliari e i log di esecuzione) vengono eliminati insieme. I backup interattivi non eliminano le vecchie copie.",
-        "pbs": "Applicato per lavoro programmato tramite <code>proxmox-backup-client prune --keep-last / --keep-daily / --keep-weekly</code>. I backup interattivi non eliminano le vecchie copie.",
-        "borg": "Applicato per lavoro programmato tramite <code>borg prune --keep-last / --keep-daily / --keep-weekly</code>. I backup interattivi non eliminano le vecchie copie."
+        "pbs": "Applicato per lavoro programmato tramite <code>proxmox-backup-client prune</code> con i sei limiti <code>--keep-*</code>: ultimi, orari, giornalieri, settimanali, mensili e annuali. I backup interattivi non eliminano le vecchie copie.",
+        "borg": "Applicato per lavoro programmato tramite <code>borg prune</code> con i sei limiti <code>--keep-*</code>: ultimi, orari, giornalieri, settimanali, mensili e annuali. I backup interattivi non eliminano le vecchie copie."
       },
       {
         "feature": "Rete",

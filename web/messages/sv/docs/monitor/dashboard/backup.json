@@ -36,7 +36,7 @@
               [
                 "Proxmox Backup Server",
                 "Status för PBS-servrar: datalager, senaste uppgifter och underhållsscheman.",
-                "PBS webbgränssnitt. Den här vyn läser bara: den ändrar aldrig något på servern."
+                "PBS webbgränssnitt. Den här vyn läser serverns status; det enda den skapar där är den skrivskyddade token för en anslutning som görs med användare och lösenord."
               ]
             ]
           }
@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Vem som ser fliken",
-            "body": "Fliken visas när kontots profil innehåller området <strong>Säkerhetskopiering</strong>. Att skapa, köra, redigera, återställa, ladda ner, visa innehållet i en säkerhetskopia eller radera den kräver åtgärden <strong>Hantera säkerhetskopior</strong>. Utan den är vyerna skrivskyddade och knapparna visas inte. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Monitor på en värd med Proxmox Backup Server har egna flikar och ingen flik för säkerhetskopiering."
+            "body": "Fliken visas när kontots profil innehåller området <strong>Säkerhetskopiering</strong>. Att skapa, köra, redigera, återställa, ladda ner, visa innehållet i en säkerhetskopia eller radera den kräver åtgärden <strong>Hantera säkerhetskopior</strong>, liksom att hantera PBS-anslutningarna och redigera <strong>Lagringens bevarandepolicy</strong>. Utan den är vyerna skrivskyddade och knapparna visas inte. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Monitor på en värd med Proxmox Backup Server har egna flikar och ingen flik för säkerhetskopiering."
           }
         }
       ]
@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Varje rad visar backend, märket <strong>bunden</strong>, ett lås när jobbet är krypterat, profilen (<strong>Standard</strong> eller <strong>Beställnings</strong>), destinationen, schemat, bevarandet samt nästa och senaste körning. Ett klick öppnar jobbet med dess inställningar, loggen från den senaste körningen och <strong>Kör nu</strong>, <strong>Redigera</strong>, <strong>Inaktivera</strong> och <strong>Radera</strong>. Att radera tar bort jobbet och dess timer, aldrig de säkerhetskopior som redan har gjorts. Att radera ett kopplat jobb tar också bort Monitor-kroken från den Proxmox-lagringen."
+          "p": "Varje rad visar backend, märket <strong>bunden</strong>, ett lås när jobbet är krypterat, profilen (<strong>Standard</strong> eller <strong>Beställnings</strong>), destinationen, schemat, bevarandet samt nästa och senaste körning. Ett klick öppnar jobbet med dess inställningar, loggen från den senaste körningen och <strong>Kör nu</strong>, <strong>Redigera</strong>, <strong>Inaktivera</strong> och <strong>Radera</strong>. Att radera tar bort jobbet och dess timer, aldrig de säkerhetskopior som redan har gjorts. Att radera ett kopplat jobb lämnar Proxmox-jobbet som det är: det fortsätter att säkerhetskopiera sina gäster, utan den här säkerhetskopian av värden."
         },
         {
           "calloutTip": {
@@ -149,7 +149,7 @@
             "rows": [
               [
                 "Lokal / USB",
-                "En mapp på den här värden eller på en monterad USB-enhet. <code>/var/lib/vz/dump</code> listas alltid, som <strong>Inbyggd standard</strong>. Guiden listar USB-enheter, som skannas var 30:e sekund: <strong>Montera och använd</strong> monterar en som den är, och <strong>Formatera och använda</strong> rensar den och skapar en enda ext4-partition, efter att du har skrivit enhetens sökväg för att bekräfta."
+                "En mapp på den här värden eller på en monterad USB-enhet. <code>/var/lib/vz/dump</code> listas alltid, som <strong>Inbyggd standard</strong>. Guiden listar USB-enheterna när den öppnas och igen med <strong>Uppdatera</strong>. Varje enhet erbjuder den åtgärd som dess tillstånd tillåter: <strong>Använda</strong> för en monterad enhet, <strong>Montera och använd</strong> för en omonterad enhet med filsystem, som monterar den som den är, och <strong>Formatera och använda</strong> för en enhet utan filsystem, som skapar en enda ext4-partition efter att du har skrivit enhetens sökväg för att bekräfta."
               ],
               [
                 "PBS",
@@ -341,7 +341,7 @@
     {
       "id": "pbs",
       "title": "Proxmox Backup Server",
-      "intro": "Den här vyn läser statusen för Proxmox Backup Server via deras API och ändrar aldrig något på dem. Det är inte samma sak som att använda PBS som destination för värdens säkerhetskopior, vilket konfigureras i <pbsLink>Mål: Proxmox Backup Server</pbsLink>.",
+      "intro": "Den här vyn läser statusen för Proxmox Backup Server via deras API. På en server skapar den bara den skrivskyddade token för en anslutning som görs med användare och lösenord. Det är inte samma sak som att använda PBS som destination för värdens säkerhetskopior, vilket konfigureras i <pbsLink>Mål: Proxmox Backup Server</pbsLink>.",
       "blocks": [
         {
           "p": "Väljaren överst listar de sparade anslutningarna, och <strong>PBS på den här noden</strong> när PBS är installerat på samma värd som Proxmox VE, vilket inte behöver någon anslutning. Data uppdateras var 30:e sekund och med <strong>Uppdatera</strong>."
@@ -355,7 +355,7 @@
             "rows": [
               [
                 "Sammanfattningsrad",
-                "Servernamn, PBS-version, tidpunkt för den senaste uppdateringen och om PBS-tjänsterna är aktiva."
+                "Servernamn, PBS-version, tidpunkt för den senaste uppdateringen och, för <strong>PBS på den här noden</strong>, om PBS-tjänsterna är aktiva."
               ],
               [
                 "Datalager",
@@ -401,7 +401,7 @@
           }
         },
         {
-          "p": "Adressen är HTTPS, med <code>:8007</code> som standardport. SHA256-fingeravtrycket är valfritt: lämna det tomt för ett certifikat som signerats av en betrodd utfärdare och fyll i det för ett självsignerat. Det kontrolleras innan någon inloggningsuppgift skickas. Att spara eller ändra en anslutning kräver att Monitor-autentisering är aktiverad. <strong>Ta bort anslutningen</strong> raderar anslutningen och dess token bara från Monitor: token finns kvar i PBS, där den kan raderas."
+          "p": "Adressen är HTTPS, med <code>:8007</code> som standardport. SHA256-fingeravtrycket är valfritt: lämna det tomt för ett certifikat som signerats av en betrodd utfärdare och fyll i det för ett självsignerat. Det kontrolleras innan någon inloggningsuppgift skickas. Att spara en anslutning, logga in och ta bort den kräver Monitors lokala konto med dess lösenord; med inloggning via Proxmox VE avvisas de. <strong>Ta bort anslutningen</strong> raderar anslutningen och dess token bara från Monitor: token finns kvar i PBS, där den kan raderas."
         },
         {
           "p": "När Proxmox VE har PBS-lagringar utan anslutning listar kortet <strong>PBS som hittats i Proxmox-lagringen</strong> dem med <strong>Anslut</strong>, som öppnar formuläret med namn, adress och fingeravtryck redan ifyllda."

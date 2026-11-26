@@ -36,7 +36,7 @@
               [
                 "Proxmox Backup Server",
                 "El estado de los servidores PBS: datastores, tareas recientes y programaciones de mantenimiento.",
-                "La interfaz web de PBS. Esta vista solo lee: nunca cambia nada en el servidor."
+                "La interfaz web de PBS. Esta vista lee el estado del servidor; lo único que crea en él es el token de solo lectura de una conexión hecha con usuario y contraseña."
               ]
             ]
           }
@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Quién ve la pestaña",
-            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Backup</strong>. Crear, ejecutar, editar, restaurar, descargar, ver el contenido de un backup o eliminarlo requiere la acción <strong>Gestionar backups</strong>. Sin ella las vistas son de solo lectura y esos botones no aparecen. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El Monitor de un host con Proxmox Backup Server tiene sus propias pestañas y no tiene la pestaña Backup."
+            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Backup</strong>. Crear, ejecutar, editar, restaurar, descargar, ver el contenido de un backup o eliminarlo requiere la acción <strong>Gestionar backups</strong>, igual que gestionar las conexiones de PBS y editar <strong>Retención del almacenamiento</strong>. Sin ella las vistas son de solo lectura y esos botones no aparecen. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El Monitor de un host con Proxmox Backup Server tiene sus propias pestañas y no tiene la pestaña Backup."
           }
         }
       ]
@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Cada fila muestra el backend, la insignia <strong>adjunto</strong>, un candado cuando la tarea está cifrada, el perfil (<strong>Por defecto</strong> o <strong>Personalizado</strong>), el destino, la programación, la retención, y la próxima y la última ejecución. Al pulsarla se abre la tarea con su configuración, el log de la última ejecución y los botones <strong>Ejecutar</strong>, <strong>Editar</strong>, <strong>Desactivar</strong> y <strong>Eliminar</strong>. Eliminar quita la tarea y su timer, nunca los backups ya hechos. Eliminar una tarea unida también quita el hook del Monitor de ese almacenamiento de Proxmox."
+          "p": "Cada fila muestra el backend, la insignia <strong>adjunto</strong>, un candado cuando la tarea está cifrada, el perfil (<strong>Por defecto</strong> o <strong>Personalizado</strong>), el destino, la programación, la retención, y la próxima y la última ejecución. Al pulsarla se abre la tarea con su configuración, el log de la última ejecución y los botones <strong>Ejecutar</strong>, <strong>Editar</strong>, <strong>Desactivar</strong> y <strong>Eliminar</strong>. Eliminar quita la tarea y su timer, nunca los backups ya hechos. Eliminar una tarea unida deja la tarea de Proxmox como está: sigue haciendo el backup de sus invitados, sin este backup del host."
         },
         {
           "calloutTip": {
@@ -149,7 +149,7 @@
             "rows": [
               [
                 "Local/USB",
-                "Una carpeta de este host o de una unidad USB montada. <code>/var/lib/vz/dump</code> aparece siempre, como <strong>Valor integrado por defecto</strong>. El asistente lista las unidades USB, que se escanean cada 30 segundos: <strong>Montar y usar</strong> monta una tal cual y <strong>Formato y uso</strong> la borra y crea una única partición ext4, después de que escribas la ruta del dispositivo para confirmar."
+                "Una carpeta de este host o de una unidad USB montada. <code>/var/lib/vz/dump</code> aparece siempre, como <strong>Valor integrado por defecto</strong>. El asistente lista las unidades USB al abrirse y de nuevo con <strong>Recargar</strong>. Cada unidad ofrece la acción que permite su estado: <strong>Usar</strong> para una unidad montada, <strong>Montar y usar</strong> para una unidad sin montar con sistema de archivos, que la monta tal cual, y <strong>Formato y uso</strong> para una unidad sin sistema de archivos, que crea una única partición ext4 después de que escribas la ruta del dispositivo para confirmar."
               ],
               [
                 "PBS",
@@ -341,7 +341,7 @@
     {
       "id": "pbs",
       "title": "Proxmox Backup Server",
-      "intro": "Esta vista lee el estado de los Proxmox Backup Server a través de su API y nunca cambia nada en ellos. No es lo mismo que usar PBS como destino de los backups del host, que se configura en <pbsLink>Destinos: Proxmox Backup Server</pbsLink>.",
+      "intro": "Esta vista lee el estado de los Proxmox Backup Server a través de su API. En un servidor solo crea el token de solo lectura de una conexión hecha con usuario y contraseña. No es lo mismo que usar PBS como destino de los backups del host, que se configura en <pbsLink>Destinos: Proxmox Backup Server</pbsLink>.",
       "blocks": [
         {
           "p": "El selector de arriba lista las conexiones guardadas y <strong>PBS de este nodo</strong> cuando PBS está instalado en el mismo host que Proxmox VE, lo que no necesita conexión. Los datos se actualizan cada 30 segundos y con <strong>Actualizar</strong>."
@@ -355,7 +355,7 @@
             "rows": [
               [
                 "Línea de resumen",
-                "Nombre del servidor, versión de PBS, hora de la última actualización y si los servicios de PBS están activos."
+                "Nombre del servidor, versión de PBS, hora de la última actualización y, para <strong>PBS de este nodo</strong>, si los servicios de PBS están activos."
               ],
               [
                 "Datastores",
@@ -401,7 +401,7 @@
           }
         },
         {
-          "p": "La dirección es HTTPS, con <code>:8007</code> para el puerto por defecto. La huella SHA256 es opcional: déjala vacía para un certificado firmado por una autoridad de confianza y rellénala para uno autofirmado. Se comprueba antes de enviar ninguna credencial. Guardar o cambiar una conexión requiere tener activada la autenticación del Monitor. <strong>Eliminar conexión</strong> borra la conexión y su token solo del Monitor: el token sigue en PBS, donde se puede eliminar."
+          "p": "La dirección es HTTPS, con <code>:8007</code> para el puerto por defecto. La huella SHA256 es opcional: déjala vacía para un certificado firmado por una autoridad de confianza y rellénala para uno autofirmado. Se comprueba antes de enviar ninguna credencial. Guardar una conexión, iniciar sesión en ella y eliminarla requieren la cuenta local del Monitor, con su contraseña; con el inicio de sesión de Proxmox VE se rechazan. <strong>Eliminar conexión</strong> borra la conexión y su token solo del Monitor: el token sigue en PBS, donde se puede eliminar."
         },
         {
           "p": "Cuando Proxmox VE tiene almacenamientos PBS sin conexión, la tarjeta <strong>PBS detectados en el almacenamiento de Proxmox</strong> los lista con <strong>Conectar</strong>, que abre el formulario con el nombre, la dirección y la huella ya rellenados."

@@ -36,7 +36,7 @@
               [
                 "Proxmox Backup Server",
                 "Der Status von PBS-Servern: Datenspeicher, letzte Aufgaben und Wartungszeitpläne.",
-                "Die PBS-Weboberfläche. Diese Ansicht liest nur: Sie ändert nie etwas auf dem Server."
+                "Die PBS-Weboberfläche. Diese Ansicht liest den Status des Servers; das Einzige, was sie dort anlegt, ist das schreibgeschützte Token einer Verbindung, die mit Benutzer und Passwort hergestellt wurde."
               ]
             ]
           }
@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Wer die Registerkarte sieht",
-            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Backup</strong> enthält. Zum Erstellen, Ausführen, Bearbeiten, Wiederherstellen, Herunterladen, Ansehen des Inhalts eines Backups und zum Löschen ist die Aktion <strong>Backups verwalten</strong> nötig. Ohne sie sind die Ansichten schreibgeschützt und diese Schaltflächen erscheinen nicht. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Monitor eines Proxmox-Backup-Server-Hosts hat eigene Registerkarten und keine Registerkarte Backup."
+            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Backup</strong> enthält. Zum Erstellen, Ausführen, Bearbeiten, Wiederherstellen, Herunterladen, Ansehen des Inhalts eines Backups und zum Löschen ist die Aktion <strong>Backups verwalten</strong> nötig, ebenso zum Verwalten der PBS-Verbindungen und zum Bearbeiten von <strong>Aufbewahrung im Speicher</strong>. Ohne sie sind die Ansichten schreibgeschützt und diese Schaltflächen erscheinen nicht. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Monitor eines Proxmox-Backup-Server-Hosts hat eigene Registerkarten und keine Registerkarte Backup."
           }
         }
       ]
@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Jede Zeile zeigt das Backend, das Badge <strong>beigefügt</strong>, ein Schloss bei verschlüsselten Jobs, das Profil (<strong>Standard</strong> oder <strong>Benutzerdefiniert</strong>), das Ziel, den Zeitplan, die Aufbewahrung sowie den nächsten und letzten Lauf. Ein Klick öffnet den Job mit seinen Einstellungen, dem Protokoll des letzten Laufs und den Schaltflächen <strong>Lauf jetzt</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> und <strong>Löschen</strong>. Das Löschen entfernt den Job und seinen Timer, nie die bereits erstellten Backups. Beim Löschen eines angehängten Jobs wird zudem der Monitor-Hook aus diesem Proxmox-Speicher entfernt."
+          "p": "Jede Zeile zeigt das Backend, das Badge <strong>beigefügt</strong>, ein Schloss bei verschlüsselten Jobs, das Profil (<strong>Standard</strong> oder <strong>Benutzerdefiniert</strong>), das Ziel, den Zeitplan, die Aufbewahrung sowie den nächsten und letzten Lauf. Ein Klick öffnet den Job mit seinen Einstellungen, dem Protokoll des letzten Laufs und den Schaltflächen <strong>Lauf jetzt</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> und <strong>Löschen</strong>. Das Löschen entfernt den Job und seinen Timer, nie die bereits erstellten Backups. Beim Löschen eines angehängten Jobs bleibt der Proxmox-Job unverändert: Er sichert seine Gäste weiterhin, ohne dieses Host-Backup."
         },
         {
           "calloutTip": {
@@ -149,7 +149,7 @@
             "rows": [
               [
                 "Lokal / USB",
-                "Ein Ordner auf diesem Host oder auf einem eingebundenen USB-Laufwerk. <code>/var/lib/vz/dump</code> ist immer aufgeführt, als <strong>Integrierte Standardeinstellung</strong>. Der Assistent listet USB-Laufwerke auf, die alle 30 Sekunden gescannt werden: <strong>Mounten und verwenden</strong> bindet eines unverändert ein, und <strong>Formatieren und verwenden</strong> löscht es und legt eine einzelne ext4-Partition an, nachdem Sie den Gerätepfad zur Bestätigung eingegeben haben."
+                "Ein Ordner auf diesem Host oder auf einem eingebundenen USB-Laufwerk. <code>/var/lib/vz/dump</code> ist immer aufgeführt, als <strong>Integrierte Standardeinstellung</strong>. Der Assistent listet die USB-Laufwerke beim Öffnen und erneut mit <strong>Aktualisieren</strong> auf. Jedes Laufwerk bietet die Aktion an, die sein Zustand zulässt: <strong>Verwenden</strong> für ein eingebundenes Laufwerk, <strong>Mounten und verwenden</strong> für ein nicht eingebundenes Laufwerk mit Dateisystem, das es unverändert einbindet, und <strong>Formatieren und verwenden</strong> für ein Laufwerk ohne Dateisystem, das eine einzelne ext4-Partition anlegt, nachdem Sie den Gerätepfad zur Bestätigung eingegeben haben."
               ],
               [
                 "PBS",
@@ -341,7 +341,7 @@
     {
       "id": "pbs",
       "title": "Proxmox Backup Server",
-      "intro": "Diese Ansicht liest den Status von Proxmox Backup Servern über deren API und ändert nie etwas auf ihnen. Sie ist nicht dasselbe wie PBS als Ziel von Host-Backups zu verwenden, was unter <pbsLink>Ziele: Proxmox Backup Server</pbsLink> eingerichtet wird.",
+      "intro": "Diese Ansicht liest den Status von Proxmox Backup Servern über deren API. Auf einem Server legt sie nur das schreibgeschützte Token einer Verbindung an, die mit Benutzer und Passwort hergestellt wurde. Sie ist nicht dasselbe wie PBS als Ziel von Host-Backups zu verwenden, was unter <pbsLink>Ziele: Proxmox Backup Server</pbsLink> eingerichtet wird.",
       "blocks": [
         {
           "p": "Die Auswahl oben listet die gespeicherten Verbindungen auf, und <strong>PBS auf diesem Knoten</strong>, wenn PBS auf demselben Host wie Proxmox VE installiert ist, wofür keine Verbindung nötig ist. Die Daten werden alle 30 Sekunden und mit <strong>Aktualisieren</strong> aktualisiert."
@@ -355,7 +355,7 @@
             "rows": [
               [
                 "Übersichtszeile",
-                "Servername, PBS-Version, Zeitpunkt der letzten Aktualisierung und ob die PBS-Dienste aktiv sind."
+                "Servername, PBS-Version, Zeitpunkt der letzten Aktualisierung und, bei <strong>PBS auf diesem Knoten</strong>, ob die PBS-Dienste aktiv sind."
               ],
               [
                 "Datenspeicher",
@@ -401,7 +401,7 @@
           }
         },
         {
-          "p": "Die Adresse ist HTTPS, mit <code>:8007</code> für den Standardport. Der SHA256-Fingerprint ist optional: Lassen Sie ihn leer für ein von einer vertrauenswürdigen Stelle signiertes Zertifikat und tragen Sie ihn für ein selbstsigniertes ein. Er wird geprüft, bevor Zugangsdaten gesendet werden. Zum Speichern oder Ändern einer Verbindung muss die Monitor-Authentifizierung aktiviert sein. <strong>Verbindung entfernen</strong> löscht die Verbindung und ihr Token nur aus dem Monitor: Das Token bleibt in PBS, wo es gelöscht werden kann."
+          "p": "Die Adresse ist HTTPS, mit <code>:8007</code> für den Standardport. Der SHA256-Fingerprint ist optional: Lassen Sie ihn leer für ein von einer vertrauenswürdigen Stelle signiertes Zertifikat und tragen Sie ihn für ein selbstsigniertes ein. Er wird geprüft, bevor Zugangsdaten gesendet werden. Zum Speichern einer Verbindung, zum Anmelden und zum Entfernen ist das lokale Konto des Monitors mit seinem Passwort nötig; bei Anmeldung über Proxmox VE werden diese Aktionen abgelehnt. <strong>Verbindung entfernen</strong> löscht die Verbindung und ihr Token nur aus dem Monitor: Das Token bleibt in PBS, wo es gelöscht werden kann."
         },
         {
           "p": "Hat Proxmox VE PBS-Speicher ohne Verbindung, listet die Karte <strong>Im Proxmox-Speicher erkannte PBS</strong> sie mit <strong>Verbinden</strong> auf, das das Formular mit bereits ausgefülltem Namen, Adresse und Fingerprint öffnet."

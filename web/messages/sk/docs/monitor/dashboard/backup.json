@@ -36,7 +36,7 @@
               [
                 "Proxmox Backup Server",
                 "Stav serverov PBS: dátové úložiská, nedávne úlohy a plány údržby.",
-                "Webové rozhranie PBS. Toto zobrazenie len číta: na serveri nikdy nič nemení."
+                "Webové rozhranie PBS. Toto zobrazenie číta stav servera; jediné, čo na ňom vytvorí, je token len na čítanie pre pripojenie vytvorené pomocou používateľa a hesla."
               ]
             ]
           }
@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Kto kartu vidí",
-            "body": "Karta sa zobrazí, ak profil účtu obsahuje oblasť <strong>Záloha</strong>. Vytváranie, spúšťanie, úprava, obnova, sťahovanie, zobrazenie obsahu zálohy alebo vymazanie vyžaduje akciu <strong>Spravovať zálohy</strong>. Bez nej sú zobrazenia len na čítanie a tieto tlačidlá sa nezobrazia. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Monitor na hostiteľovi Proxmox Backup Server má vlastné karty a kartu Záloha nemá."
+            "body": "Karta sa zobrazí, ak profil účtu obsahuje oblasť <strong>Záloha</strong>. Vytváranie, spúšťanie, úprava, obnova, sťahovanie, zobrazenie obsahu zálohy alebo vymazanie vyžaduje akciu <strong>Spravovať zálohy</strong>, rovnako ako správa pripojení PBS a úprava karty <strong>Uchovávanie záloh úložiska</strong>. Bez nej sú zobrazenia len na čítanie a tieto tlačidlá sa nezobrazia. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Monitor na hostiteľovi Proxmox Backup Server má vlastné karty a kartu Záloha nemá."
           }
         }
       ]
@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Každý riadok ukazuje typ cieľa, štítok <strong>pripojené</strong>, zámok pri šifrovanej úlohe, profil (<strong>Predvolený</strong> alebo <strong>Vlastný</strong>), cieľ, plán, uchovávanie a ďalšie a posledné spustenie. Kliknutím sa úloha otvorí s nastaveniami, záznamom posledného spustenia a tlačidlami <strong>Spustiť teraz</strong>, <strong>Upraviť</strong>, <strong>Vypnúť</strong> a <strong>Vymazať</strong>. Vymazanie odstráni úlohu a jej časovač, nikdy nie už vytvorené zálohy. Vymazanie prepojenej úlohy odstráni aj háčik Monitora z príslušného úložiska Proxmox."
+          "p": "Každý riadok ukazuje typ cieľa, štítok <strong>pripojené</strong>, zámok pri šifrovanej úlohe, profil (<strong>Predvolený</strong> alebo <strong>Vlastný</strong>), cieľ, plán, uchovávanie a ďalšie a posledné spustenie. Kliknutím sa úloha otvorí s nastaveniami, záznamom posledného spustenia a tlačidlami <strong>Spustiť teraz</strong>, <strong>Upraviť</strong>, <strong>Vypnúť</strong> a <strong>Vymazať</strong>. Vymazanie odstráni úlohu a jej časovač, nikdy nie už vytvorené zálohy. Vymazanie prepojenej úlohy ponechá úlohu Proxmox tak, ako je: naďalej zálohuje svojich hostí, bez tejto zálohy hostiteľa."
         },
         {
           "calloutTip": {
@@ -149,7 +149,7 @@
             "rows": [
               [
                 "Lokálne / USB",
-                "Priečinok na tomto hostiteľovi alebo na pripojenom disku USB. <code>/var/lib/vz/dump</code> je v zozname vždy, ako <strong>Vstavaný predvolený</strong>. Sprievodca zobrazuje disky USB, ktoré sa skenujú každých 30 sekúnd: <strong>Pripojiť a použiť</strong> disk pripojí tak, ako je, a <strong>Naformátovať a použiť</strong> ho vymaže a vytvorí jedinú partíciu ext4, po zadaní cesty zariadenia na potvrdenie."
+                "Priečinok na tomto hostiteľovi alebo na pripojenom disku USB. <code>/var/lib/vz/dump</code> je v zozname vždy, ako <strong>Vstavaný predvolený</strong>. Sprievodca zobrazuje disky USB pri otvorení a znova po stlačení <strong>Obnoviť</strong>. Každý disk ponúka akciu, ktorú umožňuje jeho stav: <strong>Použiť</strong> pre pripojený disk, <strong>Pripojiť a použiť</strong> pre nepripojený disk so súborovým systémom, ktorá ho pripojí tak, ako je, a <strong>Naformátovať a použiť</strong> pre disk bez súborového systému, ktorá vytvorí jedinú partíciu ext4 po zadaní cesty zariadenia na potvrdenie."
               ],
               [
                 "PBS",
@@ -341,7 +341,7 @@
     {
       "id": "pbs",
       "title": "Proxmox Backup Server",
-      "intro": "Toto zobrazenie číta stav serverov Proxmox Backup Server cez ich API a nikdy na nich nič nemení. Nejde o to isté ako použitie PBS ako cieľa záloh hostiteľa, ktoré sa nastavuje v časti <pbsLink>Ciele: Proxmox Backup Server</pbsLink>.",
+      "intro": "Toto zobrazenie číta stav serverov Proxmox Backup Server cez ich API. Na serveri vytvorí iba token len na čítanie pre pripojenie vytvorené pomocou používateľa a hesla. Nejde o to isté ako použitie PBS ako cieľa záloh hostiteľa, ktoré sa nastavuje v časti <pbsLink>Ciele: Proxmox Backup Server</pbsLink>.",
       "blocks": [
         {
           "p": "Selektor hore uvádza uložené pripojenia a <strong>PBS na tomto uzle</strong>, ak je PBS nainštalovaný na tom istom hostiteľovi ako Proxmox VE, čo nevyžaduje pripojenie. Údaje sa obnovujú každých 30 sekúnd a tlačidlom <strong>Obnoviť</strong>."
@@ -355,7 +355,7 @@
             "rows": [
               [
                 "Súhrnný riadok",
-                "Názov servera, verziu PBS, čas poslednej aktualizácie a či sú služby PBS aktívne."
+                "Názov servera, verziu PBS, čas poslednej aktualizácie a pre <strong>PBS na tomto uzle</strong> aj to, či sú služby PBS aktívne."
               ],
               [
                 "Dátové úložiská",
@@ -401,7 +401,7 @@
           }
         },
         {
-          "p": "Adresa je HTTPS, pričom <code>:8007</code> je predvolený port. Odtlačok SHA256 je voliteľný: pri certifikáte podpísanom dôveryhodnou autoritou ho nechajte prázdny a pri certifikáte podpísanom svojpomocne ho vyplňte. Kontroluje sa pred odoslaním akýchkoľvek prihlasovacích údajov. Uloženie alebo zmena pripojenia vyžaduje zapnuté overovanie v Monitore. <strong>Odstrániť pripojenie</strong> vymaže pripojenie a jeho token len z Monitora: token zostane v PBS, kde ho možno vymazať."
+          "p": "Adresa je HTTPS, pričom <code>:8007</code> je predvolený port. Odtlačok SHA256 je voliteľný: pri certifikáte podpísanom dôveryhodnou autoritou ho nechajte prázdny a pri certifikáte podpísanom svojpomocne ho vyplňte. Kontroluje sa pred odoslaním akýchkoľvek prihlasovacích údajov. Uloženie pripojenia, prihlásenie a jeho odstránenie vyžadujú lokálny účet Monitora s jeho heslom; pri prihlásení cez Proxmox VE sa odmietnu. <strong>Odstrániť pripojenie</strong> vymaže pripojenie a jeho token len z Monitora: token zostane v PBS, kde ho možno vymazať."
         },
         {
           "p": "Ak má Proxmox VE úložiská PBS bez pripojenia, karta <strong>PBS zistené v nastaveniach úložísk Proxmoxu</strong> ich uvádza s tlačidlom <strong>Pripojiť</strong>, ktoré otvorí formulár s už vyplneným názvom, adresou a odtlačkom."
