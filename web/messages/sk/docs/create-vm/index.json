@@ -146,6 +146,11 @@
     "heading": "Súvisiace",
     "items": [
       {
+        "href": "/docs/create-vm/lxc",
+        "label": "Vytvoriť LXC zo šablóny",
+        "tail": " — vytvorí neprivilegovaný kontajner LXC z oficiálnej šablóny Proxmoxu."
+      },
+      {
         "href": "/docs/disk-manager",
         "label": "Správca diskov",
         "tail": " — pripojiť existujúce fyzické disky alebo importovať obrazy diskov do VM."

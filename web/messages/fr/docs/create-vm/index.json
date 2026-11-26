@@ -146,6 +146,11 @@
     "heading": "Voir aussi",
     "items": [
       {
+        "href": "/docs/create-vm/lxc",
+        "label": "Créer un LXC à partir d'un modèle",
+        "tail": " — crée un conteneur LXC non privilégié à partir d'un modèle officiel de Proxmox."
+      },
+      {
         "href": "/docs/disk-manager",
         "label": "Gestionnaire de disque",
         "tail": "— fixer des disques physiques existants ou importer des images de disques dans des VM."

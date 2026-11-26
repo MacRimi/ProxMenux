@@ -146,6 +146,11 @@
     "heading": "Verwandte Themen",
     "items": [
       {
+        "href": "/docs/create-vm/lxc",
+        "label": "LXC aus einer Vorlage erstellen",
+        "tail": " — erstellt einen unprivilegierten LXC-Container aus einer offiziellen Proxmox-Vorlage."
+      },
+      {
         "href": "/docs/disk-manager",
         "label": "Festplattenmanager",
         "tail": "Anfügen vorhandener physischer Festplatten oder Importieren von Festplattenabbildern in VMs."

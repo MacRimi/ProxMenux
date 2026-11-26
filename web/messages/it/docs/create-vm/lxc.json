@@ -1,0 +1,348 @@
+{
+  "meta": {
+    "title": "Crea LXC da modello | Documentazione ProxMenux",
+    "description": "Creare un container LXC non privilegiato in Proxmox VE da un modello ufficiale, da ProxMenux Monitor o dal menu della console: sistema, accesso, risorse, rete e una revisione dell’intero piano prima della creazione."
+  },
+  "header": {
+    "title": "Crea LXC da modello",
+    "description": "Una procedura guidata che crea un container Linux non privilegiato da un modello ufficiale di Proxmox, con i suoi punti di montaggio, l’hardware e la rete, e verifica l’intero piano con Proxmox prima di crearlo.",
+    "section": "Macchine virtuali"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "La procedura guidata crea un normale LXC di Proxmox: usa l’API e le attività di Proxmox, e il container che ne risulta si gestisce da Proxmox come qualsiasi altro. Si articola in cinque passaggi, <strong>Sistema</strong>, <strong>Accesso</strong>, <strong>Risorse</strong>, <strong>Rete e DNS</strong> e <strong>Revisione</strong>, e non viene creato nulla finché il piano non viene confermato nell’ultimo. La stessa procedura è disponibile in tre punti:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Dove",
+              "Come aprirla"
+            ],
+            "rows": [
+              [
+                "ProxMenux Monitor",
+                "<strong>Crea LXC</strong>, nell’intestazione del riquadro <strong>Macchine virtuali e container</strong> della scheda <vmsLxcsLink>VM e LXC</vmsLxcsLink>."
+              ],
+              [
+                "Catalogo del Monitor",
+                "La voce <strong>Crea LXC da modello</strong> del catalogo <appsLink>Applicazioni</appsLink> apre la stessa procedura."
+              ],
+              [
+                "Menu della console",
+                "Menu principale → <strong>Crea VM e LXC da modello o script</strong> → <strong>Crea LXC da modello</strong>. I passaggi sono gli stessi, sotto forma di finestre di dialogo, con il titolo <strong>N/5</strong>."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Chi può usarla",
+            "body": "Nel Monitor la procedura richiede il profilo <strong>Amministratore</strong>: per gli altri profili il pulsante non compare e la voce del catalogo mostra solo la descrizione. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. La procedura della console viene eseguita come root. Nessuna delle due è disponibile su un host Proxmox Backup Server."
+          }
+        }
+      ]
+    },
+    {
+      "id": "system",
+      "title": "Sistema",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Campo",
+              "Cosa imposta"
+            ],
+            "rows": [
+              [
+                "Nodo",
+                "Il nodo su cui viene creato il container. Nel Monitor è il nodo del Monitor stesso e non si può cambiare."
+              ],
+              [
+                "ID contenitore (VMID)",
+                "Parte dal primo ID libero del cluster."
+              ],
+              [
+                "Modello di sistema",
+                "I modelli di sistema ufficiali di Proxmox già scaricati per l’architettura del nodo."
+              ],
+              [
+                "Scarica un modello ufficiale",
+                "Cerca nel catalogo ufficiale, sceglie lo storage per i modelli e scarica quello scelto, mostrandone l’avanzamento. Al termine, <strong>Utilizza questo modello</strong> lo seleziona."
+              ],
+              [
+                "Nome host del contenitore",
+                "Proposto in base al nome del modello e modificabile."
+              ],
+              [
+                "Abilita il nesting",
+                "Attivo per impostazione predefinita. Consente di eseguire container all’interno dell’LXC, come Docker, e ne riduce l’isolamento."
+              ],
+              [
+                "Avvia all'avvio dell'host",
+                "Disattivato per impostazione predefinita."
+              ],
+              [
+                "Avvia dopo la creazione",
+                "Disattivato per impostazione predefinita. Se attivo, il container viene avviato come ultimo passaggio della creazione."
+              ],
+              [
+                "Prepara il sistema per il primo avvio",
+                "Disattivato per impostazione predefinita. Descritto più avanti."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-system.png",
+            "alt": "Passaggio Sistema della procedura Crea LXC con il nodo, l’ID del container, il modello Ubuntu 24.04, il nome host e i quattro interruttori",
+            "caption": "Il passaggio Sistema, con un modello Ubuntu 24.04 e il container avviato dopo la creazione."
+          }
+        },
+        {
+          "p": "Il modello scaricato viene verificato con lo SHA-512 del catalogo ufficiale prima di poter essere usato. Si possono scaricare solo modelli da <code>download.proxmox.com</code> e da TurnKey, e gli archivi di immagini OCI o Docker non compaiono mai nell’elenco: di quelli si occupa <ociLink>OCI Manager Apps</ociLink>. La procedura della console elenca anche i modelli TurnKey e gli archivi locali; per un archivio locale chiede la sua architettura (amd64 o arm64)."
+        },
+        {
+          "calloutTip": {
+            "title": "Prepara il sistema per il primo avvio",
+            "body": "Prima del primo avvio, sul disco del container fermo vengono adattate due unità systemd che in alcuni modelli notoriamente falliscono: il certificato viene rigenerato dopo <code>ssl-cert</code> e l’attesa della rete viene saltata quando il container non ha rete. I file già esistenti non vengono mai sovrascritti, e all’interno del container non viene installato né eseguito nulla. Questo passaggio viene eseguito automaticamente anche quando il container riceve una GPU NVIDIA o dispositivi USB."
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Accesso",
+      "blocks": [
+        {
+          "p": "L’account root del container può usare una <strong>Password di root</strong>, una <strong>Chiave pubblica SSH</strong> o entrambe. La password ha tra 5 e 256 caratteri e va digitata due volte. Le chiavi si incollano una per riga o si caricano da un file <code>.pub</code>; sono accettati i tipi ed25519, RSA, ECDSA e chiave di sicurezza, fino a 32 chiavi, e una chiave privata viene rifiutata."
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Risorse",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Campo",
+              "Predefinito",
+              "Limiti"
+            ],
+            "rows": [
+              [
+                "Storage del contenitore",
+                "Il primo storage che accetta container",
+                "Solo storage con contenuto di tipo container."
+              ],
+              [
+                "Disco di root (GiB)",
+                "8",
+                "Da 1 a 65536."
+              ],
+              [
+                "Core CPU",
+                "1",
+                "Fino ai core del nodo."
+              ],
+              [
+                "RAM (MiB)",
+                "512",
+                "Da 16 fino alla memoria del nodo."
+              ],
+              [
+                "Swap (MiB)",
+                "512",
+                "0 lo disattiva."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Su storage thin, come LVM-thin o ZFS, un disco più grande dello spazio libero è consentito con un avviso nella revisione. Su altri storage viene rifiutato."
+        },
+        {
+          "p": "<strong>Aggiungi punto di montaggio</strong> aggiunge fino a 16 punti di montaggio di due tipi:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Tipo",
+              "Cosa crea",
+              "Valori predefiniti"
+            ],
+            "rows": [
+              [
+                "Nuovo volume di storage",
+                "Un nuovo volume sullo storage scelto, della dimensione indicata, montato in <strong>Percorso all'interno del contenitore</strong>.",
+                "Lettura e scrittura, e incluso nei backup del container."
+              ],
+              [
+                "Directory host esistente",
+                "Una cartella dell’host montata nel container. Il percorso deve essere assoluto e non può contenere collegamenti simbolici.",
+                "Sola lettura, e mai incluso nei backup."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Non si possono usare percorsi di sistema all’interno del container (<code>/etc</code>, <code>/usr</code>, <code>/proc</code> e simili), né directory dell’host come <code>/root</code> o le cartelle di Proxmox. Le directory dell’host e i loro permessi nei container non privilegiati sono spiegati in <mountPointsLink>Punti di montaggio LXC (host ↔ CT)</mountPointsLink>."
+        },
+        {
+          "p": "<strong>Hardware</strong> elenca i dispositivi dell’host che si possono passare al container: GPU Intel e AMD per indirizzo PCI, NVIDIA (tutte le GPU dell’host con il runtime del loro driver), Coral TPU, NPU, e dispositivi USB e seriali per numero di serie. I dispositivi USB vengono passati per identità, quindi il container li conserva dopo un riavvio. Un dispositivo già assegnato a un altro guest viene rifiutato. I driver non vengono installati all’interno del container: vedi <igpuLink>Abilita una GPU in un LXC</igpuLink>, <nvidiaLink>Installa i driver NVIDIA sull’host</nvidiaLink> e <coralLink>Abilita Coral TPU in un LXC</coralLink>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-resources.png",
+            "alt": "Passaggio Risorse con lo storage, il disco, la CPU, la RAM e lo swap, un punto di montaggio da 4 GiB in /data e l’hardware dell’host",
+            "caption": "Risorse, con un nuovo volume da 4 GiB montato in /data e i dispositivi dell’host sotto Hardware."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Rete e DNS",
+      "blocks": [
+        {
+          "p": "<strong>Bridge di rete</strong> parte da <strong>Nessuna interfaccia di rete</strong>, quindi occorre scegliere un bridge perché il container abbia rete. Con un bridge, il container ottiene l’indirizzo IPv4 tramite DHCP, oppure uno statico con <strong>Utilizza IPv4 statico anziché DHCP</strong>, il relativo prefisso e un gateway facoltativo. <strong>Tag VLAN</strong> (da 1 a 4094) compare sui bridge che supportano le VLAN. I server DNS e i domini di ricerca si lasciano vuoti per usare quelli dell’host. La procedura configura solo IPv4."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-network.png",
+            "alt": "Passaggio Rete e DNS con il bridge vmbr0, il tag VLAN, l’interruttore dell’IPv4 statico e i campi DNS con Utilizza le impostazioni dell’host",
+            "caption": "Rete e DNS, con il bridge vmbr0 e l’indirizzo tramite DHCP."
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Revisione",
+      "blocks": [
+        {
+          "p": "Prima di mostrare la revisione, il piano viene verificato con Proxmox: il VMID, il modello, lo storage e il suo spazio, i dispositivi e il bridge. La revisione mostra ogni passaggio con un pulsante <strong>Modifica</strong> per tornarci, e gli avvisi del piano, come il nesting o uno storage thin sovrallocato. <strong>Conferma la creazione</strong> crea il container. Nella console, il riepilogo offre <strong>Crea</strong>, <strong>Modifica</strong> e <strong>Annulla</strong>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-review.png",
+            "alt": "Passaggio Revisione con le sezioni Sistema, Accesso, Risorse e Rete e DNS, ciascuna con un pulsante Modifica, l’avviso sul nesting e il pulsante Conferma la creazione",
+            "caption": "La revisione del piano prima della creazione."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Un piano verificato scade",
+            "body": "La verifica è valida per cinque minuti. Se la revisione resta aperta più a lungo, <strong>Conferma la creazione</strong> risponde che la configurazione verificata non è più attuale, e il piano va verificato di nuovo prima di creare il container."
+          }
+        }
+      ]
+    },
+    {
+      "id": "creation",
+      "title": "Creazione",
+      "blocks": [
+        {
+          "p": "La creazione mostra i suoi passaggi con il tempo di ciascuno: <strong>Invia la richiesta a Proxmox</strong>, <strong>Crea il contenitore</strong> e, se richiesto, <strong>Avvia il contenitore</strong> o <strong>Prepara e avvia il contenitore</strong>. <strong>Mostra il registro</strong> apre il log dell’attività Proxmox di quel passaggio mentre è in esecuzione. Gli eventuali avvisi scritti da Proxmox nell’attività compaiono sotto il relativo passaggio: descrivono l’attività, non lo stato del container."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-progress.png",
+            "alt": "Creazione completata con i tre passaggi spuntati e i loro tempi, il messaggio Contenitore creato e i pulsanti Chiudi, Apri il terminale e Nuovo contenitore",
+            "caption": "Creazione completata, con il container avviato."
+          }
+        },
+        {
+          "p": "Chiudere la finestra di dialogo non interrompe la creazione: riaprendola nella stessa scheda del browser, mostra l’operazione al punto in cui si trova. Quando il container è avviato, <strong>Apri il terminale</strong> apre una shell al suo interno nel <terminalLink>Terminale</terminalLink> del Monitor."
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "title": "Il container creato",
+      "blocks": [
+        {
+          "p": "Il container è sempre non privilegiato e in Proxmox ha i tag <code>proxmenux</code>, <code>lxc</code> e il nome della distribuzione, oltre a queste <strong>Note</strong> con il modello, le risorse, i punti di montaggio, la rete e l’hardware. Se le Note vengono modificate in Proxmox prima della fine della creazione, vengono mantenute così come sono."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-notes.png",
+            "alt": "Riepilogo del container 151 docs-lab nell’interfaccia web di Proxmox con i tag lxc, proxmenux e ubuntu e le Note create da ProxMenux",
+            "caption": "Il container in Proxmox, con i suoi tag e le Note."
+          }
+        },
+        {
+          "p": "Da quel momento è un normale LXC di Proxmox: se ne fa il backup, si modifica, si migra o si rimuove da Proxmox o dal Monitor come qualsiasi altro container, e ProxMenux non lo sottopone ad alcuna gestione propria."
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Rimuovere il container",
+      "blocks": [
+        {
+          "p": "Nel Monitor, la finestra dei dettagli di un LXC ha <strong>Rimuovi</strong> per gli amministratori, abilitato mentre il container è fermo. La finestra di dialogo <strong>Rimuovi LXC</strong> verifica prima il container e chiede di digitarne l’ID per confermare. <strong>Eliminazione dalle configurazioni del lavoro</strong> lo rimuove anche dai job di replica, HA e backup, e <strong>Distruggi i dischi senza riferimenti di proprietà del contenitore</strong> cerca negli storage abilitati i dischi del container che non sono più nella sua configurazione. I dischi referenziati vengono sempre distrutti."
+        },
+        {
+          "calloutWarning": {
+            "title": "Quando non si può rimuovere dal Monitor",
+            "body": "Il Monitor rimuove solo container con un unico disco di root e senza configurazioni particolari. Rifiuta, tra gli altri, un container in esecuzione, protetto o bloccato, uno con un punto di montaggio o un disco inutilizzato, uno con una directory dell’host, e uno con dispositivi USB, un Coral USB o una GPU NVIDIA, che aggiungono impostazioni LXC raw. Il motivo viene mostrato nella finestra di dialogo. Quei container si rimuovono da Proxmox."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Cosa non fa la procedura guidata",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Container privilegiati: il container è sempre non privilegiato.",
+              "Architetture diverse da amd64 e arm64.",
+              "Indirizzi IPv6 e server DNS IPv6.",
+              "Container da immagini OCI o Docker: li crea <ociLink>OCI Manager Apps</ociLink>.",
+              "Impostazioni LXC raw scritte a mano, o installazione di software all’interno del container."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Pagine correlate",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/monitor/dashboard/vms-lxcs",
+                "label": "Scheda VM e LXC",
+                "tail": "la scheda del Monitor in cui il container viene elencato e gestito."
+              },
+              {
+                "href": "/docs/storage-share/lxc-mount-points",
+                "label": "Punti di montaggio LXC (host ↔ CT)",
+                "tail": "montare cartelle dell’host in un container esistente."
+              },
+              {
+                "href": "/docs/hardware/igpu-acceleration-lxc",
+                "label": "Abilita una GPU in un LXC",
+                "tail": "aggiungere una GPU a un container esistente."
+              },
+              {
+                "href": "/docs/create-vm",
+                "label": "Crea una VM",
+                "tail": "le procedure guidate per le macchine virtuali dello stesso menu."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,348 @@
+{
+  "meta": {
+    "title": "Skapa LXC från mall | ProxMenux-dokumentation",
+    "description": "Skapa en oprivilegierad LXC-container i Proxmox VE från en officiell mall, från ProxMenux Monitor eller konsolmenyn: system, åtkomst, resurser, nätverk och en granskning av hela planen innan den skapas."
+  },
+  "header": {
+    "title": "Skapa LXC från mall",
+    "description": "En guide som skapar en oprivilegierad Linux-container från en officiell Proxmox-mall, med dess monteringspunkter, hårdvara och nätverk, och som kontrollerar hela planen mot Proxmox innan den skapas.",
+    "section": "Virtuella maskiner"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "Guiden skapar en vanlig Proxmox-LXC: den använder Proxmox API och uppgifter, och containern som skapas hanteras från Proxmox som vilken annan som helst. Den går igenom fem steg, <strong>System</strong>, <strong>Access</strong>, <strong>Resurser</strong>, <strong>Nätverk och DNS</strong> och <strong>Recension</strong>, och ingenting skapas förrän planen har bekräftats i det sista. Samma guide finns på tre ställen:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Var",
+              "Hur den öppnas"
+            ],
+            "rows": [
+              [
+                "ProxMenux Monitor",
+                "<strong>Skapa LXC</strong>, i rubriken på kortet <strong>Virtuella maskiner och behållare</strong> i fliken <vmsLxcsLink>VM och LXC</vmsLxcsLink>."
+              ],
+              [
+                "Monitors katalog",
+                "Posten <strong>Skapa LXC från mall</strong> i katalogen <appsLink>Apps</appsLink> öppnar samma guide."
+              ],
+              [
+                "Konsolmeny",
+                "Huvudmeny → <strong>Skapa VM och LXC från mall eller skript</strong> → <strong>Skapa LXC från mall</strong>. Stegen är desamma, som dialogrutor, med titeln <strong>N/5</strong>."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Vem som kan använda den",
+            "body": "I Monitor kräver guiden profilen <strong>Administratör</strong>: knappen visas inte för andra profiler, och katalogposten visar bara sin beskrivning. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Konsolguiden körs som root. Ingen av dem är tillgänglig på en värd med Proxmox Backup Server."
+          }
+        }
+      ]
+    },
+    {
+      "id": "system",
+      "title": "System",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Fält",
+              "Vad det anger"
+            ],
+            "rows": [
+              [
+                "Nod",
+                "Noden där containern skapas. I Monitor är det Monitors egen nod och den kan inte ändras."
+              ],
+              [
+                "Behållar-ID (VMID)",
+                "Börjar med nästa lediga ID i klustret."
+              ],
+              [
+                "Systemmall",
+                "De officiella systemmallarna från Proxmox som redan har laddats ner för nodens arkitektur."
+              ],
+              [
+                "Ladda ner en officiell mall",
+                "Söker i den officiella katalogen, väljer lagringen för mallar och laddar ner den valda mallen med förloppsvisning. När den är klar väljer <strong>Använd den här mallen</strong> den."
+              ],
+              [
+                "Behållarens värdnamn",
+                "Föreslås utifrån mallens namn och kan redigeras."
+              ],
+              [
+                "Aktivera kapsling",
+                "På som standard. Gör det möjligt att köra containrar inuti LXC, till exempel Docker, och minskar dess isolering."
+              ],
+              [
+                "Starta när värden startar",
+                "Av som standard."
+              ],
+              [
+                "Börja efter skapandet",
+                "Av som standard. När det är på startas containern som sista steg i skapandet."
+              ],
+              [
+                "Förbered systemet för dess första uppstart",
+                "Av som standard. Beskrivs nedan."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-system.png",
+            "alt": "Steget System i guiden Skapa LXC med noden, behållar-ID, mallen Ubuntu 24.04, värdnamnet och de fyra reglagen",
+            "caption": "Steget System, med en Ubuntu 24.04-mall och containern startad efter skapandet."
+          }
+        },
+        {
+          "p": "Den nedladdade mallen kontrolleras mot SHA-512 från den officiella katalogen innan den kan användas. Bara mallar från <code>download.proxmox.com</code> och TurnKey kan laddas ner, och arkiv med OCI- eller Docker-avbilder visas aldrig i listan: de hanteras av <ociLink>OCI Manager Apps</ociLink>. Konsolguiden listar även TurnKey-mallar och lokala arkiv; för ett lokalt arkiv frågar den efter dess arkitektur (amd64 eller arm64)."
+        },
+        {
+          "calloutTip": {
+            "title": "Förbered systemet för dess första uppstart",
+            "body": "Före den första starten justeras två systemd-enheter som är kända för att misslyckas i vissa mallar på den stoppade containerns disk: certifikatet återskapas efter <code>ssl-cert</code>, och väntan på nätverket hoppas över när containern saknar nätverk. Filer som redan finns skrivs aldrig över, och ingenting installeras eller körs inuti containern. Det här steget körs också av sig självt när containern får en NVIDIA-GPU eller USB-enheter."
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Access",
+      "blocks": [
+        {
+          "p": "Containerns root-konto kan använda ett <strong>Root-lösenord</strong>, en <strong>SSH offentlig nyckel</strong> eller båda. Lösenordet har mellan 5 och 256 tecken och skrivs in två gånger. Nycklar klistras in en per rad eller läses in från en <code>.pub</code>-fil; typerna ed25519, RSA, ECDSA och säkerhetsnyckel godtas, upp till 32 nycklar, och en privat nyckel avvisas."
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Resurser",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Fält",
+              "Standard",
+              "Gränser"
+            ],
+            "rows": [
+              [
+                "Containerförvaring",
+                "Den första lagringen som tar emot containrar",
+                "Bara lagringar med containerinnehåll."
+              ],
+              [
+                "Rotdisk (GiB)",
+                "8",
+                "1 till 65536."
+              ],
+              [
+                "CPU kärnor",
+                "1",
+                "Upp till nodens antal kärnor."
+              ],
+              [
+                "RAM (MiB)",
+                "512",
+                "16 upp till nodens minne."
+              ],
+              [
+                "Byt (MiB)",
+                "512",
+                "0 inaktiverar swap."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "På tunn lagring, som LVM-thin eller ZFS, tillåts en disk som är större än det lediga utrymmet, med en varning i granskningen. På annan lagring avvisas den."
+        },
+        {
+          "p": "<strong>Lägg till monteringspunkt</strong> lägger till upp till 16 monteringspunkter av två typer:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Vad den skapar",
+              "Standardvärden"
+            ],
+            "rows": [
+              [
+                "Ny lagringsvolym",
+                "En ny volym på den valda lagringen, med angiven storlek, monterad på <strong>Bana inuti behållaren</strong>.",
+                "Läs och skriv, och ingår i containerns säkerhetskopior."
+              ],
+              [
+                "Befintlig värdkatalog",
+                "En mapp på värden som monteras i containern. Sökvägen måste vara absolut och får inte innehålla symboliska länkar.",
+                "Skrivskyddad och ingår aldrig i säkerhetskopiorna."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Systemsökvägar kan inte användas inuti containern (<code>/etc</code>, <code>/usr</code>, <code>/proc</code> och liknande), inte heller värdkataloger som <code>/root</code> eller Proxmox-mapparna. Värdkataloger och deras behörigheter i oprivilegierade containrar förklaras i <mountPointsLink>LXC-monteringspunkter (värd ↔ CT)</mountPointsLink>."
+        },
+        {
+          "p": "<strong>Hårdvara</strong> listar värdens enheter som kan skickas vidare till containern: Intel- och AMD-GPU:er efter PCI-adress, NVIDIA (alla värdens GPU:er med drivrutinens runtime), Coral TPU, NPU samt USB- och seriella enheter efter serienummer. USB-enheter skickas vidare efter sin identitet, så containern behåller dem efter en omstart. En enhet som redan är tilldelad en annan gäst avvisas. Drivrutinerna installeras inte inuti containern: se <igpuLink>Gör en GPU tillgänglig i en LXC</igpuLink>, <nvidiaLink>Installera NVIDIA-drivrutiner på värden</nvidiaLink> och <coralLink>Gör Coral TPU tillgänglig i en LXC</coralLink>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-resources.png",
+            "alt": "Steget Resurser med lagring, disk, CPU, RAM och swap, en monteringspunkt på 4 GiB på /data och värdens hårdvara",
+            "caption": "Resurser, med en ny volym på 4 GiB monterad på /data och värdens enheter under Hårdvara."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Nätverk och DNS",
+      "blocks": [
+        {
+          "p": "<strong>Nätverksbrygga</strong> står från början på <strong>Inget nätverksgränssnitt</strong>, så en brygga måste väljas för att containern ska få nätverk. Med en brygga får containern sin IPv4-adress via DHCP, eller en statisk med <strong>Använd statisk IPv4 istället för DHCP</strong>, dess prefix och en valfri gateway. <strong>VLAN-tagg</strong> (1 till 4094) visas för bryggor som stöder VLAN. DNS-servrar och sökdomäner lämnas tomma för att använda värdens. Guiden konfigurerar bara IPv4."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-network.png",
+            "alt": "Steget Nätverk och DNS med bryggan vmbr0, VLAN-taggen, reglaget för statisk IPv4 och DNS-fälten med Använd värdinställningar",
+            "caption": "Nätverk och DNS, med bryggan vmbr0 och adressen via DHCP."
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Recension",
+      "blocks": [
+        {
+          "p": "Innan granskningen visas kontrolleras planen mot Proxmox: VMID, mallen, lagringen och dess utrymme, enheterna och bryggan. Granskningen visar varje steg med en knapp <strong>Redigera</strong> för att gå tillbaka till det, samt planens varningar, till exempel om kapsling eller en överbelagd tunn lagring. <strong>Bekräfta skapandet</strong> skapar containern. I konsolen erbjuder sammanfattningen <strong>Skapa</strong>, <strong>Ändra</strong> och <strong>Avbryt</strong>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-review.png",
+            "alt": "Steget Recension med avsnitten System, Access, Resurser och Nätverk och DNS, vart och ett med en knapp Redigera, meddelandet om kapsling och knappen Bekräfta skapandet",
+            "caption": "Granskningen av planen innan den skapas."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "En kontrollerad plan går ut",
+            "body": "Kontrollen gäller i fem minuter. Om granskningen är öppen längre svarar <strong>Bekräfta skapandet</strong> att den kontrollerade konfigurationen inte längre är aktuell, och planen måste kontrolleras igen innan containern skapas."
+          }
+        }
+      ]
+    },
+    {
+      "id": "creation",
+      "title": "Skapande",
+      "blocks": [
+        {
+          "p": "Skapandet visar sina steg med tiden för vart och ett: <strong>Skicka förfrågan till Proxmox</strong>, <strong>Skapa behållaren</strong> och, om det begärts, <strong>Starta behållaren</strong> eller <strong>Förbered och starta behållaren</strong>. <strong>Visa logg</strong> öppnar loggen för stegets Proxmox-uppgift medan den körs. Varningar som Proxmox skriver i uppgiften visas, om de finns, under sitt steg: de beskriver uppgiften, inte containerns tillstånd."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-progress.png",
+            "alt": "Avslutat skapande med de tre stegen avbockade och deras tider, meddelandet Behållare skapad och knapparna Stäng, Öppna terminalen och Ny container",
+            "caption": "Avslutat skapande, med containern startad."
+          }
+        },
+        {
+          "p": "Att stänga dialogrutan stoppar inte skapandet: när den öppnas igen i samma webbläsarflik visar den åtgärden där den befinner sig. När containern har startat öppnar <strong>Öppna terminalen</strong> ett skal inuti den i Monitors <terminalLink>Terminal</terminalLink>."
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "title": "Den skapade containern",
+      "blocks": [
+        {
+          "p": "Containern är alltid oprivilegierad, och i Proxmox har den taggarna <code>proxmenux</code>, <code>lxc</code> och distributionens namn, samt dessa <strong>Anteckningar</strong> med dess mall, resurser, monteringspunkter, nätverk och hårdvara. Om Anteckningarna ändras i Proxmox innan skapandet är klart behålls de som de är."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-notes.png",
+            "alt": "Sammanfattning av container 151 docs-lab i Proxmox webbgränssnitt med taggarna lxc, proxmenux och ubuntu och Anteckningarna som ProxMenux har skapat",
+            "caption": "Containern i Proxmox, med sina taggar och Anteckningar."
+          }
+        },
+        {
+          "p": "Därefter är den en vanlig Proxmox-LXC: den säkerhetskopieras, ändras, migreras eller tas bort från Proxmox eller från Monitor som vilken annan container som helst, och ProxMenux håller den inte under någon egen hantering."
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Ta bort containern",
+      "blocks": [
+        {
+          "p": "I Monitor har detaljfönstret för en LXC knappen <strong>Ta bort</strong> för administratörer, aktiverad medan containern är stoppad. Dialogrutan <strong>Ta bort LXC</strong> kontrollerar först containern och ber om att dess ID skrivs in för att bekräfta. <strong>Rensa från jobbkonfigurationer</strong> tar även bort den från replikerings-, HA- och säkerhetskopieringsjobben, och <strong>Förstör icke-refererade diskar som ägs av behållaren</strong> söker igenom de aktiverade lagringarna efter diskar som tillhör containern men inte längre finns i dess konfiguration. Dess refererade diskar förstörs alltid."
+        },
+        {
+          "calloutWarning": {
+            "title": "När den inte kan tas bort från Monitor",
+            "body": "Monitor tar bara bort containrar med en enda rotdisk och utan särskild konfiguration. Den avvisar bland annat en container som körs, är skyddad eller låst, en med en monteringspunkt eller en oanvänd disk, en med en värdkatalog och en med USB-enheter, en Coral USB eller en NVIDIA-GPU, som lägger till råa LXC-inställningar. Orsaken visas i dialogrutan. Sådana containrar tas bort från Proxmox."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Vad guiden inte gör",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Privilegierade containrar: containern är alltid oprivilegierad.",
+              "Andra arkitekturer än amd64 och arm64.",
+              "IPv6-adresser och IPv6-DNS-servrar.",
+              "Containrar från OCI- eller Docker-avbilder: de skapas av <ociLink>OCI Manager Apps</ociLink>.",
+              "Råa LXC-inställningar som skrivs för hand, eller installation av programvara inuti containern."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Relaterade sidor",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/monitor/dashboard/vms-lxcs",
+                "label": "Fliken VM och LXC",
+                "tail": "fliken i Monitor där containern listas och hanteras."
+              },
+              {
+                "href": "/docs/storage-share/lxc-mount-points",
+                "label": "LXC-monteringspunkter (värd ↔ CT)",
+                "tail": "montera värdmappar i en befintlig container."
+              },
+              {
+                "href": "/docs/hardware/igpu-acceleration-lxc",
+                "label": "Gör en GPU tillgänglig i en LXC",
+                "tail": "lägga till en GPU i en befintlig container."
+              },
+              {
+                "href": "/docs/create-vm",
+                "label": "Skapa en VM",
+                "tail": "guiderna för virtuella maskiner i samma meny."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

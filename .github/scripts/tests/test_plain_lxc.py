@@ -389,7 +389,7 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(len(self.api.notes), 1)
         written = self.api.notes[0]
         self.assertEqual(written["description"], "ProxMenux request " + REQUEST_ID)
-        for part in ("Created with ProxMenux", "ko-fi.com/macrimi", "docs/create-vm", "Template: <code>",
+        for part in ("Created with ProxMenux", "ko-fi.com/macrimi", "docs/create-vm/lxc", "Template: <code>",
                      f"<!-- proxmenux-lxc-request={REQUEST_ID} -->"):
             self.assertIn(part, written["notes"])
         self.assertTrue(self.api.config["description"].startswith('<div align="center">'))

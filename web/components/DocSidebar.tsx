@@ -167,7 +167,7 @@ export const sidebarItems: MenuItem[] = [
       },
 
       {
-        title: "Create VM",
+        title: "Create VM and LXC",
         i18nKey: "createVm",
         href: "/docs/create-vm",
         submenu: [
@@ -177,6 +177,7 @@ export const sidebarItems: MenuItem[] = [
           { title: "Others System NAS", i18nKey: "createVmNasOthers", href: "/docs/create-vm/system-nas/system-nas-others" },
           { title: "System Windows", i18nKey: "createVmSystemWindows", href: "/docs/create-vm/system-windows" },
           { title: "System Linux", i18nKey: "createVmSystemLinux", href: "/docs/create-vm/system-linux" },
+          { title: "Create LXC from template", i18nKey: "createVmLxc", href: "/docs/create-vm/lxc" },
         ],
       },
 

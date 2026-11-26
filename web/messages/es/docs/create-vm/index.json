@@ -146,6 +146,11 @@
     "heading": "Relacionado",
     "items": [
       {
+        "href": "/docs/create-vm/lxc",
+        "label": "Crear LXC a partir de una plantilla",
+        "tail": " — crea un contenedor LXC no privilegiado a partir de una plantilla oficial de Proxmox."
+      },
+      {
         "href": "/docs/disk-manager",
         "label": "Administrador de discos",
         "tail": " — adjunta discos físicos existentes o importa imágenes de disco en VMs."

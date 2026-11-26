@@ -146,6 +146,11 @@
     "heading": "Relaterat",
     "items": [
       {
+        "href": "/docs/create-vm/lxc",
+        "label": "Skapa LXC från mall",
+        "tail": " — skapar en oprivilegierad LXC-container från en officiell Proxmox-mall."
+      },
+      {
         "href": "/docs/disk-manager",
         "label": "Diskhanteraren",
         "tail": " - bifoga befintliga fysiska diskar eller importera diskbilder till VM."

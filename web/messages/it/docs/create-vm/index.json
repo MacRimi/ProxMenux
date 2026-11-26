@@ -146,6 +146,11 @@
     "heading": "Correlati",
     "items": [
       {
+        "href": "/docs/create-vm/lxc",
+        "label": "Crea LXC da modello",
+        "tail": " — crea un container LXC non privilegiato da un modello ufficiale di Proxmox."
+      },
+      {
         "href": "/docs/disk-manager",
         "label": "Gestione disco",
         "tail": "— allegare dischi fisici esistenti o importare immagini disco nelle VM."

@@ -301,7 +301,7 @@ def normalize(spec, schema_version=1):
 
 NOTES_LOGO = "https://raw.githubusercontent.com/MacRimi/ProxMenux/main/images/logo_desc.png"
 NOTES_BADGES = (
-    ("Docs", "https://macrimi.github.io/ProxMenux/docs/create-vm",
+    ("Docs", "https://macrimi.github.io/ProxMenux/docs/create-vm/lxc",
      "https://img.shields.io/badge/%F0%9F%93%9A_Docs-blue"),
     ("Code", "https://github.com/MacRimi/ProxMenux/tree/main/scripts/lxc",
      "https://img.shields.io/badge/%F0%9F%92%BB_Code-green"),

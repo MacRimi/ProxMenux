@@ -146,6 +146,11 @@
     "heading": "Related",
     "items": [
       {
+        "href": "/docs/create-vm/lxc",
+        "label": "Create LXC from template",
+        "tail": " — create an unprivileged LXC container from an official Proxmox template."
+      },
+      {
         "href": "/docs/disk-manager",
         "label": "Disk Manager",
         "tail": " — attach existing physical disks or import disk images into VMs."

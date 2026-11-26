@@ -1,0 +1,348 @@
+{
+  "meta": {
+    "title": "Créer un LXC à partir d’un modèle | Documentation ProxMenux",
+    "description": "Créer un conteneur LXC non privilégié dans Proxmox VE à partir d’un modèle officiel, depuis ProxMenux Monitor ou le menu de la console : système, accès, ressources, réseau et une vérification de l’ensemble du plan avant sa création."
+  },
+  "header": {
+    "title": "Créer un LXC à partir d’un modèle",
+    "description": "Un assistant qui crée un conteneur Linux non privilégié à partir d’un modèle officiel de Proxmox, avec ses points de montage, son matériel et son réseau, et qui vérifie l’ensemble du plan auprès de Proxmox avant de le créer.",
+    "section": "Machines virtuelles"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "L’assistant crée un LXC Proxmox ordinaire : il utilise l’API et les tâches de Proxmox, et le conteneur obtenu se gère depuis Proxmox comme n’importe quel autre. Il comporte cinq étapes, <strong>Système</strong>, <strong>Accès</strong>, <strong>Ressources</strong>, <strong>Réseau et DNS</strong> et <strong>Récapitulatif</strong>, et rien n’est créé tant que le plan n’est pas confirmé dans la dernière. Le même assistant est disponible à trois endroits :"
+        },
+        {
+          "table": {
+            "headers": [
+              "Où",
+              "Comment l’ouvrir"
+            ],
+            "rows": [
+              [
+                "ProxMenux Monitor",
+                "<strong>Créer un LXC</strong>, dans l’en-tête de la carte <strong>Machines virtuelles et conteneurs</strong> de l’onglet <vmsLxcsLink>VM et LXC</vmsLxcsLink>."
+              ],
+              [
+                "Catalogue du Monitor",
+                "L’entrée <strong>Créer un LXC à partir d'un modèle</strong> du catalogue <appsLink>Applications</appsLink> ouvre le même assistant."
+              ],
+              [
+                "Menu de la console",
+                "Menu principal → <strong>Créer une VM et un LXC à partir d'un modèle ou d'un script</strong> → <strong>Créer un LXC à partir d'un modèle</strong>. Les étapes sont les mêmes, sous forme de boîtes de dialogue, avec le titre <strong>N/5</strong>."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Qui peut l’utiliser",
+            "body": "Dans le Monitor, l’assistant nécessite le profil <strong>Administrateur</strong> : le bouton n’apparaît pas pour les autres profils, et l’entrée du catalogue n’affiche que sa description. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. L’assistant de la console s’exécute en root. Aucun des deux n’est disponible sur un hôte Proxmox Backup Server."
+          }
+        }
+      ]
+    },
+    {
+      "id": "system",
+      "title": "Système",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Champ",
+              "Ce qu’il définit"
+            ],
+            "rows": [
+              [
+                "Nœud",
+                "Le nœud sur lequel le conteneur est créé. Dans le Monitor, c’est le nœud du Monitor et il ne peut pas être modifié."
+              ],
+              [
+                "ID de conteneur (VMID)",
+                "Commence par le prochain ID libre du cluster."
+              ],
+              [
+                "Modèle système",
+                "Les modèles système officiels de Proxmox déjà téléchargés pour l’architecture du nœud."
+              ],
+              [
+                "Télécharger un modèle officiel",
+                "Recherche dans le catalogue officiel, choisit le stockage des modèles et télécharge le modèle choisi en affichant sa progression. À la fin, <strong>Utiliser ce modèle</strong> le sélectionne."
+              ],
+              [
+                "Nom d'hôte du conteneur",
+                "Proposé à partir du nom du modèle, et modifiable."
+              ],
+              [
+                "Activer l'imbrication",
+                "Activé par défaut. Permet d’exécuter des conteneurs dans le LXC, comme Docker, et réduit son isolation."
+              ],
+              [
+                "Démarrer au démarrage de l'hôte",
+                "Désactivé par défaut."
+              ],
+              [
+                "Démarrer après la création",
+                "Désactivé par défaut. Lorsqu’il est activé, le conteneur est démarré en dernière étape de la création."
+              ],
+              [
+                "Préparer le système pour son premier démarrage",
+                "Désactivé par défaut. Décrit ci-dessous."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-system.png",
+            "alt": "Étape Système de l’assistant Créer un LXC avec le nœud, l’ID de conteneur, le modèle Ubuntu 24.04, le nom d’hôte et les quatre interrupteurs",
+            "caption": "L’étape Système, avec un modèle Ubuntu 24.04 et le conteneur démarré après la création."
+          }
+        },
+        {
+          "p": "Le modèle téléchargé est vérifié par rapport au SHA-512 du catalogue officiel avant de pouvoir être utilisé. Seuls les modèles de <code>download.proxmox.com</code> et de TurnKey peuvent être téléchargés, et les archives d’images OCI ou Docker n’apparaissent jamais dans la liste : elles sont prises en charge par <ociLink>OCI Manager Apps</ociLink>. L’assistant de la console liste aussi les modèles TurnKey et les archives locales ; pour une archive locale, il demande son architecture (amd64 ou arm64)."
+        },
+        {
+          "calloutTip": {
+            "title": "Préparer le système pour son premier démarrage",
+            "body": "Avant le premier démarrage, deux unités systemd connues pour échouer dans certains modèles sont ajustées sur le disque du conteneur arrêté : le certificat est régénéré après <code>ssl-cert</code>, et l’attente du réseau est ignorée lorsque le conteneur n’a pas de réseau. Les fichiers déjà existants ne sont jamais écrasés, et rien n’est installé ni exécuté dans le conteneur. Cette étape s’exécute aussi d’elle-même lorsque le conteneur reçoit un GPU NVIDIA ou des périphériques USB."
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Accès",
+      "blocks": [
+        {
+          "p": "Le compte root du conteneur peut utiliser un <strong>Mot de passe root</strong>, une <strong>Clé publique SSH</strong> ou les deux. Le mot de passe compte entre 5 et 256 caractères et se saisit deux fois. Les clés se collent une par ligne ou se chargent depuis un fichier <code>.pub</code> ; les types ed25519, RSA, ECDSA et clé de sécurité sont acceptés, jusqu’à 32 clés, et une clé privée est refusée."
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Ressources",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Champ",
+              "Par défaut",
+              "Limites"
+            ],
+            "rows": [
+              [
+                "Stockage du conteneur",
+                "Le premier stockage qui accepte des conteneurs",
+                "Uniquement les stockages avec le contenu conteneur."
+              ],
+              [
+                "Disque racine (Gio)",
+                "8",
+                "De 1 à 65536."
+              ],
+              [
+                "Cœurs CPU",
+                "1",
+                "Jusqu’au nombre de cœurs du nœud."
+              ],
+              [
+                "RAM (Mio)",
+                "512",
+                "De 16 jusqu’à la mémoire du nœud."
+              ],
+              [
+                "Swap (Mio)",
+                "512",
+                "0 le désactive."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Sur un stockage thin, comme LVM-thin ou ZFS, un disque plus grand que l’espace libre est autorisé avec un avertissement dans le récapitulatif. Sur les autres stockages, il est refusé."
+        },
+        {
+          "p": "<strong>Ajouter un point de montage</strong> ajoute jusqu’à 16 points de montage de deux types :"
+        },
+        {
+          "table": {
+            "headers": [
+              "Type",
+              "Ce qu’il crée",
+              "Valeurs par défaut"
+            ],
+            "rows": [
+              [
+                "Nouveau volume de stockage",
+                "Un nouveau volume sur le stockage choisi, de la taille indiquée, monté sur <strong>Chemin à l’intérieur du conteneur</strong>.",
+                "Lecture-écriture, et inclus dans les sauvegardes du conteneur."
+              ],
+              [
+                "Répertoire existant de l'hôte",
+                "Un dossier de l’hôte monté dans le conteneur. Le chemin doit être absolu et ne peut pas contenir de liens symboliques.",
+                "Lecture seule, et jamais inclus dans les sauvegardes."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Les chemins système ne peuvent pas être utilisés dans le conteneur (<code>/etc</code>, <code>/usr</code>, <code>/proc</code> et similaires), ni les répertoires de l’hôte comme <code>/root</code> ou les dossiers de Proxmox. Les répertoires de l’hôte et leurs permissions dans les conteneurs non privilégiés sont expliqués dans <mountPointsLink>Points de montage LXC (hôte ↔ CT)</mountPointsLink>."
+        },
+        {
+          "p": "<strong>Matériel</strong> liste les périphériques de l’hôte qui peuvent être transmis au conteneur : GPU Intel et AMD par adresse PCI, NVIDIA (tous les GPU de l’hôte avec le runtime de leur pilote), Coral TPU, NPU, et périphériques USB et série par numéro de série. Les périphériques USB sont transmis par leur identité, de sorte que le conteneur les conserve après un redémarrage. Un périphérique déjà attribué à un autre invité est refusé. Les pilotes ne sont pas installés dans le conteneur : voir <igpuLink>Donner accès à un GPU dans un LXC</igpuLink>, <nvidiaLink>Installer les pilotes NVIDIA sur l’hôte</nvidiaLink> et <coralLink>Donner accès à Coral TPU dans un LXC</coralLink>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-resources.png",
+            "alt": "Étape Ressources avec le stockage, le disque, le CPU, la RAM et le swap, un point de montage de 4 Gio sur /data et le matériel de l’hôte",
+            "caption": "Ressources, avec un nouveau volume de 4 Gio monté sur /data et les périphériques de l’hôte sous Matériel."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Réseau et DNS",
+      "blocks": [
+        {
+          "p": "<strong>Pont réseau</strong> commence sur <strong>Pas d'interface réseau</strong>, il faut donc choisir un pont pour que le conteneur ait du réseau. Avec un pont, le conteneur obtient son adresse IPv4 par DHCP, ou une adresse statique avec <strong>Utiliser une IPv4 statique au lieu de DHCP</strong>, son préfixe et une passerelle facultative. <strong>Étiquette VLAN</strong> (1 à 4094) apparaît sur les ponts qui prennent en charge les VLAN. Les serveurs DNS et les domaines de recherche sont laissés vides pour utiliser ceux de l’hôte. L’assistant ne configure que l’IPv4."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-network.png",
+            "alt": "Étape Réseau et DNS avec le pont vmbr0, l’étiquette VLAN, l’interrupteur d’IPv4 statique et les champs DNS avec Utiliser les paramètres de l’hôte",
+            "caption": "Réseau et DNS, avec le pont vmbr0 et l’adresse par DHCP."
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Récapitulatif",
+      "blocks": [
+        {
+          "p": "Avant l’affichage du récapitulatif, le plan est vérifié auprès de Proxmox : le VMID, le modèle, le stockage et son espace, les périphériques et le pont. Le récapitulatif affiche chaque étape avec un bouton <strong>Modifier</strong> pour y revenir, ainsi que les avertissements du plan, comme l’imbrication ou un stockage thin surengagé. <strong>Confirmer la création</strong> crée le conteneur. Dans la console, le résumé propose <strong>Créer</strong>, <strong>Modifier</strong> et <strong>Annuler</strong>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-review.png",
+            "alt": "Étape Récapitulatif avec les sections Système, Accès, Ressources et Réseau et DNS, chacune avec un bouton Modifier, l’avis sur l’imbrication et le bouton Confirmer la création",
+            "caption": "Le récapitulatif du plan avant sa création."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Un plan vérifié expire",
+            "body": "La vérification est valable cinq minutes. Si le récapitulatif reste ouvert plus longtemps, <strong>Confirmer la création</strong> répond que la configuration vérifiée n’est plus à jour, et le plan doit être vérifié de nouveau avant de créer le conteneur."
+          }
+        }
+      ]
+    },
+    {
+      "id": "creation",
+      "title": "Création",
+      "blocks": [
+        {
+          "p": "La création affiche ses étapes avec la durée de chacune : <strong>Envoyer la demande à Proxmox</strong>, <strong>Créer le conteneur</strong> et, si demandé, <strong>Démarrer le conteneur</strong> ou <strong>Préparer et démarrer le conteneur</strong>. <strong>Afficher le journal</strong> ouvre le journal de la tâche Proxmox de cette étape pendant son exécution. Les avertissements écrits par Proxmox dans la tâche, s’il y en a, apparaissent sous leur étape : ils décrivent la tâche, pas l’état du conteneur."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-progress.png",
+            "alt": "Création terminée avec les trois étapes cochées et leurs durées, le message Conteneur créé et les boutons Fermer, Ouvrir le terminal et Nouveau conteneur",
+            "caption": "Création terminée, avec le conteneur démarré."
+          }
+        },
+        {
+          "p": "Fermer la boîte de dialogue n’arrête pas la création : lorsqu’elle est rouverte dans le même onglet du navigateur, elle affiche l’opération là où elle en est. Une fois le conteneur démarré, <strong>Ouvrir le terminal</strong> ouvre un shell dans celui-ci dans le <terminalLink>Terminal</terminalLink> du Monitor."
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "title": "Le conteneur créé",
+      "blocks": [
+        {
+          "p": "Le conteneur est toujours non privilégié et, dans Proxmox, il porte les étiquettes <code>proxmenux</code>, <code>lxc</code> et le nom de la distribution, ainsi que ces <strong>Notes</strong> avec son modèle, ses ressources, ses points de montage, son réseau et son matériel. Si les Notes sont modifiées dans Proxmox avant la fin de la création, elles sont conservées telles quelles."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-notes.png",
+            "alt": "Résumé du conteneur 151 docs-lab dans l’interface web de Proxmox avec les étiquettes lxc, proxmenux et ubuntu et les Notes créées par ProxMenux",
+            "caption": "Le conteneur dans Proxmox, avec ses étiquettes et ses Notes."
+          }
+        },
+        {
+          "p": "Dès lors, c’est un LXC Proxmox ordinaire : il est sauvegardé, modifié, migré ou supprimé depuis Proxmox ou depuis le Monitor comme tout autre conteneur, et ProxMenux ne le soumet à aucune gestion propre."
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Supprimer le conteneur",
+      "blocks": [
+        {
+          "p": "Dans le Monitor, la fenêtre de détails d’un LXC propose <strong>Supprimer</strong> aux administrateurs, activé tant que le conteneur est arrêté. La boîte de dialogue <strong>Supprimer LXC</strong> vérifie d’abord le conteneur et demande de saisir son ID pour confirmer. <strong>Purger des configurations de tâches</strong> le retire aussi des tâches de réplication, de HA et de sauvegarde, et <strong>Détruire les disques non référencés appartenant au conteneur</strong> recherche dans les stockages activés les disques du conteneur qui ne figurent plus dans sa configuration. Ses disques référencés sont toujours détruits."
+        },
+        {
+          "calloutWarning": {
+            "title": "Quand il ne peut pas être supprimé depuis le Monitor",
+            "body": "Le Monitor ne supprime que les conteneurs avec un seul disque racine et sans configuration particulière. Il refuse, entre autres, un conteneur en cours d’exécution, protégé ou verrouillé, un conteneur avec un point de montage ou un disque inutilisé, un conteneur avec un répertoire de l’hôte, et un conteneur avec des périphériques USB, un Coral USB ou un GPU NVIDIA, qui ajoutent des paramètres LXC bruts. La raison est affichée dans la boîte de dialogue. Ces conteneurs se suppriment depuis Proxmox."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Ce que l’assistant ne fait pas",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Conteneurs privilégiés : le conteneur est toujours non privilégié.",
+              "Architectures autres que amd64 et arm64.",
+              "Adresses IPv6 et serveurs DNS IPv6.",
+              "Conteneurs à partir d’images OCI ou Docker : c’est <ociLink>OCI Manager Apps</ociLink> qui les crée.",
+              "Paramètres LXC bruts saisis à la main, ou installation de logiciels dans le conteneur."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Pages associées",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/monitor/dashboard/vms-lxcs",
+                "label": "Onglet VM et LXC",
+                "tail": "l’onglet du Monitor où le conteneur est listé et géré."
+              },
+              {
+                "href": "/docs/storage-share/lxc-mount-points",
+                "label": "Points de montage LXC (hôte ↔ CT)",
+                "tail": "monter des dossiers de l’hôte dans un conteneur existant."
+              },
+              {
+                "href": "/docs/hardware/igpu-acceleration-lxc",
+                "label": "Donner accès à un GPU dans un LXC",
+                "tail": "ajouter un GPU à un conteneur existant."
+              },
+              {
+                "href": "/docs/create-vm",
+                "label": "Créer une VM",
+                "tail": "les assistants de machines virtuelles du même menu."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

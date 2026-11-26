@@ -1,0 +1,348 @@
+{
+  "meta": {
+    "title": "Vytvoriť LXC zo šablóny | Dokumentácia ProxMenux",
+    "description": "Vytvorenie neprivilegovaného kontajnera LXC v Proxmox VE z oficiálnej šablóny, z ProxMenux Monitor alebo z konzolového menu: systém, prístup, zdroje, sieť a kontrola celého plánu pred vytvorením."
+  },
+  "header": {
+    "title": "Vytvoriť LXC zo šablóny",
+    "description": "Sprievodca, ktorý z oficiálnej šablóny Proxmoxu vytvorí neprivilegovaný linuxový kontajner s jeho bodmi pripojenia, hardvérom a sieťou a pred vytvorením overí celý plán v Proxmoxe.",
+    "section": "Virtuálne stroje"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "Sprievodca vytvára bežný LXC Proxmoxu: používa API a úlohy Proxmoxu a výsledný kontajner sa spravuje z Proxmoxu ako ktorýkoľvek iný. Prechádza piatimi krokmi, <strong>Systém</strong>, <strong>Prístup</strong>, <strong>Zdroje</strong>, <strong>Sieť a DNS</strong> a <strong>Kontrola</strong>, a nič sa nevytvorí, kým sa plán v poslednom kroku nepotvrdí. Ten istý sprievodca je dostupný na troch miestach:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Kde",
+              "Ako ho otvoriť"
+            ],
+            "rows": [
+              [
+                "ProxMenux Monitor",
+                "<strong>Vytvoriť LXC</strong> v hlavičke karty <strong>Virtuálne stroje a kontajnery</strong> na karte <vmsLxcsLink>VM a LXC</vmsLxcsLink>."
+              ],
+              [
+                "Katalóg Monitora",
+                "Položka <strong>Vytvoriť LXC zo šablóny</strong> v katalógu <appsLink>Aplikácie</appsLink> otvorí toho istého sprievodcu."
+              ],
+              [
+                "Konzolové menu",
+                "Hlavné menu → <strong>Vytvoriť VM a LXC zo šablóny alebo skriptu</strong> → <strong>Vytvoriť LXC zo šablóny</strong>. Kroky sú rovnaké, vo forme dialógov s názvom <strong>N/5</strong>."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Kto ho môže použiť",
+            "body": "V Monitore sprievodca vyžaduje profil <strong>Administrátor</strong>: pri iných profiloch sa tlačidlo nezobrazí a položka katalógu ukazuje len svoj popis. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Konzolový sprievodca beží ako root. Ani jeden nie je dostupný na hostiteľovi Proxmox Backup Server."
+          }
+        }
+      ]
+    },
+    {
+      "id": "system",
+      "title": "Systém",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Pole",
+              "Čo nastavuje"
+            ],
+            "rows": [
+              [
+                "Hostiteľ (uzol Proxmoxu)",
+                "Uzol, na ktorom sa kontajner vytvorí. V Monitore je to uzol samotného Monitora a nedá sa zmeniť."
+              ],
+              [
+                "ID kontajnera (VMID)",
+                "Začína nasledujúcim voľným ID klastra."
+              ],
+              [
+                "Systémová šablóna",
+                "Oficiálne systémové šablóny Proxmoxu, ktoré sú už stiahnuté pre architektúru uzla."
+              ],
+              [
+                "Stiahnuť oficiálnu šablónu",
+                "Prehľadá oficiálny katalóg, zvolí úložisko pre šablóny a stiahne vybranú šablónu so zobrazením priebehu. Po skončení ju <strong>Použiť túto šablónu</strong> vyberie."
+              ],
+              [
+                "Názov kontajnera",
+                "Navrhne sa podľa názvu šablóny a dá sa upraviť."
+              ],
+              [
+                "Povoliť vnorenie",
+                "Predvolene zapnuté. Umožňuje spúšťať v LXC kontajnery, napríklad Docker, a znižuje jeho izoláciu."
+              ],
+              [
+                "Spustiť pri štarte hostiteľa",
+                "Predvolene vypnuté."
+              ],
+              [
+                "Spustiť po vytvorení",
+                "Predvolene vypnuté. Ak je zapnuté, kontajner sa spustí ako posledný krok vytvorenia."
+              ],
+              [
+                "Pripraviť systém na prvé spustenie",
+                "Predvolene vypnuté. Popis nižšie."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-system.png",
+            "alt": "Krok Systém sprievodcu Vytvoriť LXC s uzlom, ID kontajnera, šablónou Ubuntu 24.04, názvom hostiteľa a štyrmi prepínačmi",
+            "caption": "Krok Systém so šablónou Ubuntu 24.04 a kontajnerom spusteným po vytvorení."
+          }
+        },
+        {
+          "p": "Stiahnutá šablóna sa pred použitím overí podľa SHA-512 z oficiálneho katalógu. Stiahnuť sa dajú len šablóny z <code>download.proxmox.com</code> a TurnKey a archívy obrazov OCI alebo Docker sa v zozname nikdy nezobrazia: tie spracúva <ociLink>OCI Manager Apps</ociLink>. Konzolový sprievodca zobrazuje aj šablóny TurnKey a lokálne archívy; pri lokálnom archíve sa pýta na jeho architektúru (amd64 alebo arm64)."
+        },
+        {
+          "calloutTip": {
+            "title": "Pripraviť systém na prvé spustenie",
+            "body": "Pred prvým spustením sa na disku zastaveného kontajnera upravia dve jednotky systemd, o ktorých je známe, že v niektorých šablónach zlyhávajú: certifikát sa po <code>ssl-cert</code> vygeneruje znova a čakanie na sieť sa preskočí, keď kontajner nemá sieť. Existujúce súbory sa nikdy neprepíšu a v kontajneri sa nič neinštaluje ani nespúšťa. Tento krok sa spustí aj sám, keď kontajner dostane GPU NVIDIA alebo zariadenia USB."
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Prístup",
+      "blocks": [
+        {
+          "p": "Účet root kontajnera môže používať <strong>Heslo používateľa root</strong>, <strong>Verejný kľúč SSH</strong> alebo oboje. Heslo má 5 až 256 znakov a zadáva sa dvakrát. Kľúče sa vkladajú po jednom na riadok alebo sa načítajú zo súboru <code>.pub</code>; prijímajú sa typy ed25519, RSA, ECDSA a bezpečnostné kľúče, najviac 32 kľúčov, a súkromný kľúč sa odmietne."
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Zdroje",
+      "blocks": [
+        {
+          "table": {
+            "headers": [
+              "Pole",
+              "Predvolené",
+              "Obmedzenia"
+            ],
+            "rows": [
+              [
+                "Úložisko kontajnera",
+                "Prvé úložisko, ktoré prijíma kontajnery",
+                "Len úložiská s obsahom pre kontajnery."
+              ],
+              [
+                "Koreňový disk (GiB)",
+                "8",
+                "1 až 65536."
+              ],
+              [
+                "Jadrá CPU",
+                "1",
+                "Najviac počet jadier uzla."
+              ],
+              [
+                "RAM (MiB)",
+                "512",
+                "16 až pamäť uzla."
+              ],
+              [
+                "Swap (MiB)",
+                "512",
+                "0 ho vypne."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "Na tenkom úložisku, napríklad LVM-thin alebo ZFS, je disk väčší ako voľné miesto povolený s upozornením v kontrole. Na inom úložisku sa odmietne."
+        },
+        {
+          "p": "<strong>Pridať bod pripojenia</strong> pridá najviac 16 bodov pripojenia dvoch typov:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Typ",
+              "Čo vytvorí",
+              "Predvolené hodnoty"
+            ],
+            "rows": [
+              [
+                "Nový zväzok na úložisku",
+                "Nový zväzok na zvolenom úložisku so zadanou veľkosťou, pripojený do <strong>Cesta v kontajneri</strong>.",
+                "Čítanie aj zápis, zahrnutý do záloh kontajnera."
+              ],
+              [
+                "Existujúci adresár hostiteľa",
+                "Priečinok hostiteľa pripojený do kontajnera. Cesta musí byť absolútna a nesmie obsahovať symbolické odkazy.",
+                "Len na čítanie a nikdy nie je zahrnutý do záloh."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "V kontajneri sa nedajú použiť systémové cesty (<code>/etc</code>, <code>/usr</code>, <code>/proc</code> a podobné) ani adresáre hostiteľa ako <code>/root</code> alebo priečinky Proxmoxu. Adresáre hostiteľa a ich oprávnenia v neprivilegovaných kontajneroch sú vysvetlené v časti <mountPointsLink>LXC mount pointy (Host ↔ CT)</mountPointsLink>."
+        },
+        {
+          "p": "<strong>Hardvér</strong> zobrazuje zariadenia hostiteľa, ktoré sa dajú odovzdať kontajneru: GPU Intel a AMD podľa adresy PCI, NVIDIA (všetky GPU hostiteľa s runtime ich ovládača), Coral TPU, NPU a zariadenia USB a sériové zariadenia podľa sériového čísla. Zariadenia USB sa odovzdávajú podľa svojej identity, takže si ich kontajner po reštarte ponechá. Zariadenie, ktoré je už priradené inému hosťovi, sa odmietne. Ovládače sa do kontajnera neinštalujú: pozri <igpuLink>Pridať GPU do LXC</igpuLink>, <nvidiaLink>Nainštalovať ovládače NVIDIA (host)</nvidiaLink> a <coralLink>Pridať Coral TPU do LXC</coralLink>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-resources.png",
+            "alt": "Krok Zdroje s úložiskom, diskom, CPU, RAM a swapom, bodom pripojenia 4 GiB v /data a hardvérom hostiteľa",
+            "caption": "Zdroje s novým zväzkom 4 GiB pripojeným do /data a zariadeniami hostiteľa v časti Hardvér."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Sieť a DNS",
+      "blocks": [
+        {
+          "p": "<strong>Sieťový most</strong> je na začiatku nastavený na <strong>Bez sieťového rozhrania</strong>, takže aby mal kontajner sieť, treba zvoliť most. S mostom dostane kontajner adresu IPv4 cez DHCP alebo statickú adresu s <strong>Použiť statickú IPv4 namiesto DHCP</strong>, jej prefixom a voliteľnou bránou. <strong>Značka VLAN</strong> (1 až 4094) sa zobrazí pri mostoch, ktoré podporujú VLAN. Servery DNS a vyhľadávacie domény sa nechajú prázdne, aby sa použili nastavenia hostiteľa. Sprievodca nastavuje len IPv4."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-network.png",
+            "alt": "Krok Sieť a DNS s mostom vmbr0, značkou VLAN, prepínačom statickej IPv4 a poľami DNS s možnosťou Použiť nastavenia hostiteľa",
+            "caption": "Sieť a DNS s mostom vmbr0 a adresou cez DHCP."
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Kontrola",
+      "blocks": [
+        {
+          "p": "Pred zobrazením kontroly sa plán overí v Proxmoxe: VMID, šablóna, úložisko a jeho miesto, zariadenia a most. Kontrola zobrazuje každý krok s tlačidlom <strong>Upraviť</strong> na návrat k nemu a upozornenia plánu, napríklad na vnorenie alebo na prečerpané tenké úložisko. <strong>Potvrdiť vytvorenie</strong> vytvorí kontajner. V konzole súhrn ponúka <strong>Vytvoriť</strong>, <strong>Upraviť</strong> a <strong>Zrušiť</strong>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-review.png",
+            "alt": "Krok Kontrola so sekciami Systém, Prístup, Zdroje a Sieť a DNS, každá s tlačidlom Upraviť, upozornením na vnorenie a tlačidlom Potvrdiť vytvorenie",
+            "caption": "Kontrola plánu pred vytvorením."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Overený plán má obmedzenú platnosť",
+            "body": "Overenie platí päť minút. Ak zostane kontrola otvorená dlhšie, <strong>Potvrdiť vytvorenie</strong> odpovie, že overená konfigurácia už nie je aktuálna, a plán treba pred vytvorením kontajnera overiť znova."
+          }
+        }
+      ]
+    },
+    {
+      "id": "creation",
+      "title": "Vytvorenie",
+      "blocks": [
+        {
+          "p": "Vytváranie zobrazuje svoje kroky s časom každého z nich: <strong>Odoslanie požiadavky</strong>, <strong>Vytvorenie kontajnera</strong> a podľa požiadavky <strong>Spustenie kontajnera</strong> alebo <strong>Príprava a spustenie kontajnera</strong>. <strong>Zobraziť výpis úlohy</strong> otvorí záznam úlohy Proxmoxu daného kroku počas jej behu. Upozornenia, ktoré Proxmox do úlohy zapíše, sa prípadne zobrazia pod svojím krokom: opisujú úlohu, nie stav kontajnera."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-progress.png",
+            "alt": "Dokončené vytvorenie s tromi označenými krokmi a ich časmi, správou Kontajner sa vytvoril a tlačidlami Zavrieť, Otvoriť terminál a Nový kontajner",
+            "caption": "Dokončené vytvorenie so spusteným kontajnerom."
+          }
+        },
+        {
+          "p": "Zatvorenie dialógu vytváranie nezastaví: keď sa znova otvorí v tej istej karte prehliadača, ukáže operáciu tam, kde práve je. Keď sa kontajner spustí, <strong>Otvoriť terminál</strong> v ňom otvorí shell na karte <terminalLink>Terminál</terminalLink> Monitora."
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "title": "Vytvorený kontajner",
+      "blocks": [
+        {
+          "p": "Kontajner je vždy neprivilegovaný a v Proxmoxe má značky <code>proxmenux</code>, <code>lxc</code> a názov distribúcie a tieto <strong>Poznámky</strong> s jeho šablónou, zdrojmi, bodmi pripojenia, sieťou a hardvérom. Ak sa Poznámky v Proxmoxe zmenia pred dokončením vytvárania, zostanú tak, ako sú."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-notes.png",
+            "alt": "Súhrn kontajnera 151 docs-lab vo webovom rozhraní Proxmoxu so značkami lxc, proxmenux a ubuntu a Poznámkami, ktoré vytvoril ProxMenux",
+            "caption": "Kontajner v Proxmoxe s jeho značkami a Poznámkami."
+          }
+        },
+        {
+          "p": "Odvtedy je to bežný LXC Proxmoxu: zálohuje sa, mení, migruje alebo odstraňuje z Proxmoxu alebo z Monitora ako ktorýkoľvek iný kontajner a ProxMenux ho nedrží pod žiadnou vlastnou správou."
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Odstránenie kontajnera",
+      "blocks": [
+        {
+          "p": "V Monitore má okno podrobností LXC pre administrátorov tlačidlo <strong>Odstrániť</strong>, ktoré je aktívne, kým je kontajner zastavený. Dialóg <strong>Odstrániť LXC</strong> najprv skontroluje kontajner a na potvrdenie žiada zadať jeho ID. <strong>Odobrať kontajner z konfigurácie úloh</strong> ho odstráni aj z úloh replikácie, HA a zálohovania a <strong>Odstrániť aj disky kontajnera bez odkazu v konfigurácii</strong> prehľadá povolené úložiská a hľadá disky kontajnera, ktoré už nie sú v jeho konfigurácii. Disky uvedené v konfigurácii sa odstránia vždy."
+        },
+        {
+          "calloutWarning": {
+            "title": "Kedy sa nedá odstrániť z Monitora",
+            "body": "Monitor odstraňuje len kontajnery s jediným koreňovým diskom a bez špeciálnej konfigurácie. Odmietne okrem iného spustený, chránený alebo uzamknutý kontajner, kontajner s bodom pripojenia alebo nepoužívaným diskom, kontajner s adresárom hostiteľa a kontajner so zariadeniami USB, Coral USB alebo GPU NVIDIA, ktoré pridávajú surové nastavenia LXC. Dôvod sa zobrazí v dialógu. Takéto kontajnery sa odstraňujú z Proxmoxu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "Čo sprievodca nerobí",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Privilegované kontajnery: kontajner je vždy neprivilegovaný.",
+              "Iné architektúry ako amd64 a arm64.",
+              "Adresy IPv6 a servery DNS IPv6.",
+              "Kontajnery z obrazov OCI alebo Docker: tie vytvára <ociLink>OCI Manager Apps</ociLink>.",
+              "Ručne zadané surové nastavenia LXC alebo inštalácia softvéru v kontajneri."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Súvisiace stránky",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "href": "/docs/monitor/dashboard/vms-lxcs",
+                "label": "Karta VM a LXC",
+                "tail": "karta Monitora, v ktorej sa kontajner zobrazuje a spravuje."
+              },
+              {
+                "href": "/docs/storage-share/lxc-mount-points",
+                "label": "LXC mount pointy (Host ↔ CT)",
+                "tail": "pripojenie priečinkov hostiteľa do existujúceho kontajnera."
+              },
+              {
+                "href": "/docs/hardware/igpu-acceleration-lxc",
+                "label": "Pridať GPU do LXC",
+                "tail": "pridanie GPU do existujúceho kontajnera."
+              },
+              {
+                "href": "/docs/create-vm",
+                "label": "Vytvoriť VM",
+                "tail": "sprievodcovia pre virtuálne stroje v tom istom menu."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

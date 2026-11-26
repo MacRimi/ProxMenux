@@ -1,0 +1,298 @@
+{
+  "meta": {
+    "title": "Create LXC from template | ProxMenux Documentation",
+    "description": "Create an unprivileged LXC container in Proxmox VE from an official template, from ProxMenux Monitor or the console menu: system, access, resources, network and a review of the whole plan before it is created."
+  },
+  "header": {
+    "title": "Create LXC from template",
+    "description": "A wizard that creates an unprivileged Linux container from an official Proxmox template, with its mount points, hardware and network, and checks the whole plan with Proxmox before creating it.",
+    "section": "Virtual Machines"
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "blocks": [
+        {
+          "p": "The wizard creates an ordinary Proxmox LXC: it uses the Proxmox API and tasks, and the container it leaves behind is managed from Proxmox like any other. It goes through five steps, <strong>System</strong>, <strong>Access</strong>, <strong>Resources</strong>, <strong>Network and DNS</strong> and <strong>Review</strong>, and nothing is created until the plan is confirmed in the last one. The same wizard is available in three places:"
+        },
+        {
+          "table": {
+            "headers": ["Where", "How to open it"],
+            "rows": [
+              [
+                "ProxMenux Monitor",
+                "<strong>Create LXC</strong>, in the header of the <strong>Virtual Machines & Containers</strong> card of the <vmsLxcsLink>VMs & LXCs</vmsLxcsLink> tab."
+              ],
+              [
+                "Catalog of the Monitor",
+                "The <strong>Create LXC from template</strong> entry of the <appsLink>Apps</appsLink> catalog opens the same wizard."
+              ],
+              [
+                "Console menu",
+                "Main menu → <strong>Create VM and LXC from template or script</strong> → <strong>Create LXC from template</strong>. The steps are the same, as dialogs, with the title <strong>N/5</strong>."
+              ]
+            ]
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "Who can use it",
+            "body": "In the Monitor the wizard needs the <strong>Administrator</strong> profile: the button does not appear for other profiles, and the catalog entry shows only its description. Profiles are described in <accessLink>Users and profiles</accessLink>. The console wizard runs as root. Neither is available on a Proxmox Backup Server host."
+          }
+        }
+      ]
+    },
+    {
+      "id": "system",
+      "title": "System",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Field", "What it sets"],
+            "rows": [
+              [
+                "Node",
+                "The node the container is created on. In the Monitor it is the node of the Monitor and cannot be changed."
+              ],
+              [
+                "Container ID (VMID)",
+                "Starts with the next free ID of the cluster."
+              ],
+              [
+                "System template",
+                "The official Proxmox system templates already downloaded for the architecture of the node."
+              ],
+              [
+                "Download an official template",
+                "Searches the official catalog, picks the storage for templates and downloads the one chosen, with its progress. When it ends, <strong>Use this template</strong> selects it."
+              ],
+              [
+                "Container hostname",
+                "Suggested from the name of the template, and editable."
+              ],
+              [
+                "Enable nesting",
+                "On by default. It allows running containers inside the LXC, such as Docker, and reduces its isolation."
+              ],
+              [
+                "Start when the host boots",
+                "Off by default."
+              ],
+              [
+                "Start after creation",
+                "Off by default. When on, the container is started as the last step of the creation."
+              ],
+              [
+                "Prepare the system for its first boot",
+                "Off by default. Described below."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-system.png",
+            "alt": "System step of the Create LXC wizard with the node, the container ID, the Ubuntu 24.04 template, the hostname and the four switches",
+            "caption": "The System step, with an Ubuntu 24.04 template and the container started after creation."
+          }
+        },
+        {
+          "p": "The downloaded template is checked against the SHA-512 of the official catalog before it can be used. Only templates from <code>download.proxmox.com</code> and TurnKey can be downloaded, and archives of OCI or Docker images never appear in the list: those are handled by <ociLink>OCI Manager Apps</ociLink>. The console wizard also lists TurnKey templates and local archives; for a local archive it asks for its architecture (amd64 or arm64)."
+        },
+        {
+          "calloutTip": {
+            "title": "Prepare the system for its first boot",
+            "body": "Before the first start, two systemd units known to fail in some templates are adjusted on the stopped disk of the container: the certificate is regenerated after <code>ssl-cert</code>, and waiting for the network is skipped when the container has no network. Files that already exist are never overwritten, and nothing is installed or run inside the container. This step also runs on its own when the container gets an NVIDIA GPU or USB devices."
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Access",
+      "blocks": [
+        {
+          "p": "The root account of the container can use a <strong>Root password</strong>, an <strong>SSH public key</strong> or both. The password has between 5 and 256 characters and is typed twice. Keys are pasted one per line or loaded from a <code>.pub</code> file; ed25519, RSA, ECDSA and security-key types are accepted, up to 32 keys, and a private key is refused."
+        }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Resources",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Field", "Default", "Limits"],
+            "rows": [
+              ["Container storage", "The first storage that accepts containers", "Only storages with container content."],
+              ["Root disk (GiB)", "8", "1 to 65536."],
+              ["CPU cores", "1", "Up to the cores of the node."],
+              ["RAM (MiB)", "512", "16 up to the memory of the node."],
+              ["Swap (MiB)", "512", "0 disables it."]
+            ]
+          }
+        },
+        {
+          "p": "On thin storage, such as LVM-thin or ZFS, a disk larger than the free space is allowed with a warning in the review. On other storage it is refused."
+        },
+        {
+          "p": "<strong>Add mount point</strong> adds up to 16 mount points of two types:"
+        },
+        {
+          "table": {
+            "headers": ["Type", "What it creates", "Defaults"],
+            "rows": [
+              [
+                "New storage volume",
+                "A new volume on the storage chosen, of the size given, mounted at <strong>Path inside the container</strong>.",
+                "Read-write and included in the container backups."
+              ],
+              [
+                "Existing host directory",
+                "A folder of the host mounted in the container. The path must be absolute and cannot contain symbolic links.",
+                "Read-only and never included in the backups."
+              ]
+            ]
+          }
+        },
+        {
+          "p": "System paths cannot be used inside the container (<code>/etc</code>, <code>/usr</code>, <code>/proc</code> and similar), nor host directories such as <code>/root</code> or the Proxmox folders. Host directories and their permissions in unprivileged containers are explained in <mountPointsLink>LXC Mount Points</mountPointsLink>."
+        },
+        {
+          "p": "<strong>Hardware</strong> lists the devices of the host that can be passed to the container: Intel and AMD GPUs by PCI address, NVIDIA (all the GPUs of the host with their driver runtime), Coral TPU, NPU, and USB and serial devices by serial number. USB devices are passed by their identity, so the container keeps them after a reboot. A device already assigned to another guest is refused. The drivers are not installed inside the container: see <igpuLink>iGPU acceleration in LXC</igpuLink>, <nvidiaLink>NVIDIA drivers on the host</nvidiaLink> and <coralLink>Coral TPU in LXC</coralLink>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-resources.png",
+            "alt": "Resources step with the storage, disk, CPU, RAM and swap, a 4 GiB mount point at /data and the hardware of the host",
+            "caption": "Resources, with a new 4 GiB volume mounted at /data and the devices of the host under Hardware."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Network and DNS",
+      "blocks": [
+        {
+          "p": "<strong>Network bridge</strong> starts at <strong>No network interface</strong>, so a bridge has to be chosen for the container to have network. With a bridge, the container gets its IPv4 address by DHCP, or a static one with <strong>Use static IPv4 instead of DHCP</strong>, its prefix and an optional gateway. <strong>VLAN tag</strong> (1 to 4094) appears on bridges that support VLANs. The DNS servers and search domains are left empty to use those of the host. The wizard configures IPv4 only."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-network.png",
+            "alt": "Network and DNS step with the vmbr0 bridge, the VLAN tag, the static IPv4 switch and the DNS fields with Use host settings",
+            "caption": "Network and DNS, with the vmbr0 bridge and the address by DHCP."
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Review",
+      "blocks": [
+        {
+          "p": "Before the review is shown, the plan is checked with Proxmox: the VMID, the template, the storage and its space, the devices and the bridge. The review shows each step with an <strong>Edit</strong> button to go back to it, and the warnings of the plan, such as nesting or an overcommitted thin storage. <strong>Confirm creation</strong> creates the container. In the console, the summary offers <strong>Create</strong>, <strong>Modify</strong> and <strong>Cancel</strong>."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-review.png",
+            "alt": "Review step with the System, Access, Resources and Network and DNS sections, each with an Edit button, the nesting notice and the Confirm creation button",
+            "caption": "The review of the plan before it is created."
+          }
+        },
+        {
+          "calloutInfo": {
+            "title": "A checked plan expires",
+            "body": "The check is valid for five minutes. If the review stays open longer, <strong>Confirm creation</strong> answers that the checked configuration is no longer current, and the plan has to be checked again before creating the container."
+          }
+        }
+      ]
+    },
+    {
+      "id": "creation",
+      "title": "Creation",
+      "blocks": [
+        {
+          "p": "The creation shows its steps with the time of each one: <strong>Send the request to Proxmox</strong>, <strong>Create the container</strong> and, when requested, <strong>Start the container</strong> or <strong>Prepare and start the container</strong>. <strong>Show log</strong> opens the log of the Proxmox task of that step while it runs. Warnings written by Proxmox in the task, if any, appear under their step: they describe the task, not the health of the container."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-progress.png",
+            "alt": "Creation finished with the three steps checked and their times, the Container created message and the Close, Open terminal and New container buttons",
+            "caption": "Creation finished, with the container started."
+          }
+        },
+        {
+          "p": "Closing the dialog does not stop the creation: when it is opened again in the same browser tab it shows the operation where it is. When the container has started, <strong>Open terminal</strong> opens a shell inside it in the <terminalLink>Terminal</terminalLink> of the Monitor."
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "title": "The container created",
+      "blocks": [
+        {
+          "p": "The container is always unprivileged, and in Proxmox it has the tags <code>proxmenux</code>, <code>lxc</code> and the name of the distribution, and these <strong>Notes</strong> with its template, resources, mount points, network and hardware. If the Notes are changed in Proxmox before the creation ends, they are kept as they are."
+        },
+        {
+          "figure": {
+            "src": "/vm/lxc/lxc-create-notes.png",
+            "alt": "Summary of container 151 docs-lab in the Proxmox web interface with the lxc, proxmenux and ubuntu tags and the Notes created by ProxMenux",
+            "caption": "The container in Proxmox, with its tags and Notes."
+          }
+        },
+        {
+          "p": "From then on it is an ordinary Proxmox LXC: it is backed up, changed, migrated or removed from Proxmox or from the Monitor as any other container, and ProxMenux does not keep it under any management of its own."
+        }
+      ]
+    },
+    {
+      "id": "remove",
+      "title": "Removing the container",
+      "blocks": [
+        {
+          "p": "In the Monitor, the details window of an LXC has <strong>Remove</strong> for Administrators, enabled while the container is stopped. The <strong>Remove LXC</strong> dialog checks the container first and asks to type its ID to confirm. <strong>Purge from job configurations</strong> also removes it from the replication, HA and backup jobs, and <strong>Destroy unreferenced disks owned by the container</strong> searches the enabled storages for disks of the container that are no longer in its configuration. Its referenced disks are always destroyed."
+        },
+        {
+          "calloutWarning": {
+            "title": "When it cannot be removed from the Monitor",
+            "body": "The Monitor removes only containers with a single root disk and no special configuration. It refuses, among others, a running, protected or locked container, one with a mount point or an unused disk, one with a host directory, and one with USB devices, a Coral USB or an NVIDIA GPU, which add raw LXC settings. The reason is shown in the dialog. Those containers are removed from Proxmox."
+          }
+        }
+      ]
+    },
+    {
+      "id": "limits",
+      "title": "What the wizard does not do",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Privileged containers: the container is always unprivileged.",
+              "Architectures other than amd64 and arm64.",
+              "IPv6 addresses and DNS servers.",
+              "Containers from OCI or Docker images: <ociLink>OCI Manager Apps</ociLink> creates those.",
+              "Raw LXC settings typed by hand, or installing software inside the container."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "related",
+      "title": "Related",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              { "href": "/docs/monitor/dashboard/vms-lxcs", "label": "VMs & LXCs", "tail": "the tab of the Monitor where the container is listed and managed." },
+              { "href": "/docs/storage-share/lxc-mount-points", "label": "LXC Mount Points", "tail": "mount host folders in an existing container." },
+              { "href": "/docs/hardware/igpu-acceleration-lxc", "label": "iGPU acceleration in LXC", "tail": "add a GPU to an existing container." },
+              { "href": "/docs/create-vm", "label": "Create VM", "tail": "the virtual machine wizards of the same menu." }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
