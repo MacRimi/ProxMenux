@@ -42,7 +42,7 @@ class Render(unittest.TestCase):
             "2fauth": {"status": "laboratory-validated"},
             "legacy": {"status": "laboratory-validated"}}}
         text = validation.render(record, INDEX)
-        self.assertIn("2 of 3 applications", text)
+        self.assertIn("2 applications of the OCI catalog have been tested for real", text)
         self.assertIn("| Glances | [@Vaso73](https://github.com/Vaso73) | 2026-09-27 | — | — | [Report](" + REPORT + ") |", text)
         self.assertIn("| 2FAuth | Security |", text)
         # An application that cannot be installed is not listed as verified.
