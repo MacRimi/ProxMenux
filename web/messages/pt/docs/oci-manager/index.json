@@ -42,7 +42,7 @@
     {
       "id": "where",
       "title": "Onde encontrar",
-      "intro": "No nó Proxmox, como root, abra <strong>OCI manager Apps (Technology Preview)</strong> no menu principal do ProxMenux. A primeira tela apresenta:",
+      "intro": "No nó Proxmox, como root, abra <strong>OCI manager Apps (Technology Preview)</strong> no menu principal do ProxMenux. A <catalogLink>aba Catálogo</catalogLink> do ProxMenux Monitor instala os mesmos aplicativos. No console, a primeira tela do OCI manager Apps apresenta:",
       "blocks": [
         {
           "list": {

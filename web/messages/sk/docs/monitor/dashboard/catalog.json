@@ -242,6 +242,33 @@
         },
         {
           "p": "Texty nástrojov ProxMenux a aplikácií OCI sa riadia jazykom Monitora. Texty Community Scripts pochádzajú z ich projektu a zobrazujú sa v angličtine."
+        },
+        {
+          "p": "Ak sa zoznam nepodarí načítať, karta zobrazí <strong>Katalóg sa nepodarilo načítať. Skúste to znova o chvíľu.</strong> s tlačidlom <strong>Skúsiť znova</strong>. Ak obnovenie Community Scripts zlyhá, karta ďalej zobrazuje uložený zoznam. Hostiteľ, ktorý zoznam nikdy neuložil a nemá pripojenie, nezobrazí žiadne Community Scripts. V oboch prípadoch Monitor skúsi sťahovanie znova pri ďalšom načítaní zoznamu, keď uplynie päť minút."
+        },
+        {
+          "p": "Karta číta dva endpointy API Monitora. Oba vyžadujú profil, ktorý obsahuje oblasť <strong>Menux</strong>:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Čo sa načíta",
+              "Endpoint",
+              "Zdroj"
+            ],
+            "rows": [
+              [
+                "Zoznam položiek",
+                "<code>GET /api/catalog/items?lang=</code>",
+                "Katalóg OCI manager Apps, možnosti konzolového menu a uložený zoznam Community Scripts v <code>/var/lib/proxmenux/catalog_scripts.json</code>."
+              ],
+              [
+                "Panel podrobností položky",
+                "<code>GET /api/catalog/items/&lt;kind&gt;/&lt;id&gt;?lang=</code>",
+                "<code>&lt;kind&gt;</code> je <code>oci</code>, <code>pmx</code> alebo <code>cs</code>, s rovnakými zdrojmi ako zoznam. Panel podrobností skriptu Community Scripts pridáva jeho záznam v databáze projektu Community Scripts."
+              ]
+            ]
+          }
         }
       ]
     },
@@ -266,6 +293,11 @@
                 "href": "/docs/create-vm/lxc",
                 "label": "Vytvoriť LXC zo šablóny",
                 "tail": "sprievodca otváraný z Katalógu."
+              },
+              {
+                "href": "/docs/external-repositories",
+                "label": "Externé repozitáre",
+                "tail": "projekty tretích strán, ktoré ProxMenux spúšťa, vrátane Community Scripts, a kam hlásiť ich problémy."
               },
               {
                 "href": "/docs/monitor/dashboard/settings#navigation-order",

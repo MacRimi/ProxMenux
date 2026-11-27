@@ -42,7 +42,7 @@
     {
       "id": "where",
       "title": "Kde ho nájdete",
-      "intro": "Na uzle Proxmox otvorte ako root položku <strong>OCI manager Apps (Technology Preview)</strong> v hlavnom menu ProxMenux. Úvodná obrazovka ponúka:",
+      "intro": "Na uzle Proxmox otvorte ako root položku <strong>OCI manager Apps (Technology Preview)</strong> v hlavnom menu ProxMenux. Tie isté aplikácie inštaluje aj <catalogLink>karta Katalóg</catalogLink> v ProxMenux Monitor. V konzole ponúka úvodná obrazovka OCI manager Apps:",
       "blocks": [
         {
           "list": {

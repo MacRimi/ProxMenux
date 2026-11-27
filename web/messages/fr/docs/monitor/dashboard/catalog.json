@@ -242,6 +242,33 @@
         },
         {
           "p": "Les textes des outils ProxMenux et des applications OCI suivent la langue du Monitor. Les textes des Community Scripts proviennent de leur projet et sont affichés en anglais."
+        },
+        {
+          "p": "Si la liste ne peut pas être chargée, l’onglet affiche <strong>Impossible de charger le catalogue. Réessayez dans un instant.</strong> avec le bouton <strong>Réessayer</strong>. Si le renouvellement des Community Scripts échoue, l’onglet continue d’afficher la liste conservée. Un hôte qui ne l’a jamais conservée et n’a pas de connexion n’affiche pas les Community Scripts. Dans les deux cas, le Monitor retente le téléchargement au prochain chargement de la liste, une fois cinq minutes écoulées."
+        },
+        {
+          "p": "L’onglet lit deux endpoints de l’API du Monitor. Les deux exigent un profil qui inclut la zone <strong>Menux</strong> :"
+        },
+        {
+          "table": {
+            "headers": [
+              "Ce qui est chargé",
+              "Endpoint",
+              "Source"
+            ],
+            "rows": [
+              [
+                "La liste des éléments",
+                "<code>GET /api/catalog/items?lang=</code>",
+                "Le catalogue d’OCI manager Apps, les options du menu de la console et la liste conservée des Community Scripts, dans <code>/var/lib/proxmenux/catalog_scripts.json</code>."
+              ],
+              [
+                "La fiche d’un élément",
+                "<code>GET /api/catalog/items/&lt;kind&gt;/&lt;id&gt;?lang=</code>",
+                "<code>&lt;kind&gt;</code> vaut <code>oci</code>, <code>pmx</code> ou <code>cs</code>, avec les mêmes sources que la liste. La fiche d’un script Community Scripts ajoute son enregistrement dans la base de données du projet Community Scripts."
+              ]
+            ]
+          }
         }
       ]
     },
@@ -266,6 +293,11 @@
                 "href": "/docs/create-vm/lxc",
                 "label": "Créer un LXC à partir d'un modèle",
                 "tail": "l’assistant ouvert depuis le Catalogue."
+              },
+              {
+                "href": "/docs/external-repositories",
+                "label": "Dépôts externes",
+                "tail": "les projets tiers que ProxMenux exécute, dont les Community Scripts, et où signaler leurs problèmes."
               },
               {
                 "href": "/docs/monitor/dashboard/settings#navigation-order",

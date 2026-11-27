@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Un lanzador, no un instalador de aplicaciones",
-    "body": "La pestaña <strong>Apps</strong> no instala ni descubre servicios. Convierte enlaces guardados en una cuadrícula con búsqueda. Los enlaces de LXC se configuran en su <appTabLink>pestaña App</appTabLink>; los personalizados permiten incluir servicios VM, proxies inversos y paneles externos."
+    "body": "La pestaña <strong>Apps</strong> no instala ni descubre servicios. Convierte enlaces guardados en una cuadrícula con búsqueda. Los enlaces de LXC se configuran en su <appTabLink>pestaña App</appTabLink>; los personalizados permiten incluir servicios VM, proxies inversos y paneles externos. En el Monitor, las aplicaciones se instalan desde la <catalogLink>pestaña Catálogo</catalogLink>."
   },
   "sources": {
     "heading": "Qué aparece en Apps",

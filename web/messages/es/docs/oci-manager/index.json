@@ -42,7 +42,7 @@
     {
       "id": "where",
       "title": "Dónde encontrarlo",
-      "intro": "OCI manager Apps se abre desde la opción <strong>OCI manager Apps (Technology Preview)</strong> del menú principal de ProxMenux, en el nodo Proxmox y como root. La primera pantalla ofrece:",
+      "intro": "OCI manager Apps se abre desde la opción <strong>OCI manager Apps (Technology Preview)</strong> del menú principal de ProxMenux, en el nodo Proxmox y como root. La <catalogLink>pestaña Catálogo</catalogLink> de ProxMenux Monitor instala las mismas aplicaciones. En la consola, la primera pantalla de OCI manager Apps ofrece:",
       "blocks": [
         {
           "list": {

@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Ein Launcher, kein Application Installer",
-    "body": "Der Reiter <strong>Apps</strong> installiert keine Software und sucht nicht selbst nach Diensten. Er zeigt gespeicherte Weblinks in einem durchsuchbaren Raster. LXC-Links werden im <appTabLink>App-Reiter</appTabLink> des Gastsystems konfiguriert; eigene Links ergänzen VM-Dienste, Reverse Proxys und externe Dashboards."
+    "body": "Der Reiter <strong>Apps</strong> installiert keine Software und sucht nicht selbst nach Diensten. Er zeigt gespeicherte Weblinks in einem durchsuchbaren Raster. LXC-Links werden im <appTabLink>App-Reiter</appTabLink> des Gastsystems konfiguriert; eigene Links ergänzen VM-Dienste, Reverse Proxys und externe Dashboards. Im Monitor werden Anwendungen über die <catalogLink>Registerkarte Katalog</catalogLink> installiert."
   },
   "sources": {
     "heading": "Was in Apps erscheint",
