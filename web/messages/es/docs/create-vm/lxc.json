@@ -27,12 +27,12 @@
                 "<strong>Crear LXC</strong>, en la cabecera de la tarjeta <strong>Máquinas virtuales y contenedores</strong> de la pestaña <vmsLxcsLink>VM y LXC</vmsLxcsLink>."
               ],
               [
-                "Catálogo del Monitor",
-                "La entrada <strong>Crear LXC a partir de una plantilla</strong> de la pestaña <catalogLink>Catálogo</catalogLink>, que aparece como Menux en la barra superior, abre el mismo asistente."
+                "Pestaña Menux del Monitor",
+                "La entrada <strong>Crear LXC a partir de una plantilla</strong> de la pestaña <catalogLink>Menux</catalogLink> abre el mismo asistente."
               ],
               [
                 "Menú de consola",
-                "Menú principal → <strong>Crear VM y LXC a partir de una plantilla o script</strong> → <strong>Crear LXC a partir de una plantilla</strong>. Los pasos son los mismos, en forma de diálogos, con el título <strong>N/5</strong>."
+                "Menú principal → <strong>Crear VM y LXC a partir de una plantilla o script</strong> → <strong>Crear LXC a partir de una plantilla</strong>. Los pasos son los mismos, en forma de diálogos numerados de 1/5 a 5/5 en su título."
               ]
             ]
           }
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Quién puede usarlo",
-            "body": "En el Monitor el asistente requiere el perfil <strong>Administrador</strong>, y el botón no aparece para otros perfiles. En el Catálogo, un perfil con <strong>Ejecutar scripts y herramientas</strong> que no sea Administrador tiene un botón <strong>Abrir</strong> en la entrada, que ejecuta el asistente de consola en un terminal; sin esa acción, la entrada solo muestra su descripción. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El asistente de consola se ejecuta como root. Ninguno de los dos está disponible en un host con Proxmox Backup Server."
+            "body": "En el Monitor el asistente requiere el perfil <strong>Administrador</strong>, y el botón no aparece para otros perfiles. En la pestaña Menux, un perfil con <strong>Ejecutar scripts y herramientas</strong> que no sea Administrador tiene un botón <strong>Abrir</strong> en la entrada, que ejecuta el asistente de consola en un terminal; sin esa acción, la entrada solo muestra su descripción. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El asistente de consola se ejecuta como root. Ninguno de los dos está disponible en un host con Proxmox Backup Server."
           }
         }
       ]
@@ -70,7 +70,7 @@
               ],
               [
                 "Descargar una plantilla oficial",
-                "Busca en el catálogo oficial, elige el almacenamiento para plantillas y descarga la plantilla elegida, mostrando su progreso. Al terminar, <strong>Usar esta plantilla</strong> la selecciona."
+                "Busca en el catálogo oficial, elige el almacenamiento para plantillas y descarga la plantilla elegida, mostrando su progreso. Al terminar, el asistente vuelve a <strong>Sistema</strong> con esa plantilla seleccionada."
               ],
               [
                 "Nombre de host del contenedor",
@@ -103,12 +103,12 @@
           }
         },
         {
-          "p": "La plantilla descargada se comprueba con el SHA-512 del catálogo oficial antes de poder usarla. Solo se pueden descargar plantillas de <code>download.proxmox.com</code> y de TurnKey, y los archivos de imágenes OCI o Docker nunca aparecen en la lista: de esos se encarga <ociLink>OCI Manager Apps</ociLink>. El asistente de consola también lista las plantillas de TurnKey y los archivos locales; para un archivo local pregunta su arquitectura (amd64 o arm64)."
+          "p": "La plantilla descargada se comprueba con el SHA-512 del catálogo oficial antes de poder usarla. El Monitor descarga solo las plantillas de sistema de <code>download.proxmox.com</code>, y la consola también las de TurnKey. Los archivos de imágenes OCI o Docker nunca aparecen en la lista: de esos se encarga <ociLink>OCI manager Apps</ociLink>. El asistente de consola también lista las plantillas de TurnKey y los archivos locales; para un archivo local pregunta su arquitectura (amd64 o arm64)."
         },
         {
           "calloutTip": {
             "title": "Preparar el sistema para su primer arranque",
-            "body": "Antes del primer arranque se ajustan, en el disco del contenedor detenido, dos unidades de systemd que fallan en algunas plantillas: el certificado se regenera después de <code>ssl-cert</code> y la espera de red se omite cuando el contenedor no tiene red. Los archivos que ya existen nunca se sobrescriben, y no se instala ni se ejecuta nada dentro del contenedor. Este paso también se ejecuta por sí solo cuando el contenedor recibe una GPU NVIDIA o dispositivos USB."
+            "body": "Antes del primer arranque se ajustan, en el disco del contenedor detenido, dos unidades de systemd que fallan en algunas plantillas: el certificado se regenera después de <code>ssl-cert</code> y la espera de red se omite cuando el contenedor no tiene red. Los archivos que ya existen nunca se sobrescriben, y no se instala ni se ejecuta nada dentro del contenedor. Un contenedor con una GPU NVIDIA o dispositivos USB también pasa por una preparación antes de su primer arranque, que configura esos dispositivos; las dos unidades se ajustan solo cuando este interruptor está activado."
           }
         }
       ]
@@ -163,7 +163,7 @@
           }
         },
         {
-          "p": "En almacenamientos thin, como LVM-thin o ZFS, se permite un disco mayor que el espacio libre, con un aviso en la revisión. En otros almacenamientos se rechaza."
+          "p": "En almacenamientos LVM-thin o ZFS, se permite un disco mayor que el espacio libre, con un aviso en la revisión. En otros almacenamientos se rechaza."
         },
         {
           "p": "<strong>Añadir punto de montaje</strong> añade hasta 16 puntos de montaje de dos tipos:"
@@ -247,7 +247,7 @@
       "title": "Creación",
       "blocks": [
         {
-          "p": "La creación muestra sus pasos con el tiempo de cada uno: <strong>Enviar la solicitud a Proxmox</strong>, <strong>Crear el contenedor</strong> y, si se ha pedido, <strong>Arrancar el contenedor</strong> o <strong>Preparar y arrancar el contenedor</strong>. <strong>Ver registro</strong> abre el log de la tarea de Proxmox de ese paso mientras se ejecuta. Los avisos que Proxmox escribe en la tarea, si los hay, aparecen bajo su paso: describen la tarea, no el estado del contenedor."
+          "p": "La creación muestra sus pasos con el tiempo de cada uno: <strong>Enviar la solicitud a Proxmox</strong>, <strong>Crear el contenedor</strong> y, si se ha pedido, <strong>Arrancar el contenedor</strong>, <strong>Preparar el contenedor para su primer arranque</strong> o <strong>Preparar y arrancar el contenedor</strong>. <strong>Ver registro</strong> abre el log de la tarea de Proxmox de ese paso mientras se ejecuta. Los avisos que Proxmox escribe en la tarea, si los hay, aparecen bajo su paso: describen la tarea, no el estado del contenedor."
         },
         {
           "figure": {
@@ -257,7 +257,7 @@
           }
         },
         {
-          "p": "Cerrar el diálogo no detiene la creación: al volver a abrirlo en la misma pestaña del navegador, muestra la operación en el punto en que se encuentra. Cuando el contenedor ha arrancado, <strong>Abrir terminal</strong> abre una shell dentro de él en la pestaña <terminalLink>Terminal</terminalLink> del Monitor."
+          "p": "Cerrar el diálogo no detiene la creación: al volver a abrirlo en la misma pestaña del navegador, muestra la operación en el punto en que se encuentra. Cuando el contenedor ha arrancado, <strong>Abrir terminal</strong> abre una shell dentro de él, en la consola del LXC descrita en <terminalLink>Terminal</terminalLink>. Ese botón aparece cuando el asistente se ha abierto desde VMs y LXCs, no desde la pestaña Menux."
         }
       ]
     },
@@ -266,7 +266,7 @@
       "title": "El contenedor creado",
       "blocks": [
         {
-          "p": "El contenedor se crea siempre sin privilegios, y en Proxmox lleva las etiquetas <code>proxmenux</code>, <code>lxc</code> y el nombre de la distribución, y estas <strong>Notas</strong> con su plantilla, recursos, puntos de montaje, red y hardware. Si las Notas se cambian en Proxmox antes de que termine la creación, se conservan tal cual."
+          "p": "El contenedor se crea siempre sin privilegios, y en Proxmox lleva las etiquetas <code>proxmenux</code>, <code>lxc</code> y el nombre de la distribución, y estas <strong>Notas</strong> con su plantilla, recursos, puntos de montaje, red y hardware, y una insignia Docs que enlaza con esta página. Si las Notas se cambian en Proxmox antes de que termine la creación, se conservan tal cual."
         },
         {
           "figure": {
@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Cuándo no se puede eliminar desde el Monitor",
-            "body": "El Monitor solo elimina contenedores con un único disco raíz y sin configuración especial. Rechaza, entre otros, un contenedor en ejecución, protegido o bloqueado, uno con un punto de montaje o un disco sin usar, uno con un directorio del host, y uno con dispositivos USB, un Coral USB o una GPU NVIDIA, que añaden ajustes LXC en bruto. El motivo se muestra en el diálogo. Esos contenedores se eliminan desde Proxmox."
+            "body": "El Monitor solo elimina contenedores con un único disco raíz y sin configuración especial. Rechaza, entre otros, un contenedor en ejecución, protegido o bloqueado, uno con un punto de montaje o un disco sin usar, uno con un directorio del host, y uno con dispositivos USB, un Coral USB o una GPU NVIDIA, que añaden ajustes LXC en bruto. El motivo se muestra en el diálogo, y esos contenedores se eliminan desde Proxmox. Cuando el único motivo es la protección contra eliminación, el diálogo ofrece <strong>Desactivar la protección…</strong> y después elimina el contenedor."
           }
         }
       ]
@@ -305,7 +305,7 @@
               "Contenedores privilegiados: el contenedor se crea siempre sin privilegios.",
               "Arquitecturas distintas de amd64 y arm64.",
               "Direcciones IPv6 y servidores DNS IPv6.",
-              "Contenedores a partir de imágenes OCI o Docker: los crea <ociLink>OCI Manager Apps</ociLink>.",
+              "Contenedores a partir de imágenes OCI o Docker: los crea <ociLink>OCI manager Apps</ociLink>.",
               "Ajustes LXC en bruto escritos a mano, o instalar software dentro del contenedor."
             ]
           }

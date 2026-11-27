@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Un lanceur, pas un installateur d'applications",
-    "body": "L'onglet <strong>Apps</strong> n'installe pas de logiciel et ne découvre pas lui-même les services. Il regroupe les liens sauvegardés dans une grille de recherche. Les liens LXC se configurent dans l’<appTabLink>onglet App</appTabLink> de l'invité ; les liens personnalisés ajoutent services VM, proxies inverses et tableaux de bord externes. Dans le Monitor, les applications s’installent depuis l’<catalogLink>onglet Catalogue</catalogLink>."
+    "body": "L'onglet <strong>Apps</strong> n'installe pas de logiciel et ne découvre pas lui-même les services. Il regroupe les liens sauvegardés dans une grille de recherche. Les liens LXC se configurent dans l’<appTabLink>onglet App</appTabLink> de l'invité ; les liens personnalisés ajoutent services VM, proxies inverses et tableaux de bord externes. Dans le Monitor, les applications s’installent depuis l’<catalogLink>onglet Menux</catalogLink>."
   },
   "sources": {
     "heading": "Ce qui apparaît dans Apps",

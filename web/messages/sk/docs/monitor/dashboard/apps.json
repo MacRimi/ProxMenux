@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Spúšťač, nie inštalátor aplikácií",
-    "body": "Karta <strong>Apps</strong> neinštaluje softvér ani sama nevyhľadáva služby. Zoskupuje uložené odkazy do prehľadávateľnej mriežky. Odkazy LXC sa nastavujú na <appTabLink>karte App</appTabLink> hosťovského systému; vlastné odkazy zahŕňajú služby VM, reverzné proxy a externé panely. V Monitore sa aplikácie inštalujú na <catalogLink>karte Katalóg</catalogLink>."
+    "body": "Karta <strong>Apps</strong> neinštaluje softvér ani sama nevyhľadáva služby. Zoskupuje uložené odkazy do prehľadávateľnej mriežky. Odkazy LXC sa nastavujú na <appTabLink>karte App</appTabLink> hosťovského systému; vlastné odkazy zahŕňajú služby VM, reverzné proxy a externé panely. V Monitore sa aplikácie inštalujú na <catalogLink>karte Menux</catalogLink>."
   },
   "sources": {
     "heading": "Čo sa objavuje v Apps",

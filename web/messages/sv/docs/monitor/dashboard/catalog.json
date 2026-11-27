@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Översikt: fliken Katalog | ProxMenux-dokumentation",
-    "description": "Fliken Katalog i ProxMenux Monitor, som visas som Menux: OCI-programmen, ProxMenux-verktygen, de VM som ProxMenux skapar och Community Scripts på ett ställe, var och en med sitt blad, och de körs med samma steg som konsolmenyn."
+    "title": "ProxMenux Monitor Översikt: fliken Menux | ProxMenux-dokumentation",
+    "description": "Fliken Menux i ProxMenux Monitor: OCI-programmen, ProxMenux-verktygen, de VM som ProxMenux skapar och Community Scripts på ett ställe, var och en med sitt blad, och de körs med samma steg som konsolmenyn."
   },
   "header": {
-    "title": "Översikt: fliken Katalog",
+    "title": "Översikt: fliken Menux",
     "description": "Allt som ProxMenux kan installera eller köra, samlat i en flik: program, verktyg från menyn och skript, var och en med ett blad som beskriver den innan något körs.",
     "section": "ProxMenux Monitor · Översikt"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "Fliken Katalog visas i det övre fältet som <strong>Menux</strong>. Den samlar det som konsolmenyn i ProxMenux erbjuder och de program den installerar, så att de kan hittas, läsas om och köras från Monitor. När ett objekt körs öppnas en terminal i Monitor med samma steg som konsolmenyn. Fliken innehåller fyra sorters objekt:"
+          "p": "Fliken <strong>Menux</strong> samlar det som konsolmenyn i ProxMenux erbjuder och de program den installerar, så att de kan hittas, läsas om och köras från Monitor. När ett objekt körs öppnas en terminal i Monitor med samma steg som konsolmenyn. Fliken innehåller fyra sorters objekt:"
         },
         {
           "table": {
@@ -49,14 +49,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Fliken Katalog med sökrutan, inställningsknappen, ett utvalt program och ProxMenux-verktygen",
-            "caption": "Fliken Katalog, som visas som Menux i det övre fältet."
+            "alt": "Fliken Menux med sökrutan, inställningsknappen, ett utvalt program och ProxMenux-verktygen",
+            "caption": "Fliken Menux."
           }
         },
         {
           "calloutInfo": {
             "title": "Vem som ser fliken",
-            "body": "Fliken visas när kontots profil omfattar området <strong>Menux</strong>. För att installera, köra eller öppna ett objekt krävs åtgärden <strong>Köra skript och verktyg</strong>; utan den är bladen skrivskyddade och saknar knappar. Så ser profilen <strong>Observatör</strong> fliken. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Monitor på en värd med Proxmox Backup Server har ingen flik Katalog."
+            "body": "Fliken visas när kontots profil omfattar området <strong>Menux</strong>. För att installera, köra eller öppna ett objekt krävs åtgärden <strong>Köra skript och verktyg</strong>; utan den är bladen skrivskyddade och saknar knappar. Så ser profilen <strong>Observatör</strong> fliken. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Monitor på en värd med Proxmox Backup Server har ingen flik Menux."
           }
         }
       ]
@@ -83,7 +83,7 @@
               ],
               [
                 "Verktyg från Community Scripts",
-                "Skripten från Community Scripts som verkar på Proxmox-värden, grupperade efter kategori."
+                "Skripten från Community Scripts som hanterar Proxmox-värden, i en ruta."
               ],
               [
                 "Appkategorier",
@@ -196,7 +196,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminal med titeln Open SMART Disk Health & Test som kör dialogen för diskval från konsolmenyn",
-            "caption": "Ett verktyg från menyn, öppnat från Katalog i en egen terminal."
+            "caption": "Ett verktyg från menyn, öppnat från fliken Menux i en egen terminal."
           }
         },
         {
@@ -212,7 +212,7 @@
               ],
               [
                 "ProxMenux-verktyg eller VM",
-                "Det alternativet i konsolmenyn, utan resten av menyn runt omkring."
+                "Det alternativet i konsolmenyn, utan resten av menyn runt omkring. De alternativ som själva är menyer, systemen för NAS, Windows och Linux-VM, öppnar sin terminal direkt i stället för sitt blad."
               ],
               [
                 "Skapa LXC från mall",
@@ -292,7 +292,7 @@
               {
                 "href": "/docs/create-vm/lxc",
                 "label": "Skapa LXC från mall",
-                "tail": "guiden som öppnas från Katalog."
+                "tail": "guiden som öppnas från fliken Menux."
               },
               {
                 "href": "/docs/external-repositories",

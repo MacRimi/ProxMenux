@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Dashboard: scheda Catalogo | Documentazione ProxMenux",
-    "description": "La scheda Catalogo di ProxMenux Monitor, mostrata come Menux: le applicazioni OCI, gli strumenti di ProxMenux, le VM che ProxMenux crea e i Community Scripts in un unico posto, ognuno con la sua scheda informativa, eseguiti con gli stessi passaggi del menu della console."
+    "title": "ProxMenux Monitor Dashboard: scheda Menux | Documentazione ProxMenux",
+    "description": "La scheda Menux di ProxMenux Monitor: le applicazioni OCI, gli strumenti di ProxMenux, le VM che ProxMenux crea e i Community Scripts in un unico posto, ognuno con la sua scheda informativa, eseguiti con gli stessi passaggi del menu della console."
   },
   "header": {
-    "title": "Dashboard: scheda Catalogo",
+    "title": "Dashboard: scheda Menux",
     "description": "Tutto ciò che ProxMenux può installare o eseguire, riunito in una scheda: applicazioni, strumenti del menu e script, ognuno con una scheda informativa che lo descrive prima di eseguire qualsiasi cosa.",
     "section": "ProxMenux Monitor · Dashboard"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "La scheda Catalogo compare nella barra superiore come <strong>Menux</strong>. Riunisce ciò che offre il menu della console di ProxMenux e le applicazioni che installa, così da poterli trovare, consultare ed eseguire dal Monitor. Eseguire un elemento apre un terminale nel Monitor con gli stessi passaggi del menu della console. La scheda contiene quattro tipi di elementi:"
+          "p": "La scheda <strong>Menux</strong> riunisce ciò che offre il menu della console di ProxMenux e le applicazioni che installa, così da poterli trovare, consultare ed eseguire dal Monitor. Eseguire un elemento apre un terminale nel Monitor con gli stessi passaggi del menu della console. La scheda contiene quattro tipi di elementi:"
         },
         {
           "table": {
@@ -49,14 +49,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Scheda Catalogo con la casella di ricerca, il pulsante delle impostazioni, un’applicazione in evidenza e gli strumenti di ProxMenux",
-            "caption": "La scheda Catalogo, mostrata come Menux nella barra superiore."
+            "alt": "Scheda Menux con la casella di ricerca, il pulsante delle impostazioni, un’applicazione in evidenza e gli strumenti di ProxMenux",
+            "caption": "La scheda Menux."
           }
         },
         {
           "calloutInfo": {
             "title": "Chi vede la scheda",
-            "body": "La scheda compare quando il profilo dell’account include l’area <strong>Menux</strong>. Per installare, eseguire o aprire un elemento serve l’azione <strong>Eseguire script e strumenti</strong>; senza di essa le schede informative sono in sola lettura e non hanno pulsanti. È così che il profilo <strong>Osservatore</strong> vede la scheda. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. Il Monitor di un host Proxmox Backup Server non ha la scheda Catalogo."
+            "body": "La scheda compare quando il profilo dell’account include l’area <strong>Menux</strong>. Per installare, eseguire o aprire un elemento serve l’azione <strong>Eseguire script e strumenti</strong>; senza di essa le schede informative sono in sola lettura e non hanno pulsanti. È così che il profilo <strong>Osservatore</strong> vede la scheda. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. Il Monitor di un host Proxmox Backup Server non ha la scheda Menux."
           }
         }
       ]
@@ -83,7 +83,7 @@
               ],
               [
                 "Strumenti di Community Scripts",
-                "Gli script di Community Scripts che agiscono sull’host Proxmox, raggruppati per categoria."
+                "Gli script di Community Scripts che gestiscono l’host Proxmox, in un unico riquadro."
               ],
               [
                 "Categorie di app",
@@ -196,7 +196,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminale intitolato Open SMART Disk Health & Test che esegue la finestra di selezione dei dischi del menu della console",
-            "caption": "Uno strumento del menu aperto dal Catalogo, nel suo terminale."
+            "caption": "Uno strumento del menu aperto dalla scheda Menux, nel suo terminale."
           }
         },
         {
@@ -212,7 +212,7 @@
               ],
               [
                 "Strumento di ProxMenux o VM",
-                "Quell’opzione del menu della console, senza il resto del menu intorno."
+                "Quell’opzione del menu della console, senza il resto del menu intorno. Le opzioni che sono esse stesse dei menu, i sistemi di VM NAS, Windows e Linux, aprono subito il loro terminale invece della scheda informativa."
               ],
               [
                 "Crea LXC da modello",
@@ -292,7 +292,7 @@
               {
                 "href": "/docs/create-vm/lxc",
                 "label": "Crea LXC da modello",
-                "tail": "la procedura aperta dal Catalogo."
+                "tail": "la procedura aperta dalla scheda Menux."
               },
               {
                 "href": "/docs/external-repositories",
