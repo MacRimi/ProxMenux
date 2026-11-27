@@ -198,6 +198,35 @@ class TestNotificationManagerSettings(_NotificationManagerTestBase):
                 self.assertFalse(res['success'])
                 self.assertIn('Invalid Telegram topic', res.get('error', ''))
 
+    def test_save_settings_mixed_valid_and_invalid_payload_rolls_back_memory_and_db(self):
+        self.manager.save_settings({
+            'telegram.enabled': 'true',
+            'telegram.bot_token': '123456:ABCDEF_TOKEN',
+            'telegram.chat_id': '-1001234567890',
+            'telegram.events.backup': 'true',
+            'telegram.topic_id': '10',
+            'telegram.topic_id.backup': '222',
+        })
+        res = self.manager.save_settings({
+            'telegram.events.backup': 'false',
+            'telegram.topic_id.backup': 'not-a-number',
+        })
+        self.assertFalse(res['success'])
+        self.assertIn('Invalid Telegram topic', res.get('error', ''))
+
+        # In-memory config must remain unchanged
+        self.assertEqual(self.manager._config.get('telegram.events.backup'), 'true')
+        self.assertEqual(self.manager._config.get('telegram.topic_id.backup'), '222')
+        overrides = self.manager.get_settings()['config']['channel_overrides']['telegram']
+        self.assertTrue(overrides['categories']['backup'])
+        self.assertEqual(overrides['topics']['backup'], '222')
+
+        # Database must also remain unchanged
+        fresh_manager = NotificationManager()
+        fresh_manager._load_config()
+        self.assertEqual(fresh_manager._config.get('telegram.events.backup'), 'true')
+        self.assertEqual(fresh_manager._config.get('telegram.topic_id.backup'), '222')
+
 
 class TestNotificationManagerCategoryTopicDispatch(_NotificationManagerTestBase):
     """End-to-end dispatch routing across categories, fallbacks, rich cards, and bursts."""

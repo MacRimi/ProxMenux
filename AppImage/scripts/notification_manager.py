@@ -3300,8 +3300,9 @@ class NotificationManager:
     
     def save_settings(self, settings: Dict[str, str]) -> Dict[str, Any]:
         """Save multiple notification settings at once."""
+        previous_config = dict(self._config)
+        conn = None
         try:
-            previous_config = dict(self._config)
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
             conn.execute('PRAGMA busy_timeout=5000')
@@ -3480,6 +3481,13 @@ class NotificationManager:
                 result['pve_webhook'] = pve_webhook_result
             return result
         except Exception as e:
+            self._config = previous_config
+            if conn is not None:
+                try:
+                    conn.rollback()
+                    conn.close()
+                except Exception:
+                    pass
             return {'success': False, 'error': str(e)}
 
 
