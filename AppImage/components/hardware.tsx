@@ -1698,8 +1698,9 @@ return (
           </div>
 
           {/* Primary CTA at the section level when ANY of the detected Coral devices
-              is missing drivers — avoids a per-card button repetition. */}
-          {hardwareData.coral_tpus.some((c) => !c.drivers_ready) && (
+              is missing drivers — avoids a per-card button repetition. A Proxmox
+              Backup Server does not install them, so it is not offered there. */}
+          {!pbs && hardwareData.coral_tpus.some((c) => !c.drivers_ready) && (
             <div className="mt-4 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 flex items-center justify-between gap-3">
               <div className="flex items-start gap-3 flex-1">
                 <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />

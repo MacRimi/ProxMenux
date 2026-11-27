@@ -184,6 +184,7 @@ A special thank you goes to [@jcastro](https://github.com/jcastro), [@Vaso73](ht
 - **A Proxmox Backup Server shows its network and hardware**: the Network and Hardware tabs, with the new system information, the memory, PCI, USB and disks, follow the Datastores and Tasks of a PBS, without the Proxmox VE tools such as GPU driver installers, the GPU switch mode or the network flow of guests. Custom profiles choose them as *Network and hardware*.
 - **On a Proxmox Backup Server, the update button of the Health Monitor runs the PBS update**: it refreshes the repositories PBS already has, shows the package upgrade for review and never runs the Proxmox VE steps.
 - **The estimated full date of a new PBS datastore reads "Not enough data yet"** until PBS has a trend to estimate from.
+- **Rules for Proxmox Backup Server accounts start with a user**: *Add rule* on a PBS starts a rule for a user, since PBS has no groups, and the Hardware tab no longer suggests installing Coral TPU drivers, which a PBS does not offer.
 
 ## 🖥️ Monitor — performance and health
 

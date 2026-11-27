@@ -100,7 +100,7 @@ function PveProfileRules({ rules, setRules, directory }: {
         )
       })}
       <Button variant="outline" size="sm"
-        onClick={() => setRules([...rules, { kind: "group", name: "", choice: { profile: "observer", custom: null } }])}>
+        onClick={() => setRules([...rules, { kind: pbs ? "user" : "group", name: "", choice: { profile: "observer", custom: null } }])}>
         <Plus className="h-4 w-4 mr-1" />{t("pveAccounts.addRule")}
       </Button>
     </div>

@@ -184,6 +184,7 @@ Un agradecimiento especial a [@jcastro](https://github.com/jcastro), [@Vaso73](h
 - **Un Proxmox Backup Server muestra su red y su hardware**: las pestañas Red y Hardware, con la nueva información del sistema, la memoria, PCI, USB y los discos, van detrás de Datastores y Tareas en un PBS, sin las herramientas de Proxmox VE como los instaladores de drivers de GPU, el cambio de modo de la GPU o el flujo de red de los invitados. Los perfiles personalizados las eligen como *Red y hardware*.
 - **En un Proxmox Backup Server, el botón de actualización del Monitor de salud ejecuta la actualización de PBS**: refresca los repositorios que PBS ya tiene, muestra la actualización de paquetes para revisarla y nunca ejecuta los pasos de Proxmox VE.
 - **La fecha estimada de llenado de un datastore de PBS nuevo indica «Aún no hay datos suficientes»** hasta que PBS tiene una tendencia a partir de la que estimar.
+- **Las reglas de cuentas de Proxmox Backup Server empiezan por un usuario**: *Add rule* en un PBS crea una regla para un usuario, porque PBS no tiene grupos, y la pestaña Hardware ya no sugiere instalar los drivers de Coral TPU, que un PBS no ofrece.
 
 ## 🖥️ Monitor — rendimiento y salud
 
