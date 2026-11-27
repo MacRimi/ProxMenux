@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
+import { withMenuxMark } from "@/components/menux-mark"
 import { Callout } from "@/components/ui/callout"
 
 export async function generateMetadata({
@@ -81,7 +82,7 @@ export default async function DashboardIndexPage({
                 <td className="px-3 py-2 align-top whitespace-nowrap">
                   {row.linksTo ? (
                     <Link href={row.linksTo} className="text-blue-600 hover:underline font-semibold">
-                      {row.name}
+                      {withMenuxMark(row.name)}
                     </Link>
                   ) : (
                     <strong>{row.name}</strong>

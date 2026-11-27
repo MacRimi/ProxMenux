@@ -8,6 +8,7 @@ import { Link, usePathname } from "@/i18n/navigation"
 import { useState, useEffect } from "react"
 import { ChevronDown, ChevronRight, Menu, X } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { withMenuxMark } from "@/components/menux-mark"
 
 interface SubMenuItem {
   title: string
@@ -412,7 +413,7 @@ export default function DocSidebar() {
                     : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
               }`}
             >
-              {tItem(subItem)}
+              {withMenuxMark(tItem(subItem))}
             </Link>
             <button
               type="button"
@@ -447,7 +448,7 @@ export default function DocSidebar() {
           }`}
           onClick={() => setIsMobileMenuOpen(false)}
         >
-          {tItem(subItem)}
+          {withMenuxMark(tItem(subItem))}
         </Link>
       </li>
     )
@@ -467,7 +468,7 @@ export default function DocSidebar() {
                 : "hover:bg-gray-200"
             }`}
           >
-            <span>{tItem(item)}</span>
+            <span>{withMenuxMark(tItem(item))}</span>
             {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           {isOpen && (
@@ -487,7 +488,7 @@ export default function DocSidebar() {
             }`}
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            {tItem(item)}
+            {withMenuxMark(tItem(item))}
           </Link>
         </li>
       )

@@ -5,7 +5,7 @@ import { ScriptViewer } from "./script-viewer"
 import { cn } from "@/lib/utils"
 
 interface DocHeaderProps {
-  title: string
+  title: React.ReactNode
   description?: React.ReactNode
   section?: string
   estimatedMinutes?: number

@@ -24,6 +24,7 @@ import { Link } from "@/i18n/navigation"
 import { Callout } from "@/components/ui/callout"
 import { DataFlowDiagram } from "@/components/ui/data-flow-diagram"
 import { DocHeader } from "@/components/ui/doc-header"
+import { withMenuxMark } from "@/components/menux-mark"
 import { Mermaid } from "@/components/ui/mermaid"
 import { STACK_DEPENDENCY_HOOK_SOURCE } from "@/components/oci/stackDependencyHookSource"
 
@@ -327,7 +328,7 @@ export async function DocPage({
   return (
     <div className="pb-16">
       <DocHeader
-        title={t("header.title")}
+        title={withMenuxMark(t("header.title"))}
         description={t("header.description")}
         section={t("header.section")}
         estimatedMinutes={minutes}

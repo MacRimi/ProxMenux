@@ -3,6 +3,8 @@
 import { usePathname } from "@/i18n/navigation"
 import { Link } from "@/i18n/navigation"
 import { Home, ChevronRight } from "lucide-react"
+import type { ReactNode } from "react"
+import { MenuxMark } from "@/components/menux-mark"
 
 /**
  * Breadcrumb shown above the docs content.
@@ -19,6 +21,8 @@ import { Home, ChevronRight } from "lucide-react"
 // Sections that only group pages and have no page of their own: shown as text.
 // shortcut: hand-kept list, derive it at build time if a second section appears.
 const SECTIONS_WITHOUT_PAGE = new Set(["/docs/hardware"])
+// Pages whose name is not their path: the Monitor shows the catalog tab as Menux.
+const PAGE_NAMES: Record<string, ReactNode> = { "/docs/monitor/dashboard/catalog": <MenuxMark /> }
 
 export function DocBreadcrumb() {
   const pathname = usePathname()
@@ -29,7 +33,7 @@ export function DocBreadcrumb() {
 
   const crumbs = segments.map((seg, i) => {
     const href = "/" + segments.slice(0, i + 1).join("/")
-    const label = humanize(seg)
+    const label = PAGE_NAMES[href] ?? humanize(seg)
     const isLast = i === segments.length - 1
     return { href, label, isLast }
   })
