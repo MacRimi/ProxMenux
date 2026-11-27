@@ -206,6 +206,9 @@
     ],
     "kutt": [
       "/kutt/custom"
+    ],
+    "opencloud": [
+      "/mnt/opencloud-users"
     ]
   },
   "sizes": {
