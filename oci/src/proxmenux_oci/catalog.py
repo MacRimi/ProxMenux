@@ -371,7 +371,6 @@ class Catalog:
                     "skipped_count": len(casaos_skipped),
                     "skipped": sorted(casaos_skipped, key=lambda item: item["path"]),
                 },
-                "curated_profiles": {"included_count": len(curated_items)},
             },
         }
         self._enrich_index_from_templates(payload)

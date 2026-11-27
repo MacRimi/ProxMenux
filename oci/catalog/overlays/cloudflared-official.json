@@ -1,0 +1,10 @@
+{
+  "catalog_ui": {
+    "tagline": {
+      "en_US": "Publish local services on the internet through Cloudflare without opening ports on the router."
+    },
+    "description": {
+      "en_US": "Cloudflare Tunnel publishes local services on the internet through outbound-only connections that cloudflared opens to Cloudflare, so no port is opened on the router and the public IP address stays hidden. Public hostnames and access rules are managed from the Cloudflare Zero Trust dashboard, and traffic passes through Cloudflare's network before it reaches the services."
+    }
+  }
+}
