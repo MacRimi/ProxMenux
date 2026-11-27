@@ -185,6 +185,31 @@ class UpdateRetainedDiskTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'invalid runtime'):self.apply()
             transaction.recover(self.root,self.journal())
         self.assert_retained()
+        restore, = (args for args in self.commands if args[:2] == ('pct', 'restore'))
+        self.assertNotIn('--allow-identity-mismatch', restore)
+
+    def test_recovery_restores_verified_backup_over_recreated_pve_93_guest(self):
+        original_meta = b'meta: ctime=1,uid=original\n'
+        self.configs[115] += original_meta
+        self.base_config += original_meta
+        self.saved['observed'].update(config=self.configs[115].decode(),
+                                      config_sha256=transaction.sha(self.configs[115]))
+        instances.write(instances.location(self.root, 115), self.saved)
+
+        def recreate(*args, **kwargs):
+            self.configs[115] = self.base_config.replace(original_meta, b'meta: uid=recreated,ctime=2\n')
+
+        with patch.object(transaction, 'install_candidate', side_effect=recreate), \
+                patch.object(transaction.gpu_devices, 'validate_runtime',
+                             side_effect=[RuntimeError('invalid runtime'), None]):
+            with self.assertRaisesRegex(RuntimeError, 'invalid runtime'):
+                self.apply()
+            self.assertTrue(transaction.recover_failed_update(self.root, self.journal()))
+
+        restore, = (args for args in self.commands if args[:2] == ('pct', 'restore'))
+        self.assertEqual(restore[-2:], ('--allow-identity-mismatch', '1'))
+        self.assert_retained()
+        self.assertEqual(json.loads(self.journal().read_text())['phase'], 'rolled-back')
 
 
 class AutomaticRecoveryGuardTests(unittest.TestCase):
