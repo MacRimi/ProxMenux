@@ -242,6 +242,33 @@
         },
         {
           "p": "Тексты инструментов ProxMenux и приложений OCI следуют языку Monitor. Тексты Community Scripts поступают из их проекта и отображаются на английском."
+        },
+        {
+          "p": "Если список не удаётся загрузить, на вкладке отображается <strong>Не удалось загрузить каталог. Повторите попытку чуть позже.</strong> и кнопка <strong>Повторить</strong>. Если обновить список Community Scripts не удалось, вкладка продолжает показывать сохранённый список. Хост, на котором список ни разу не сохранялся и нет подключения, не показывает Community Scripts. В обоих случаях Monitor повторяет загрузку при следующем запросе списка, но не раньше чем через пять минут."
+        },
+        {
+          "p": "Вкладка обращается к двум адресам API Monitor. Для обоих нужен профиль, включающий область <strong>Menux</strong>:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Что загружается",
+              "Endpoint",
+              "Источник"
+            ],
+            "rows": [
+              [
+                "Список элементов",
+                "<code>GET /api/catalog/items?lang=</code>",
+                "Каталог OCI manager Apps, пункты консольного меню и сохранённый список Community Scripts в <code>/var/lib/proxmenux/catalog_scripts.json</code>."
+              ],
+              [
+                "Панель сведений элемента",
+                "<code>GET /api/catalog/items/&lt;kind&gt;/&lt;id&gt;?lang=</code>",
+                "<code>&lt;kind&gt;</code> принимает значения <code>oci</code>, <code>pmx</code> или <code>cs</code>; источники те же, что и для списка. Панель сведений скрипта Community Scripts дополняется его записью из базы данных проекта Community Scripts."
+              ]
+            ]
+          }
         }
       ]
     },
@@ -266,6 +293,11 @@
                 "href": "/docs/create-vm/lxc",
                 "label": "Создать LXC из шаблона",
                 "tail": "мастер, открываемый из каталога."
+              },
+              {
+                "href": "/docs/external-repositories",
+                "label": "Внешние репозитории",
+                "tail": "сторонние проекты, которые запускает ProxMenux, в том числе Community Scripts, и куда сообщать об их проблемах."
               },
               {
                 "href": "/docs/monitor/dashboard/settings#navigation-order",

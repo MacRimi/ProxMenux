@@ -42,7 +42,7 @@
     {
       "id": "where",
       "title": "Var du hittar det",
-      "intro": "Öppna <strong>OCI manager Apps (Technology Preview)</strong> i ProxMenux huvudmeny på Proxmox-noden som root. Den första vyn erbjuder:",
+      "intro": "Öppna <strong>OCI manager Apps (Technology Preview)</strong> i ProxMenux huvudmeny på Proxmox-noden som root. Samma program kan även installeras från <catalogLink>fliken Katalog</catalogLink> i ProxMenux Monitor. I konsolen erbjuder den första vyn i OCI manager Apps:",
       "blocks": [
         {
           "list": {

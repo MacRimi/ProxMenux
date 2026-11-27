@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "En launcher, inte en applikation installer",
-    "body": "Fliken <strong>Apps</strong> installerar inte program och upptäcker inte tjänster själv. Den samlar sparade länkar i ett sökbart rutnät. LXC-länkar ställs in på gästens <appTabLink>App-flik</appTabLink>; egna länkar kan lägga till VM-tjänster, omvända proxyservrar och externa paneler."
+    "body": "Fliken <strong>Apps</strong> installerar inte program och upptäcker inte tjänster själv. Den samlar sparade länkar i ett sökbart rutnät. LXC-länkar ställs in på gästens <appTabLink>App-flik</appTabLink>; egna länkar kan lägga till VM-tjänster, omvända proxyservrar och externa paneler. I Monitor installeras program från <catalogLink>fliken Katalog</catalogLink>."
   },
   "sources": {
     "heading": "Vad som visas i Apps",

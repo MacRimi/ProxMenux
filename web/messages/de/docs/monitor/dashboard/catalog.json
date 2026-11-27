@@ -242,6 +242,33 @@
         },
         {
           "p": "Die Texte der ProxMenux-Werkzeuge und der OCI-Anwendungen folgen der Sprache des Monitors. Die Texte der Community Scripts stammen aus deren Projekt und werden auf Englisch angezeigt."
+        },
+        {
+          "p": "Wenn die Liste nicht geladen werden kann, zeigt die Registerkarte <strong>Der Katalog konnte nicht geladen werden. Versuchen Sie es gleich noch einmal.</strong> mit der Schaltfläche <strong>Erneut versuchen</strong>. Schlägt die Erneuerung der Community Scripts fehl, zeigt die Registerkarte weiter die gespeicherte Liste. Ein Host, der die Liste nie gespeichert hat und keine Verbindung hat, zeigt keine Community Scripts. In beiden Fällen versucht der Monitor den Download erneut, wenn die Liste das nächste Mal geladen wird und fünf Minuten vergangen sind."
+        },
+        {
+          "p": "Die Registerkarte liest zwei Endpoints der Monitor-API. Beide setzen ein Profil voraus, das den Bereich <strong>Menux</strong> enthält:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Was geladen wird",
+              "Endpoint",
+              "Quelle"
+            ],
+            "rows": [
+              [
+                "Die Liste der Einträge",
+                "<code>GET /api/catalog/items?lang=</code>",
+                "Der Katalog von OCI manager Apps, die Optionen des Konsolenmenüs und die gespeicherte Liste der Community Scripts in <code>/var/lib/proxmenux/catalog_scripts.json</code>."
+              ],
+              [
+                "Das Datenblatt eines Eintrags",
+                "<code>GET /api/catalog/items/&lt;kind&gt;/&lt;id&gt;?lang=</code>",
+                "<code>&lt;kind&gt;</code> ist <code>oci</code>, <code>pmx</code> oder <code>cs</code>, mit denselben Quellen wie die Liste. Das Datenblatt eines Community-Scripts-Skripts ergänzt dessen Datensatz in der Datenbank des Community-Scripts-Projekts."
+              ]
+            ]
+          }
         }
       ]
     },
@@ -266,6 +293,11 @@
                 "href": "/docs/create-vm/lxc",
                 "label": "LXC aus einer Vorlage erstellen",
                 "tail": "der Assistent, der aus dem Katalog geöffnet wird."
+              },
+              {
+                "href": "/docs/external-repositories",
+                "label": "Externe Repositorys",
+                "tail": "die Drittanbieterprojekte, die ProxMenux ausführt, darunter die Community Scripts, und wo ihre Probleme gemeldet werden."
               },
               {
                 "href": "/docs/monitor/dashboard/settings#navigation-order",

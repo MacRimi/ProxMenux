@@ -42,7 +42,7 @@
     {
       "id": "where",
       "title": "Где найти",
-      "intro": "OCI manager Apps открывается через пункт <strong>OCI manager Apps (Technology Preview)</strong> главного меню ProxMenux на узле Proxmox от имени root. На начальном экране доступны:",
+      "intro": "OCI manager Apps открывается через пункт <strong>OCI manager Apps (Technology Preview)</strong> главного меню ProxMenux на узле Proxmox от имени root. Те же приложения устанавливает <catalogLink>вкладка «Каталог»</catalogLink> ProxMenux Monitor. В консоли на начальном экране OCI manager Apps доступны:",
       "blocks": [
         {
           "list": {

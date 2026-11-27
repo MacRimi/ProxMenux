@@ -242,6 +242,33 @@
         },
         {
           "p": "Texterna för ProxMenux-verktygen och OCI-programmen följer språket i Monitor. Texterna för Community Scripts kommer från deras projekt och visas på engelska."
+        },
+        {
+          "p": "Om listan inte kan läsas in visar fliken <strong>Katalogen kunde inte läsas in. Försök igen om en stund.</strong> med knappen <strong>Försök igen</strong>. Om förnyelsen av Community Scripts misslyckas fortsätter fliken att visa den sparade listan. En värd som aldrig har sparat listan och saknar anslutning visar inga Community Scripts. I båda fallen försöker Monitor hämta listan igen nästa gång den läses in, när fem minuter har gått."
+        },
+        {
+          "p": "Fliken läser två endpoints i Monitors API. Båda kräver en profil som omfattar området <strong>Menux</strong>:"
+        },
+        {
+          "table": {
+            "headers": [
+              "Vad som läses in",
+              "Endpoint",
+              "Källa"
+            ],
+            "rows": [
+              [
+                "Listan över objekt",
+                "<code>GET /api/catalog/items?lang=</code>",
+                "Katalogen i OCI manager Apps, alternativen i konsolmenyn och den sparade listan över Community Scripts i <code>/var/lib/proxmenux/catalog_scripts.json</code>."
+              ],
+              [
+                "Ett objekts blad",
+                "<code>GET /api/catalog/items/&lt;kind&gt;/&lt;id&gt;?lang=</code>",
+                "<code>&lt;kind&gt;</code> är <code>oci</code>, <code>pmx</code> eller <code>cs</code>, med samma källor som listan. Bladet för ett skript från Community Scripts lägger till dess post i databasen för projektet Community Scripts."
+              ]
+            ]
+          }
         }
       ]
     },
@@ -266,6 +293,11 @@
                 "href": "/docs/create-vm/lxc",
                 "label": "Skapa LXC från mall",
                 "tail": "guiden som öppnas från Katalog."
+              },
+              {
+                "href": "/docs/external-repositories",
+                "label": "Externa arkiv",
+                "tail": "tredjepartsprojekt som ProxMenux kör, bland dem Community Scripts, och var man rapporterar problem med dem."
               },
               {
                 "href": "/docs/monitor/dashboard/settings#navigation-order",

@@ -242,6 +242,33 @@
         },
         {
           "p": "Os textos das ferramentas do ProxMenux e dos aplicativos OCI seguem o idioma do Monitor. Os textos dos Community Scripts vêm do projeto deles e são exibidos em inglês."
+        },
+        {
+          "p": "Quando a lista não pode ser carregada, a aba mostra <strong>Não foi possível carregar o catálogo. Tente novamente em instantes.</strong> com o botão <strong>Tentar novamente</strong>. Quando a renovação dos Community Scripts falha, a aba continua mostrando a lista mantida no host. Um host que nunca salvou a lista e não tem conexão não mostra Community Scripts. Nos dois casos, o Monitor tenta o download de novo na próxima vez que a lista é carregada, depois de passados cinco minutos."
+        },
+        {
+          "p": "A aba lê dois endpoints da API do Monitor. Os dois exigem um perfil que inclua a área <strong>Menux</strong>:"
+        },
+        {
+          "table": {
+            "headers": [
+              "O que carrega",
+              "Endpoint",
+              "Origem"
+            ],
+            "rows": [
+              [
+                "A lista de itens",
+                "<code>GET /api/catalog/items?lang=</code>",
+                "O catálogo do OCI manager Apps, as opções do menu do console e a lista de Community Scripts mantida no host, em <code>/var/lib/proxmenux/catalog_scripts.json</code>."
+              ],
+              [
+                "A ficha de um item",
+                "<code>GET /api/catalog/items/&lt;kind&gt;/&lt;id&gt;?lang=</code>",
+                "<code>&lt;kind&gt;</code> é <code>oci</code>, <code>pmx</code> ou <code>cs</code>, com as mesmas origens da lista. A ficha de um script do Community Scripts acrescenta o registro dele no banco de dados do projeto Community Scripts."
+              ]
+            ]
+          }
         }
       ]
     },
@@ -266,6 +293,11 @@
                 "href": "/docs/create-vm/lxc",
                 "label": "Criar LXC a partir de modelo",
                 "tail": "o assistente aberto a partir do Catálogo."
+              },
+              {
+                "href": "/docs/external-repositories",
+                "label": "Repositórios externos",
+                "tail": "os projetos de terceiros que o ProxMenux executa, entre eles os Community Scripts, e onde relatar seus problemas."
               },
               {
                 "href": "/docs/monitor/dashboard/settings#navigation-order",

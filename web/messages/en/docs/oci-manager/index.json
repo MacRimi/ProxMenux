@@ -33,7 +33,7 @@
     {
       "id": "where",
       "title": "Where it is",
-      "intro": "OCI manager Apps opens from option <strong>OCI manager Apps (Technology Preview)</strong> of the ProxMenux main menu, on the Proxmox node and as root. Its first screen offers:",
+      "intro": "OCI manager Apps opens from option <strong>OCI manager Apps (Technology Preview)</strong> of the ProxMenux main menu, on the Proxmox node and as root. The <catalogLink>Catalog tab</catalogLink> of ProxMenux Monitor installs the same applications. In the console, the first screen of OCI manager Apps offers:",
       "blocks": [
         {
           "list": {
