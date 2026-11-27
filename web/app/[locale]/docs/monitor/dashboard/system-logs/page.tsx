@@ -5,6 +5,7 @@ import { icuQuotesToHtml } from "@/i18n/loadMessages"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -90,10 +91,9 @@ export default async function SystemLogsTabPage({
       </p>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/log-details-modal.png"
           alt={t("subtabs.logDetailsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("subtabs.logDetailsImageCaption")}

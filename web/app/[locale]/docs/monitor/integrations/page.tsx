@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -180,8 +180,8 @@ curl -H "Authorization: Bearer <returned-token>" http://<host>:8008/api/system |
         })}
       </Callout>
 
-      <figure className="my-6">
-        <Image src="/monitor/integrations/homepage.png" alt={t("homepage.imageAlt")} width={2000} height={1062} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
+      <figure className="my-6 mx-auto max-w-2xl">
+        <Screenshot src="/monitor/integrations/homepage.png" alt={t("homepage.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("homepage.imageCaption", { code })}</figcaption>
       </figure>
 
@@ -355,8 +355,8 @@ curl -H "Authorization: Bearer <returned-token>" http://<host>:8008/api/system |
         {t.rich("homeAssistant.intro", { code, link: apiLink })}
       </p>
 
-      <figure className="my-6">
-        <Image src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} width={2000} height={1200} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
+      <figure className="my-6 mx-auto max-w-2xl">
+        <Screenshot src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} density={1} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("homeAssistant.imageCaption")}</figcaption>
       </figure>
 
@@ -858,8 +858,8 @@ cards:
         className="my-4"
       />
 
-      <figure className="my-6">
-        <Image src="/monitor/integrations/home-assistant-view.png" alt={t("homeAssistant.viewImageAlt")} width={2210} height={1606} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-3xl" />
+      <figure className="my-6 mx-auto max-w-3xl">
+        <Screenshot src="/monitor/integrations/home-assistant-view.png" alt={t("homeAssistant.viewImageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("homeAssistant.viewImageCaption", { em })}</figcaption>
       </figure>
 
@@ -969,8 +969,8 @@ cards:
         {t.rich("grafana.intro", { code })}
       </p>
 
-      <figure className="my-6">
-        <Image src="/monitor/integrations/grafana.png" alt={t("grafana.imageAlt")} width={2000} height={1327} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
+      <figure className="my-6 mx-auto max-w-2xl">
+        <Screenshot src="/monitor/integrations/grafana.png" alt={t("grafana.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("grafana.imageCaption", { link: promAnchor })}</figcaption>
       </figure>
 

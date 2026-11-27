@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ArrowRight, ExternalLink, HardDrive, Database, Server, MonitorIcon } from "lucide-react"
 import { Github } from "@/components/ui/brand-icons"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -103,17 +103,11 @@ export default async function SystemNASPage({
       </Callout>
 
       <div className="flex flex-col items-center my-6">
-        <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-          <Image
-            src="/vm/system-nas-menu.png"
-            alt={t("image.alt")}
-            width={768}
-            height={0}
-            style={{ height: "auto" }}
-            className="w-full object-contain"
-            sizes="(max-width: 768px) 100vw, 768px"
-          />
-        </div>
+        <Screenshot
+          src="/vm/system-nas-menu.png"
+          alt={t("image.alt")}
+          className="rounded-md border border-gray-200"
+        />
         <span className="mt-2 text-sm text-gray-600">{t("image.caption")}</span>
       </div>
 

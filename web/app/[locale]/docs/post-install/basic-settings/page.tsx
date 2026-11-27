@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
-import Image from "next/image"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -176,11 +176,9 @@ Acquire::Languages "none";`}
         {t.rich("utilities.intro", { strong, code })}
       </p>
 
-      <Image
+      <Screenshot
         src="/basic/menu_utilities.png"
         alt={t("utilities.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
@@ -209,12 +207,10 @@ Acquire::Languages "none";`}
       <div className="grid gap-4 sm:grid-cols-2 my-4">
         {SCREENSHOTS.map((s) => (
           <figure key={s.pkg} className="m-0">
-            <Image
+            <Screenshot
               src={s.src}
               alt={s.alt}
-              width={450}
-              height={280}
-              className="rounded shadow-sm border border-gray-200 w-full h-auto"
+              className="rounded shadow-sm border border-gray-200"
             />
             <figcaption className="text-xs text-gray-600 mt-1 text-center">
               <code>{s.pkg}</code>

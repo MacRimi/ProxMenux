@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -103,10 +104,9 @@ export default async function VmsLxcsTabPage({
       <p className="mb-4 text-gray-800 leading-relaxed">{t("topRow.intro")}</p>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/vms-top-row.png"
           alt={t("topRow.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("topRow.imageCaption")}
@@ -154,11 +154,10 @@ export default async function VmsLxcsTabPage({
         {t.rich("inventory.intro", { code })}
       </p>
 
-      <figure className="my-6">
-        <img
+      <figure className="my-6 mx-auto max-w-md">
+        <Screenshot
           src="/monitor/vms-inventory-mobile.png"
           alt={t("inventory.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full max-w-md mx-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("inventory.imageCaption")}
@@ -185,10 +184,9 @@ export default async function VmsLxcsTabPage({
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.statusTitle")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/vms-modal-status.png"
           alt={t("drillIn.statusImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.statusImageCaption")}
@@ -257,10 +255,9 @@ export default async function VmsLxcsTabPage({
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.mountsTitle")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/vms-modal-mounts.png"
           alt={t("drillIn.mountsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.mountsImageCaption")}
@@ -304,10 +301,9 @@ export default async function VmsLxcsTabPage({
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.backupsTitle")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/vms-modal-backups.png"
           alt={t("drillIn.backupsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.backupsImageCaption")}

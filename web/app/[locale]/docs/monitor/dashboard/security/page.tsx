@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -111,7 +111,7 @@ export default async function SecurityTabPage({
       <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("auth.heading")}</h3>
 
       <figure className="my-4">
-        <Image src="/monitor/security/auth-card.png" alt={t("auth.imageAlt")} width={2000} height={956} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/auth-card.png" alt={t("auth.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("auth.imageCaption")}</figcaption>
       </figure>
 
@@ -127,7 +127,7 @@ export default async function SecurityTabPage({
       <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("ssl.heading")}</h3>
 
       <figure className="my-4">
-        <Image src="/monitor/security/ssl-https-card.png" alt={t("ssl.imageAlt")} width={2000} height={1124} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/ssl-https-card.png" alt={t("ssl.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("ssl.imageCaption", { em })}</figcaption>
       </figure>
 
@@ -141,7 +141,7 @@ export default async function SecurityTabPage({
       </ul>
 
       <figure className="my-4">
-        <Image src="/monitor/security/ssl-https-enabled.png" alt={t("ssl.enabledAlt")} width={2000} height={889} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/ssl-https-enabled.png" alt={t("ssl.enabledAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("ssl.enabledCaption", { em })}</figcaption>
       </figure>
 
@@ -156,7 +156,7 @@ export default async function SecurityTabPage({
       <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("apiTokens.heading")}</h3>
 
       <figure className="my-4">
-        <Image src="/monitor/security/api-tokens-empty.png" alt={t("apiTokens.emptyAlt")} width={2000} height={855} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/api-tokens-empty.png" alt={t("apiTokens.emptyAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("apiTokens.emptyCaption", { em, code })}</figcaption>
       </figure>
 
@@ -167,7 +167,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/api-tokens-generate.png" alt={t("apiTokens.generateAlt")} width={2000} height={1124} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/api-tokens-generate.png" alt={t("apiTokens.generateAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("apiTokens.generateCaption")}</figcaption>
       </figure>
 
@@ -176,7 +176,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/api-tokens-generated.png" alt={t("apiTokens.generatedAlt")} width={2000} height={1468} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/api-tokens-generated.png" alt={t("apiTokens.generatedAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("apiTokens.generatedCaption", { code })}</figcaption>
       </figure>
 
@@ -187,7 +187,7 @@ export default async function SecurityTabPage({
       <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("gateway.heading")}</h3>
 
       <figure className="my-4">
-        <Image src="/monitor/security/secure-gateway-card.png" alt={t("gateway.cardAlt")} width={2000} height={434} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/secure-gateway-card.png" alt={t("gateway.cardAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("gateway.cardCaption")}</figcaption>
       </figure>
 
@@ -207,7 +207,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/tailscale-auth-key-page.png" alt={t("gateway.step0Alt")} width={2000} height={1115} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/tailscale-auth-key-page.png" alt={t("gateway.step0Alt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("gateway.step0Caption", { em })}</figcaption>
       </figure>
 
@@ -217,7 +217,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/gateway-step-1-intro.png" alt={t("gateway.step1Alt")} width={1589} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/gateway-step-1-intro.png" alt={t("gateway.step1Alt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("gateway.step1Caption")}</figcaption>
       </figure>
 
@@ -227,7 +227,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/gateway-step-3-auth.png" alt={t("gateway.step2Alt")} width={1985} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/gateway-step-3-auth.png" alt={t("gateway.step2Alt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("gateway.step2Caption")}</figcaption>
       </figure>
 
@@ -240,7 +240,7 @@ export default async function SecurityTabPage({
       </ul>
 
       <figure className="my-4">
-        <Image src="/monitor/security/gateway-step-2-scope.png" alt={t("gateway.step3Alt")} width={1934} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/gateway-step-2-scope.png" alt={t("gateway.step3Alt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("gateway.step3Caption", { em })}</figcaption>
       </figure>
 
@@ -255,7 +255,7 @@ export default async function SecurityTabPage({
       </ul>
 
       <figure className="my-4">
-        <Image src="/monitor/security/gateway-step-4-advanced.png" alt={t("gateway.step4Alt")} width={1847} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/gateway-step-4-advanced.png" alt={t("gateway.step4Alt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("gateway.step4Caption")}</figcaption>
       </figure>
 
@@ -265,7 +265,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/gateway-step-5-review.png" alt={t("gateway.step5Alt")} width={1860} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/gateway-step-5-review.png" alt={t("gateway.step5Alt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("gateway.step5Caption")}</figcaption>
       </figure>
 
@@ -279,7 +279,7 @@ export default async function SecurityTabPage({
       <h3 className="text-xl font-semibold mt-8 mb-3 text-gray-900">{t("firewall.heading")}</h3>
 
       <figure className="my-4">
-        <Image src="/monitor/security/firewall-card.png" alt={t("firewall.imageAlt")} width={2000} height={1256} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/firewall-card.png" alt={t("firewall.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("firewall.imageCaption", { em })}</figcaption>
       </figure>
 
@@ -305,7 +305,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/fail2ban-not-installed.png" alt={t("fail2ban.notInstalledAlt")} width={2000} height={968} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/fail2ban-not-installed.png" alt={t("fail2ban.notInstalledAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("fail2ban.notInstalledCaption")}</figcaption>
       </figure>
 
@@ -314,14 +314,14 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/fail2ban-install-confirm.png" alt={t("fail2ban.confirmAlt")} width={1808} height={1678} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/fail2ban-install-confirm.png" alt={t("fail2ban.confirmAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("fail2ban.confirmCaption", { code })}</figcaption>
       </figure>
 
       <p className="mb-3 text-gray-800 leading-relaxed">{t("fail2ban.confirmIntro")}</p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/fail2ban-install-progress.png" alt={t("fail2ban.progressAlt")} width={2000} height={1512} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/fail2ban-install-progress.png" alt={t("fail2ban.progressAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("fail2ban.progressCaption")}</figcaption>
       </figure>
 
@@ -330,7 +330,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/fail2ban-active.png" alt={t("fail2ban.activeAlt")} width={2000} height={1614} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/fail2ban-active.png" alt={t("fail2ban.activeAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("fail2ban.activeCaption", { code })}</figcaption>
       </figure>
 
@@ -339,7 +339,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/fail2ban-sshd-config.png" alt={t("fail2ban.configAlt")} width={2000} height={919} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/fail2ban-sshd-config.png" alt={t("fail2ban.configAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("fail2ban.configCaption", { em })}</figcaption>
       </figure>
 
@@ -364,7 +364,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/lynis-not-installed.png" alt={t("lynis.notInstalledAlt")} width={2000} height={919} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/lynis-not-installed.png" alt={t("lynis.notInstalledAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("lynis.notInstalledCaption")}</figcaption>
       </figure>
 
@@ -373,12 +373,12 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/lynis-install-confirm.png" alt={t("lynis.confirmAlt")} width={1985} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/lynis-install-confirm.png" alt={t("lynis.confirmAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("lynis.confirmCaption")}</figcaption>
       </figure>
 
       <figure className="my-4">
-        <Image src="/monitor/security/lynis-install-progress.png" alt={t("lynis.progressAlt")} width={1856} height={972} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/lynis-install-progress.png" alt={t("lynis.progressAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("lynis.progressCaption")}</figcaption>
       </figure>
 
@@ -387,12 +387,12 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/lynis-installed-empty.png" alt={t("lynis.installedAlt")} width={2000} height={1131} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/lynis-installed-empty.png" alt={t("lynis.installedAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("lynis.installedCaption")}</figcaption>
       </figure>
 
       <figure className="my-4">
-        <Image src="/monitor/security/lynis-audit-running.png" alt={t("lynis.runningAlt")} width={2000} height={1131} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/lynis-audit-running.png" alt={t("lynis.runningAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("lynis.runningCaption")}</figcaption>
       </figure>
 
@@ -401,7 +401,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/lynis-audit-results.png" alt={t("lynis.resultsAlt")} width={2000} height={1183} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/lynis-audit-results.png" alt={t("lynis.resultsAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("lynis.resultsCaption", { strong })}</figcaption>
       </figure>
 
@@ -419,7 +419,7 @@ export default async function SecurityTabPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/security/lynis-report-pdf.png" alt={t("lynis.reportAlt")} width={1414} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/security/lynis-report-pdf.png" alt={t("lynis.reportAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("lynis.reportCaption", { a: lynisSampleAnchor })}
         </figcaption>

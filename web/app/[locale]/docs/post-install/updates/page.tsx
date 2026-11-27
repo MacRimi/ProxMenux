@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Steps } from "@/components/ui/steps"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -90,12 +90,9 @@ export default async function PostInstallUpdatesPage({
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/post-install/post-install-updates-menu.png"
           alt={t("pathA.menuAlt")}
-          width={1200}
-          height={680}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("pathA.menuCaption", { em })}
@@ -107,12 +104,9 @@ export default async function PostInstallUpdatesPage({
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/post-install/post-install-updates-checklist.png"
           alt={t("pathA.checklistAlt")}
-          width={1200}
-          height={680}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("pathA.checklistCaption")}
@@ -126,12 +120,9 @@ export default async function PostInstallUpdatesPage({
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/proxmenux-optimizations-update-banner.png"
           alt={t("pathB.imageAlt")}
-          width={2000}
-          height={1146}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("pathB.imageCaption")}

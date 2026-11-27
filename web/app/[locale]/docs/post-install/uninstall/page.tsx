@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Steps } from "@/components/ui/steps"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -71,11 +71,9 @@ export default async function UninstallOptimizationsPage({
         {t.rich("openMenu.body", { strong, em })}
       </p>
 
-      <Image
+      <Screenshot
         src="/post-install/post-install-uninstall.png"
         alt={t("openMenu.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

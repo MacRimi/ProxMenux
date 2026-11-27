@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Plus, ExternalLink } from "lucide-react"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -233,7 +234,7 @@ pveam update
         {fastfetchLogos.map((logo) => (
           <div key={logo.name}>
             <p className="font-semibold text-center">{logo.name}</p>
-            <img
+            <Screenshot
               src={logo.src}
               alt={logo.alt}
               className="rounded shadow-lg"
@@ -300,11 +301,11 @@ EOF
       </p>
 
       <div className="mb-6 flex justify-center">
-        <img
+        <Screenshot
           src="https://macrimi.github.io/ProxMenux/figurine/figurine.png"
           alt={t("figurine.imageAlt")}
+          density={1}
           className="rounded-md shadow-lg border border-gray-200"
-          style={{ maxWidth: "100%" }}
         />
       </div>
 

@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Prerequisites } from "@/components/ui/prerequisites"
 import { Steps } from "@/components/ui/steps"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -137,11 +137,9 @@ export default async function GpuVmPassthroughPage({
         {t.rich("running.body", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/gpu-tpu/gpu-vm-01-menu-entry.png"
         alt={t("running.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
@@ -157,11 +155,9 @@ export default async function GpuVmPassthroughPage({
           <Callout variant="tip" title={t("walkthrough.detect.tipTitle")}>
             {t.rich("walkthrough.detect.tipBody", { postLink })}
           </Callout>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-vm-02-gpu-detection.png"
             alt={t("walkthrough.detect.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -184,11 +180,9 @@ export default async function GpuVmPassthroughPage({
 
         <Steps.Step title={t("walkthrough.pickVm.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.pickVm.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-vm-03-vm-select.png"
             alt={t("walkthrough.pickVm.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -200,11 +194,9 @@ export default async function GpuVmPassthroughPage({
               <li key={idx}>{t.rich(`walkthrough.switchMode.items.${idx}`, { strong, code, em })}</li>
             ))}
           </ul>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-vm-04-switch-mode.png"
             alt={t("walkthrough.switchMode.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
 
@@ -215,11 +207,9 @@ export default async function GpuVmPassthroughPage({
 
         <Steps.Step title={t("walkthrough.audioPick.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.audioPick.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-vm-07-audio-checklist.png"
             alt={t("walkthrough.audioPick.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
           <Callout variant="warning" title={t("walkthrough.audioPick.warnTitle")}>
@@ -229,11 +219,9 @@ export default async function GpuVmPassthroughPage({
 
         <Steps.Step title={t("walkthrough.summary.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.summary.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-vm-05-summary.png"
             alt={t("walkthrough.summary.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -268,11 +256,9 @@ args: -cpu 'host,+kvm_pv_unhalt,+kvm_pv_eoi,hv_vendor_id=NV43FIX,kvm=off'`}
 
         <Steps.Step title={t("walkthrough.reboot.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.reboot.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-vm-06-reboot.png"
             alt={t("walkthrough.reboot.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>

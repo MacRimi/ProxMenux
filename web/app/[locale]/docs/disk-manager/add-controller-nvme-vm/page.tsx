@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -250,9 +250,7 @@ was changed          │  PHASE 2 — Apply                   │
           </div>
           {step.img && (
             <div className="flex flex-col items-center w-full max-w-[768px] mx-auto my-4">
-              <div className="w-full overflow-hidden rounded-md border border-gray-200">
-                <Image src={step.img} alt={step.alt || step.title} width={768} height={0} style={{ height: "auto" }} className="w-full object-contain" sizes="(max-width: 768px) 100vw, 768px" />
-              </div>
+              <Screenshot src={step.img} alt={step.alt || step.title} className="rounded-md border border-gray-200" />
               {step.caption && <span className="mt-2 text-sm text-gray-600">{step.caption}</span>}
             </div>
           )}

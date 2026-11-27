@@ -5,6 +5,7 @@ import { Download } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -115,10 +116,9 @@ export default async function StorageTabPage({
       <p className="mb-4 text-gray-800 leading-relaxed">{t("topRow.intro")}</p>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/storage-top-row.png"
           alt={t("topRow.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("topRow.imageCaption")}
@@ -212,10 +212,9 @@ export default async function StorageTabPage({
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.overviewTitle")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/disk-modal-overview.png"
           alt={t("drillIn.overviewImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.overviewImageCaption")}
@@ -232,10 +231,9 @@ export default async function StorageTabPage({
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.smartTitle")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/disk-modal-smart.png"
           alt={t("drillIn.smartImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.smartImageCaption")}
@@ -255,10 +253,9 @@ export default async function StorageTabPage({
       </p>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/smart-report-preview.png"
           alt={t("drillIn.pdfPreviewAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.pdfPreviewCaption")}
@@ -289,10 +286,9 @@ export default async function StorageTabPage({
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.historyTitle")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/disk-modal-history.png"
           alt={t("drillIn.historyImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("drillIn.historyImageCaption", { code })}
@@ -311,10 +307,9 @@ export default async function StorageTabPage({
       <h3 className="text-lg font-semibold mt-8 mb-2 text-gray-900">{t("drillIn.scheduleTitle")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/disk-modal-schedule.png"
           alt={t("drillIn.scheduleImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("drillIn.scheduleImageCaption", { code })}
@@ -334,10 +329,9 @@ export default async function StorageTabPage({
       <p className="mb-4 text-gray-800 leading-relaxed">{t("drillIn.tempIntro")}</p>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/disk-modal-temperature.png"
           alt={t("drillIn.tempImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("drillIn.tempImageCaption")}
@@ -377,10 +371,9 @@ export default async function StorageTabPage({
       </p>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/disk-modal-observations.png"
           alt={t("drillIn.obsImageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("drillIn.obsImageCaption", { strong })}

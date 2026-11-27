@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -284,12 +284,12 @@ export default async function AIAssistantPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/ai-enhancement-collapsed.png" alt={t("enabling.collapsedAlt")} width={2000} height={244} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/ai-enhancement-collapsed.png" alt={t("enabling.collapsedAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("enabling.collapsedCaption")}</figcaption>
       </figure>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/ai-enhancement-panel.png" alt={t("enabling.panelAlt")} width={2000} height={1854} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/ai-enhancement-panel.png" alt={t("enabling.panelAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("enabling.panelCaption")}</figcaption>
       </figure>
 
@@ -397,8 +397,8 @@ ata8.00: error: { ICRC ABRT }`}
 
       <p className="mb-4 text-gray-800 leading-relaxed">{t("providers.intro")}</p>
 
-      <figure className="my-4">
-        <Image src="/monitor/settings/ai-providers-information.png" alt={t("providers.imageAlt")} width={1602} height={2138} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl" />
+      <figure className="my-4 mx-auto max-w-2xl">
+        <Screenshot src="/monitor/settings/ai-providers-information.png" alt={t("providers.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("providers.imageCaption")}</figcaption>
       </figure>
 
@@ -521,7 +521,7 @@ ata8.00: error: { ICRC ABRT }`}
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/ai-custom-prompt.png" alt={t("customPrompt.imageAlt")} width={2000} height={987} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/ai-custom-prompt.png" alt={t("customPrompt.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("customPrompt.imageCaption", { em })}</figcaption>
       </figure>
 

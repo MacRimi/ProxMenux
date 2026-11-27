@@ -5,6 +5,7 @@ import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
 import { routing } from "@/i18n/routing"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 /**
  * Pilot page for the i18n migration. Pattern used here is the same one
@@ -121,10 +122,9 @@ export default async function MonitorOverviewPage({
 
       {/* Hero screenshot */}
       <figure className="my-8">
-        <img
+        <Screenshot
           src="/monitor/dashboard-home.png"
           alt={t("hero.alt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("hero.caption")}
@@ -202,10 +202,9 @@ https://<your-domain>/proxmenux-monitor/`}
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("mobile.intro", { code })}</p>
       <div className="grid md:grid-cols-2 gap-6 my-6 items-start">
         <figure>
-          <img
+          <Screenshot
             src="/monitor/mobile-home.png"
             alt={t("mobile.phoneAlt")}
-            className="rounded-lg border border-gray-200 shadow-xs w-full"
           />
           <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
             {t("mobile.phoneCaption")}
@@ -233,10 +232,9 @@ https://<your-domain>/proxmenux-monitor/`}
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("health.heading")}</h2>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/health-monitor.png"
           alt={t("health.alt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("health.caption")}

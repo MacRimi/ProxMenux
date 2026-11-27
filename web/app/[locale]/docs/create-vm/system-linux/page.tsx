@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { Server, HardDrive } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -89,17 +89,11 @@ export default async function SystemLinuxPage({
       </Callout>
 
       <div className="flex flex-col items-center my-6">
-        <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-          <Image
-            src="/vm/menu_linux.png"
-            alt={t("image.alt")}
-            width={768}
-            height={0}
-            style={{ height: "auto" }}
-            className="w-full object-contain"
-            sizes="(max-width: 768px) 100vw, 768px"
-          />
-        </div>
+        <Screenshot
+          src="/vm/menu_linux.png"
+          alt={t("image.alt")}
+          className="rounded-md border border-gray-200"
+        />
         <span className="mt-2 text-sm text-gray-600">{t("image.caption")}</span>
       </div>
 
@@ -234,9 +228,7 @@ export default async function SystemLinuxPage({
 
         <div className="mt-4">
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-              <Image src="/vm/distro_linux.png" alt={t("installOptions.officialImageAlt")} width={768} height={0} style={{ height: "auto" }} className="w-full object-contain" sizes="(max-width: 768px) 100vw, 768px" />
-            </div>
+            <Screenshot src="/vm/distro_linux.png" alt={t("installOptions.officialImageAlt")} className="rounded-md border border-gray-200" />
             <span className="mt-2 text-sm text-gray-600">{t("installOptions.officialImageCaption")}</span>
           </div>
         </div>
@@ -251,9 +243,7 @@ export default async function SystemLinuxPage({
           {t.rich("installOptions.localBody", { code })}
         </p>
         <div className="flex flex-col items-center">
-          <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-            <Image src="/vm/local-store.png" alt={t("installOptions.localImageAlt")} width={768} height={0} style={{ height: "auto" }} className="w-full object-contain" sizes="(max-width: 768px) 100vw, 768px" />
-          </div>
+          <Screenshot src="/vm/local-store.png" alt={t("installOptions.localImageAlt")} className="rounded-md border border-gray-200" />
           <span className="mt-2 text-sm text-gray-600">{t("installOptions.localImageCaption")}</span>
         </div>
       </section>

@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
-import Image from "next/image"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -310,12 +310,10 @@ export default async function RestoringPage({
           className="block cursor-zoom-in group"
           aria-label={t("postbootExample.imageAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/postboot-completion-console.png"
             alt={t("postbootExample.imageAlt")}
-            width={1600}
-            height={800}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -367,12 +365,10 @@ export default async function RestoringPage({
           className="block cursor-zoom-in group"
           aria-label={t("liveProgress.imageAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/monitor-restore-progress-details.png"
             alt={t("liveProgress.imageAlt")}
-            width={1600}
-            height={1200}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -388,12 +384,10 @@ export default async function RestoringPage({
           className="block cursor-zoom-in group"
           aria-label={t("liveProgress.detailsImageAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/monitor-restore-progress-card.png"
             alt={t("liveProgress.detailsImageAlt")}
-            width={1600}
-            height={1200}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">

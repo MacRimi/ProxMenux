@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { DataFlowDiagram } from "@/components/ui/data-flow-diagram"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -85,11 +85,9 @@ export default async function LynisPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("manageMenu.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("manageMenu.intro")}</p>
 
-      <Image
+      <Screenshot
         src="/security/lynis-menu.png"
         alt={t("manageMenu.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
@@ -240,12 +238,9 @@ export default async function LynisPage({
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("sample.intro", { link: linkSecurityTab })}</p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/security/lynis-report-pdf.png"
           alt={t("sample.imageAlt")}
-          width={1414}
-          height={2000}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("sample.captionPrefix")}

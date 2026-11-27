@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import {
   ArrowRight,
   Activity,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -146,11 +146,9 @@ export default async function NetworkOverviewPage({
         {t.rich("openingMenu.intro", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/network/network-menu.png"
         alt={t("openingMenu.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
