@@ -1105,6 +1105,39 @@
     "os": "alpine"
   },
   {
+    "name": "ALT Linux",
+    "slug": "alt-vm",
+    "desc": "ALT Linux is an RPM-based distribution whose packages are managed with apt-get (apt-rpm). This creates an ALT p11 VM on an Incus host.",
+    "script": "vm/alt-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/alt-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/alt-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
+    "notes": [
+      "No password is set. Open a shell with `incus exec <name> -- bash`, or set credentials through cloud-init in the advanced settings."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://en.altlinux.org/",
+    "documentation": "https://en.altlinux.org/Documentation",
+    "logo": "",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "Ampache",
     "slug": "ampache",
     "desc": "Ampache is a web-based audio streaming application and file manager that allows you to access your music & videos from anywhere. It features a powerful music catalog, multiple user support, transcoding, streaming, and more.",
@@ -9257,6 +9290,39 @@
     "os": "debian"
   },
   {
+    "name": "FreeBSD",
+    "slug": "freebsd-vm",
+    "desc": "FreeBSD is an open-source Unix-like operating system with its own kernel, base system and ports collection. This creates a FreeBSD 15.1 VM on an Incus host.",
+    "script": "vm/freebsd-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/freebsd-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/freebsd-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
+    "notes": [
+      "No password is set. Open a shell with `incus exec <name> -- sh`, or set credentials through cloud-init in the advanced settings."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.freebsd.org/",
+    "documentation": "https://docs.freebsd.org/en/books/handbook/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/freebsd.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "FreePBX",
     "slug": "freepbx",
     "desc": "FreePBX is a web-based open-source graphical user interface that manages Asterisk, a voice over IP and telephony server.",
@@ -9632,6 +9698,39 @@
       "password": ""
     },
     "os": "gentoo"
+  },
+  {
+    "name": "Gentoo",
+    "slug": "gentoo-vm",
+    "desc": "Gentoo is a source-based rolling-release distribution that compiles packages locally with Portage. This creates a Gentoo VM with the systemd profile on an Incus host.",
+    "script": "vm/gentoo-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/gentoo-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/gentoo-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
+    "notes": [
+      "No password is set. Open a shell with `incus exec <name> -- bash`, or set credentials through cloud-init in the advanced settings."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.gentoo.org/",
+    "documentation": "https://wiki.gentoo.org/wiki/Handbook:AMD64",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/gentoo.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
   },
   {
     "name": "GeoPulse",
@@ -18151,6 +18250,39 @@
     "os": "debian"
   },
   {
+    "name": "NixOS",
+    "slug": "nixos-vm",
+    "desc": "NixOS is a Linux distribution configured declaratively in configuration.nix and built with nixos-rebuild. This creates a NixOS unstable VM on an Incus host.",
+    "script": "vm/nixos-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/nixos-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/nixos-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
+    "notes": [
+      "No password is set. Open a shell with `incus exec <name> -- bash`, or set credentials through cloud-init in the advanced settings."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://nixos.org/",
+    "documentation": "https://nixos.org/manual/nixos/unstable/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/nixos.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "NocoBase",
     "slug": "nocobase",
     "desc": "NocoBase is an extensible no-code and low-code platform for building internal tools and business applications. You model data in collections, assemble pages from tables, forms, kanban and chart blocks, automate processes with workflows and extend everything through plugins.",
@@ -19425,6 +19557,39 @@
     "os": "openeuler"
   },
   {
+    "name": "openEuler",
+    "slug": "openeuler-vm",
+    "desc": "openEuler is an open-source, RPM-based enterprise Linux distribution managed with dnf. This creates an openEuler 24.03 LTS VM on an Incus host.",
+    "script": "vm/openeuler-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/openeuler-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/openeuler-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
+    "notes": [
+      "No password is set. Open a shell with `incus exec <name> -- bash`, or set credentials through cloud-init in the advanced settings."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.openeuler.org/en/",
+    "documentation": "https://docs.openeuler.org/en/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openeuler.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
+  },
+  {
     "name": "Opengist",
     "slug": "opengist",
     "desc": "Self-hosted pastebin powered by Git, open-source alternative to Github Gist.",
@@ -19708,6 +19873,39 @@
       "password": ""
     },
     "os": "opensuse"
+  },
+  {
+    "name": "openSUSE",
+    "slug": "opensuse-vm",
+    "desc": "openSUSE Tumbleweed is a rolling-release distribution with zypper and btrfs snapshots. This creates a Tumbleweed VM on an Incus host.",
+    "script": "vm/opensuse-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/opensuse-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/opensuse-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
+    "notes": [
+      "No password is set. Open a shell with `incus exec <name> -- bash`, or set credentials through cloud-init in the advanced settings."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://www.opensuse.org/",
+    "documentation": "https://doc.opensuse.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opensuse.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
   },
   {
     "name": "OpenThread Border Router",
@@ -24026,6 +24224,39 @@
     ],
     "config_path": "",
     "os": "debian"
+  },
+  {
+    "name": "Rocky Linux",
+    "slug": "rockylinux-vm",
+    "desc": "Rocky Linux is a community enterprise distribution compatible with Red Hat Enterprise Linux. This creates a Rocky Linux 10 VM on an Incus host.",
+    "script": "vm/rockylinux-vm.sh",
+    "script_url": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/rockylinux-vm.sh",
+    "script_url_mirror": "https://git.community-scripts.org/community-scripts/ProxmoxVE/raw/branch/main/vm/rockylinux-vm.sh",
+    "type": "vm",
+    "type_id": "lte524abgx960bd",
+    "categories": [
+      "scriptcat00002"
+    ],
+    "category_names": [
+      "Operating Systems & Appliances"
+    ],
+    "notes": [
+      "No password is set. Open a shell with `incus exec <name> -- bash`, or set credentials through cloud-init in the advanced settings."
+    ],
+    "warnings": [],
+    "port": 0,
+    "website": "https://rockylinux.org/",
+    "documentation": "https://docs.rockylinux.org/",
+    "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/rocky-linux.webp",
+    "updateable": false,
+    "privileged": false,
+    "has_arm": false,
+    "is_dev": false,
+    "execute_in": [
+      "vm"
+    ],
+    "config_path": "",
+    "os": ""
   },
   {
     "name": "RomM",
