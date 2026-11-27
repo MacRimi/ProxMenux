@@ -29,7 +29,7 @@
         "owns": "Spoločný spúšťač registrovaných webových odkazov LXC a vlastných odkazov s kategóriami, vyhľadávaním, skratkami k hosťovským systémom a indikátormi aktualizácií aplikácií."
       },
       {
-        "name": "Katalóg (Menux)",
+        "name": "Menux",
         "linksTo": "/docs/monitor/dashboard/catalog",
         "owns": "Všetko, čo ProxMenux dokáže nainštalovať alebo spustiť: aplikácie OCI, nástroje konzolového menu, VM, ktoré vytvára, a Community Scripts, každá položka so svojím panelom podrobností a spúšťaná rovnakými krokmi ako konzolové menu."
       },

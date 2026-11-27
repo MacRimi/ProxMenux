@@ -29,7 +29,7 @@
         "owns": "Gemeinsamer Starter für registrierte LXC-Weblinks und eigene Links, mit Kategorien, Suche, Gastsystem-Verknüpfungen und Aktualisierungshinweisen je Anwendung."
       },
       {
-        "name": "Katalog (Menux)",
+        "name": "Menux",
         "linksTo": "/docs/monitor/dashboard/catalog",
         "owns": "Alles, was ProxMenux installieren oder ausführen kann: OCI-Anwendungen, Werkzeuge des Konsolenmenüs, die VMs, die es erstellt, und Community Scripts, jeweils mit eigenem Datenblatt und mit denselben Schritten ausgeführt wie im Konsolenmenü."
       },
