@@ -26,7 +26,7 @@
           }
         },
         {
-          "p": "Avec toute autre combinaison, le menu PBS s’ouvre quand même, mais la mise à jour des paquets, la vérification des dépôts et l’installateur des utilitaires système s’arrêtent avec <strong>Cette opération prend en charge PBS 3 sur Debian 12 et PBS 4 sur Debian 13.</strong>"
+          "p": "Avec toute autre combinaison, le menu PBS s’ouvre quand même, mais la mise à jour des paquets et la vérification des dépôts s’arrêtent avec <strong>Cette opération prend en charge PBS 3 sur Debian 12 et PBS 4 sur Debian 13.</strong> L’installateur des utilitaires système s’ouvre toujours, mais ses installations s’arrêtent avec le même message."
         }
       ]
     },
@@ -95,7 +95,7 @@
               [
                 "Examen",
                 "Affiche la sortie de <code>apt-get -s full-upgrade</code> dans <strong>Examiner la mise à niveau des paquets</strong>, puis demande s’il faut l’appliquer, avec Non sélectionné.",
-                "Affiche la version installée et la version disponible de Proxmox Backup Server, le nombre de mises à jour de paquets et de sécurité et les paquets à mettre à niveau, puis demande s’il faut continuer."
+                "Affiche la version installée de Proxmox Backup Server, la version disponible quand elle diffère et le nombre de mises à jour de paquets et de sécurité. S’il y a des paquets à mettre à niveau, il les liste et demande s’il faut continuer. S’il n’y en a aucun, il indique <strong>Le système est déjà à jour</strong> et s’arrête sans rien demander."
               ],
               [
                 "Mise à niveau",
@@ -109,13 +109,6 @@
                 "Avertit quand un redémarrage est nécessaire ou qu’un noyau plus récent est installé. Il ne redémarre jamais."
               ]
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/pbs/pbs-update-review.png",
-            "alt": "La zone de texte Examiner la mise à niveau des paquets de l’option 6 avec la sortie du full-upgrade simulé",
-            "caption": "L’option 6 affiche la mise à niveau simulée avant de demander s’il faut l’appliquer."
           }
         }
       ]
@@ -148,7 +141,7 @@
           "list": {
             "items": [
               "Le <strong>Script de post-installation automatisé</strong> exécute la mise à jour du système de la post-installation décrite plus haut et demande avant de retirer la bannière d’abonnement de l’interface web de Proxmox Backup Server.",
-              "<strong>Désinstaller les optimisations</strong> restaure le fichier de l’interface web depuis la copie que ProxMenux en a faite. S’il n’y a pas de copie utilisable, il réinstalle <code>proxmox-widget-toolkit</code> et <code>libjs-extjs</code>, les paquets présents sur un Proxmox Backup Server, au lieu de ceux de Proxmox VE."
+              "L’entrée <strong>Subscription Banner Removal</strong> de <strong>Désinstaller les optimisations</strong> restaure le fichier de l’interface web depuis la copie que ProxMenux en a faite. S’il n’y a pas de copie utilisable, elle réinstalle <code>proxmox-widget-toolkit</code> et <code>libjs-extjs</code>, les paquets présents sur un Proxmox Backup Server, au lieu de ceux de Proxmox VE."
             ]
           }
         }

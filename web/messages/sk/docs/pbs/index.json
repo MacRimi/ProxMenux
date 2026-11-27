@@ -26,7 +26,7 @@
           }
         },
         {
-          "p": "Pri akejkoľvek inej kombinácii sa ponuka PBS aj tak otvorí, ale aktualizácia balíkov, kontrola repozitárov a inštalátor systémových nástrojov sa zastavia so správou <strong>Táto operácia podporuje PBS 3 na Debiane 12 a PBS 4 na Debiane 13.</strong>"
+          "p": "Pri akejkoľvek inej kombinácii sa ponuka PBS aj tak otvorí, ale aktualizácia balíkov a kontrola repozitárov sa zastavia so správou <strong>Táto operácia podporuje PBS 3 na Debiane 12 a PBS 4 na Debiane 13.</strong> Inštalátor systémových nástrojov sa stále otvorí, ale jeho inštalácie sa zastavia s rovnakou správou."
         }
       ]
     },
@@ -95,7 +95,7 @@
               [
                 "Kontrola",
                 "Zobrazí výstup <code>apt-get -s full-upgrade</code> v okne <strong>Skontrolovať aktualizáciu balíkov</strong> a potom sa opýta, či ju použiť, s predvolenou voľbou Nie.",
-                "Zobrazí nainštalovanú a dostupnú verziu Proxmox Backup Server, počet aktualizácií balíkov a bezpečnostných aktualizácií a balíky na aktualizáciu a potom sa opýta, či pokračovať."
+                "Zobrazí nainštalovanú verziu Proxmox Backup Server, dostupnú verziu, ak sa líši, a počet aktualizácií balíkov a bezpečnostných aktualizácií. Ak sú balíky na aktualizáciu, vypíše ich a opýta sa, či pokračovať. Ak nie sú žiadne, oznámi <strong>Systém je už aktuálny</strong> a skončí bez otázky."
               ],
               [
                 "Aktualizácia",
@@ -109,13 +109,6 @@
                 "Upozorní, keď je potrebný reštart alebo je nainštalované novšie jadro. Nikdy nereštartuje."
               ]
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/pbs/pbs-update-review.png",
-            "alt": "Textové okno Skontrolovať aktualizáciu balíkov z možnosti 6 s výstupom simulovaného full-upgrade",
-            "caption": "Možnosť 6 zobrazí simulovanú aktualizáciu skôr, ako sa opýta, či ju použiť."
           }
         }
       ]
@@ -148,7 +141,7 @@
           "list": {
             "items": [
               "<strong>Automatický skript po inštalácii</strong> spustí aktualizáciu systému opísanú vyššie a pred odstránením upozornenia na predplatné z webového rozhrania Proxmox Backup Server sa opýta.",
-              "<strong>Odstrániť optimalizácie</strong> obnoví súbor webového rozhrania zo zálohy, ktorú si z neho ProxMenux urobil. Ak nie je k dispozícii použiteľná záloha, preinštaluje <code>proxmox-widget-toolkit</code> a <code>libjs-extjs</code>, teda balíky, ktoré Proxmox Backup Server má, namiesto balíkov Proxmox VE."
+              "Položka <strong>Subscription Banner Removal</strong> v <strong>Odstrániť optimalizácie</strong> obnoví súbor webového rozhrania zo zálohy, ktorú si z neho ProxMenux urobil. Ak nie je k dispozícii použiteľná záloha, preinštaluje <code>proxmox-widget-toolkit</code> a <code>libjs-extjs</code>, teda balíky, ktoré Proxmox Backup Server má, namiesto balíkov Proxmox VE."
             ]
           }
         }

@@ -26,7 +26,7 @@
           }
         },
         {
-          "p": "Med alla andra kombinationer öppnas PBS-menyn ändå, men paketuppdateringen, kontrollen av paketförråd och installationsprogrammet för systemverktyg stoppar med <strong>Denna åtgärd stöder PBS 3 på Debian 12 och PBS 4 på Debian 13.</strong>"
+          "p": "Med alla andra kombinationer öppnas PBS-menyn ändå, men paketuppdateringen och kontrollen av paketförråd stoppar med <strong>Denna åtgärd stöder PBS 3 på Debian 12 och PBS 4 på Debian 13.</strong> Installationsprogrammet för systemverktyg öppnas fortfarande, men dess installationer stoppar med samma meddelande."
         }
       ]
     },
@@ -95,7 +95,7 @@
               [
                 "Granskning",
                 "Visar utdata från <code>apt-get -s full-upgrade</code> i <strong>Granska paketuppgraderingen</strong> och frågar sedan om den ska tillämpas, med Nej förvalt.",
-                "Visar installerad och tillgänglig version av Proxmox Backup Server, antalet paket- och säkerhetsuppdateringar och paketen som ska uppgraderas, och frågar sedan om den ska fortsätta."
+                "Visar installerad version av Proxmox Backup Server, tillgänglig version när den skiljer sig och antalet paket- och säkerhetsuppdateringar. Finns det paket att uppgradera listar den dem och frågar om den ska fortsätta. Finns det inga säger den <strong>Systemet är redan uppdaterat</strong> och avslutar utan att fråga."
               ],
               [
                 "Uppgradering",
@@ -109,13 +109,6 @@
                 "Varnar när en omstart behövs eller en nyare kärna är installerad. Den startar aldrig om."
               ]
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/pbs/pbs-update-review.png",
-            "alt": "Textrutan Granska paketuppgraderingen i alternativ 6 med utdata från den simulerade full-upgrade",
-            "caption": "Alternativ 6 visar den simulerade uppgraderingen innan den frågar om den ska tillämpas."
           }
         }
       ]
@@ -148,7 +141,7 @@
           "list": {
             "items": [
               "<strong>Automatiserat skript efter installation</strong> kör systemuppdateringen i efterinstallationen som beskrivs ovan och frågar innan den tar bort prenumerationsbannern från webbgränssnittet i Proxmox Backup Server.",
-              "<strong>Avinstallera optimeringar</strong> återställer webbgränssnittets fil från den kopia som ProxMenux gjorde av den. Om det inte finns någon användbar kopia installerar den om <code>proxmox-widget-toolkit</code> och <code>libjs-extjs</code>, de paket som en Proxmox Backup Server har, i stället för paketen i Proxmox VE."
+              "Posten <strong>Subscription Banner Removal</strong> i <strong>Avinstallera optimeringar</strong> återställer webbgränssnittets fil från den kopia som ProxMenux gjorde av den. Om det inte finns någon användbar kopia installerar den om <code>proxmox-widget-toolkit</code> och <code>libjs-extjs</code>, de paket som en Proxmox Backup Server har, i stället för paketen i Proxmox VE."
             ]
           }
         }

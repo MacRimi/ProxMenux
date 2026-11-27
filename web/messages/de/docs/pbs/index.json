@@ -26,7 +26,7 @@
           }
         },
         {
-          "p": "Bei jeder anderen Kombination öffnet sich das PBS-Menü trotzdem, aber die Paketaktualisierung, die Repository-Prüfung und das Installationsprogramm für Systemdienstprogramme brechen mit <strong>Dieser Vorgang unterstützt PBS 3 unter Debian 12 und PBS 4 unter Debian 13.</strong> ab."
+          "p": "Bei jeder anderen Kombination öffnet sich das PBS-Menü trotzdem, aber die Paketaktualisierung und die Repository-Prüfung brechen mit <strong>Dieser Vorgang unterstützt PBS 3 unter Debian 12 und PBS 4 unter Debian 13.</strong> ab. Das Installationsprogramm für Systemdienstprogramme öffnet sich weiterhin, seine Installationen brechen aber mit derselben Meldung ab."
         }
       ]
     },
@@ -95,7 +95,7 @@
               [
                 "Prüfung",
                 "Zeigt die Ausgabe von <code>apt-get -s full-upgrade</code> in <strong>Paketaktualisierung prüfen</strong> und fragt dann, ob sie angewendet werden soll, mit Nein vorausgewählt.",
-                "Zeigt die installierte und die verfügbare Version von Proxmox Backup Server, die Zahl der Paket- und Sicherheitsaktualisierungen und die zu aktualisierenden Pakete und fragt dann, ob fortgefahren werden soll."
+                "Zeigt die installierte Version von Proxmox Backup Server, die verfügbare, wenn sie abweicht, und die Zahl der Paket- und Sicherheitsaktualisierungen. Gibt es Pakete zu aktualisieren, listet es sie auf und fragt, ob fortgefahren werden soll. Gibt es keine, meldet es <strong>Das System ist bereits auf dem neuesten Stand</strong> und endet ohne Rückfrage."
               ],
               [
                 "Upgrade",
@@ -109,13 +109,6 @@
                 "Warnt, wenn ein Neustart nötig ist oder ein neuerer Kernel installiert ist. Es startet nie neu."
               ]
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/pbs/pbs-update-review.png",
-            "alt": "Das Textfeld Paketaktualisierung prüfen von Option 6 mit der Ausgabe des simulierten full-upgrade",
-            "caption": "Option 6 zeigt das simulierte Upgrade, bevor sie fragt, ob es angewendet werden soll."
           }
         }
       ]
@@ -148,7 +141,7 @@
           "list": {
             "items": [
               "<strong>Automatisiertes Nachinstallationsskript</strong> führt die oben beschriebene Systemaktualisierung der Nachinstallation aus und fragt, bevor es den Abonnement-Hinweis aus der Weboberfläche von Proxmox Backup Server entfernt.",
-              "<strong>Optimierungen deinstallieren</strong> stellt die Datei der Weboberfläche aus der Sicherung wieder her, die ProxMenux davon angelegt hat. Gibt es keine brauchbare Sicherung, installiert es <code>proxmox-widget-toolkit</code> und <code>libjs-extjs</code> neu, die Pakete, die ein Proxmox Backup Server hat, statt der von Proxmox VE."
+              "Der Eintrag <strong>Subscription Banner Removal</strong> in <strong>Optimierungen deinstallieren</strong> stellt die Datei der Weboberfläche aus der Sicherung wieder her, die ProxMenux davon angelegt hat. Gibt es keine brauchbare Sicherung, installiert er <code>proxmox-widget-toolkit</code> und <code>libjs-extjs</code> neu, die Pakete, die ein Proxmox Backup Server hat, statt der von Proxmox VE."
             ]
           }
         }

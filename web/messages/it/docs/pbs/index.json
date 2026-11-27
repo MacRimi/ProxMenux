@@ -26,7 +26,7 @@
           }
         },
         {
-          "p": "Con qualsiasi altra combinazione il menu PBS si apre comunque, ma l’aggiornamento dei pacchetti, il controllo dei repository e l’installazione delle utilità di sistema si fermano con <strong>Questa operazione supporta PBS 3 su Debian 12 e PBS 4 su Debian 13.</strong>"
+          "p": "Con qualsiasi altra combinazione il menu PBS si apre comunque, ma l’aggiornamento dei pacchetti e il controllo dei repository si fermano con <strong>Questa operazione supporta PBS 3 su Debian 12 e PBS 4 su Debian 13.</strong> L’installazione delle utilità di sistema si apre comunque, ma le sue installazioni si fermano con lo stesso messaggio."
         }
       ]
     },
@@ -95,7 +95,7 @@
               [
                 "Revisione",
                 "Mostra l’output di <code>apt-get -s full-upgrade</code> in <strong>Esamina l’aggiornamento dei pacchetti</strong>, poi chiede se applicarlo, con No selezionato.",
-                "Mostra la versione installata e quella disponibile di Proxmox Backup Server, il numero di aggiornamenti dei pacchetti e di sicurezza e i pacchetti da aggiornare, poi chiede se procedere."
+                "Mostra la versione installata di Proxmox Backup Server, quella disponibile quando è diversa e il numero di aggiornamenti dei pacchetti e di sicurezza. Se ci sono pacchetti da aggiornare, li elenca e chiede se procedere. Se non ce ne sono, indica <strong>Il sistema è già aggiornato</strong> e termina senza chiedere nulla."
               ],
               [
                 "Aggiornamento",
@@ -109,13 +109,6 @@
                 "Avvisa quando serve un riavvio o è installato un kernel più recente. Non riavvia mai."
               ]
             ]
-          }
-        },
-        {
-          "figure": {
-            "src": "/pbs/pbs-update-review.png",
-            "alt": "La casella di testo Esamina l’aggiornamento dei pacchetti dell’opzione 6 con l’output del full-upgrade simulato",
-            "caption": "L’opzione 6 mostra l’aggiornamento simulato prima di chiedere se applicarlo."
           }
         }
       ]
@@ -148,7 +141,7 @@
           "list": {
             "items": [
               "Lo <strong>Script post-installazione automatizzato</strong> esegue l’aggiornamento del sistema della post-installazione descritto sopra e chiede conferma prima di rimuovere il banner dell’abbonamento dall’interfaccia web di Proxmox Backup Server.",
-              "<strong>Disinstalla ottimizzazioni</strong> ripristina il file dell’interfaccia web dalla copia che ProxMenux ne ha fatto. Se non c’è una copia utilizzabile, reinstalla <code>proxmox-widget-toolkit</code> e <code>libjs-extjs</code>, i pacchetti presenti su un Proxmox Backup Server, invece di quelli di Proxmox VE."
+              "La voce <strong>Subscription Banner Removal</strong> di <strong>Disinstalla ottimizzazioni</strong> ripristina il file dell’interfaccia web dalla copia che ProxMenux ne ha fatto. Se non c’è una copia utilizzabile, reinstalla <code>proxmox-widget-toolkit</code> e <code>libjs-extjs</code>, i pacchetti presenti su un Proxmox Backup Server, invece di quelli di Proxmox VE."
             ]
           }
         }
