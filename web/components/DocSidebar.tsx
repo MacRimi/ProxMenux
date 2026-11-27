@@ -319,6 +319,7 @@ export const sidebarItems: MenuItem[] = [
     href: "/docs/pbs",
     submenu: [
       { title: "Overview", i18nKey: "pbsOverview", href: "/docs/pbs" },
+      { title: "ProxMenux Monitor", i18nKey: "pbsMonitor", href: "/docs/pbs/monitor" },
     ],
   },
 

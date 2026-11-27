@@ -351,7 +351,7 @@
   },
   "catalogue": {
     "heading": "Event catalogue",
-    "intro": "Events are grouped into the categories of the Notifications panel, which renders one collapsible section per group with a toggle for every event inside it. Each event is on by default unless marked (off by default). On a Proxmox Backup Server host the panel hides the VM / CT, Backups and Cluster groups, and ProxMenux does not set up the Proxmox VE webhook.",
+    "intro": "Events are grouped into the categories of the Notifications panel, which renders one collapsible section per group with a toggle for every event inside it. Each event is on by default unless marked (off by default). The Monitor of a Proxmox Backup Server host has no Notifications panel: see <pbsMonitorLink>ProxMenux Monitor on Proxmox Backup Server</pbsMonitorLink>.",
     "headerGroup": "Group",
     "headerEvents": "Events",
     "rows": [

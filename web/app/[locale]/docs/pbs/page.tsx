@@ -13,6 +13,7 @@ const LINKS = {
   settingsLink: "/docs/settings",
   backupTabLink: "/docs/monitor/dashboard/backup#pbs",
   pbsDestLink: "/docs/backup-restore/destinations/pbs",
+  monitorLink: "/docs/pbs/monitor",
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {

@@ -35,7 +35,7 @@
       "title": "Installation",
       "blocks": [
         {
-          "p": "ProxMenux installs on a Proxmox Backup Server with the same command as on Proxmox VE, described in <installLink>Installing ProxMenux</installLink>. The installer has no separate path for PBS: it also installs ProxMenux Monitor, which listens on port 8008. After the installation, <code>menu</code> opens the PBS menu."
+          "p": "ProxMenux installs on a Proxmox Backup Server with the same command as on Proxmox VE, described in <installLink>Installing ProxMenux</installLink>. The installer has no separate path for PBS: it also installs ProxMenux Monitor, which listens on port 8008. After the installation, <code>menu</code> opens the PBS menu. What the Monitor shows on the server is described in <monitorLink>ProxMenux Monitor on Proxmox Backup Server</monitorLink>."
         }
       ]
     },
@@ -169,6 +169,28 @@
       "blocks": [
         {
           "p": "This page covers ProxMenux installed on the backup server itself. To follow the datastores and tasks of a Proxmox Backup Server from a Proxmox VE host, see the <backupTabLink>Proxmox Backup Server view of the Backup tab</backupTabLink>. To back up a Proxmox VE host to a Proxmox Backup Server, see <pbsDestLink>Destinations: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Where to next",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux Monitor on Proxmox Backup Server",
+                "href": "/docs/pbs/monitor",
+                "tail": "the tabs, the sign-in and the health checks of the Monitor on the server."
+              },
+              {
+                "label": "Post-install on Proxmox Backup Server",
+                "href": "/docs/post-install#pbs",
+                "tail": "what the post-install changes on a backup server."
+              }
+            ]
+          }
         }
       ]
     }

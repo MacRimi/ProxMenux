@@ -391,7 +391,7 @@
   },
   "pveAccounts": {
     "heading": "Proxmox VE accounts",
-    "intro": "The users and realms of Proxmox VE can sign in to the Monitor, alongside local accounts or instead of them. <strong>Security</strong> → <strong>Proxmox VE accounts</strong> → <strong>Edit</strong> turns them on. The login screen then has a <em>Proxmox VE</em> tab with user, password and realm, followed by the second factor (TOTP code or recovery key) when the account has one.",
+    "intro": "The users and realms of Proxmox VE can sign in to the Monitor, alongside local accounts or instead of them. <strong>Security</strong> → <strong>Proxmox VE accounts</strong> → <strong>Edit</strong> turns them on. The login screen then has a <em>Proxmox VE</em> tab with user, password and realm, followed by the second factor (TOTP code or recovery key) when the account has one. On a Proxmox Backup Server host the accounts are those of the backup server: see <pbsMonitorLink>Signing in on Proxmox Backup Server</pbsMonitorLink>.",
     "items": [
       "The Monitor keeps no session of its own: the browser holds a Proxmox VE ticket, and the Monitor checks it against the local Proxmox VE API (<code>/access/permissions</code>) at most once a minute. Expiry, realms, 2FA and permissions remain those of Proxmox VE, and a privilege removed there reaches the Monitor within a minute.",
       "Accounts that sign in with a security key (WebAuthn), or through an OpenID Connect realm of Proxmox VE, sign in on the Proxmox VE web interface. With the Monitor opened over HTTPS at the same host name, that session also signs in to the Monitor.",

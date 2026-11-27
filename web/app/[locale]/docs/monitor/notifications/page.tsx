@@ -131,6 +131,9 @@ export default async function NotificationsPage({
   const pveLink = (chunks: React.ReactNode) => (
     <a href="#pve-webhook-integration" className="text-blue-600 hover:underline">{chunks}</a>
   )
+  const pbsMonitorLink = (chunks: React.ReactNode) => (
+    <Link href="/docs/pbs/monitor" className="text-blue-600 hover:underline">{chunks}</Link>
+  )
   const aiLink = (chunks: React.ReactNode) => (
     <Link href="/docs/monitor/ai-assistant#what-context-the-ai-receives" className="text-blue-600 hover:underline">{chunks}</Link>
   )
@@ -699,7 +702,7 @@ running on node pve-01
 
       <h2 id="event-catalogue" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("catalogue.heading")}</h2>
 
-      <p className="mb-4 text-gray-800 leading-relaxed">{t("catalogue.intro")}</p>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("catalogue.intro", { pbsMonitorLink })}</p>
 
       <div className="overflow-x-auto mb-6">
         <table className="w-full text-sm border border-gray-200 rounded-md">
