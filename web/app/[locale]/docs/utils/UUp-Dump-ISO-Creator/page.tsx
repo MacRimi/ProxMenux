@@ -109,6 +109,7 @@ export default async function UUPDumpISOCreatorPage({
         <Screenshot
           src="/utils/uup-dump-iso-creator.png"
           alt={t("hero.imageAlt")}
+          density={1}
           className="rounded-md border border-gray-200"
         />
         <span className="mt-2 text-sm text-gray-600">{t("hero.caption")}</span>

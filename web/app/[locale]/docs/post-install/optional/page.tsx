@@ -304,6 +304,7 @@ EOF
         <Screenshot
           src="https://macrimi.github.io/ProxMenux/figurine/figurine.png"
           alt={t("figurine.imageAlt")}
+          density={1}
           className="rounded-md shadow-lg border border-gray-200"
         />
       </div>

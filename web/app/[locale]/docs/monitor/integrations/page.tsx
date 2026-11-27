@@ -356,7 +356,7 @@ curl -H "Authorization: Bearer <returned-token>" http://<host>:8008/api/system |
       </p>
 
       <figure className="my-6 mx-auto max-w-2xl">
-        <Screenshot src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} />
+        <Screenshot src="/monitor/integrations/home-assistant.png" alt={t("homeAssistant.imageAlt")} density={1} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("homeAssistant.imageCaption")}</figcaption>
       </figure>
 
