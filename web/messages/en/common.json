@@ -213,7 +213,9 @@
       "backupRestoreJobs": "Scheduled jobs",
       "backupRestoreRestoring": "Restoring",
       "backupRestoreCrossKernel": "Cross-kernel restore",
-      "backupRestoreGlossary": "Glossary"
+      "backupRestoreGlossary": "Glossary",
+      "pbs": "Proxmox Backup Server",
+      "pbsOverview": "Overview"
     }
   },
   "hero": {

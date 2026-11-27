@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Installing ProxMenux",
-    "description": "One-line installer that runs on any Proxmox VE 8+ host. Auto-installs the dependencies it needs, downloads the scripts, sets up the menu launcher and (on first run) prompts you to pick a language. Two install channels: stable (default) and beta.",
+    "description": "One-line installer that runs on any Proxmox VE 8+ host and on Proxmox Backup Server 3 and 4. Auto-installs the dependencies it needs, downloads the scripts, sets up the menu launcher and (on first run) prompts you to pick a language. Two install channels: stable (default) and beta.",
     "section": "Installation"
   },
   "stable": {
@@ -80,12 +80,13 @@
     "heading": "What's next",
     "postInstall": "<postlink>Post-Install Script</postlink> — tweaks and hardening for a fresh Proxmox host.",
     "introduction": "<introlink>Introduction</introlink> — the full feature tour.",
-    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — web dashboard for the host (auto-installed alongside the menu)."
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — web dashboard for the host (auto-installed alongside the menu).",
+    "pbs": "<pbslink>ProxMenux on Proxmox Backup Server</pbslink>: the menu, updates and post-install on a backup server."
   },
   "requirements": {
     "heading": "Requirements & good practices",
     "reqTitle": "Requirements",
-    "reqBody": "Proxmox VE <strong>8.x or later</strong>. PVE 7 and earlier are not supported. Internet access from the host (the installer downloads scripts, dependencies and the ProxMenux Monitor AppImage). Run as <strong>root</strong> on the Proxmox host.",
+    "reqBody": "Proxmox VE <strong>8.x or later</strong>, or Proxmox Backup Server 3 or 4 (see <pbslink>ProxMenux on Proxmox Backup Server</pbslink>). PVE 7 and earlier are not supported. Internet access from the host (the installer downloads scripts, dependencies and the ProxMenux Monitor AppImage). Run as <strong>root</strong> on the Proxmox host.",
     "inspectTitle": "Always inspect scripts you run from the internet",
     "inspectReview": "<sourcelink>Review the installer source</sourcelink> before running.",
     "inspectCoc": "All executable links follow the <coclink>ProxMenux Code of Conduct</coclink>."

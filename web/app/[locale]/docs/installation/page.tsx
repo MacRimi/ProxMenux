@@ -169,12 +169,13 @@ export default async function InstallationPage({ params }: { params: Promise<{ l
         <li>{t.rich("next.postInstall", { postlink: internalLink("/docs/post-install") })}</li>
         <li>{t.rich("next.introduction", { introlink: internalLink("/docs/introduction") })}</li>
         <li>{t.rich("next.monitor", { monitorlink: internalLink("/docs/settings/proxmenux-monitor") })}</li>
+        <li>{t.rich("next.pbs", { pbslink: internalLink("/docs/pbs") })}</li>
       </ul>
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("requirements.heading")}</h2>
 
       <Callout variant="info" title={t("requirements.reqTitle")}>
-        {t.rich("requirements.reqBody", { strong })}
+        {t.rich("requirements.reqBody", { strong, pbslink: internalLink("/docs/pbs") })}
       </Callout>
 
       <Callout variant="info" title={t("requirements.inspectTitle")}>
