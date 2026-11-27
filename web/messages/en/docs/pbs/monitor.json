@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Network has no <strong>Network Flow</strong> card, which draws how traffic reaches the VMs and LXCs.",
-              "Hardware has no <strong>Switch Mode</strong> control for GPUs, no driver installers (<strong>Install NVIDIA Drivers</strong>, <strong>Install AMD GPU Tools</strong>, <strong>Install Intel GPU Tools</strong> and <strong>Install Coral TPU Drivers</strong>) and no <strong>Extended Monitoring Not Available</strong> notice, which offers those tools. The <strong>Run scripts and tools</strong> action adds nothing to this tab."
+              "Hardware has no <strong>Switch Mode</strong> control for GPUs, no driver installers and no <strong>Extended Monitoring Not Available</strong> notice. The <strong>Run scripts and tools</strong> action adds nothing to this tab."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Signing in",
-      "intro": "Local accounts, profiles, 2FA and API tokens work as described in <accessLink>Access & Authentication</accessLink>. The Proxmox accounts that can sign in are those of the backup server, turned on as described in <proxmoxAccountsLink>Proxmox VE accounts</proxmoxAccountsLink>. What changes:",
+      "intro": "Local accounts, profiles, 2FA and API tokens work as described in <accessLink>Access & Authentication</accessLink>. The Proxmox accounts that can sign in are those of the backup server. They are turned on in the <strong>Proxmox Backup Server accounts</strong> card of <strong>Security</strong>, which works as described in <proxmoxAccountsLink>Proxmox VE accounts</proxmoxAccountsLink>. What changes:",
       "blocks": [
         {
           "list": {
             "items": [
-              "The login screen has a <em>Proxmox Backup Server</em> tab next to <strong>Local account</strong>, with <strong>User</strong>, <strong>Password</strong> and <strong>Realm</strong>. The realms are those the server lists. When the account has a second factor, <strong>Two-factor code</strong> takes a TOTP code or a recovery key.",
+              "When local accounts can also sign in, the login screen has two tabs, <strong>Local account</strong> and <em>Proxmox Backup Server</em>. Otherwise it shows only the form of the server. The form has <strong>User</strong>, <strong>Password</strong> and <strong>Realm</strong>, and the realms are those the server lists. When the account has a second factor, <strong>Two-factor code</strong> takes a TOTP code or a recovery key.",
               "The privileges on <code>/</code> of the server decide, as on Proxmox VE: <code>Sys.Modify</code> gives Administrator and <code>Sys.Audit</code> alone gives Observer, unless a rule gives another profile. Without either one the account cannot sign in.",
               "An account whose only second factor is a security key signs in on the web interface of the server, on port 8007. With the Monitor opened over HTTPS at the same address, that session also signs in to the Monitor.",
               "Proxmox Backup Server has no user groups, so a profile rule names a user.",
@@ -171,7 +171,7 @@
               "<strong>PBS services</strong> checks <code>proxmox-backup</code> and <code>proxmox-backup-proxy</code> instead of the Proxmox VE services, and never corosync.",
               "The checks of VMs and LXCs, of Proxmox VE storages and their capacity, of LXC root disks and mount points and of VM disks do not run. The remote NFS, CIFS and SMB mounts of the host are still checked.",
               "<strong>Health Monitor Thresholds</strong> in Settings hides the thresholds of those checks.",
-              "In <strong>System updates</strong>, the <strong>Update system</strong> button opens a terminal window with <code>pbs_update.sh</code>, the update of option 6 of the PBS menu, described in <updatesLink>Updating the server</updatesLink>. It needs the <strong>Update</strong> action."
+              "In <strong>System updates</strong>, when updates are pending, the <strong>Update system</strong> button opens a terminal window with <code>pbs_update.sh</code>, the update of option 6 of the PBS menu, described in <updatesLink>Updating the server</updatesLink>. It needs the <strong>Update</strong> action."
             ]
           }
         }
