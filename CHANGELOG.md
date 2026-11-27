@@ -268,6 +268,7 @@ A special thank you goes to [@jcastro](https://github.com/jcastro), [@Vaso73](ht
 - **The AI knows how often an error repeats**: the context passed to the AI includes again how many times an error has occurred and how often it comes back.
 - **Current Groq and OpenRouter models first** ([PR #594](https://github.com/MacRimi/ProxMenux/pull/594), contributed by [@jcastro](https://github.com/jcastro)): Groq lists GPT-OSS and Qwen before the older families, and two free OpenRouter models that are no longer served were removed from the list.
 - **Times stay whole in the digest email** ([issue #669](https://github.com/MacRimi/ProxMenux/issues/669), reported by [@christiannieveslauz](https://github.com/christiannieveslauz)): the HTML email of the daily digest and of the quiet-hours summary keeps a line such as `• 14:47  2 app updates available` in one row instead of splitting it at the time. Clock times and addresses are not taken as labels either.
+- **Security warnings of the Health Monitor are not reported as failed logins** ([issue #733](https://github.com/MacRimi/ProxMenux/issues/733), reported by [@Carbanog](https://github.com/Carbanog)): an expiring certificate, a long uptime without updates, many failed logins in a day or Fail2Ban bans arrive as a new health issue with their reason, instead of an authentication failure with an empty source IP, user and service.
 
 ## 🧩 Community Scripts
 

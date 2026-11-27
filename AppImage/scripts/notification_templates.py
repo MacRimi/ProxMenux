@@ -1895,7 +1895,7 @@ _HEALTH_CATEGORY_EVENTS = {
     'zfs': 'disk_io_error',
     'storage': 'storage_unavailable',
     'pve_services': 'service_fail',
-    'security': 'auth_fail',
+    'security': 'health_issue_new',
     'updates': 'update_summary',
 }
 

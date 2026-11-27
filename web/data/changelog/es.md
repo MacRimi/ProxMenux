@@ -268,6 +268,7 @@ Un agradecimiento especial a [@jcastro](https://github.com/jcastro), [@Vaso73](h
 - **La IA sabe cada cuánto se repite un error**: el contexto que se pasa a la IA vuelve a incluir cuántas veces ha ocurrido un error y con qué frecuencia vuelve.
 - **Los modelos actuales de Groq y OpenRouter, primero** ([PR #594](https://github.com/MacRimi/ProxMenux/pull/594), aportado por [@jcastro](https://github.com/jcastro)): Groq lista GPT-OSS y Qwen antes que las familias más antiguas, y se han quitado de la lista dos modelos gratuitos de OpenRouter que ya no se sirven.
 - **Las horas se mantienen enteras en el correo del resumen** ([issue #669](https://github.com/MacRimi/ProxMenux/issues/669), reportado por [@christiannieveslauz](https://github.com/christiannieveslauz)): el correo HTML del resumen diario y del resumen de las horas de silencio mantiene una línea como `• 14:47  2 app updates available` en una sola fila en lugar de partirla en la hora. Las horas y las direcciones tampoco se toman como etiquetas.
+- **Los avisos de seguridad del monitor de salud no se notifican como inicios de sesión fallidos** ([issue #733](https://github.com/MacRimi/ProxMenux/issues/733), reportado por [@Carbanog](https://github.com/Carbanog)): un certificado a punto de caducar, mucho tiempo encendido sin actualizar, muchos inicios de sesión fallidos en un día o bloqueos de Fail2Ban llegan como un nuevo problema de salud con su motivo, en lugar de un fallo de autenticación con la IP de origen, el usuario y el servicio vacíos.
 
 ## 🧩 Community Scripts
 

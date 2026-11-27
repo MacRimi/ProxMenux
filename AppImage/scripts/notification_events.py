@@ -2815,7 +2815,9 @@ class PollingCollector:
         'storage': 'storage_unavailable',
         'network': 'network_down',
         'pve_services': 'service_fail',
-        'security': 'auth_fail',
+        # Certificates, uptime, failed logins in 24h and Fail2Ban bans: none
+        # of them is a single failed login, which auth_fail describes.
+        'security': 'health_issue_new',
         'updates': 'update_summary',
         'logs': 'system_problem',
         'vms': 'system_problem',
