@@ -459,6 +459,11 @@
       "cs:clickhouse"
     ],
     [
+      "oci:cloudflared",
+      "oci:cloudflared-official",
+      "cs:cloudflared"
+    ],
+    [
       "oci:crafty",
       "cs:crafty-controller"
     ],

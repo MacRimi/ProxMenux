@@ -2161,7 +2161,7 @@
       "variant": null,
       "title": "Cloudflared",
       "repository": "https://hub.docker.com/r/wisdomsky/cloudflared-web",
-      "description": "Cloudflare Tunnel offers an easy way to expose web servers securely to the internet, without opening up firewall ports and configuring ACLs. Cloudflare Tunnel also ensures requests route through Cloudflare before reaching the web server, so you can be sure attack traffic is stopped with Cloudflare\u2019s WAF and Unmetered DDoS mitigation, and authenticated with Access if you\u2019ve enabled those features for your account.\n\nThe software provides a seamless way to securely expose web servers to the internet without configuring firewall ports or access control lists (ACLs). All requests are routed through Cloudflare before reaching your web server, leveraging Cloudflare\u2019s Web Application Firewall (WAF) and unmetered DDoS mitigation to block attack traffic, with optional authentication via Cloudflare Access if enabled. With its intuitive Web interface and efficient tunnel management, this tool is the perfect solution for securely deploying web services.\n\n**Discover How to Connect self-hosted server to Cloudflare Tunnel**\nIntegrating self-hosted server with Cloudflare Tunnel allows you to securely expose local services to the internet without opening firewall ports, enabling seamless remote access. Below are two practical resources to guide you through the setup process:\n1. [**Cloudflare Official Tutorial**](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-remote-tunnel/): \n  This tutorial provides detailed steps for creating and managing a Cloudflare Tunnel.\n2. [**Phiptech Practical Guide**](https://phiptech.com/how-to-setup-cloudflare-tunnel-and-expose-your-local-service-or-application/): \n  This guide offers a concise, step-by-step walkthrough for setting up Cloudflare Tunnel on local devices like self-hosted server, with practical examples to help users easily expose services to the public internet.\n",
+      "description": "Publish local services on the internet through Cloudflare without opening ports on the router.",
       "website": "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-remote-tunnel/",
       "icon": "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Cloudflared/icon.png",
       "architectures": [
@@ -2188,6 +2188,38 @@
       "requires_security_confirmation": false,
       "hidden": false,
       "template_id": "image-cloudflared"
+    },
+    {
+      "id": "cloudflared-official",
+      "provider": "cloudflare",
+      "template_family": "curated-profile",
+      "title": "Cloudflared",
+      "repository": "https://github.com/cloudflare/cloudflared",
+      "description": "Publish local services on the internet through Cloudflare without opening ports on the router.",
+      "website": "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/cloudflare.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/cloudflare/cloudflared:latest",
+      "category": "web",
+      "category_label": "Webservers & Proxies",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/cloudflared-official.json",
+      "template": "apps/cloudflared-official.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false,
+      "template_id": "image-cloudflared-official"
     },
     {
       "id": "cloudreve",
@@ -12904,6 +12936,38 @@
       "template_id": "image-papra"
     },
     {
+      "id": "papyra",
+      "provider": "official",
+      "template_family": "curated-profile",
+      "title": "Papyra",
+      "repository": "https://github.com/lyfie-org/papyra",
+      "description": "Notes kept as plain Markdown files, with live collaboration, encrypted notes and full-text search.",
+      "website": "https://papyra.app/",
+      "icon": "https://raw.githubusercontent.com/lyfie-org/papyra/e070cdd8eb194f2474b20e59c10d5785c9cc3ec3/assets/favicon/android-chrome-512x512.png",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/lyfie/papyra:v1.2.0",
+      "category": "documents",
+      "category_label": "Documents & Notes",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/papyra.json",
+      "template": "apps/papyra.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "optional_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false,
+      "template_id": "image-papyra"
+    },
+    {
       "id": "pcsx2",
       "provider": "linuxserver.io",
       "title": "PCSX2",
@@ -21381,7 +21445,7 @@
       "skipped": []
     },
     "curated_profiles": {
-      "included_count": 44
+      "included_count": 46
     }
   }
 }
