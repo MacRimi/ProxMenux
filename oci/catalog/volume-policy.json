@@ -217,6 +217,9 @@
     },
     "sharecovex": {
       "/config": 1
+    },
+    "opencloud": {
+      "/etc/opencloud": 2
     }
   }
 }

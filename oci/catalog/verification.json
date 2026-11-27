@@ -204,6 +204,15 @@
         "scenario": "PVE 9.2.32 amd64/ZFS/DHCP. Default and advanced installs, Chrome JPEG/PNG, PDF merge and trusted-origin video compression, in-place CPU/RAM changes, reboot, restore/Manage, 0.6.0 to latest and automatic rollback on failed startup health check."
       }
     },
+    "opencloud": {
+      "community_tested": {
+        "by": "jcastro",
+        "date": "2026-11-27",
+        "digest": "8474a6ece9e0b7515de369fd8d4afbdcc12a158be226a5504581e06f45a549fc",
+        "report": "https://github.com/MacRimi/ProxMenux/discussions/440#discussioncomment-19902914",
+        "scenario": "PVE 9.3.1 amd64, ZFS and DHCP. Default and advanced native install, HTTPS admin login, upload and read in Chrome, managed config/data, restart, in-place CPU/RAM and 9.1.1-rc.2 to 9.1.1 update. Backup restored into OCI Manage and Chrome reopened the file. Manual recovery on PVE 9.3.1."
+      }
+    },
     "openlist": {
       "status": "laboratory-validated"
     },
