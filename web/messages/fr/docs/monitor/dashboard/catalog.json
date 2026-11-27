@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Tableau de bord : onglet Catalogue | Documentation ProxMenux",
-    "description": "L’onglet Catalogue de ProxMenux Monitor, affiché sous le nom Menux : les applications OCI, les outils ProxMenux, les VM que crée ProxMenux et les Community Scripts au même endroit, chacun avec sa fiche, exécutés avec les mêmes étapes que le menu de la console."
+    "title": "ProxMenux Monitor Tableau de bord : onglet Menux | Documentation ProxMenux",
+    "description": "L’onglet Menux de ProxMenux Monitor : les applications OCI, les outils ProxMenux, les VM que crée ProxMenux et les Community Scripts au même endroit, chacun avec sa fiche, exécutés avec les mêmes étapes que le menu de la console."
   },
   "header": {
-    "title": "Tableau de bord : onglet Catalogue",
+    "title": "Tableau de bord : onglet Menux",
     "description": "Tout ce que ProxMenux peut installer ou exécuter, réuni dans un seul onglet : applications, outils du menu et scripts, chacun avec une fiche qui le décrit avant toute exécution.",
     "section": "ProxMenux Monitor · Tableau de bord"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "L’onglet Catalogue apparaît dans la barre supérieure sous le nom <strong>Menux</strong>. Il rassemble ce que propose le menu de la console de ProxMenux et les applications qu’il installe, pour les trouver, les consulter et les exécuter depuis le Monitor. Exécuter un élément ouvre un terminal dans le Monitor avec les mêmes étapes que le menu de la console. L’onglet contient quatre types d’éléments :"
+          "p": "L’onglet <strong>Menux</strong> rassemble ce que propose le menu de la console de ProxMenux et les applications qu’il installe, pour les trouver, les consulter et les exécuter depuis le Monitor. Exécuter un élément ouvre un terminal dans le Monitor avec les mêmes étapes que le menu de la console. L’onglet contient quatre types d’éléments :"
         },
         {
           "table": {
@@ -49,14 +49,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Onglet Catalogue avec le champ de recherche, le bouton des paramètres, une application à la une et les outils ProxMenux",
-            "caption": "L’onglet Catalogue, affiché sous le nom Menux dans la barre supérieure."
+            "alt": "Onglet Menux avec le champ de recherche, le bouton des paramètres, une application à la une et les outils ProxMenux",
+            "caption": "L’onglet Menux."
           }
         },
         {
           "calloutInfo": {
             "title": "Qui voit l’onglet",
-            "body": "L’onglet apparaît quand le profil du compte inclut la zone <strong>Menux</strong>. Installer, exécuter ou ouvrir un élément nécessite l’action <strong>Exécuter des scripts et des outils</strong> ; sans elle, les fiches sont en lecture seule et n’ont pas de boutons. C’est ainsi que le profil <strong>Observateur</strong> voit l’onglet. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. Le Monitor d’un hôte Proxmox Backup Server n’a pas d’onglet Catalogue."
+            "body": "L’onglet apparaît quand le profil du compte inclut la zone <strong>Menux</strong>. Installer, exécuter ou ouvrir un élément nécessite l’action <strong>Exécuter des scripts et des outils</strong> ; sans elle, les fiches sont en lecture seule et n’ont pas de boutons. C’est ainsi que le profil <strong>Observateur</strong> voit l’onglet. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. Le Monitor d’un hôte Proxmox Backup Server n’a pas d’onglet Menux."
           }
         }
       ]
@@ -83,7 +83,7 @@
               ],
               [
                 "Outils de Community Scripts",
-                "Les scripts de Community Scripts qui agissent sur l’hôte Proxmox, regroupés par catégorie."
+                "Les scripts de Community Scripts qui gèrent l’hôte Proxmox, dans une seule vignette."
               ],
               [
                 "Catégories d'apps",
@@ -196,7 +196,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminal intitulé Open SMART Disk Health & Test exécutant la boîte de dialogue de sélection des disques du menu de la console",
-            "caption": "Un outil du menu ouvert depuis le Catalogue, dans son propre terminal."
+            "caption": "Un outil du menu ouvert depuis l’onglet Menux, dans son propre terminal."
           }
         },
         {
@@ -212,7 +212,7 @@
               ],
               [
                 "Outil ProxMenux ou VM",
-                "Cette option du menu de la console, sans le reste du menu autour."
+                "Cette option du menu de la console, sans le reste du menu autour. Les options qui sont elles-mêmes des menus, les systèmes de VM NAS, Windows et Linux, ouvrent tout de suite leur terminal au lieu de leur fiche."
               ],
               [
                 "Créer un LXC à partir d'un modèle",
@@ -292,7 +292,7 @@
               {
                 "href": "/docs/create-vm/lxc",
                 "label": "Créer un LXC à partir d'un modèle",
-                "tail": "l’assistant ouvert depuis le Catalogue."
+                "tail": "l’assistant ouvert depuis l’onglet Menux."
               },
               {
                 "href": "/docs/external-repositories",

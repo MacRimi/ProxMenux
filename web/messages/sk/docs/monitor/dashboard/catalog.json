@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Prehľad: karta Katalóg | Dokumentácia ProxMenux",
-    "description": "Karta Katalóg v ProxMenux Monitor, zobrazená ako Menux: aplikácie OCI, nástroje ProxMenux, VM, ktoré ProxMenux vytvára, a Community Scripts na jednom mieste, každá položka so svojím panelom podrobností a spúšťaná rovnakými krokmi ako konzolové menu."
+    "title": "ProxMenux Monitor Prehľad: karta Menux | Dokumentácia ProxMenux",
+    "description": "Karta Menux v ProxMenux Monitor: aplikácie OCI, nástroje ProxMenux, VM, ktoré ProxMenux vytvára, a Community Scripts na jednom mieste, každá položka so svojím panelom podrobností a spúšťaná rovnakými krokmi ako konzolové menu."
   },
   "header": {
-    "title": "Prehľad: karta Katalóg",
+    "title": "Prehľad: karta Menux",
     "description": "Všetko, čo ProxMenux dokáže nainštalovať alebo spustiť, zhromaždené na jednej karte: aplikácie, nástroje menu a skripty, každá položka s panelom podrobností, ktorý ju opíše skôr, ako sa čokoľvek spustí.",
     "section": "ProxMenux Monitor · Prehľad"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "Karta Katalóg sa v hornej lište zobrazuje ako <strong>Menux</strong>. Spája to, čo ponúka konzolové menu ProxMenux, s aplikáciami, ktoré inštaluje, aby sa dali v Monitore nájsť, preštudovať a spustiť. Spustenie položky otvorí v Monitore terminál s rovnakými krokmi ako konzolové menu. Karta obsahuje štyri druhy položiek:"
+          "p": "Karta <strong>Menux</strong> spája to, čo ponúka konzolové menu ProxMenux, s aplikáciami, ktoré inštaluje, aby sa dali v Monitore nájsť, preštudovať a spustiť. Spustenie položky otvorí v Monitore terminál s rovnakými krokmi ako konzolové menu. Karta obsahuje štyri druhy položiek:"
         },
         {
           "table": {
@@ -49,14 +49,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Karta Katalóg s vyhľadávacím poľom, tlačidlom nastavení, odporúčanou aplikáciou a nástrojmi ProxMenux",
-            "caption": "Karta Katalóg, v hornej lište zobrazená ako Menux."
+            "alt": "Karta Menux s vyhľadávacím poľom, tlačidlom nastavení, odporúčanou aplikáciou a nástrojmi ProxMenux",
+            "caption": "Karta Menux."
           }
         },
         {
           "calloutInfo": {
             "title": "Kto kartu vidí",
-            "body": "Karta sa zobrazí, keď profil účtu obsahuje oblasť <strong>Menux</strong>. Inštalácia, spustenie alebo otvorenie položky vyžaduje akciu <strong>Spúšťať skripty a nástroje</strong>; bez nej sú panely podrobností len na čítanie a nemajú tlačidlá. Takto kartu vidí profil <strong>Pozorovateľ</strong>. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Monitor na hostiteľovi Proxmox Backup Server kartu Katalóg nemá."
+            "body": "Karta sa zobrazí, keď profil účtu obsahuje oblasť <strong>Menux</strong>. Inštalácia, spustenie alebo otvorenie položky vyžaduje akciu <strong>Spúšťať skripty a nástroje</strong>; bez nej sú panely podrobností len na čítanie a nemajú tlačidlá. Takto kartu vidí profil <strong>Pozorovateľ</strong>. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Monitor na hostiteľovi Proxmox Backup Server kartu Menux nemá."
           }
         }
       ]
@@ -83,7 +83,7 @@
               ],
               [
                 "Nástroje Community Scripts",
-                "Skripty Community Scripts, ktoré pracujú s hostiteľom Proxmox, zoskupené podľa kategórie."
+                "Skripty Community Scripts, ktoré spravujú hostiteľa Proxmox, v jednej dlaždici."
               ],
               [
                 "Kategórie aplikácií",
@@ -196,7 +196,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminál s názvom Open SMART Disk Health & Test, v ktorom beží dialóg výberu disku z konzolového menu",
-            "caption": "Nástroj menu otvorený z Katalógu vo vlastnom termináli."
+            "caption": "Nástroj menu otvorený z karty Menux vo vlastnom termináli."
           }
         },
         {
@@ -212,7 +212,7 @@
               ],
               [
                 "Nástroj ProxMenux alebo VM",
-                "Daná možnosť konzolového menu bez zvyšku menu okolo nej."
+                "Daná možnosť konzolového menu bez zvyšku menu okolo nej. Možnosti, ktoré sú samy menu, systémy NAS, Windows a Linux VM, otvoria svoj terminál hneď namiesto svojho panela podrobností."
               ],
               [
                 "Vytvoriť LXC zo šablóny",
@@ -292,7 +292,7 @@
               {
                 "href": "/docs/create-vm/lxc",
                 "label": "Vytvoriť LXC zo šablóny",
-                "tail": "sprievodca otváraný z Katalógu."
+                "tail": "sprievodca otváraný z karty Menux."
               },
               {
                 "href": "/docs/external-repositories",

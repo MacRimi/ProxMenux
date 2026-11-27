@@ -27,12 +27,12 @@
                 "<strong>LXC erstellen</strong> im Kopf der Karte <strong>Virtuelle Maschinen und Container</strong> auf der Registerkarte <vmsLxcsLink>VMs und LXCs</vmsLxcsLink>."
               ],
               [
-                "Katalog des Monitors",
-                "Der Eintrag <strong>LXC aus einer Vorlage erstellen</strong> in der Registerkarte <catalogLink>Katalog</catalogLink>, die in der oberen Leiste als Menux angezeigt wird, öffnet denselben Assistenten."
+                "Registerkarte Menux des Monitors",
+                "Der Eintrag <strong>LXC aus einer Vorlage erstellen</strong> in der Registerkarte <catalogLink>Menux</catalogLink> öffnet denselben Assistenten."
               ],
               [
                 "Konsolenmenü",
-                "Hauptmenü → <strong>VM und LXC aus einer Vorlage oder einem Skript erstellen</strong> → <strong>LXC aus einer Vorlage erstellen</strong>. Die Schritte sind dieselben, als Dialoge mit dem Titel <strong>N/5</strong>."
+                "Hauptmenü → <strong>VM und LXC aus einer Vorlage oder einem Skript erstellen</strong> → <strong>LXC aus einer Vorlage erstellen</strong>. Die Schritte sind dieselben, als Dialoge, die in ihrem Titel von 1/5 bis 5/5 nummeriert sind."
               ]
             ]
           }
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Wer ihn verwenden kann",
-            "body": "Im Monitor erfordert der Assistent das Profil <strong>Administrator</strong>, und bei anderen Profilen erscheint die Schaltfläche nicht. Im Katalog erhält ein Profil mit <strong>Skripte und Werkzeuge ausführen</strong>, das nicht Administrator ist, im Eintrag eine Schaltfläche <strong>Öffnen</strong>, die den Konsolenassistenten in einem Terminal ausführt; ohne diese Aktion zeigt der Eintrag nur seine Beschreibung. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Konsolenassistent läuft als root. Keiner der beiden ist auf einem Proxmox-Backup-Server-Host verfügbar."
+            "body": "Im Monitor erfordert der Assistent das Profil <strong>Administrator</strong>, und bei anderen Profilen erscheint die Schaltfläche nicht. In der Registerkarte Menux erhält ein Profil mit <strong>Skripte und Werkzeuge ausführen</strong>, das nicht Administrator ist, im Eintrag eine Schaltfläche <strong>Öffnen</strong>, die den Konsolenassistenten in einem Terminal ausführt; ohne diese Aktion zeigt der Eintrag nur seine Beschreibung. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Konsolenassistent läuft als root. Keiner der beiden ist auf einem Proxmox-Backup-Server-Host verfügbar."
           }
         }
       ]
@@ -70,7 +70,7 @@
               ],
               [
                 "Laden Sie eine offizielle Vorlage herunter",
-                "Durchsucht den offiziellen Katalog, wählt den Speicher für Vorlagen und lädt die gewählte Vorlage mit Fortschrittsanzeige herunter. Danach wählt <strong>Verwenden Sie diese Vorlage</strong> sie aus."
+                "Durchsucht den offiziellen Katalog, wählt den Speicher für Vorlagen und lädt die gewählte Vorlage mit Fortschrittsanzeige herunter. Danach kehrt der Assistent mit der gewählten Vorlage zu <strong>System</strong> zurück."
               ],
               [
                 "Hostname des Containers",
@@ -103,12 +103,12 @@
           }
         },
         {
-          "p": "Die heruntergeladene Vorlage wird vor der Verwendung mit dem SHA-512 des offiziellen Katalogs abgeglichen. Heruntergeladen werden können nur Vorlagen von <code>download.proxmox.com</code> und TurnKey, und Archive von OCI- oder Docker-Images erscheinen nie in der Liste: Diese verwaltet <ociLink>OCI Manager Apps</ociLink>. Der Konsolenassistent listet außerdem TurnKey-Vorlagen und lokale Archive auf; bei einem lokalen Archiv fragt er nach dessen Architektur (amd64 oder arm64)."
+          "p": "Die heruntergeladene Vorlage wird vor der Verwendung mit dem SHA-512 des offiziellen Katalogs abgeglichen. Der Monitor lädt nur die Systemvorlagen von <code>download.proxmox.com</code> herunter, die Konsole auch die von TurnKey. Archive von OCI- oder Docker-Images erscheinen nie in der Liste: Diese verwaltet <ociLink>OCI manager Apps</ociLink>. Der Konsolenassistent listet außerdem TurnKey-Vorlagen und lokale Archive auf; bei einem lokalen Archiv fragt er nach dessen Architektur (amd64 oder arm64)."
         },
         {
           "calloutTip": {
             "title": "Bereiten Sie das System auf den ersten Start vor",
-            "body": "Vor dem ersten Start werden auf der Festplatte des gestoppten Containers zwei systemd-Units angepasst, die in manchen Vorlagen bekanntermaßen fehlschlagen: Das Zertifikat wird nach <code>ssl-cert</code> neu erzeugt, und das Warten auf das Netzwerk wird übersprungen, wenn der Container kein Netzwerk hat. Bereits vorhandene Dateien werden nie überschrieben, und im Container wird nichts installiert oder ausgeführt. Dieser Schritt läuft auch von selbst, wenn der Container eine NVIDIA-GPU oder USB-Geräte erhält."
+            "body": "Vor dem ersten Start werden auf der Festplatte des gestoppten Containers zwei systemd-Units angepasst, die in manchen Vorlagen bekanntermaßen fehlschlagen: Das Zertifikat wird nach <code>ssl-cert</code> neu erzeugt, und das Warten auf das Netzwerk wird übersprungen, wenn der Container kein Netzwerk hat. Bereits vorhandene Dateien werden nie überschrieben, und im Container wird nichts installiert oder ausgeführt. Ein Container mit einer NVIDIA-GPU oder USB-Geräten durchläuft vor seinem ersten Start ebenfalls eine Vorbereitung, die diese Geräte einrichtet; die beiden Units werden nur angepasst, wenn dieser Schalter aktiviert ist."
           }
         }
       ]
@@ -163,7 +163,7 @@
           }
         },
         {
-          "p": "Auf Thin-Speicher wie LVM-thin oder ZFS ist eine Festplatte, die größer als der freie Platz ist, mit einer Warnung in der Prüfung erlaubt. Auf anderem Speicher wird sie abgelehnt."
+          "p": "Auf LVM-thin- oder ZFS-Speicher ist eine Festplatte, die größer als der freie Platz ist, mit einer Warnung in der Prüfung erlaubt. Auf anderem Speicher wird sie abgelehnt."
         },
         {
           "p": "<strong>Mountpunkt hinzufügen</strong> fügt bis zu 16 Mountpoints zweier Typen hinzu:"
@@ -247,7 +247,7 @@
       "title": "Erstellung",
       "blocks": [
         {
-          "p": "Die Erstellung zeigt ihre Schritte mit der Dauer jedes einzelnen: <strong>Senden Sie die Anfrage an Proxmox</strong>, <strong>Erstellen Sie den Container</strong> und, falls angefordert, <strong>Starten Sie den Container</strong> oder <strong>Bereiten Sie den Container vor und starten Sie ihn</strong>. <strong>Protokoll anzeigen</strong> öffnet das Protokoll der Proxmox-Aufgabe dieses Schritts, während sie läuft. Warnungen, die Proxmox in die Aufgabe schreibt, erscheinen gegebenenfalls unter ihrem Schritt: Sie beschreiben die Aufgabe, nicht den Zustand des Containers."
+          "p": "Die Erstellung zeigt ihre Schritte mit der Dauer jedes einzelnen: <strong>Senden Sie die Anfrage an Proxmox</strong>, <strong>Erstellen Sie den Container</strong> und, falls angefordert, <strong>Starten Sie den Container</strong>, <strong>Bereiten Sie den Container für seinen ersten Start vor</strong> oder <strong>Bereiten Sie den Container vor und starten Sie ihn</strong>. <strong>Protokoll anzeigen</strong> öffnet das Protokoll der Proxmox-Aufgabe dieses Schritts, während sie läuft. Warnungen, die Proxmox in die Aufgabe schreibt, erscheinen gegebenenfalls unter ihrem Schritt: Sie beschreiben die Aufgabe, nicht den Zustand des Containers."
         },
         {
           "figure": {
@@ -257,7 +257,7 @@
           }
         },
         {
-          "p": "Das Schließen des Dialogs hält die Erstellung nicht an: Wird er im selben Browser-Tab erneut geöffnet, zeigt er den aktuellen Stand der Operation. Sobald der Container gestartet ist, öffnet <strong>Terminal öffnen</strong> eine Shell darin im <terminalLink>Terminal</terminalLink> des Monitors."
+          "p": "Das Schließen des Dialogs hält die Erstellung nicht an: Wird er im selben Browser-Tab erneut geöffnet, zeigt er den aktuellen Stand der Operation. Sobald der Container gestartet ist, öffnet <strong>Terminal öffnen</strong> eine Shell darin, in der LXC-Konsole, die unter <terminalLink>Terminal</terminalLink> beschrieben ist. Diese Schaltfläche erscheint, wenn der Assistent über VMs und LXCs geöffnet wurde, nicht über die Registerkarte Menux."
         }
       ]
     },
@@ -266,7 +266,7 @@
       "title": "Der erstellte Container",
       "blocks": [
         {
-          "p": "Der Container ist immer unprivilegiert und hat in Proxmox die Tags <code>proxmenux</code>, <code>lxc</code> und den Namen der Distribution sowie diese <strong>Notizen</strong> mit seiner Vorlage, seinen Ressourcen, Mountpoints, seinem Netzwerk und seiner Hardware. Werden die Notizen in Proxmox geändert, bevor die Erstellung endet, bleiben sie unverändert erhalten."
+          "p": "Der Container ist immer unprivilegiert und hat in Proxmox die Tags <code>proxmenux</code>, <code>lxc</code> und den Namen der Distribution sowie diese <strong>Notizen</strong> mit seiner Vorlage, seinen Ressourcen, Mountpoints, seinem Netzwerk und seiner Hardware, und ein Docs-Badge, das auf diese Seite verweist. Werden die Notizen in Proxmox geändert, bevor die Erstellung endet, bleiben sie unverändert erhalten."
         },
         {
           "figure": {
@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Wann er sich nicht über den Monitor entfernen lässt",
-            "body": "Der Monitor entfernt nur Container mit einer einzigen Root-Festplatte und ohne besondere Konfiguration. Er lehnt unter anderem einen laufenden, geschützten oder gesperrten Container ab, einen mit einem Mountpoint oder einer unbenutzten Festplatte, einen mit einem Host-Verzeichnis und einen mit USB-Geräten, einem Coral USB oder einer NVIDIA-GPU, die rohe LXC-Einstellungen hinzufügen. Der Grund wird im Dialog angezeigt. Diese Container werden über Proxmox entfernt."
+            "body": "Der Monitor entfernt nur Container mit einer einzigen Root-Festplatte und ohne besondere Konfiguration. Er lehnt unter anderem einen laufenden, geschützten oder gesperrten Container ab, einen mit einem Mountpoint oder einer unbenutzten Festplatte, einen mit einem Host-Verzeichnis und einen mit USB-Geräten, einem Coral USB oder einer NVIDIA-GPU, die rohe LXC-Einstellungen hinzufügen. Der Grund wird im Dialog angezeigt, und diese Container werden über Proxmox entfernt. Ist der Entfernungsschutz der einzige Grund, bietet der Dialog <strong>Schutz deaktivieren…</strong> an und entfernt danach den Container."
           }
         }
       ]
@@ -305,7 +305,7 @@
               "Privilegierte Container: Der Container ist immer unprivilegiert.",
               "Andere Architekturen als amd64 und arm64.",
               "IPv6-Adressen und IPv6-DNS-Server.",
-              "Container aus OCI- oder Docker-Images: Diese erstellt <ociLink>OCI Manager Apps</ociLink>.",
+              "Container aus OCI- oder Docker-Images: Diese erstellt <ociLink>OCI manager Apps</ociLink>.",
               "Von Hand eingegebene rohe LXC-Einstellungen oder das Installieren von Software im Container."
             ]
           }

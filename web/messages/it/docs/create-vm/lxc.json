@@ -27,12 +27,12 @@
                 "<strong>Crea LXC</strong>, nell’intestazione del riquadro <strong>Macchine virtuali e container</strong> della scheda <vmsLxcsLink>VM e LXC</vmsLxcsLink>."
               ],
               [
-                "Catalogo del Monitor",
-                "La voce <strong>Crea LXC da modello</strong> della scheda <catalogLink>Catalogo</catalogLink>, mostrata come Menux nella barra superiore, apre la stessa procedura."
+                "Scheda Menux del Monitor",
+                "La voce <strong>Crea LXC da modello</strong> della scheda <catalogLink>Menux</catalogLink> apre la stessa procedura."
               ],
               [
                 "Menu della console",
-                "Menu principale → <strong>Crea VM e LXC da modello o script</strong> → <strong>Crea LXC da modello</strong>. I passaggi sono gli stessi, sotto forma di finestre di dialogo, con il titolo <strong>N/5</strong>."
+                "Menu principale → <strong>Crea VM e LXC da modello o script</strong> → <strong>Crea LXC da modello</strong>. I passaggi sono gli stessi, sotto forma di finestre di dialogo numerate da 1/5 a 5/5 nel titolo."
               ]
             ]
           }
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Chi può usarla",
-            "body": "Nel Monitor la procedura richiede il profilo <strong>Amministratore</strong>, e per gli altri profili il pulsante non compare. Nel Catalogo, un profilo con <strong>Eseguire script e strumenti</strong> che non è Amministratore ha un pulsante <strong>Apri</strong> nella voce, che esegue la procedura della console in un terminale; senza quell’azione la voce mostra solo la descrizione. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. La procedura della console viene eseguita come root. Nessuna delle due è disponibile su un host Proxmox Backup Server."
+            "body": "Nel Monitor la procedura richiede il profilo <strong>Amministratore</strong>, e per gli altri profili il pulsante non compare. Nella scheda Menux, un profilo con <strong>Eseguire script e strumenti</strong> che non è Amministratore ha un pulsante <strong>Apri</strong> nella voce, che esegue la procedura della console in un terminale; senza quell’azione la voce mostra solo la descrizione. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. La procedura della console viene eseguita come root. Nessuna delle due è disponibile su un host Proxmox Backup Server."
           }
         }
       ]
@@ -70,7 +70,7 @@
               ],
               [
                 "Scarica un modello ufficiale",
-                "Cerca nel catalogo ufficiale, sceglie lo storage per i modelli e scarica quello scelto, mostrandone l’avanzamento. Al termine, <strong>Utilizza questo modello</strong> lo seleziona."
+                "Cerca nel catalogo ufficiale, sceglie lo storage per i modelli e scarica quello scelto, mostrandone l’avanzamento. Al termine, la procedura torna a <strong>Sistema</strong> con quel modello selezionato."
               ],
               [
                 "Nome host del contenitore",
@@ -103,12 +103,12 @@
           }
         },
         {
-          "p": "Il modello scaricato viene verificato con lo SHA-512 del catalogo ufficiale prima di poter essere usato. Si possono scaricare solo modelli da <code>download.proxmox.com</code> e da TurnKey, e gli archivi di immagini OCI o Docker non compaiono mai nell’elenco: di quelli si occupa <ociLink>OCI Manager Apps</ociLink>. La procedura della console elenca anche i modelli TurnKey e gli archivi locali; per un archivio locale chiede la sua architettura (amd64 o arm64)."
+          "p": "Il modello scaricato viene verificato con lo SHA-512 del catalogo ufficiale prima di poter essere usato. Il Monitor scarica solo i modelli di sistema di <code>download.proxmox.com</code>, e la console anche quelli di TurnKey. Gli archivi di immagini OCI o Docker non compaiono mai nell’elenco: di quelli si occupa <ociLink>OCI manager Apps</ociLink>. La procedura della console elenca anche i modelli TurnKey e gli archivi locali; per un archivio locale chiede la sua architettura (amd64 o arm64)."
         },
         {
           "calloutTip": {
             "title": "Prepara il sistema per il primo avvio",
-            "body": "Prima del primo avvio, sul disco del container fermo vengono adattate due unità systemd che in alcuni modelli notoriamente falliscono: il certificato viene rigenerato dopo <code>ssl-cert</code> e l’attesa della rete viene saltata quando il container non ha rete. I file già esistenti non vengono mai sovrascritti, e all’interno del container non viene installato né eseguito nulla. Questo passaggio viene eseguito automaticamente anche quando il container riceve una GPU NVIDIA o dispositivi USB."
+            "body": "Prima del primo avvio, sul disco del container fermo vengono adattate due unità systemd che in alcuni modelli notoriamente falliscono: il certificato viene rigenerato dopo <code>ssl-cert</code> e l’attesa della rete viene saltata quando il container non ha rete. I file già esistenti non vengono mai sovrascritti, e all’interno del container non viene installato né eseguito nulla. Un container con una GPU NVIDIA o dispositivi USB passa anche da una preparazione prima del primo avvio, che configura quei dispositivi; le due unità vengono adattate solo quando questo interruttore è attivo."
           }
         }
       ]
@@ -163,7 +163,7 @@
           }
         },
         {
-          "p": "Su storage thin, come LVM-thin o ZFS, un disco più grande dello spazio libero è consentito con un avviso nella revisione. Su altri storage viene rifiutato."
+          "p": "Su uno storage LVM-thin o ZFS, un disco più grande dello spazio libero è consentito con un avviso nella revisione. Su altri storage viene rifiutato."
         },
         {
           "p": "<strong>Aggiungi punto di montaggio</strong> aggiunge fino a 16 punti di montaggio di due tipi:"
@@ -247,7 +247,7 @@
       "title": "Creazione",
       "blocks": [
         {
-          "p": "La creazione mostra i suoi passaggi con il tempo di ciascuno: <strong>Invia la richiesta a Proxmox</strong>, <strong>Crea il contenitore</strong> e, se richiesto, <strong>Avvia il contenitore</strong> o <strong>Prepara e avvia il contenitore</strong>. <strong>Mostra il registro</strong> apre il log dell’attività Proxmox di quel passaggio mentre è in esecuzione. Gli eventuali avvisi scritti da Proxmox nell’attività compaiono sotto il relativo passaggio: descrivono l’attività, non lo stato del container."
+          "p": "La creazione mostra i suoi passaggi con il tempo di ciascuno: <strong>Invia la richiesta a Proxmox</strong>, <strong>Crea il contenitore</strong> e, se richiesto, <strong>Avvia il contenitore</strong>, <strong>Prepara il contenitore per il suo primo avvio</strong> o <strong>Prepara e avvia il contenitore</strong>. <strong>Mostra il registro</strong> apre il log dell’attività Proxmox di quel passaggio mentre è in esecuzione. Gli eventuali avvisi scritti da Proxmox nell’attività compaiono sotto il relativo passaggio: descrivono l’attività, non lo stato del container."
         },
         {
           "figure": {
@@ -257,7 +257,7 @@
           }
         },
         {
-          "p": "Chiudere la finestra di dialogo non interrompe la creazione: riaprendola nella stessa scheda del browser, mostra l’operazione al punto in cui si trova. Quando il container è avviato, <strong>Apri il terminale</strong> apre una shell al suo interno nel <terminalLink>Terminale</terminalLink> del Monitor."
+          "p": "Chiudere la finestra di dialogo non interrompe la creazione: riaprendola nella stessa scheda del browser, mostra l’operazione al punto in cui si trova. Quando il container è avviato, <strong>Apri il terminale</strong> apre una shell al suo interno, nella console LXC descritta in <terminalLink>Terminale</terminalLink>. Questo pulsante compare quando la procedura è stata aperta da VM e LXC, non dalla scheda Menux."
         }
       ]
     },
@@ -266,7 +266,7 @@
       "title": "Il container creato",
       "blocks": [
         {
-          "p": "Il container è sempre non privilegiato e in Proxmox ha i tag <code>proxmenux</code>, <code>lxc</code> e il nome della distribuzione, oltre a queste <strong>Note</strong> con il modello, le risorse, i punti di montaggio, la rete e l’hardware. Se le Note vengono modificate in Proxmox prima della fine della creazione, vengono mantenute così come sono."
+          "p": "Il container è sempre non privilegiato e in Proxmox ha i tag <code>proxmenux</code>, <code>lxc</code> e il nome della distribuzione, oltre a queste <strong>Note</strong> con il modello, le risorse, i punti di montaggio, la rete e l’hardware, e un badge Docs che rimanda a questa pagina. Se le Note vengono modificate in Proxmox prima della fine della creazione, vengono mantenute così come sono."
         },
         {
           "figure": {
@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Quando non si può rimuovere dal Monitor",
-            "body": "Il Monitor rimuove solo container con un unico disco di root e senza configurazioni particolari. Rifiuta, tra gli altri, un container in esecuzione, protetto o bloccato, uno con un punto di montaggio o un disco inutilizzato, uno con una directory dell’host, e uno con dispositivi USB, un Coral USB o una GPU NVIDIA, che aggiungono impostazioni LXC raw. Il motivo viene mostrato nella finestra di dialogo. Quei container si rimuovono da Proxmox."
+            "body": "Il Monitor rimuove solo container con un unico disco di root e senza configurazioni particolari. Rifiuta, tra gli altri, un container in esecuzione, protetto o bloccato, uno con un punto di montaggio o un disco inutilizzato, uno con una directory dell’host, e uno con dispositivi USB, un Coral USB o una GPU NVIDIA, che aggiungono impostazioni LXC raw. Il motivo viene mostrato nella finestra di dialogo, e quei container si rimuovono da Proxmox. Quando l’unico motivo è la protezione dalla rimozione, la finestra di dialogo offre <strong>Disattiva protezione…</strong> e poi rimuove il container."
           }
         }
       ]
@@ -305,7 +305,7 @@
               "Container privilegiati: il container è sempre non privilegiato.",
               "Architetture diverse da amd64 e arm64.",
               "Indirizzi IPv6 e server DNS IPv6.",
-              "Container da immagini OCI o Docker: li crea <ociLink>OCI Manager Apps</ociLink>.",
+              "Container da immagini OCI o Docker: li crea <ociLink>OCI manager Apps</ociLink>.",
               "Impostazioni LXC raw scritte a mano, o installazione di software all’interno del container."
             ]
           }

@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Um lançador, não um instalador de aplicações",
-    "body": "A aba <strong>Apps</strong> não instala software nem descobre serviços. Reúne os links salvos em uma grade pesquisável. Os links LXC configuram-se na <appTabLink>aba App</appTabLink> do sistema convidado; as personalizadas incluem serviços VM, proxies inversos e painéis externos. No Monitor, os aplicativos são instalados pela <catalogLink>aba Catálogo</catalogLink>."
+    "body": "A aba <strong>Apps</strong> não instala software nem descobre serviços. Reúne os links salvos em uma grade pesquisável. Os links LXC configuram-se na <appTabLink>aba App</appTabLink> do sistema convidado; as personalizadas incluem serviços VM, proxies inversos e painéis externos. No Monitor, os aplicativos são instalados pela <catalogLink>aba Menux</catalogLink>."
   },
   "sources": {
     "heading": "O que aparece em Apps",

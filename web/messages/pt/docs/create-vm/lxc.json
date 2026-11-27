@@ -27,12 +27,12 @@
                 "<strong>Criar LXC</strong>, no cabeçalho do cartão <strong>Máquinas Virtuais e Contêineres</strong> da aba <vmsLxcsLink>VMs e LXCs</vmsLxcsLink>."
               ],
               [
-                "Catálogo do Monitor",
-                "A entrada <strong>Criar LXC a partir de modelo</strong> da aba <catalogLink>Catálogo</catalogLink>, exibida como Menux na barra superior, abre o mesmo assistente."
+                "Aba Menux do Monitor",
+                "A entrada <strong>Criar LXC a partir de modelo</strong> da aba <catalogLink>Menux</catalogLink> abre o mesmo assistente."
               ],
               [
                 "Menu do console",
-                "Menu principal → <strong>Criar VM e LXC a partir de modelo ou script</strong> → <strong>Criar LXC a partir de modelo</strong>. As etapas são as mesmas, em forma de diálogos, com o título <strong>N/5</strong>."
+                "Menu principal → <strong>Criar VM e LXC a partir de modelo ou script</strong> → <strong>Criar LXC a partir de modelo</strong>. As etapas são as mesmas, em forma de diálogos numerados de 1/5 a 5/5 no título."
               ]
             ]
           }
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Quem pode usar",
-            "body": "No Monitor, o assistente exige o perfil <strong>Administrador</strong>, e o botão não aparece para outros perfis. No Catálogo, um perfil com <strong>Executar scripts e ferramentas</strong> que não seja Administrador recebe um botão <strong>Abrir</strong> na entrada, que executa o assistente do console em um terminal; sem essa ação, a entrada mostra apenas sua descrição. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O assistente do console é executado como root. Nenhum dos dois está disponível em um host Proxmox Backup Server."
+            "body": "No Monitor, o assistente exige o perfil <strong>Administrador</strong>, e o botão não aparece para outros perfis. Na aba Menux, um perfil com <strong>Executar scripts e ferramentas</strong> que não seja Administrador recebe um botão <strong>Abrir</strong> na entrada, que executa o assistente do console em um terminal; sem essa ação, a entrada mostra apenas sua descrição. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O assistente do console é executado como root. Nenhum dos dois está disponível em um host Proxmox Backup Server."
           }
         }
       ]
@@ -70,7 +70,7 @@
               ],
               [
                 "Baixe um modelo oficial",
-                "Pesquisa o catálogo oficial, escolhe o armazenamento para modelos e baixa o modelo escolhido, mostrando o progresso. Ao terminar, <strong>Use este modelo</strong> o seleciona."
+                "Pesquisa o catálogo oficial, escolhe o armazenamento para modelos e baixa o modelo escolhido, mostrando o progresso. Ao terminar, o assistente volta para <strong>Sistema</strong> com esse modelo selecionado."
               ],
               [
                 "Nome do host do contêiner",
@@ -103,12 +103,12 @@
           }
         },
         {
-          "p": "O modelo baixado é verificado com o SHA-512 do catálogo oficial antes de poder ser usado. Só podem ser baixados modelos de <code>download.proxmox.com</code> e do TurnKey, e arquivos de imagens OCI ou Docker nunca aparecem na lista: eles são tratados pelo <ociLink>OCI Manager Apps</ociLink>. O assistente do console também lista modelos TurnKey e arquivos locais; para um arquivo local, pergunta sua arquitetura (amd64 ou arm64)."
+          "p": "O modelo baixado é verificado com o SHA-512 do catálogo oficial antes de poder ser usado. O Monitor baixa apenas os modelos de sistema de <code>download.proxmox.com</code>, e o console também os do TurnKey. Arquivos de imagens OCI ou Docker nunca aparecem na lista: eles são tratados pelo <ociLink>OCI manager Apps</ociLink>. O assistente do console também lista modelos TurnKey e arquivos locais; para um arquivo local, pergunta sua arquitetura (amd64 ou arm64)."
         },
         {
           "calloutTip": {
             "title": "Prepare o sistema para sua primeira inicialização",
-            "body": "Antes da primeira inicialização, duas unidades do systemd conhecidas por falhar em alguns modelos são ajustadas no disco do contêiner parado: o certificado é regenerado depois do <code>ssl-cert</code>, e a espera pela rede é ignorada quando o contêiner não tem rede. Arquivos que já existem nunca são sobrescritos, e nada é instalado nem executado dentro do contêiner. Esta etapa também é executada automaticamente quando o contêiner recebe uma GPU NVIDIA ou dispositivos USB."
+            "body": "Antes da primeira inicialização, duas unidades do systemd conhecidas por falhar em alguns modelos são ajustadas no disco do contêiner parado: o certificado é regenerado depois do <code>ssl-cert</code>, e a espera pela rede é ignorada quando o contêiner não tem rede. Arquivos que já existem nunca são sobrescritos, e nada é instalado nem executado dentro do contêiner. Um contêiner com uma GPU NVIDIA ou dispositivos USB também passa por uma preparação antes da primeira inicialização, que configura esses dispositivos; as duas unidades só são ajustadas quando este interruptor está ativado."
           }
         }
       ]
@@ -163,7 +163,7 @@
           }
         },
         {
-          "p": "Em armazenamento thin, como LVM-thin ou ZFS, um disco maior que o espaço livre é permitido com um aviso na revisão. Em outros armazenamentos, é recusado."
+          "p": "Em armazenamento LVM-thin ou ZFS, um disco maior que o espaço livre é permitido com um aviso na revisão. Em outros armazenamentos, é recusado."
         },
         {
           "p": "<strong>Adicionar ponto de montagem</strong> adiciona até 16 pontos de montagem de dois tipos:"
@@ -247,7 +247,7 @@
       "title": "Criação",
       "blocks": [
         {
-          "p": "A criação mostra suas etapas com o tempo de cada uma: <strong>Envie a solicitação para Proxmox</strong>, <strong>Crie o contêiner</strong> e, quando solicitado, <strong>Inicie o contêiner</strong> ou <strong>Prepare e inicie o contêiner</strong>. <strong>Mostrar log</strong> abre o log da tarefa do Proxmox dessa etapa enquanto ela é executada. Os avisos escritos pelo Proxmox na tarefa, se houver, aparecem sob a respectiva etapa: descrevem a tarefa, não o estado do contêiner."
+          "p": "A criação mostra suas etapas com o tempo de cada uma: <strong>Envie a solicitação para Proxmox</strong>, <strong>Crie o contêiner</strong> e, quando solicitado, <strong>Inicie o contêiner</strong>, <strong>Prepare o contêiner para sua primeira inicialização</strong> ou <strong>Prepare e inicie o contêiner</strong>. <strong>Mostrar log</strong> abre o log da tarefa do Proxmox dessa etapa enquanto ela é executada. Os avisos escritos pelo Proxmox na tarefa, se houver, aparecem sob a respectiva etapa: descrevem a tarefa, não o estado do contêiner."
         },
         {
           "figure": {
@@ -257,7 +257,7 @@
           }
         },
         {
-          "p": "Fechar o diálogo não interrompe a criação: quando ele é aberto novamente na mesma aba do navegador, mostra a operação no ponto em que está. Quando o contêiner já iniciou, <strong>Terminal aberto</strong> abre um shell dentro dele no <terminalLink>terminal</terminalLink> do Monitor."
+          "p": "Fechar o diálogo não interrompe a criação: quando ele é aberto novamente na mesma aba do navegador, mostra a operação no ponto em que está. Quando o contêiner já iniciou, <strong>Terminal aberto</strong> abre um shell dentro dele, no console do LXC descrito em <terminalLink>Terminal</terminalLink>. Esse botão aparece quando o assistente foi aberto a partir de VMs e LXCs, não da aba Menux."
         }
       ]
     },
@@ -266,7 +266,7 @@
       "title": "O contêiner criado",
       "blocks": [
         {
-          "p": "O contêiner é sempre não privilegiado e, no Proxmox, tem as tags <code>proxmenux</code>, <code>lxc</code> e o nome da distribuição, além destas <strong>Notas</strong> com seu modelo, recursos, pontos de montagem, rede e hardware. Se as Notas forem alteradas no Proxmox antes do fim da criação, elas são mantidas como estão."
+          "p": "O contêiner é sempre não privilegiado e, no Proxmox, tem as tags <code>proxmenux</code>, <code>lxc</code> e o nome da distribuição, além destas <strong>Notas</strong> com seu modelo, recursos, pontos de montagem, rede e hardware, e um selo Docs que leva a esta página. Se as Notas forem alteradas no Proxmox antes do fim da criação, elas são mantidas como estão."
         },
         {
           "figure": {
@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Quando não pode ser removido pelo Monitor",
-            "body": "O Monitor remove apenas contêineres com um único disco raiz e sem configuração especial. Ele recusa, entre outros, um contêiner em execução, protegido ou bloqueado, um com ponto de montagem ou disco não utilizado, um com diretório do host, e um com dispositivos USB, um Coral USB ou uma GPU NVIDIA, que adicionam configurações LXC brutas. O motivo é exibido no diálogo. Esses contêineres são removidos pelo Proxmox."
+            "body": "O Monitor remove apenas contêineres com um único disco raiz e sem configuração especial. Ele recusa, entre outros, um contêiner em execução, protegido ou bloqueado, um com ponto de montagem ou disco não utilizado, um com diretório do host, e um com dispositivos USB, um Coral USB ou uma GPU NVIDIA, que adicionam configurações LXC brutas. O motivo é exibido no diálogo, e esses contêineres são removidos pelo Proxmox. Quando o único motivo é a proteção contra remoção, o diálogo oferece <strong>Desativar proteção…</strong> e depois remove o contêiner."
           }
         }
       ]
@@ -305,7 +305,7 @@
               "Contêineres privilegiados: o contêiner é sempre não privilegiado.",
               "Arquiteturas diferentes de amd64 e arm64.",
               "Endereços IPv6 e servidores DNS IPv6.",
-              "Contêineres a partir de imagens OCI ou Docker: quem os cria é o <ociLink>OCI Manager Apps</ociLink>.",
+              "Contêineres a partir de imagens OCI ou Docker: quem os cria é o <ociLink>OCI manager Apps</ociLink>.",
               "Configurações LXC brutas digitadas à mão, ou a instalação de software dentro do contêiner."
             ]
           }

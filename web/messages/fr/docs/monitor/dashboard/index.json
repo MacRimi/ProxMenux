@@ -29,7 +29,7 @@
         "owns": "Lanceur unifié de liens web LXC enregistrés et de liens personnalisés, avec catégories, recherche, raccourcis vers les invités et indicateurs de mise à jour par application."
       },
       {
-        "name": "Catalogue (Menux)",
+        "name": "Menux",
         "linksTo": "/docs/monitor/dashboard/catalog",
         "owns": "Tout ce que ProxMenux peut installer ou exécuter : applications OCI, outils du menu de la console, VM qu’il crée et Community Scripts, chacun avec sa fiche, exécutés avec les mêmes étapes que le menu de la console."
       },

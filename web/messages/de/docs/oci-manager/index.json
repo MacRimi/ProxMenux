@@ -42,7 +42,7 @@
     {
       "id": "where",
       "title": "Wo Sie es finden",
-      "intro": "Öffnen Sie auf dem Proxmox-Knoten als root den Eintrag <strong>OCI manager Apps (Technology Preview)</strong> im ProxMenux-Hauptmenü. Dieselben Anwendungen installiert auch die <catalogLink>Registerkarte Katalog</catalogLink> von ProxMenux Monitor. In der Konsole bietet die erste Ansicht von OCI manager Apps:",
+      "intro": "Öffnen Sie auf dem Proxmox-Knoten als root den Eintrag <strong>OCI manager Apps (Technology Preview)</strong> im ProxMenux-Hauptmenü. Dieselben Anwendungen installiert auch die <catalogLink>Registerkarte Menux</catalogLink> von ProxMenux Monitor. In der Konsole bietet die erste Ansicht von OCI manager Apps:",
       "blocks": [
         {
           "list": {

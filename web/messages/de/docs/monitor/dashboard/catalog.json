@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Dashboard: Registerkarte Katalog | ProxMenux-Dokumentation",
-    "description": "Die Registerkarte Katalog von ProxMenux Monitor, angezeigt als Menux: die OCI-Anwendungen, die ProxMenux-Werkzeuge, die VMs, die ProxMenux erstellt, und die Community Scripts an einem Ort, jeweils mit eigenem Datenblatt und mit denselben Schritten ausgeführt wie im Konsolenmenü."
+    "title": "ProxMenux Monitor Dashboard: Registerkarte Menux | ProxMenux-Dokumentation",
+    "description": "Die Registerkarte Menux von ProxMenux Monitor: die OCI-Anwendungen, die ProxMenux-Werkzeuge, die VMs, die ProxMenux erstellt, und die Community Scripts an einem Ort, jeweils mit eigenem Datenblatt und mit denselben Schritten ausgeführt wie im Konsolenmenü."
   },
   "header": {
-    "title": "Dashboard: Registerkarte Katalog",
+    "title": "Dashboard: Registerkarte Menux",
     "description": "Alles, was ProxMenux installieren oder ausführen kann, in einer Registerkarte: Anwendungen, Werkzeuge des Menüs und Skripte, jeweils mit einem Datenblatt, das sie beschreibt, bevor etwas ausgeführt wird.",
     "section": "ProxMenux Monitor · Dashboard"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "Die Registerkarte Katalog erscheint in der oberen Leiste als <strong>Menux</strong>. Sie vereint, was das Konsolenmenü von ProxMenux bietet, und die Anwendungen, die es installiert, sodass sie im Monitor gefunden, nachgelesen und ausgeführt werden können. Beim Ausführen eines Eintrags öffnet sich im Monitor ein Terminal mit denselben Schritten wie im Konsolenmenü. Die Registerkarte enthält vier Arten von Einträgen:"
+          "p": "Die Registerkarte <strong>Menux</strong> vereint, was das Konsolenmenü von ProxMenux bietet, und die Anwendungen, die es installiert, sodass sie im Monitor gefunden, nachgelesen und ausgeführt werden können. Beim Ausführen eines Eintrags öffnet sich im Monitor ein Terminal mit denselben Schritten wie im Konsolenmenü. Die Registerkarte enthält vier Arten von Einträgen:"
         },
         {
           "table": {
@@ -49,14 +49,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Registerkarte Katalog mit dem Suchfeld, der Einstellungsschaltfläche, einer empfohlenen Anwendung und den ProxMenux-Werkzeugen",
-            "caption": "Die Registerkarte Katalog, in der oberen Leiste als Menux angezeigt."
+            "alt": "Registerkarte Menux mit dem Suchfeld, der Einstellungsschaltfläche, einer empfohlenen Anwendung und den ProxMenux-Werkzeugen",
+            "caption": "Die Registerkarte Menux."
           }
         },
         {
           "calloutInfo": {
             "title": "Wer die Registerkarte sieht",
-            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Menux</strong> enthält. Zum Installieren, Ausführen oder Öffnen eines Eintrags ist die Aktion <strong>Skripte und Werkzeuge ausführen</strong> nötig; ohne sie sind die Datenblätter schreibgeschützt und haben keine Schaltflächen. So sieht das Profil <strong>Beobachter</strong> die Registerkarte. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Monitor eines Proxmox-Backup-Server-Hosts hat keine Registerkarte Katalog."
+            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Menux</strong> enthält. Zum Installieren, Ausführen oder Öffnen eines Eintrags ist die Aktion <strong>Skripte und Werkzeuge ausführen</strong> nötig; ohne sie sind die Datenblätter schreibgeschützt und haben keine Schaltflächen. So sieht das Profil <strong>Beobachter</strong> die Registerkarte. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Monitor eines Proxmox-Backup-Server-Hosts hat keine Registerkarte Menux."
           }
         }
       ]
@@ -83,7 +83,7 @@
               ],
               [
                 "Werkzeuge von Community Scripts",
-                "Die Skripte von Community Scripts, die auf den Proxmox-Host wirken, gruppiert nach ihrer Kategorie."
+                "Die Skripte von Community Scripts, die den Proxmox-Host verwalten, in einer Kachel."
               ],
               [
                 "App-Kategorien",
@@ -196,7 +196,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminal mit dem Titel Open SMART Disk Health & Test, in dem der Dialog zur Festplattenauswahl des Konsolenmenüs läuft",
-            "caption": "Ein Werkzeug des Menüs, aus dem Katalog in einem eigenen Terminal geöffnet."
+            "caption": "Ein Werkzeug des Menüs, aus der Registerkarte Menux in einem eigenen Terminal geöffnet."
           }
         },
         {
@@ -212,7 +212,7 @@
               ],
               [
                 "ProxMenux-Werkzeug oder VM",
-                "Diese Option des Konsolenmenüs, ohne den Rest des Menüs drumherum."
+                "Diese Option des Konsolenmenüs, ohne den Rest des Menüs drumherum. Die Optionen, die selbst Menüs sind, die Systeme für NAS, Windows und Linux-VMs, öffnen sofort ihr Terminal statt ihres Datenblatts."
               ],
               [
                 "LXC aus einer Vorlage erstellen",
@@ -292,7 +292,7 @@
               {
                 "href": "/docs/create-vm/lxc",
                 "label": "LXC aus einer Vorlage erstellen",
-                "tail": "der Assistent, der aus dem Katalog geöffnet wird."
+                "tail": "der Assistent, der aus der Registerkarte Menux geöffnet wird."
               },
               {
                 "href": "/docs/external-repositories",

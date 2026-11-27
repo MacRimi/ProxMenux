@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Panel: pestaña Catálogo | Documentación de ProxMenux",
-    "description": "La pestaña Catálogo de ProxMenux Monitor, que aparece como Menux: las aplicaciones OCI, las herramientas de ProxMenux, las VMs que crea ProxMenux y los Community Scripts en un mismo sitio, cada uno con su ficha, y se ejecutan con los mismos pasos que en el menú de consola."
+    "title": "ProxMenux Monitor Panel: pestaña Menux | Documentación de ProxMenux",
+    "description": "La pestaña Menux de ProxMenux Monitor: las aplicaciones OCI, las herramientas de ProxMenux, las VMs que crea ProxMenux y los Community Scripts en un mismo sitio, cada uno con su ficha, y se ejecutan con los mismos pasos que en el menú de consola."
   },
   "header": {
-    "title": "Panel: pestaña Catálogo",
+    "title": "Panel: pestaña Menux",
     "description": "Todo lo que ProxMenux puede instalar o ejecutar, reunido en una pestaña: aplicaciones, herramientas del menú y scripts, cada uno con una ficha que lo describe antes de ejecutar nada.",
     "section": "ProxMenux Monitor · Panel"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "La pestaña Catálogo aparece en la barra superior como <strong>Menux</strong>. Reúne lo que ofrece el menú de consola de ProxMenux y las aplicaciones que instala, para poder encontrarlos, consultarlos y ejecutarlos desde el Monitor. Al ejecutar un elemento se abre un terminal en el Monitor con los mismos pasos que en el menú de consola. La pestaña contiene cuatro tipos de elementos:"
+          "p": "La pestaña <strong>Menux</strong> reúne lo que ofrece el menú de consola de ProxMenux y las aplicaciones que instala, para poder encontrarlos, consultarlos y ejecutarlos desde el Monitor. Al ejecutar un elemento se abre un terminal en el Monitor con los mismos pasos que en el menú de consola. La pestaña contiene cuatro tipos de elementos:"
         },
         {
           "table": {
@@ -49,14 +49,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Pestaña Catálogo con el cuadro de búsqueda, el botón de ajustes, una aplicación destacada y las herramientas de ProxMenux",
-            "caption": "La pestaña Catálogo, que aparece como Menux en la barra superior."
+            "alt": "Pestaña Menux con el cuadro de búsqueda, el botón de ajustes, una aplicación destacada y las herramientas de ProxMenux",
+            "caption": "La pestaña Menux."
           }
         },
         {
           "calloutInfo": {
             "title": "Quién ve la pestaña",
-            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Menux</strong>. Para instalar, ejecutar o abrir un elemento hace falta la acción <strong>Ejecutar scripts y herramientas</strong>; sin ella, las fichas son de solo lectura y no tienen botones. Así ve la pestaña el perfil <strong>Observador</strong>. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El Monitor de un host con Proxmox Backup Server no tiene pestaña Catálogo."
+            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Menux</strong>. Para instalar, ejecutar o abrir un elemento hace falta la acción <strong>Ejecutar scripts y herramientas</strong>; sin ella, las fichas son de solo lectura y no tienen botones. Así ve la pestaña el perfil <strong>Observador</strong>. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El Monitor de un host con Proxmox Backup Server no tiene pestaña Menux."
           }
         }
       ]
@@ -83,7 +83,7 @@
               ],
               [
                 "Herramientas de Community Scripts",
-                "Los scripts de Community Scripts que actúan sobre el host de Proxmox, agrupados por su categoría."
+                "Los scripts de Community Scripts que gestionan el host de Proxmox, en un solo recuadro."
               ],
               [
                 "Categorías de apps",
@@ -196,7 +196,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminal con el título Open SMART Disk Health & Test que ejecuta el diálogo de selección de discos del menú de consola",
-            "caption": "Una herramienta del menú abierta desde el Catálogo, en su propio terminal."
+            "caption": "Una herramienta del menú abierta desde la pestaña Menux, en su propio terminal."
           }
         },
         {
@@ -212,7 +212,7 @@
               ],
               [
                 "Herramienta de ProxMenux o VM",
-                "Esa opción del menú de consola, sin el resto del menú alrededor."
+                "Esa opción del menú de consola, sin el resto del menú alrededor. Las opciones que son menús en sí mismas, los sistemas de VM NAS, Windows y Linux, abren su terminal directamente en lugar de su ficha."
               ],
               [
                 "Crear LXC a partir de una plantilla",
@@ -292,7 +292,7 @@
               {
                 "href": "/docs/create-vm/lxc",
                 "label": "Crear LXC a partir de una plantilla",
-                "tail": "el asistente que se abre desde el Catálogo."
+                "tail": "el asistente que se abre desde la pestaña Menux."
               },
               {
                 "href": "/docs/external-repositories",

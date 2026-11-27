@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Dashboard: Catalog tab | ProxMenux Documentation",
-    "description": "The Catalog tab of ProxMenux Monitor, shown as Menux: the OCI applications, the ProxMenux tools, the VMs ProxMenux creates and the Community Scripts in one place, each with its sheet, and run with the same steps as the console menu."
+    "title": "ProxMenux Monitor Dashboard: Menux tab | ProxMenux Documentation",
+    "description": "The Menux tab of ProxMenux Monitor: the OCI applications, the ProxMenux tools, the VMs ProxMenux creates and the Community Scripts in one place, each with its sheet, and run with the same steps as the console menu."
   },
   "header": {
-    "title": "Dashboard: Catalog tab",
+    "title": "Dashboard: Menux tab",
     "description": "Everything ProxMenux can install or run, gathered in one tab: applications, tools of the menu and scripts, each with a sheet that describes it before anything is run.",
     "section": "ProxMenux Monitor · Dashboard"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "The Catalog tab appears in the top bar as <strong>Menux</strong>. It brings together what the console menu of ProxMenux offers and the applications it installs, so they can be found, read about and run from the Monitor. Running an item opens a terminal in the Monitor with the same steps as the console menu. The tab holds four kinds of items:"
+          "p": "The <strong>Menux</strong> tab brings together what the console menu of ProxMenux offers and the applications it installs, so they can be found, read about and run from the Monitor. Running an item opens a terminal in the Monitor with the same steps as the console menu. The tab holds four kinds of items:"
         },
         {
           "table": {
@@ -45,14 +45,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Catalog tab with the search box, the settings button, a featured application and the ProxMenux tools",
-            "caption": "The Catalog tab, shown as Menux in the top bar."
+            "alt": "Menux tab with the search box, the settings button, a featured application and the ProxMenux tools",
+            "caption": "The Menux tab."
           }
         },
         {
           "calloutInfo": {
             "title": "Who sees the tab",
-            "body": "The tab appears when the profile of the account includes the <strong>Menux</strong> area. Installing, running or opening an item needs the action <strong>Run scripts and tools</strong>; without it the sheets are read-only and have no buttons. The <strong>Observer</strong> profile sees the tab this way. Profiles are described in <accessLink>Users and profiles</accessLink>. The Monitor of a Proxmox Backup Server host has no Catalog tab."
+            "body": "The tab appears when the profile of the account includes the <strong>Menux</strong> area. Installing, running or opening an item needs the action <strong>Run scripts and tools</strong>; without it the sheets are read-only and have no buttons. The <strong>Observer</strong> profile sees the tab this way. Profiles are described in <accessLink>Users and profiles</accessLink>. The Monitor of a Proxmox Backup Server host has no Menux tab."
           }
         }
       ]
@@ -76,7 +76,7 @@
               ],
               [
                 "Community Scripts tools",
-                "The Community Scripts scripts that act on the Proxmox host, grouped by their category."
+                "The Community Scripts scripts that manage the Proxmox host, in one tile."
               ],
               [
                 "App categories",
@@ -185,7 +185,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminal titled Open SMART Disk Health & Test running the disk selection dialog of the console menu",
-            "caption": "A tool of the menu opened from the Catalog, in its own terminal."
+            "caption": "A tool of the menu opened from the Menux tab, in its own terminal."
           }
         },
         {
@@ -198,7 +198,7 @@
               ],
               [
                 "ProxMenux tool or VM",
-                "That option of the console menu, without the rest of the menu around it."
+                "That option of the console menu, without the rest of the menu around it. The options that are menus themselves, the NAS, Windows and Linux VM systems, open their terminal at once instead of their sheet."
               ],
               [
                 "Create LXC from template",
@@ -263,7 +263,7 @@
             "items": [
               { "href": "/docs/oci-manager", "label": "OCI manager Apps", "tail": "how an OCI image becomes an LXC and how it is installed." },
               { "href": "/docs/monitor/dashboard/apps", "label": "Apps tab", "tail": "the applications already installed, with their links and updates." },
-              { "href": "/docs/create-vm/lxc", "label": "Create LXC from template", "tail": "the wizard opened from the Catalog." },
+              { "href": "/docs/create-vm/lxc", "label": "Create LXC from template", "tail": "the wizard opened from the Menux tab." },
               { "href": "/docs/external-repositories", "label": "External Repositories", "tail": "the third-party projects ProxMenux runs, Community Scripts among them, and where to report their problems." },
               { "href": "/docs/monitor/dashboard/settings#navigation-order", "label": "Settings tab", "tail": "the order of the tabs in the top bar." }
             ]

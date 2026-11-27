@@ -27,12 +27,12 @@
                 "<strong>Créer un LXC</strong>, dans l’en-tête de la carte <strong>Machines virtuelles et conteneurs</strong> de l’onglet <vmsLxcsLink>VM et LXC</vmsLxcsLink>."
               ],
               [
-                "Catalogue du Monitor",
-                "L’entrée <strong>Créer un LXC à partir d'un modèle</strong> de l’onglet <catalogLink>Catalogue</catalogLink>, affiché sous le nom Menux dans la barre supérieure, ouvre le même assistant."
+                "Onglet Menux du Monitor",
+                "L’entrée <strong>Créer un LXC à partir d'un modèle</strong> de l’onglet <catalogLink>Menux</catalogLink> ouvre le même assistant."
               ],
               [
                 "Menu de la console",
-                "Menu principal → <strong>Créer une VM et un LXC à partir d'un modèle ou d'un script</strong> → <strong>Créer un LXC à partir d'un modèle</strong>. Les étapes sont les mêmes, sous forme de boîtes de dialogue, avec le titre <strong>N/5</strong>."
+                "Menu principal → <strong>Créer une VM et un LXC à partir d'un modèle ou d'un script</strong> → <strong>Créer un LXC à partir d'un modèle</strong>. Les étapes sont les mêmes, sous forme de boîtes de dialogue numérotées de 1/5 à 5/5 dans leur titre."
               ]
             ]
           }
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Qui peut l’utiliser",
-            "body": "Dans le Monitor, l’assistant nécessite le profil <strong>Administrateur</strong>, et le bouton n’apparaît pas pour les autres profils. Dans le Catalogue, un profil disposant de <strong>Exécuter des scripts et des outils</strong> qui n’est pas Administrateur obtient un bouton <strong>Ouvrir</strong> dans l’entrée, qui exécute l’assistant de la console dans un terminal ; sans cette action, l’entrée n’affiche que sa description. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. L’assistant de la console s’exécute en root. Aucun des deux n’est disponible sur un hôte Proxmox Backup Server."
+            "body": "Dans le Monitor, l’assistant nécessite le profil <strong>Administrateur</strong>, et le bouton n’apparaît pas pour les autres profils. Dans l’onglet Menux, un profil disposant de <strong>Exécuter des scripts et des outils</strong> qui n’est pas Administrateur obtient un bouton <strong>Ouvrir</strong> dans l’entrée, qui exécute l’assistant de la console dans un terminal ; sans cette action, l’entrée n’affiche que sa description. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. L’assistant de la console s’exécute en root. Aucun des deux n’est disponible sur un hôte Proxmox Backup Server."
           }
         }
       ]
@@ -70,7 +70,7 @@
               ],
               [
                 "Télécharger un modèle officiel",
-                "Recherche dans le catalogue officiel, choisit le stockage des modèles et télécharge le modèle choisi en affichant sa progression. À la fin, <strong>Utiliser ce modèle</strong> le sélectionne."
+                "Recherche dans le catalogue officiel, choisit le stockage des modèles et télécharge le modèle choisi en affichant sa progression. À la fin, l’assistant revient à <strong>Système</strong> avec ce modèle sélectionné."
               ],
               [
                 "Nom d'hôte du conteneur",
@@ -103,12 +103,12 @@
           }
         },
         {
-          "p": "Le modèle téléchargé est vérifié par rapport au SHA-512 du catalogue officiel avant de pouvoir être utilisé. Seuls les modèles de <code>download.proxmox.com</code> et de TurnKey peuvent être téléchargés, et les archives d’images OCI ou Docker n’apparaissent jamais dans la liste : elles sont prises en charge par <ociLink>OCI Manager Apps</ociLink>. L’assistant de la console liste aussi les modèles TurnKey et les archives locales ; pour une archive locale, il demande son architecture (amd64 ou arm64)."
+          "p": "Le modèle téléchargé est vérifié par rapport au SHA-512 du catalogue officiel avant de pouvoir être utilisé. Le Monitor ne télécharge que les modèles système de <code>download.proxmox.com</code>, et la console aussi ceux de TurnKey. Les archives d’images OCI ou Docker n’apparaissent jamais dans la liste : elles sont prises en charge par <ociLink>OCI manager Apps</ociLink>. L’assistant de la console liste aussi les modèles TurnKey et les archives locales ; pour une archive locale, il demande son architecture (amd64 ou arm64)."
         },
         {
           "calloutTip": {
             "title": "Préparer le système pour son premier démarrage",
-            "body": "Avant le premier démarrage, deux unités systemd connues pour échouer dans certains modèles sont ajustées sur le disque du conteneur arrêté : le certificat est régénéré après <code>ssl-cert</code>, et l’attente du réseau est ignorée lorsque le conteneur n’a pas de réseau. Les fichiers déjà existants ne sont jamais écrasés, et rien n’est installé ni exécuté dans le conteneur. Cette étape s’exécute aussi d’elle-même lorsque le conteneur reçoit un GPU NVIDIA ou des périphériques USB."
+            "body": "Avant le premier démarrage, deux unités systemd connues pour échouer dans certains modèles sont ajustées sur le disque du conteneur arrêté : le certificat est régénéré après <code>ssl-cert</code>, et l’attente du réseau est ignorée lorsque le conteneur n’a pas de réseau. Les fichiers déjà existants ne sont jamais écrasés, et rien n’est installé ni exécuté dans le conteneur. Un conteneur avec un GPU NVIDIA ou des périphériques USB passe aussi par une préparation avant son premier démarrage, qui configure ces périphériques ; les deux unités ne sont ajustées que lorsque cet interrupteur est activé."
           }
         }
       ]
@@ -163,7 +163,7 @@
           }
         },
         {
-          "p": "Sur un stockage thin, comme LVM-thin ou ZFS, un disque plus grand que l’espace libre est autorisé avec un avertissement dans le récapitulatif. Sur les autres stockages, il est refusé."
+          "p": "Sur un stockage LVM-thin ou ZFS, un disque plus grand que l’espace libre est autorisé avec un avertissement dans le récapitulatif. Sur les autres stockages, il est refusé."
         },
         {
           "p": "<strong>Ajouter un point de montage</strong> ajoute jusqu’à 16 points de montage de deux types :"
@@ -247,7 +247,7 @@
       "title": "Création",
       "blocks": [
         {
-          "p": "La création affiche ses étapes avec la durée de chacune : <strong>Envoyer la demande à Proxmox</strong>, <strong>Créer le conteneur</strong> et, si demandé, <strong>Démarrer le conteneur</strong> ou <strong>Préparer et démarrer le conteneur</strong>. <strong>Afficher le journal</strong> ouvre le journal de la tâche Proxmox de cette étape pendant son exécution. Les avertissements écrits par Proxmox dans la tâche, s’il y en a, apparaissent sous leur étape : ils décrivent la tâche, pas l’état du conteneur."
+          "p": "La création affiche ses étapes avec la durée de chacune : <strong>Envoyer la demande à Proxmox</strong>, <strong>Créer le conteneur</strong> et, si demandé, <strong>Démarrer le conteneur</strong>, <strong>Préparer le conteneur pour son premier démarrage</strong> ou <strong>Préparer et démarrer le conteneur</strong>. <strong>Afficher le journal</strong> ouvre le journal de la tâche Proxmox de cette étape pendant son exécution. Les avertissements écrits par Proxmox dans la tâche, s’il y en a, apparaissent sous leur étape : ils décrivent la tâche, pas l’état du conteneur."
         },
         {
           "figure": {
@@ -257,7 +257,7 @@
           }
         },
         {
-          "p": "Fermer la boîte de dialogue n’arrête pas la création : lorsqu’elle est rouverte dans le même onglet du navigateur, elle affiche l’opération là où elle en est. Une fois le conteneur démarré, <strong>Ouvrir le terminal</strong> ouvre un shell dans celui-ci dans le <terminalLink>Terminal</terminalLink> du Monitor."
+          "p": "Fermer la boîte de dialogue n’arrête pas la création : lorsqu’elle est rouverte dans le même onglet du navigateur, elle affiche l’opération là où elle en est. Une fois le conteneur démarré, <strong>Ouvrir le terminal</strong> ouvre un shell dans celui-ci, dans la console LXC décrite dans <terminalLink>Terminal</terminalLink>. Ce bouton apparaît quand l’assistant a été ouvert depuis VM et LXC, pas depuis l’onglet Menux."
         }
       ]
     },
@@ -266,7 +266,7 @@
       "title": "Le conteneur créé",
       "blocks": [
         {
-          "p": "Le conteneur est toujours non privilégié et, dans Proxmox, il porte les étiquettes <code>proxmenux</code>, <code>lxc</code> et le nom de la distribution, ainsi que ces <strong>Notes</strong> avec son modèle, ses ressources, ses points de montage, son réseau et son matériel. Si les Notes sont modifiées dans Proxmox avant la fin de la création, elles sont conservées telles quelles."
+          "p": "Le conteneur est toujours non privilégié et, dans Proxmox, il porte les étiquettes <code>proxmenux</code>, <code>lxc</code> et le nom de la distribution, ainsi que ces <strong>Notes</strong> avec son modèle, ses ressources, ses points de montage, son réseau et son matériel, et un badge Docs qui renvoie à cette page. Si les Notes sont modifiées dans Proxmox avant la fin de la création, elles sont conservées telles quelles."
         },
         {
           "figure": {
@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Quand il ne peut pas être supprimé depuis le Monitor",
-            "body": "Le Monitor ne supprime que les conteneurs avec un seul disque racine et sans configuration particulière. Il refuse, entre autres, un conteneur en cours d’exécution, protégé ou verrouillé, un conteneur avec un point de montage ou un disque inutilisé, un conteneur avec un répertoire de l’hôte, et un conteneur avec des périphériques USB, un Coral USB ou un GPU NVIDIA, qui ajoutent des paramètres LXC bruts. La raison est affichée dans la boîte de dialogue. Ces conteneurs se suppriment depuis Proxmox."
+            "body": "Le Monitor ne supprime que les conteneurs avec un seul disque racine et sans configuration particulière. Il refuse, entre autres, un conteneur en cours d’exécution, protégé ou verrouillé, un conteneur avec un point de montage ou un disque inutilisé, un conteneur avec un répertoire de l’hôte, et un conteneur avec des périphériques USB, un Coral USB ou un GPU NVIDIA, qui ajoutent des paramètres LXC bruts. La raison est affichée dans la boîte de dialogue, et ces conteneurs se suppriment depuis Proxmox. Quand la seule raison est la protection contre la suppression, la boîte de dialogue propose <strong>Désactiver la protection…</strong> puis supprime le conteneur."
           }
         }
       ]
@@ -305,7 +305,7 @@
               "Conteneurs privilégiés : le conteneur est toujours non privilégié.",
               "Architectures autres que amd64 et arm64.",
               "Adresses IPv6 et serveurs DNS IPv6.",
-              "Conteneurs à partir d’images OCI ou Docker : c’est <ociLink>OCI Manager Apps</ociLink> qui les crée.",
+              "Conteneurs à partir d’images OCI ou Docker : c’est <ociLink>OCI manager Apps</ociLink> qui les crée.",
               "Paramètres LXC bruts saisis à la main, ou installation de logiciels dans le conteneur."
             ]
           }

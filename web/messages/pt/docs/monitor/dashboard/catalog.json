@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "ProxMenux Monitor Painel: aba Catálogo | Documentação ProxMenux",
-    "description": "A aba Catálogo do ProxMenux Monitor, exibida como Menux: os aplicativos OCI, as ferramentas do ProxMenux, as VMs que o ProxMenux cria e os Community Scripts em um só lugar, cada um com sua ficha, executados com os mesmos passos do menu do console."
+    "title": "ProxMenux Monitor Painel: aba Menux | Documentação ProxMenux",
+    "description": "A aba Menux do ProxMenux Monitor: os aplicativos OCI, as ferramentas do ProxMenux, as VMs que o ProxMenux cria e os Community Scripts em um só lugar, cada um com sua ficha, executados com os mesmos passos do menu do console."
   },
   "header": {
-    "title": "Painel: aba Catálogo",
+    "title": "Painel: aba Menux",
     "description": "Tudo o que o ProxMenux pode instalar ou executar, reunido em uma aba: aplicativos, ferramentas do menu e scripts, cada um com uma ficha que o descreve antes de qualquer execução.",
     "section": "ProxMenux Monitor · Painel"
   },
@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "A aba Catálogo aparece na barra superior como <strong>Menux</strong>. Ela reúne o que o menu do console do ProxMenux oferece e os aplicativos que ele instala, para que possam ser encontrados, consultados e executados a partir do Monitor. Executar um item abre um terminal no Monitor com os mesmos passos do menu do console. A aba contém quatro tipos de itens:"
+          "p": "A aba <strong>Menux</strong> reúne o que o menu do console do ProxMenux oferece e os aplicativos que ele instala, para que possam ser encontrados, consultados e executados a partir do Monitor. Executar um item abre um terminal no Monitor com os mesmos passos do menu do console. A aba contém quatro tipos de itens:"
         },
         {
           "table": {
@@ -49,14 +49,14 @@
         {
           "figure": {
             "src": "/monitor/catalog/catalog-home.png",
-            "alt": "Aba Catálogo com a caixa de pesquisa, o botão de configurações, um aplicativo em destaque e as ferramentas do ProxMenux",
-            "caption": "A aba Catálogo, exibida como Menux na barra superior."
+            "alt": "Aba Menux com a caixa de pesquisa, o botão de configurações, um aplicativo em destaque e as ferramentas do ProxMenux",
+            "caption": "A aba Menux."
           }
         },
         {
           "calloutInfo": {
             "title": "Quem vê a aba",
-            "body": "A aba aparece quando o perfil da conta inclui a área <strong>Menux</strong>. Instalar, executar ou abrir um item exige a ação <strong>Executar scripts e ferramentas</strong>; sem ela, as fichas são somente leitura e não têm botões. É assim que o perfil <strong>Observador</strong> vê a aba. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O Monitor de um host Proxmox Backup Server não tem a aba Catálogo."
+            "body": "A aba aparece quando o perfil da conta inclui a área <strong>Menux</strong>. Instalar, executar ou abrir um item exige a ação <strong>Executar scripts e ferramentas</strong>; sem ela, as fichas são somente leitura e não têm botões. É assim que o perfil <strong>Observador</strong> vê a aba. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O Monitor de um host Proxmox Backup Server não tem a aba Menux."
           }
         }
       ]
@@ -83,7 +83,7 @@
               ],
               [
                 "Ferramentas do Community Scripts",
-                "Os scripts do Community Scripts que atuam no host Proxmox, agrupados por categoria."
+                "Os scripts do Community Scripts que gerenciam o host Proxmox, em um só bloco."
               ],
               [
                 "Categorias de apps",
@@ -196,7 +196,7 @@
           "figure": {
             "src": "/monitor/catalog/catalog-run.png",
             "alt": "Terminal com o título Open SMART Disk Health & Test executando a caixa de diálogo de seleção de discos do menu do console",
-            "caption": "Uma ferramenta do menu aberta a partir do Catálogo, em seu próprio terminal."
+            "caption": "Uma ferramenta do menu aberta a partir da aba Menux, em seu próprio terminal."
           }
         },
         {
@@ -212,7 +212,7 @@
               ],
               [
                 "Ferramenta do ProxMenux ou VM",
-                "Essa opção do menu do console, sem o resto do menu ao redor."
+                "Essa opção do menu do console, sem o resto do menu ao redor. As opções que são menus em si, os sistemas de VM NAS, Windows e Linux, abrem o terminal delas de imediato, em vez da ficha."
               ],
               [
                 "Criar LXC a partir de modelo",
@@ -292,7 +292,7 @@
               {
                 "href": "/docs/create-vm/lxc",
                 "label": "Criar LXC a partir de modelo",
-                "tail": "o assistente aberto a partir do Catálogo."
+                "tail": "o assistente aberto a partir da aba Menux."
               },
               {
                 "href": "/docs/external-repositories",

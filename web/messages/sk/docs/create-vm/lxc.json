@@ -27,12 +27,12 @@
                 "<strong>Vytvoriť LXC</strong> v hlavičke karty <strong>Virtuálne stroje a kontajnery</strong> na karte <vmsLxcsLink>VM a LXC</vmsLxcsLink>."
               ],
               [
-                "Katalóg Monitora",
-                "Položka <strong>Vytvoriť LXC zo šablóny</strong> na karte <catalogLink>Katalóg</catalogLink>, ktorá sa v hornej lište zobrazuje ako Menux, otvorí toho istého sprievodcu."
+                "Karta Menux v Monitore",
+                "Položka <strong>Vytvoriť LXC zo šablóny</strong> na karte <catalogLink>Menux</catalogLink> otvorí toho istého sprievodcu."
               ],
               [
                 "Konzolové menu",
-                "Hlavné menu → <strong>Vytvoriť VM a LXC zo šablóny alebo skriptu</strong> → <strong>Vytvoriť LXC zo šablóny</strong>. Kroky sú rovnaké, vo forme dialógov s názvom <strong>N/5</strong>."
+                "Hlavné menu → <strong>Vytvoriť VM a LXC zo šablóny alebo skriptu</strong> → <strong>Vytvoriť LXC zo šablóny</strong>. Kroky sú rovnaké, vo forme dialógov očíslovaných v názve od 1/5 do 5/5."
               ]
             ]
           }
@@ -40,7 +40,7 @@
         {
           "calloutInfo": {
             "title": "Kto ho môže použiť",
-            "body": "V Monitore sprievodca vyžaduje profil <strong>Administrátor</strong> a pri iných profiloch sa tlačidlo nezobrazí. V Katalógu dostane profil s akciou <strong>Spúšťať skripty a nástroje</strong>, ktorý nie je Administrátor, v položke tlačidlo <strong>Otvoriť</strong>, ktoré spustí konzolového sprievodcu v termináli; bez tejto akcie položka ukazuje len svoj popis. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Konzolový sprievodca beží ako root. Ani jeden nie je dostupný na hostiteľovi Proxmox Backup Server."
+            "body": "V Monitore sprievodca vyžaduje profil <strong>Administrátor</strong> a pri iných profiloch sa tlačidlo nezobrazí. Na karte Menux dostane profil s akciou <strong>Spúšťať skripty a nástroje</strong>, ktorý nie je Administrátor, v položke tlačidlo <strong>Otvoriť</strong>, ktoré spustí konzolového sprievodcu v termináli; bez tejto akcie položka ukazuje len svoj popis. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Konzolový sprievodca beží ako root. Ani jeden nie je dostupný na hostiteľovi Proxmox Backup Server."
           }
         }
       ]
@@ -70,7 +70,7 @@
               ],
               [
                 "Stiahnuť oficiálnu šablónu",
-                "Prehľadá oficiálny katalóg, zvolí úložisko pre šablóny a stiahne vybranú šablónu so zobrazením priebehu. Po skončení ju <strong>Použiť túto šablónu</strong> vyberie."
+                "Prehľadá oficiálny katalóg, zvolí úložisko pre šablóny a stiahne vybranú šablónu so zobrazením priebehu. Po skončení sa sprievodca vráti do kroku <strong>Systém</strong> s vybranou šablónou."
               ],
               [
                 "Názov kontajnera",
@@ -103,12 +103,12 @@
           }
         },
         {
-          "p": "Stiahnutá šablóna sa pred použitím overí podľa SHA-512 z oficiálneho katalógu. Stiahnuť sa dajú len šablóny z <code>download.proxmox.com</code> a TurnKey a archívy obrazov OCI alebo Docker sa v zozname nikdy nezobrazia: tie spracúva <ociLink>OCI Manager Apps</ociLink>. Konzolový sprievodca zobrazuje aj šablóny TurnKey a lokálne archívy; pri lokálnom archíve sa pýta na jeho architektúru (amd64 alebo arm64)."
+          "p": "Stiahnutá šablóna sa pred použitím overí podľa SHA-512 z oficiálneho katalógu. Monitor sťahuje len systémové šablóny z <code>download.proxmox.com</code>, konzola aj šablóny TurnKey. Archívy obrazov OCI alebo Docker sa v zozname nikdy nezobrazia: tie spracúva <ociLink>OCI manager Apps</ociLink>. Konzolový sprievodca zobrazuje aj šablóny TurnKey a lokálne archívy; pri lokálnom archíve sa pýta na jeho architektúru (amd64 alebo arm64)."
         },
         {
           "calloutTip": {
             "title": "Pripraviť systém na prvé spustenie",
-            "body": "Pred prvým spustením sa na disku zastaveného kontajnera upravia dve jednotky systemd, o ktorých je známe, že v niektorých šablónach zlyhávajú: certifikát sa po <code>ssl-cert</code> vygeneruje znova a čakanie na sieť sa preskočí, keď kontajner nemá sieť. Existujúce súbory sa nikdy neprepíšu a v kontajneri sa nič neinštaluje ani nespúšťa. Tento krok sa spustí aj sám, keď kontajner dostane GPU NVIDIA alebo zariadenia USB."
+            "body": "Pred prvým spustením sa na disku zastaveného kontajnera upravia dve jednotky systemd, o ktorých je známe, že v niektorých šablónach zlyhávajú: certifikát sa po <code>ssl-cert</code> vygeneruje znova a čakanie na sieť sa preskočí, keď kontajner nemá sieť. Existujúce súbory sa nikdy neprepíšu a v kontajneri sa nič neinštaluje ani nespúšťa. Kontajner s GPU NVIDIA alebo zariadeniami USB prechádza pred prvým spustením tiež prípravou, ktorá tieto zariadenia nastaví; dve jednotky sa upravia, len keď je tento prepínač zapnutý."
           }
         }
       ]
@@ -163,7 +163,7 @@
           }
         },
         {
-          "p": "Na tenkom úložisku, napríklad LVM-thin alebo ZFS, je disk väčší ako voľné miesto povolený s upozornením v kontrole. Na inom úložisku sa odmietne."
+          "p": "Na úložisku LVM-thin alebo ZFS je disk väčší ako voľné miesto povolený s upozornením v kontrole. Na inom úložisku sa odmietne."
         },
         {
           "p": "<strong>Pridať bod pripojenia</strong> pridá najviac 16 bodov pripojenia dvoch typov:"
@@ -247,7 +247,7 @@
       "title": "Vytvorenie",
       "blocks": [
         {
-          "p": "Vytváranie zobrazuje svoje kroky s časom každého z nich: <strong>Odoslanie požiadavky</strong>, <strong>Vytvorenie kontajnera</strong> a podľa požiadavky <strong>Spustenie kontajnera</strong> alebo <strong>Príprava a spustenie kontajnera</strong>. <strong>Zobraziť výpis úlohy</strong> otvorí záznam úlohy Proxmoxu daného kroku počas jej behu. Upozornenia, ktoré Proxmox do úlohy zapíše, sa prípadne zobrazia pod svojím krokom: opisujú úlohu, nie stav kontajnera."
+          "p": "Vytváranie zobrazuje svoje kroky s časom každého z nich: <strong>Odoslanie požiadavky</strong>, <strong>Vytvorenie kontajnera</strong> a podľa požiadavky <strong>Spustenie kontajnera</strong>, <strong>Príprava na prvé spustenie</strong> alebo <strong>Príprava a spustenie kontajnera</strong>. <strong>Zobraziť výpis úlohy</strong> otvorí záznam úlohy Proxmoxu daného kroku počas jej behu. Upozornenia, ktoré Proxmox do úlohy zapíše, sa prípadne zobrazia pod svojím krokom: opisujú úlohu, nie stav kontajnera."
         },
         {
           "figure": {
@@ -257,7 +257,7 @@
           }
         },
         {
-          "p": "Zatvorenie dialógu vytváranie nezastaví: keď sa znova otvorí v tej istej karte prehliadača, ukáže operáciu tam, kde práve je. Keď sa kontajner spustí, <strong>Otvoriť terminál</strong> v ňom otvorí shell na karte <terminalLink>Terminál</terminalLink> Monitora."
+          "p": "Zatvorenie dialógu vytváranie nezastaví: keď sa znova otvorí v tej istej karte prehliadača, ukáže operáciu tam, kde práve je. Keď sa kontajner spustí, <strong>Otvoriť terminál</strong> v ňom otvorí shell v konzole LXC opísanej v časti <terminalLink>Terminál</terminalLink>. Toto tlačidlo sa zobrazí, keď sa sprievodca otvoril z VM a LXC, nie z karty Menux."
         }
       ]
     },
@@ -266,7 +266,7 @@
       "title": "Vytvorený kontajner",
       "blocks": [
         {
-          "p": "Kontajner je vždy neprivilegovaný a v Proxmoxe má značky <code>proxmenux</code>, <code>lxc</code> a názov distribúcie a tieto <strong>Poznámky</strong> s jeho šablónou, zdrojmi, bodmi pripojenia, sieťou a hardvérom. Ak sa Poznámky v Proxmoxe zmenia pred dokončením vytvárania, zostanú tak, ako sú."
+          "p": "Kontajner je vždy neprivilegovaný a v Proxmoxe má značky <code>proxmenux</code>, <code>lxc</code> a názov distribúcie a tieto <strong>Poznámky</strong> s jeho šablónou, zdrojmi, bodmi pripojenia, sieťou a hardvérom a odznak Docs, ktorý odkazuje na túto stránku. Ak sa Poznámky v Proxmoxe zmenia pred dokončením vytvárania, zostanú tak, ako sú."
         },
         {
           "figure": {
@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Kedy sa nedá odstrániť z Monitora",
-            "body": "Monitor odstraňuje len kontajnery s jediným koreňovým diskom a bez špeciálnej konfigurácie. Odmietne okrem iného spustený, chránený alebo uzamknutý kontajner, kontajner s bodom pripojenia alebo nepoužívaným diskom, kontajner s adresárom hostiteľa a kontajner so zariadeniami USB, Coral USB alebo GPU NVIDIA, ktoré pridávajú surové nastavenia LXC. Dôvod sa zobrazí v dialógu. Takéto kontajnery sa odstraňujú z Proxmoxu."
+            "body": "Monitor odstraňuje len kontajnery s jediným koreňovým diskom a bez špeciálnej konfigurácie. Odmietne okrem iného spustený, chránený alebo uzamknutý kontajner, kontajner s bodom pripojenia alebo nepoužívaným diskom, kontajner s adresárom hostiteľa a kontajner so zariadeniami USB, Coral USB alebo GPU NVIDIA, ktoré pridávajú surové nastavenia LXC. Dôvod sa zobrazí v dialógu a takéto kontajnery sa odstraňujú z Proxmoxu. Keď je jediným dôvodom ochrana proti odstráneniu, dialóg ponúkne <strong>Vypnúť ochranu…</strong> a potom kontajner odstráni."
           }
         }
       ]
@@ -305,7 +305,7 @@
               "Privilegované kontajnery: kontajner je vždy neprivilegovaný.",
               "Iné architektúry ako amd64 a arm64.",
               "Adresy IPv6 a servery DNS IPv6.",
-              "Kontajnery z obrazov OCI alebo Docker: tie vytvára <ociLink>OCI Manager Apps</ociLink>.",
+              "Kontajnery z obrazov OCI alebo Docker: tie vytvára <ociLink>OCI manager Apps</ociLink>.",
               "Ručne zadané surové nastavenia LXC alebo inštalácia softvéru v kontajneri."
             ]
           }

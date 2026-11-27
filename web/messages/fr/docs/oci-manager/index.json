@@ -42,7 +42,7 @@
     {
       "id": "where",
       "title": "Où le trouver",
-      "intro": "Sur le nœud Proxmox, en tant que root, ouvrez <strong>OCI manager Apps (Technology Preview)</strong> dans le menu principal de ProxMenux. L’<catalogLink>onglet Catalogue</catalogLink> de ProxMenux Monitor installe les mêmes applications. Dans la console, le premier écran d’OCI manager Apps propose :",
+      "intro": "Sur le nœud Proxmox, en tant que root, ouvrez <strong>OCI manager Apps (Technology Preview)</strong> dans le menu principal de ProxMenux. L’<catalogLink>onglet Menux</catalogLink> de ProxMenux Monitor installe les mêmes applications. Dans la console, le premier écran d’OCI manager Apps propose :",
       "blocks": [
         {
           "list": {

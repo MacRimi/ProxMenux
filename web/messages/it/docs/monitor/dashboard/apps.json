@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "Un lanciatore, non un installatore di applicazione",
-    "body": "La scheda <strong>Apps</strong> non installa software né scopre servizi. Raggruppa i collegamenti salvati in una griglia ricercabile. I link LXC si configurano nella <appTabLink>scheda App</appTabLink> del guest; i link personalizzati includono servizi VM, proxy inversi e pannelli esterni. Nel Monitor, le applicazioni si installano dalla <catalogLink>scheda Catalogo</catalogLink>."
+    "body": "La scheda <strong>Apps</strong> non installa software né scopre servizi. Raggruppa i collegamenti salvati in una griglia ricercabile. I link LXC si configurano nella <appTabLink>scheda App</appTabLink> del guest; i link personalizzati includono servizi VM, proxy inversi e pannelli esterni. Nel Monitor, le applicazioni si installano dalla <catalogLink>scheda Menux</catalogLink>."
   },
   "sources": {
     "heading": "Cosa appare in Apps",
