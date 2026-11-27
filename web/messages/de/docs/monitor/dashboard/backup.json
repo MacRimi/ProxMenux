@@ -70,7 +70,7 @@
             "rows": [
               [
                 "Fortschritt nach der Wiederherstellung",
-                "Wird nur angezeigt, solange eine Wiederherstellung läuft oder bis ihre Zusammenfassung geschlossen wird. Sie verfolgt die Wiederherstellung auch nach dem Neustart, mit den Schritten, den Komponenten, dem Protokoll und dem Rollback-Delta. Nach dem Schließen bewahrt <strong>Vergangene Restaurierungen</strong> die letzten 20 auf."
+                "Wird nur angezeigt, solange eine Wiederherstellung läuft oder bis ihre Zusammenfassung geschlossen wird. Sie verfolgt die Wiederherstellung auch nach dem Neustart, mit den Schritten, den Komponenten, dem Protokoll und dem Rollback-Delta. Nach dem Schließen bewahrt <strong>Frühere Wiederherstellungen</strong> die letzten 20 auf."
               ],
               [
                 "Geplant",
@@ -78,7 +78,7 @@
               ],
               [
                 "Backup-Konfiguration",
-                "<strong>Reiseziele</strong> und <strong>Benutzerdefinierte Pfade</strong>."
+                "<strong>Ziele</strong> und <strong>Benutzerdefinierte Pfade</strong>."
               ],
               [
                 "Manuelles Backup",
@@ -111,7 +111,7 @@
               },
               {
                 "title": "Zeitplan und Aufbewahrung",
-                "body": "<strong>Täglich</strong>, <strong>Stündlich</strong>, <strong>Wöchentlich</strong>, <strong>Monatlich</strong> oder <strong>Fortschrittlich</strong>, das einen systemd-<code>OnCalendar</code>-Ausdruck annimmt und eine Vorschau zeigt. Die Aufbewahrung behält die letzten sowie die stündlichen, täglichen, wöchentlichen, monatlichen und jährlichen Backups: 0 deaktiviert ein Limit, und ohne gesetztes Limit sammeln sich die Backups an. Ein angehängter Job wählt hier stattdessen seinen übergeordneten Proxmox-Job."
+                "body": "<strong>Täglich</strong>, <strong>Stündlich</strong>, <strong>Wöchentlich</strong>, <strong>Monatlich</strong> oder <strong>Erweitert</strong>, das einen systemd-<code>OnCalendar</code>-Ausdruck annimmt und eine Vorschau zeigt. Die Aufbewahrung behält die letzten sowie die stündlichen, täglichen, wöchentlichen, monatlichen und jährlichen Backups: 0 deaktiviert ein Limit, und ohne gesetztes Limit sammeln sich die Backups an. Ein angehängter Job wählt hier stattdessen seinen übergeordneten Proxmox-Job."
               },
               {
                 "title": "Profil",
@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Jede Zeile zeigt das Backend, das Badge <strong>beigefügt</strong>, ein Schloss bei verschlüsselten Jobs, das Profil (<strong>Standard</strong> oder <strong>Benutzerdefiniert</strong>), das Ziel, den Zeitplan, die Aufbewahrung sowie den nächsten und letzten Lauf. Ein Klick öffnet den Job mit seinen Einstellungen, dem Protokoll des letzten Laufs und den Schaltflächen <strong>Lauf jetzt</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> und <strong>Löschen</strong>. Das Löschen entfernt den Job und seinen Timer, nie die bereits erstellten Backups. Beim Löschen eines angehängten Jobs bleibt der Proxmox-Job unverändert: Er sichert seine Gäste weiterhin, ohne dieses Host-Backup."
+          "p": "Jede Zeile zeigt das Backend, das Badge <strong>angehängt</strong>, ein Schloss bei verschlüsselten Jobs, das Profil (<strong>Standard</strong> oder <strong>Benutzerdefiniert</strong>), das Ziel, den Zeitplan, die Aufbewahrung sowie den nächsten und letzten Lauf. Ein Klick öffnet den Job mit seinen Einstellungen, dem Protokoll des letzten Laufs und den Schaltflächen <strong>Jetzt ausführen</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> und <strong>Löschen</strong>. Das Löschen entfernt den Job und seinen Timer, nie die bereits erstellten Backups. Beim Löschen eines angehängten Jobs bleibt der Proxmox-Job unverändert: Er sichert seine Gäste weiterhin, ohne dieses Host-Backup."
         },
         {
           "calloutTip": {
@@ -184,7 +184,7 @@
       "title": "Backups",
       "blocks": [
         {
-          "p": "Die Liste führt die Backups aller Ziele zusammen: lokale Ordner, gelesen über die Begleitdatei neben jedem Archiv, sowie PBS- und Borg-Repositories, deren Antwort einen Moment dauern kann. Jede Zeile zeigt das Backend, ein Schloss bei verschlüsselten Backups, das Datum, die Größe und den Ablageort. Lokale Backups zeigen außerdem ihren Job oder <strong>Handbuch</strong> sowie <strong>Ehemaliger Auftrag</strong>, wenn der Job, der sie erstellt hat, nicht mehr existiert."
+          "p": "Die Liste führt die Backups aller Ziele zusammen: lokale Ordner, gelesen über die Begleitdatei neben jedem Archiv, sowie PBS- und Borg-Repositories, deren Antwort einen Moment dauern kann. Jede Zeile zeigt das Backend, ein Schloss bei verschlüsselten Backups, das Datum, die Größe und den Ablageort. Lokale Backups zeigen außerdem ihren Job oder <strong>manuell</strong> sowie <strong>Ehemaliger Auftrag</strong>, wenn der Job, der sie erstellt hat, nicht mehr existiert."
         },
         {
           "p": "Enthält ein Ziel Backups anderer Knoten, erscheint ein Schalter <strong>Dieser Knoten</strong> / <strong>Alle Knoten</strong>. Die Liste beginnt nur mit den Backups dieses Knotens."
@@ -270,7 +270,7 @@
       "intro": "Diese Ansicht zeigt die Proxmox-Backup-Jobs für VMs und Container: die Jobs von <code>/cluster/backup</code>, dieselben wie unter <strong>Datencenter → Backup</strong>. Ein hier erstellter oder geänderter Job erscheint dort und umgekehrt.",
       "blocks": [
         {
-          "p": "Jeder Job zeigt seinen Zeitplan, Speicher, Modus und seine Komprimierung, Aufbewahrung und Gäste. Ein Klick öffnet ihn mit <strong>Lauf jetzt</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> oder <strong>Aktivieren</strong> und <strong>Löschen</strong>. <strong>Lauf jetzt</strong> startet das Backup als Proxmox-Task mit den Einstellungen des Jobs; im Modus Stop werden seine Gäste während des Backups heruntergefahren. <strong>Deaktivieren</strong> beendet die geplanten Läufe, behält aber den Job, der weiterhin von Hand ausgeführt werden kann. <strong>Löschen</strong> entfernt nur den Zeitplan: Die bereits erstellten Backups bleiben im Speicher."
+          "p": "Jeder Job zeigt seinen Zeitplan, Speicher, Modus und seine Komprimierung, Aufbewahrung und Gäste. Ein Klick öffnet ihn mit <strong>Jetzt ausführen</strong>, <strong>Bearbeiten</strong>, <strong>Deaktivieren</strong> oder <strong>Aktivieren</strong> und <strong>Löschen</strong>. <strong>Jetzt ausführen</strong> startet das Backup als Proxmox-Task mit den Einstellungen des Jobs; im Modus Stop werden seine Gäste während des Backups heruntergefahren. <strong>Deaktivieren</strong> beendet die geplanten Läufe, behält aber den Job, der weiterhin von Hand ausgeführt werden kann. <strong>Löschen</strong> entfernt nur den Zeitplan: Die bereits erstellten Backups bleiben im Speicher."
         },
         {
           "p": "<strong>Neuer Job</strong> öffnet das Formular:"
@@ -426,7 +426,7 @@
                 "Die Job-Dateien in <code>/var/lib/proxmenux/backup-jobs/</code> und ihre systemd-Timer."
               ],
               [
-                "Reiseziele",
+                "Ziele",
                 "<code>GET /api/host-backups/destinations</code>",
                 "Die von ProxMenux gespeicherten Ziele, der lokale Standardordner und die PBS-Speicher aus <code>/etc/pve/storage.cfg</code>."
               ],

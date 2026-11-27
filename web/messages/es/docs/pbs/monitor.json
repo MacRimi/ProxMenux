@@ -171,7 +171,7 @@
               "<strong>Servicios PBS</strong> comprueba <code>proxmox-backup</code> y <code>proxmox-backup-proxy</code> en lugar de los servicios de Proxmox VE, y nunca corosync.",
               "Las comprobaciones de VM y LXC, de los almacenamientos de Proxmox VE y su capacidad, de los discos raíz y los puntos de montaje de los LXC y de los discos de las VM no se ejecutan. Los montajes remotos NFS, CIFS y SMB del host se siguen comprobando.",
               "<strong>Umbrales del monitor de salud</strong>, en Ajustes, oculta los umbrales de esas comprobaciones.",
-              "En <strong>Actualizaciones del sistema</strong>, cuando hay actualizaciones pendientes, el botón <strong>sistema de actualización</strong> abre una ventana de terminal con <code>pbs_update.sh</code>, la actualización de la opción 6 del menú de PBS, descrita en <updatesLink>Actualizar el servidor</updatesLink>. Requiere la acción <strong>Actualizar</strong>."
+              "En <strong>Actualizaciones del sistema</strong>, cuando hay actualizaciones pendientes, el botón <strong>Actualizar el sistema</strong> abre una ventana de terminal con <code>pbs_update.sh</code>, la actualización de la opción 6 del menú de PBS, descrita en <updatesLink>Actualizar el servidor</updatesLink>. Requiere la acción <strong>Actualizar</strong>."
             ]
           }
         }

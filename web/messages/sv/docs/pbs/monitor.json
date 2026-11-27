@@ -188,7 +188,7 @@
             "rows": [
               [
                 "<strong>Inställningar</strong>",
-                "<strong>Navigeringsordning</strong>, <strong>Exklusioner för fjärrlagring</strong>, <strong>LXC Update Detection</strong>, <strong>GitHub API</strong>, <strong>Aviseringar</strong>, <strong>Lagring för hookscripts</strong> och raden <strong>virtuella datorer och behållare</strong> bland undertryckningstiderna i <strong>Hälsoövervakare</strong>."
+                "<strong>Navigeringsordning</strong>, <strong>Exklusioner för fjärrlagring</strong>, <strong>LXC-uppdateringsdetektering</strong>, <strong>GitHub API</strong>, <strong>Aviseringar</strong>, <strong>Lagring för hookscripts</strong> och raden <strong>virtuella datorer och behållare</strong> bland undertryckningstiderna i <strong>Hälsoövervakare</strong>."
               ],
               ["<strong>Säkerhet</strong>", "Gruppen Proxmox VE: <strong>Brandvägg</strong>, Fail2Ban och <strong>Lynis säkerhetsrevision</strong>."]
             ]

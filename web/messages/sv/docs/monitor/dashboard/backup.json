@@ -78,11 +78,11 @@
               ],
               [
                 "Säkerhetskopieringskonfiguration",
-                "<strong>Destinationer</strong> och <strong>Anpassade vägar</strong>."
+                "<strong>Destinationer</strong> och <strong>Anpassade sökvägar</strong>."
               ],
               [
                 "Manuell säkerhetskopia",
-                "<strong>Sikt</strong>, för en engångssäkerhetskopia direkt."
+                "<strong>Kör</strong>, för en engångssäkerhetskopia direkt."
               ],
               [
                 "Säkerhetskopieringar",
@@ -115,7 +115,7 @@
               },
               {
                 "title": "Profil",
-                "body": "<strong>Standard</strong> säkerhetskopierar den rekommenderade värdkonfigurationen och ProxMenux-data. <strong>Beställnings</strong> låter dig välja vilka av de sökvägarna som ska med."
+                "body": "<strong>Standard</strong> säkerhetskopierar den rekommenderade värdkonfigurationen och ProxMenux-data. <strong>Anpassad</strong> låter dig välja vilka av de sökvägarna som ska med."
               },
               {
                 "title": "Destination och sammanfattning",
@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Varje rad visar backend, märket <strong>bunden</strong>, ett lås när jobbet är krypterat, profilen (<strong>Standard</strong> eller <strong>Beställnings</strong>), destinationen, schemat, bevarandet samt nästa och senaste körning. Ett klick öppnar jobbet med dess inställningar, loggen från den senaste körningen och <strong>Kör nu</strong>, <strong>Redigera</strong>, <strong>Inaktivera</strong> och <strong>Radera</strong>. Att radera tar bort jobbet och dess timer, aldrig de säkerhetskopior som redan har gjorts. Att radera ett kopplat jobb lämnar Proxmox-jobbet som det är: det fortsätter att säkerhetskopiera sina gäster, utan den här säkerhetskopian av värden."
+          "p": "Varje rad visar backend, märket <strong>bunden</strong>, ett lås när jobbet är krypterat, profilen (<strong>Standard</strong> eller <strong>Anpassad</strong>), destinationen, schemat, bevarandet samt nästa och senaste körning. Ett klick öppnar jobbet med dess inställningar, loggen från den senaste körningen och <strong>Kör nu</strong>, <strong>Redigera</strong>, <strong>Inaktivera</strong> och <strong>Radera</strong>. Att radera tar bort jobbet och dess timer, aldrig de säkerhetskopior som redan har gjorts. Att radera ett kopplat jobb lämnar Proxmox-jobbet som det är: det fortsätter att säkerhetskopiera sina gäster, utan den här säkerhetskopian av värden."
         },
         {
           "calloutTip": {
@@ -166,7 +166,7 @@
           "p": "<strong>Konfigurera destination</strong> öppnar guiden som lägger till en. Så länge jobb använder en destination kan dess namn och inloggningsuppgifter inte ändras, och att ta bort den raderar också de jobben (<strong>Ta bort destination och ta bort jobb</strong>). De säkerhetskopior som redan har skrivits ligger kvar där de är."
         },
         {
-          "p": "<strong>Anpassade vägar</strong> är absoluta sökvägar som läggs till i varje säkerhetskopia, manuell eller schemalagd, med båda profilerna: programdata, konfigurationsmappar och liknande. En sökväg som inte längre finns på värden markeras <strong>saknas på disken</strong>."
+          "p": "<strong>Anpassade sökvägar</strong> är absoluta sökvägar som läggs till i varje säkerhetskopia, manuell eller schemalagd, med båda profilerna: programdata, konfigurationsmappar och liknande. En sökväg som inte längre finns på värden markeras <strong>saknas på disken</strong>."
         }
       ]
     },
@@ -175,7 +175,7 @@
       "title": "Manuell säkerhetskopia",
       "blocks": [
         {
-          "p": "<strong>Sikt</strong> öppnar en kort dialogruta: destinationen, profilen och, för PBS, krypteringen. Säkerhetskopieringen startar direkt och dess logg öppnas live. Om dialogrutan stängs innan den är klar öppnar raden <strong>Manuell säkerhetskopiering pågår</strong> i kortet loggen igen. Varje engångssäkerhetskopia sparas som ett avslutat jobb, så att dess logg kan läsas senare."
+          "p": "<strong>Kör</strong> öppnar en kort dialogruta: destinationen, profilen och, för PBS, krypteringen. Säkerhetskopieringen startar direkt och dess logg öppnas live. Om dialogrutan stängs innan den är klar öppnar raden <strong>Manuell säkerhetskopiering pågår</strong> i kortet loggen igen. Varje engångssäkerhetskopia sparas som ett avslutat jobb, så att dess logg kan läsas senare."
         }
       ]
     },
@@ -243,7 +243,7 @@
                 "Allt i säkerhetskopian, som den fullständiga återställningen i CLI-menyn. Innan den startar listar dialogrutan vad som finns på värden men inte i säkerhetskopian (VM, LXC och komponenter som skapats senare), vilket återställningen raderar permanent, och ber dig bocka i en bekräftelse."
               ],
               [
-                "Anpassad efter stigar",
+                "Anpassad efter sökvägar",
                 "Bara de sökvägar du väljer bland dem i säkerhetskopian. Sökvägar som kräver en omstart, till exempel kärnan, moduler eller fstab, identifieras av återställningen, som erbjuder att tillämpa dem vid nästa uppstart."
               ]
             ]
@@ -252,7 +252,7 @@
         {
           "figure": {
             "src": "/monitor/backup/backup-restore-custom.png",
-            "alt": "Dialogrutan för återställning Anpassad efter stigar med listan över sökvägar i säkerhetskopian, ett filter och antalet valda sökvägar",
+            "alt": "Dialogrutan för återställning Anpassad efter sökvägar med listan över sökvägar i säkerhetskopian, ett filter och antalet valda sökvägar",
             "caption": "Anpassad efter stigar: säkerhetskopians sökvägar, för att återställa bara några av dem."
           }
         },

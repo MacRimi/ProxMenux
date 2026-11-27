@@ -159,7 +159,7 @@
       "title": "La ficha de un elemento",
       "blocks": [
         {
-          "p": "Una tarjeta abre la ficha del elemento, que lo describe antes de ejecutar nada. Su cabecera muestra el nombre, el resumen y unas insignias: la categoría, <strong>1 contenedor</strong> o <strong>Varios contenedores</strong>, <strong>LXC sin privilegios</strong> o <strong>LXC con privilegios</strong>, <strong>Probada</strong> para las aplicaciones OCI ya probadas en instalaciones reales, <strong>Actualizable</strong> para los Community Scripts que pueden actualizar lo que instalan, y las arquitecturas. Debajo, según el elemento:"
+          "p": "Una tarjeta abre la ficha del elemento, que lo describe antes de ejecutar nada. Su cabecera muestra el nombre, el resumen y unas insignias: la categoría, <strong>1 contenedor</strong> o <strong>Varios contenedores</strong>, <strong>LXC sin privilegios</strong> o <strong>LXC con privilegios</strong>, <strong>Verificado</strong> para las aplicaciones OCI ya probadas en instalaciones reales, <strong>Actualizable</strong> para los Community Scripts que pueden actualizar lo que instalan, y las arquitecturas. Debajo, según el elemento:"
         },
         {
           "list": {

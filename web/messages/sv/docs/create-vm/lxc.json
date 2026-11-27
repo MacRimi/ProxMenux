@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "Guiden skapar en vanlig Proxmox-LXC: den använder Proxmox API och uppgifter, och containern som skapas hanteras från Proxmox som vilken annan som helst. Den går igenom fem steg, <strong>System</strong>, <strong>Access</strong>, <strong>Resurser</strong>, <strong>Nätverk och DNS</strong> och <strong>Recension</strong>, och ingenting skapas förrän planen har bekräftats i det sista. Samma guide finns på tre ställen:"
+          "p": "Guiden skapar en vanlig Proxmox-LXC: den använder Proxmox API och uppgifter, och containern som skapas hanteras från Proxmox som vilken annan som helst. Den går igenom fem steg, <strong>System</strong>, <strong>Åtkomst</strong>, <strong>Resurser</strong>, <strong>Nätverk och DNS</strong> och <strong>Granskning</strong>, och ingenting skapas förrän planen har bekräftats i det sista. Samma guide finns på tre ställen:"
         },
         {
           "table": {
@@ -85,7 +85,7 @@
                 "Av som standard."
               ],
               [
-                "Börja efter skapandet",
+                "Starta efter skapandet",
                 "Av som standard. När det är på startas containern som sista steg i skapandet."
               ],
               [
@@ -115,7 +115,7 @@
     },
     {
       "id": "access",
-      "title": "Access",
+      "title": "Åtkomst",
       "blocks": [
         {
           "p": "Containerns root-konto kan använda ett <strong>Root-lösenord</strong>, en <strong>SSH offentlig nyckel</strong> eller båda. Lösenordet har mellan 5 och 256 tecken och skrivs in två gånger. Nycklar klistras in en per rad eller läses in från en <code>.pub</code>-fil; typerna ed25519, RSA, ECDSA och säkerhetsnyckel godtas, upp till 32 nycklar, och en privat nyckel avvisas."
@@ -135,7 +135,7 @@
             ],
             "rows": [
               [
-                "Containerförvaring",
+                "Behållarlagring",
                 "Den första lagringen som tar emot containrar",
                 "Bara lagringar med containerinnehåll."
               ],
@@ -155,7 +155,7 @@
                 "16 upp till nodens minne."
               ],
               [
-                "Byt (MiB)",
+                "Swap (MiB)",
                 "512",
                 "0 inaktiverar swap."
               ]
@@ -222,7 +222,7 @@
     },
     {
       "id": "review",
-      "title": "Recension",
+      "title": "Granskning",
       "blocks": [
         {
           "p": "Innan granskningen visas kontrolleras planen mot Proxmox: VMID, mallen, lagringen och dess utrymme, enheterna och bryggan. Granskningen visar varje steg med en knapp <strong>Redigera</strong> för att gå tillbaka till det, samt planens varningar, till exempel om kapsling eller en överbelagd tunn lagring. <strong>Bekräfta skapandet</strong> skapar containern. I konsolen erbjuder sammanfattningen <strong>Skapa</strong>, <strong>Ändra</strong> och <strong>Avbryt</strong>."
@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "När den inte kan tas bort från Monitor",
-            "body": "Monitor tar bara bort containrar med en enda rotdisk och utan särskild konfiguration. Den avvisar bland annat en container som körs, är skyddad eller låst, en med en monteringspunkt eller en oanvänd disk, en med en värdkatalog och en med USB-enheter, en Coral USB eller en NVIDIA-GPU, som lägger till råa LXC-inställningar. Orsaken visas i dialogrutan, och sådana containrar tas bort från Proxmox. När den enda orsaken är borttagningsskyddet erbjuder dialogrutan <strong>Inaktivera skydd...</strong> och tar sedan bort containern."
+            "body": "Monitor tar bara bort containrar med en enda rotdisk och utan särskild konfiguration. Den avvisar bland annat en container som körs, är skyddad eller låst, en med en monteringspunkt eller en oanvänd disk, en med en värdkatalog och en med USB-enheter, en Coral USB eller en NVIDIA-GPU, som lägger till råa LXC-inställningar. Orsaken visas i dialogrutan, och sådana containrar tas bort från Proxmox. När den enda orsaken är borttagningsskyddet erbjuder dialogrutan <strong>Inaktivera skydd…</strong> och tar sedan bort containern."
           }
         }
       ]

@@ -149,7 +149,7 @@
             "rows": [
               [
                 "Local/USB",
-                "Una carpeta de este host o de una unidad USB montada. <code>/var/lib/vz/dump</code> aparece siempre, como <strong>Valor integrado por defecto</strong>. El asistente lista las unidades USB al abrirse y de nuevo con <strong>Recargar</strong>. Cada unidad ofrece la acción que permite su estado: <strong>Usar</strong> para una unidad montada, <strong>Montar y usar</strong> para una unidad sin montar con sistema de archivos, que la monta tal cual, y <strong>Formato y uso</strong> para una unidad sin sistema de archivos, que crea una única partición ext4 después de que escribas la ruta del dispositivo para confirmar."
+                "Una carpeta de este host o de una unidad USB montada. <code>/var/lib/vz/dump</code> aparece siempre, como <strong>Valor integrado por defecto</strong>. El asistente lista las unidades USB al abrirse y de nuevo con <strong>Recargar</strong>. Cada unidad ofrece la acción que permite su estado: <strong>Usar</strong> para una unidad montada, <strong>Montar y usar</strong> para una unidad sin montar con sistema de archivos, que la monta tal cual, y <strong>Formatear y usar</strong> para una unidad sin sistema de archivos, que crea una única partición ext4 después de que escribas la ruta del dispositivo para confirmar."
               ],
               [
                 "PBS",
@@ -157,7 +157,7 @@
               ],
               [
                 "Borg",
-                "Un repositorio Borg en este host, en una unidad USB o en otro host por SSH. Para SSH, <strong>preparar clave</strong> crea una clave en este host y muestra la línea de la clave pública, que añades a <code>~/.ssh/authorized_keys</code> en el host remoto: el Monitor no la instala allí."
+                "Un repositorio Borg en este host, en una unidad USB o en otro host por SSH. Para SSH, <strong>Preparar clave</strong> crea una clave en este host y muestra la línea de la clave pública, que añades a <code>~/.ssh/authorized_keys</code> en el host remoto: el Monitor no la instala allí."
               ]
             ]
           }

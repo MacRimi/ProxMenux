@@ -13,7 +13,7 @@
       "id": "overview",
       "blocks": [
         {
-          "p": "Der Assistent erstellt einen gewöhnlichen Proxmox-LXC: Er verwendet die Proxmox-API und Proxmox-Aufgaben, und der entstandene Container wird wie jeder andere über Proxmox verwaltet. Er durchläuft fünf Schritte, <strong>System</strong>, <strong>Zugriff</strong>, <strong>Ressourcen</strong>, <strong>Netzwerk und DNS</strong> und <strong>Rezension</strong>, und es wird nichts erstellt, bevor der Plan im letzten Schritt bestätigt wird. Derselbe Assistent ist an drei Stellen verfügbar:"
+          "p": "Der Assistent erstellt einen gewöhnlichen Proxmox-LXC: Er verwendet die Proxmox-API und Proxmox-Aufgaben, und der entstandene Container wird wie jeder andere über Proxmox verwaltet. Er durchläuft fünf Schritte, <strong>System</strong>, <strong>Zugriff</strong>, <strong>Ressourcen</strong>, <strong>Netzwerk und DNS</strong> und <strong>Überprüfung</strong>, und es wird nichts erstellt, bevor der Plan im letzten Schritt bestätigt wird. Derselbe Assistent ist an drei Stellen verfügbar:"
         },
         {
           "table": {
@@ -69,7 +69,7 @@
                 "Die offiziellen Proxmox-Systemvorlagen, die für die Architektur des Knotens bereits heruntergeladen sind."
               ],
               [
-                "Laden Sie eine offizielle Vorlage herunter",
+                "Offizielle Vorlage herunterladen",
                 "Durchsucht den offiziellen Katalog, wählt den Speicher für Vorlagen und lädt die gewählte Vorlage mit Fortschrittsanzeige herunter. Danach kehrt der Assistent mit der gewählten Vorlage zu <strong>System</strong> zurück."
               ],
               [
@@ -85,11 +85,11 @@
                 "Standardmäßig deaktiviert."
               ],
               [
-                "Nach der Erstellung beginnen",
+                "Nach der Erstellung starten",
                 "Standardmäßig deaktiviert. Wenn aktiviert, wird der Container als letzter Schritt der Erstellung gestartet."
               ],
               [
-                "Bereiten Sie das System auf den ersten Start vor",
+                "System für den ersten Start vorbereiten",
                 "Standardmäßig deaktiviert. Weiter unten beschrieben."
               ]
             ]
@@ -107,7 +107,7 @@
         },
         {
           "calloutTip": {
-            "title": "Bereiten Sie das System auf den ersten Start vor",
+            "title": "System für den ersten Start vorbereiten",
             "body": "Vor dem ersten Start werden auf der Festplatte des gestoppten Containers zwei systemd-Units angepasst, die in manchen Vorlagen bekanntermaßen fehlschlagen: Das Zertifikat wird nach <code>ssl-cert</code> neu erzeugt, und das Warten auf das Netzwerk wird übersprungen, wenn der Container kein Netzwerk hat. Bereits vorhandene Dateien werden nie überschrieben, und im Container wird nichts installiert oder ausgeführt. Ein Container mit einer NVIDIA-GPU oder USB-Geräten durchläuft vor seinem ersten Start ebenfalls eine Vorbereitung, die diese Geräte einrichtet; die beiden Units werden nur angepasst, wenn dieser Schalter aktiviert ist."
           }
         }
@@ -135,7 +135,7 @@
             ],
             "rows": [
               [
-                "Containerlagerung",
+                "Containerspeicher",
                 "Der erste Speicher, der Container akzeptiert",
                 "Nur Speicher mit Container-Inhalt."
               ],
@@ -155,7 +155,7 @@
                 "16 bis zum Speicher des Knotens."
               ],
               [
-                "Tauschen (MiB)",
+                "Swap (MiB)",
                 "512",
                 "0 deaktiviert ihn."
               ]
@@ -222,10 +222,10 @@
     },
     {
       "id": "review",
-      "title": "Rezension",
+      "title": "Überprüfung",
       "blocks": [
         {
-          "p": "Bevor die Übersicht angezeigt wird, wird der Plan mit Proxmox geprüft: die VMID, die Vorlage, der Speicher und sein Platz, die Geräte und die Bridge. Die Übersicht zeigt jeden Schritt mit einer Schaltfläche <strong>Bearbeiten</strong>, um zu ihm zurückzukehren, sowie die Warnungen des Plans, etwa zur Verschachtelung oder zu einem überbuchten Thin-Speicher. <strong>Erstellung bestätigen</strong> erstellt den Container. In der Konsole bietet die Zusammenfassung <strong>Erstellen</strong>, <strong>Ändern</strong> und <strong>Stornieren</strong>."
+          "p": "Bevor die Übersicht angezeigt wird, wird der Plan mit Proxmox geprüft: die VMID, die Vorlage, der Speicher und sein Platz, die Geräte und die Bridge. Die Übersicht zeigt jeden Schritt mit einer Schaltfläche <strong>Bearbeiten</strong>, um zu ihm zurückzukehren, sowie die Warnungen des Plans, etwa zur Verschachtelung oder zu einem überbuchten Thin-Speicher. <strong>Erstellung bestätigen</strong> erstellt den Container. In der Konsole bietet die Zusammenfassung <strong>Erstellen</strong>, <strong>Ändern</strong> und <strong>Abbrechen</strong>."
         },
         {
           "figure": {
@@ -247,7 +247,7 @@
       "title": "Erstellung",
       "blocks": [
         {
-          "p": "Die Erstellung zeigt ihre Schritte mit der Dauer jedes einzelnen: <strong>Senden Sie die Anfrage an Proxmox</strong>, <strong>Erstellen Sie den Container</strong> und, falls angefordert, <strong>Starten Sie den Container</strong>, <strong>Bereiten Sie den Container für seinen ersten Start vor</strong> oder <strong>Bereiten Sie den Container vor und starten Sie ihn</strong>. <strong>Protokoll anzeigen</strong> öffnet das Protokoll der Proxmox-Aufgabe dieses Schritts, während sie läuft. Warnungen, die Proxmox in die Aufgabe schreibt, erscheinen gegebenenfalls unter ihrem Schritt: Sie beschreiben die Aufgabe, nicht den Zustand des Containers."
+          "p": "Die Erstellung zeigt ihre Schritte mit der Dauer jedes einzelnen: <strong>Anfrage an Proxmox senden</strong>, <strong>Container erstellen</strong> und, falls angefordert, <strong>Container starten</strong>, <strong>Container für den ersten Start vorbereiten</strong> oder <strong>Container vorbereiten und starten</strong>. <strong>Protokoll anzeigen</strong> öffnet das Protokoll der Proxmox-Aufgabe dieses Schritts, während sie läuft. Warnungen, die Proxmox in die Aufgabe schreibt, erscheinen gegebenenfalls unter ihrem Schritt: Sie beschreiben die Aufgabe, nicht den Zustand des Containers."
         },
         {
           "figure": {
@@ -285,7 +285,7 @@
       "title": "Den Container entfernen",
       "blocks": [
         {
-          "p": "Im Monitor hat das Detailfenster eines LXC für Administratoren die Schaltfläche <strong>Entfernen</strong>, die aktiv ist, solange der Container gestoppt ist. Der Dialog <strong>LXC entfernen</strong> prüft zuerst den Container und verlangt zur Bestätigung die Eingabe seiner ID. <strong>Aus Jobkonfigurationen löschen</strong> entfernt ihn auch aus den Replikations-, HA- und Backup-Jobs, und <strong>Zerstören Sie nicht referenzierte Festplatten, die dem Container gehören</strong> durchsucht die aktivierten Speicher nach Festplatten des Containers, die nicht mehr in seiner Konfiguration stehen. Seine referenzierten Festplatten werden immer zerstört."
+          "p": "Im Monitor hat das Detailfenster eines LXC für Administratoren die Schaltfläche <strong>Entfernen</strong>, die aktiv ist, solange der Container gestoppt ist. Der Dialog <strong>LXC entfernen</strong> prüft zuerst den Container und verlangt zur Bestätigung die Eingabe seiner ID. <strong>Aus Jobkonfigurationen löschen</strong> entfernt ihn auch aus den Replikations-, HA- und Backup-Jobs, und <strong>Nicht referenzierte Datenträger des Containers zerstören</strong> durchsucht die aktivierten Speicher nach Festplatten des Containers, die nicht mehr in seiner Konfiguration stehen. Seine referenzierten Festplatten werden immer zerstört."
         },
         {
           "calloutWarning": {

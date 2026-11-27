@@ -148,7 +148,7 @@
       "title": "The sheet of an item",
       "blocks": [
         {
-          "p": "A card opens the sheet of the item, which describes it before anything is run. Its header shows the name, the summary and badges: the category, <strong>1 container</strong> or <strong>Several containers</strong>, <strong>Unprivileged LXC</strong> or <strong>Privileged LXC</strong>, <strong>Tested</strong> for the OCI applications already tested in real installations, <strong>Updatable</strong> for the Community Scripts that can update what they install, and the architectures. Below it, depending on the item:"
+          "p": "A card opens the sheet of the item, which describes it before anything is run. Its header shows the name, the summary and badges: the category, <strong>1 container</strong> or <strong>Several containers</strong>, <strong>Unprivileged LXC</strong> or <strong>Privileged LXC</strong>, <strong>Verified</strong> for the OCI applications already tested in real installations, <strong>Updatable</strong> for the Community Scripts that can update what they install, and the architectures. Below it, depending on the item:"
         },
         {
           "list": {

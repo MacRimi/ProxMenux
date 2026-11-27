@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Samma konverterare och installationsflöde",
-            "body": "Alternativet <strong>Installera en bild som inte finns i katalogen</strong> använder samma konverterare och installationsflöde som katalogmallarna. Skillnaden är att kontraktet skapas vid det tillfället från den angivna definitionen och valideras innan någon LXC-container skapas."
+            "body": "Alternativet <strong>Installera en avbildning som inte finns i katalogen</strong> använder samma konverterare och installationsflöde som katalogmallarna. Skillnaden är att kontraktet skapas vid det tillfället från den angivna definitionen och valideras innan någon LXC-container skapas."
           }
         }
       ]

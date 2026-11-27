@@ -159,7 +159,7 @@
       "title": "Ett objekts blad",
       "blocks": [
         {
-          "p": "Ett kort öppnar objektets blad, som beskriver det innan något körs. Dess sidhuvud visar namnet, sammanfattningen och märken: kategorin, <strong>1 container</strong> eller <strong>Flera containrar</strong>, <strong>Oprivilegierad LXC</strong> eller <strong>Privilegierad LXC</strong>, <strong>Testad</strong> för OCI-program som redan testats i verkliga installationer, <strong>Uppdateringsbar</strong> för Community Scripts som kan uppdatera det de installerar, och arkitekturerna. Under det, beroende på objekt:"
+          "p": "Ett kort öppnar objektets blad, som beskriver det innan något körs. Dess sidhuvud visar namnet, sammanfattningen och märken: kategorin, <strong>1 container</strong> eller <strong>Flera containrar</strong>, <strong>Oprivilegierad LXC</strong> eller <strong>Privilegierad LXC</strong>, <strong>Verifierad</strong> för OCI-program som redan testats i verkliga installationer, <strong>Uppdateringsbar</strong> för Community Scripts som kan uppdatera det de installerar, och arkitekturerna. Under det, beroende på objekt:"
         },
         {
           "list": {

@@ -82,7 +82,7 @@
             "rows": [
               [
                 "Onde começa",
-                "A opção 6, <strong>Atualizar PBS com os repositórios configurados</strong>, e o botão <strong>Sistema de atualização</strong> da categoria <strong>Atualizações do sistema</strong> no <healthLink>Monitor de estado</healthLink> do Monitor do servidor, exibido quando há atualizações pendentes.",
+                "A opção 6, <strong>Atualizar PBS com os repositórios configurados</strong>, e o botão <strong>Atualizar o sistema</strong> da categoria <strong>Atualizações do sistema</strong> no <healthLink>Monitor de estado</healthLink> do Monitor do servidor, exibido quando há atualizações pendentes.",
                 "<strong>Atualizar e atualizar o sistema</strong>, uma etapa do <strong>script de pós-instalação automatizado</strong> e uma opção do <strong>script pós-instalação personalizável</strong>."
               ],
               ["Script", "<code>scripts/utilities/pbs_update.sh</code>", "<code>scripts/global/update-pbs.sh</code>"],

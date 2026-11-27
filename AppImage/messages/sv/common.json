@@ -30,7 +30,7 @@
     "emptyView": "Här finns inget än.",
     "sourceOci": "OCI manager Apps",
     "sourceCs": "Community Scripts",
-    "tested": "Testad",
+    "tested": "Verifierad",
     "updateable": "Uppdateringsbar",
     "stack": "Flera containrar",
     "oneContainer": "1 container",
@@ -1496,7 +1496,7 @@
     "cronChip": {
       "detected": "host cron upptäckt",
       "variantTteck": "teck (arv)",
-      "variantCustom": "beställnings-",
+      "variantCustom": "anpassad",
       "variantCommunityScripts": "community-skript",
       "scopeAptApk": "apt/apk på alla CT",
       "scopeUnknown": "omfattning okänt"
@@ -2111,7 +2111,7 @@
       "resizeColumn": "Ändra storlek {column}",
       "sortColumn": "Sortera efter {column}",
       "sortBy": "Sortera efter",
-      "originalOrder": "Ursprunglig beställning",
+      "originalOrder": "Ursprunglig ordning",
       "asc": "stigande",
       "desc": "fallande",
       "updatesShort": "Uppd.",
@@ -2173,7 +2173,7 @@
       "target": "Ta bort {name} (LXC {vmid})?",
       "checking": "Kontrollerar det aktuella LXC-tillståndet...",
       "blocked": "Borttagning är blockerad:",
-      "reviewProtection": "Inaktivera skydd...",
+      "reviewProtection": "Inaktivera skydd…",
       "disableProtection": "Inaktivera skydd",
       "disableProtectionHint": "Inaktivera borttagningsskydd för {name} (LXC {vmid})?Den här inställningen förblir avstängd om du stänger den här dialogrutan.",
       "disableProtectionUnconfirmed": "Skyddsändringen kunde inte bekräftas. Kontrollera det aktuella läget innan du fortsätter.",
@@ -2250,7 +2250,7 @@
         "1w": "1 vecka",
         "1m": "1 månad",
         "1y": "1 år",
-        "custom": "Beställnings",
+        "custom": "Anpassad",
         "permanent": "Permanent"
       },
       "categories": {
@@ -2298,7 +2298,7 @@
       "footer": "VM/LXC som redan använder den tidigare lagringen fortsätter att fungera. Endast nya GPU-passthrough-åtgärder eller körning av \"sync hookscripts\" på värden använder det nya valet."
     },
     "lxcUpdateDetection": {
-      "title": "LXC Update Detection",
+      "title": "LXC-uppdateringsdetektering",
       "descriptionStart": "Kontrollera med jämna mellanrum körande Debian/Ubuntu/Alpine LXC-behållare för väntande paketuppdateringar",
       "descriptionEnd": "och placera dem på instrumentbrädan. Motsvarande meddelandeväxling i Meddelanden -> VM / CT visas endast när upptäckten är aktiverad.",
       "enableLabel": "Aktivera LXC-uppdateringsdetektering",
@@ -3290,7 +3290,7 @@
       "httpNoSsl": "Instrumentpanelen använder vanlig HTTP.",
       "usingCertificate": "Använder certifikatet {source}.",
       "proxmoxHost": "Proxmox-värd",
-      "custom": "beställnings-",
+      "custom": "anpassat",
       "unencryptedHttp": "Trafiken är inte krypterad över HTTP.",
       "activeCertificate": "Aktivt certifikat",
       "cert": "Certifikat",
@@ -4982,7 +4982,7 @@
       "everyBackup": "varje säkerhetskopia",
       "missingOnDisk": "saknas på disken",
       "removeTitle": "Ta bort den här anpassade sökvägen",
-      "title": "Anpassade vägar"
+      "title": "Anpassade sökvägar"
     },
     "fields": {
       "absolutePathOnHost": "Absolut väg på värd",
@@ -5229,7 +5229,7 @@
       "inProgress": "Manuell säkerhetskopiering pågår",
       "oneShotDescription": "Engångssäkerhetskopior sparas som frysta jobb så att du kan inspektera deras logg senare.",
       "reopenLogTitle": "Öppna loggen igen",
-      "run": "Sikt",
+      "run": "Kör",
       "runBackup": "Kör säkerhetskopiering",
       "runOneShotBackup": "Kör en engångssäkerhetskopiering",
       "title": "Manuell säkerhetskopia",
@@ -5237,7 +5237,7 @@
     },
     "paths": {
       "count": "{count} sökvägar",
-      "title": "stigar"
+      "title": "Sökvägar"
     },
     "placeholders": {
       "autoFromPveStorage": "auto från PVE-lagring",
@@ -5286,7 +5286,7 @@
       "zfsPoolsCount": "{count} ZFS-pooler"
     },
     "profile": {
-      "custom": "Beställnings",
+      "custom": "Anpassad",
       "customDescription": "Välj exakt vilka vägar som ska inkluderas.",
       "default": "Standard",
       "defaultDescription": "Rekommenderad värdkonfiguration och ProxMenux-data.",
@@ -5316,7 +5316,7 @@
       "completeTitle": "Fullständig återställning",
       "crossKernelDescription": "Både komplett och anpassad återställning hoppar automatiskt över kärn-/startknutna sökvägar för att undvika kärnpanik vid nästa uppstart. Allt annat (VM, LXC, nätverk, komponenter, anpassade sökvägar) återställs normalt.",
       "crossKernelTitle": "Korskärnåterställning – endast säker delmängd",
-      "customByPaths": "Anpassad efter stigar",
+      "customByPaths": "Anpassad efter sökvägar",
       "customByPathsDescription": "Välj exakt vilka vägar som ska återställas. Listar vad som faktiskt finns i denna säkerhetskopia (standardprofil + dina anpassade sökvägar).",
       "customByPathsTitle": "Anpassad återställning av sökvägar",
       "customPickDescriptionAfter": "env var — samma nedströmskod som TUI. Omstartskrävda sökvägar (kärna, moduler, fstab, …) kommer att upptäckas av bash-flödet och du kan schemalägga dem för nästa uppstart därifrån.",
@@ -5783,11 +5783,11 @@
       "cpuSustained": "CPU >{threshold} % bibehållen för {seconds}s",
       "cpuCheckFailed": "CPU-kontrollen misslyckades: {error}",
       "sensorHighSamplesSpan": "Sensortemperatur {temperature}°C >80°C; höga mätvärden under {duration}",
-      "noSwapConfigured": "Inget byte har konfigurerats",
+      "noSwapConfigured": "Ingen swap har konfigurerats",
       "ramHighSustained": "Hög RAM-användning bibehålls",
-      "swapRamPressure": "Byt nästan fullt med RAM-minne tätt",
+      "swapRamPressure": "Swap nästan full och ont om RAM",
       "ramSustained": "RAM >{threshold} % bibehållen för {seconds}s",
-      "memoryPressure": "Minnestryck: byt {swapPercent}% används och endast {ramAvailablePercent}% RAM tillgängligt",
+      "memoryPressure": "Minnestryck: {swapPercent}% swap används och endast {ramAvailablePercent}% RAM tillgängligt",
       "memoryCheckFailed": "Minneskontrollen misslyckades: {error}",
       "pendingSecurityUpdates": "Väntande säkerhetsuppdateringar: {count}",
       "pendingSecurityUpdatesUnpatched": "Väntande säkerhetsuppdateringar: {count} (dagar utan patch: {days})",
@@ -8058,8 +8058,8 @@
       "healthDegraded": {
         "categories": {
           "cpu": "CPU-användning och temperatur",
-          "memory": "Minne och byt",
-          "storage": "Förvaringsfästen och utrymme",
+          "memory": "Minne och swap",
+          "storage": "Lagringsmonteringar och utrymme",
           "disks": "Disk I/O och fel",
           "network": "Nätverksgränssnitt",
           "vms": "Virtuella datorer och behållare",
@@ -8250,7 +8250,7 @@
         "arc": "ARC",
         "available": "avail",
         "zram": "ZRAM",
-        "swap": "byta",
+        "swap": "swap",
         "rx": "RX",
         "tx": "TX",
         "read": "R",
@@ -8713,10 +8713,10 @@
     "description": "Skapa en oprivilegierad Linux-behållare från en officiell Proxmox-mall.",
     "steps": "Skapa steg",
     "system": "System",
-    "access": "Access",
+    "access": "Åtkomst",
     "resources": "Resurser",
     "network": "Nätverk och DNS",
-    "review": "Recension",
+    "review": "Granskning",
     "node": "Nod",
     "vmid": "Behållar-ID (VMID)",
     "template": "Systemmall",
@@ -8741,12 +8741,12 @@
     "confirmPassword": "Bekräfta root-lösenordet",
     "publicKeys": "SSH publika nycklar (en per rad)",
     "keyFile": "Ladda en publik nyckelfil",
-    "storage": "Containerförvaring",
+    "storage": "Behållarlagring",
     "selectStorage": "Välj lagring",
     "disk": "Rotdisk (GiB)",
     "cores": "CPU kärnor",
     "ram": "RAM (MiB)",
-    "swap": "Byt (MiB)",
+    "swap": "Swap (MiB)",
     "bridge": "Nätverksbrygga",
     "noNetwork": "Inget nätverksgränssnitt",
     "vlan": "VLAN-tagg",
@@ -8756,7 +8756,7 @@
     "dns": "IPv4 DNS-servrar",
     "domains": "DNS-sökdomäner",
     "hostDns": "Använd värdinställningar",
-    "start": "Börja efter skapandet",
+    "start": "Starta efter skapandet",
     "prepare": "Förbered systemet för dess första uppstart",
     "yes": "Ja",
     "no": "Nej",
@@ -8790,7 +8790,7 @@
       "download_failed": "Proxmox kunde inte ladda ner mallen.",
       "template_checksum_mismatch": "Den nedladdade mallen matchar inte dess officiella kontrollsumma."
     },
-    "mounts": "Montera punkter",
+    "mounts": "Monteringspunkter",
     "addMount": "Lägg till monteringspunkt",
     "mountType": "Typ",
     "mountVolume": "Ny lagringsvolym",

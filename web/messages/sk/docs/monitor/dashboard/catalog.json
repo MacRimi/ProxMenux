@@ -159,7 +159,7 @@
       "title": "Panel podrobností položky",
       "blocks": [
         {
-          "p": "Kartička otvorí panel podrobností položky, ktorý ju opíše skôr, ako sa čokoľvek spustí. Jeho hlavička zobrazuje názov, zhrnutie a štítky: kategóriu, <strong>1 kontajner</strong> alebo <strong>Viac kontajnerov</strong>, <strong>Neprivilegovaný LXC</strong> alebo <strong>Privilegovaný LXC</strong>, <strong>Otestované</strong> pri aplikáciách OCI už otestovaných v reálnych inštaláciách, <strong>Aktualizovateľné</strong> pri Community Scripts, ktoré dokážu aktualizovať to, čo inštalujú, a architektúry. Pod ňou podľa položky:"
+          "p": "Kartička otvorí panel podrobností položky, ktorý ju opíše skôr, ako sa čokoľvek spustí. Jeho hlavička zobrazuje názov, zhrnutie a štítky: kategóriu, <strong>1 kontajner</strong> alebo <strong>Viac kontajnerov</strong>, <strong>Neprivilegovaný LXC</strong> alebo <strong>Privilegovaný LXC</strong>, <strong>Overené</strong> pri aplikáciách OCI už otestovaných v reálnych inštaláciách, <strong>Aktualizovateľné</strong> pri Community Scripts, ktoré dokážu aktualizovať to, čo inštalujú, a architektúry. Pod ňou podľa položky:"
         },
         {
           "list": {

@@ -30,7 +30,7 @@
     "emptyView": "Aquí no hay nada todavía.",
     "sourceOci": "OCI manager Apps",
     "sourceCs": "Community Scripts",
-    "tested": "Probada",
+    "tested": "Verificado",
     "updateable": "Actualizable",
     "stack": "Varios contenedores",
     "oneContainer": "1 contenedor",
@@ -4901,7 +4901,7 @@
       "upload": "Subir",
       "use": "Usar",
       "viewContents": "Ver contenido",
-      "prepareSshKey": "preparar clave"
+      "prepareSshKey": "Preparar clave"
     },
     "archives": {
       "archive": "Archivo",
@@ -5573,7 +5573,7 @@
       "description": "Monta unidades USB para que puedan ser elegidas como objetivo local o Borg. Las unidades que ya tenían un sistema de archivos se pueden volver a montar tal como están; Las unidades sin formato (sin tabla de particiones) se pueden borrar y formatear para",
       "drivesDetected": "{count} unidades detectadas",
       "empty": "No se detectaron unidades USB. Conecta una y pulsa Recargar.",
-      "formatAndUse": "Formato y uso",
+      "formatAndUse": "Formatear y usar",
       "formatDescription": "Esto borrará el disco seleccionado y creará una única partición ext4.",
       "formatDrive": "Formatear unidad",
       "formatDriveQuestion": "¿Limpiar y formatear este disco?",
@@ -6048,7 +6048,7 @@
       "rebootUnknown": "No se pudo determinar si es necesario reiniciar.",
       "rebootKernel": "Es necesario reiniciar para activar {installed}.Actualmente en ejecución: {running}."
     },
-    "updateSystem": "sistema de actualización",
+    "updateSystem": "Actualizar el sistema",
     "packagePlanNote": "el plan también incluye nuevos paquetes, como un nuevo kernel.La descripción general cuenta únicamente las actualizaciones de los paquetes existentes.",
     "snapshotUnavailable": "Los nuevos resultados de salud aún no están disponibles.",
     "lastKnownResults": "muestra los últimos resultados disponibles con su hora de verificación original."

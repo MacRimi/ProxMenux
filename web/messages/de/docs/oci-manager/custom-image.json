@@ -15,7 +15,7 @@
         {
           "calloutInfo": {
             "title": "Derselbe Konverter und Installer",
-            "body": "Die Option <strong>Installieren Sie ein Bild, das sich nicht im Katalog befindet</strong> nutzt denselben Konverter und Installer wie die Katalogvorlagen. Der Unterschied: Der Vertrag wird erst in diesem Moment aus der angegebenen Definition erzeugt und vor dem Erstellen eines LXC validiert."
+            "body": "Die Option <strong>Installieren Sie ein Image, das sich nicht im Katalog befindet</strong> nutzt denselben Konverter und Installer wie die Katalogvorlagen. Der Unterschied: Der Vertrag wird erst in diesem Moment aus der angegebenen Definition erzeugt und vor dem Erstellen eines LXC validiert."
           }
         }
       ]

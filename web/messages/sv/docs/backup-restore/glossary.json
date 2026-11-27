@@ -93,7 +93,7 @@
         },
         {
           "id": "rutas-personalizadas",
-          "term": "Anpassade vägar",
+          "term": "Anpassade sökvägar",
           "def": "Extra vägar som användaren lägger till ovanpå <a href=\"#perfil-defecto\">default profil</a>. Antingen ihållande (lagras i <code>backup-extra-paths.txt</code>) eller per-run (plockad i anpassat läge)."
         }
       ]

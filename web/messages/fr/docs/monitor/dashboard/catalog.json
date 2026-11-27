@@ -159,7 +159,7 @@
       "title": "La fiche d’un élément",
       "blocks": [
         {
-          "p": "Une carte ouvre la fiche de l’élément, qui le décrit avant toute exécution. Son en-tête affiche le nom, le résumé et des badges : la catégorie, <strong>1 conteneur</strong> ou <strong>Plusieurs conteneurs</strong>, <strong>LXC non privilégié</strong> ou <strong>LXC privilégié</strong>, <strong>Testée</strong> pour les applications OCI déjà testées dans des installations réelles, <strong>Peut être mise à jour</strong> pour les Community Scripts capables de mettre à jour ce qu’ils installent, et les architectures. En dessous, selon l’élément :"
+          "p": "Une carte ouvre la fiche de l’élément, qui le décrit avant toute exécution. Son en-tête affiche le nom, le résumé et des badges : la catégorie, <strong>1 conteneur</strong> ou <strong>Plusieurs conteneurs</strong>, <strong>LXC non privilégié</strong> ou <strong>LXC privilégié</strong>, <strong>Vérifié</strong> pour les applications OCI déjà testées dans des installations réelles, <strong>Peut être mise à jour</strong> pour les Community Scripts capables de mettre à jour ce qu’ils installent, et les architectures. En dessous, selon l’élément :"
         },
         {
           "list": {

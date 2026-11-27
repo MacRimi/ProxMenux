@@ -69,7 +69,7 @@
                 "Os modelos de sistema oficiais do Proxmox já baixados para a arquitetura do nó."
               ],
               [
-                "Baixe um modelo oficial",
+                "Baixar um modelo oficial",
                 "Pesquisa o catálogo oficial, escolhe o armazenamento para modelos e baixa o modelo escolhido, mostrando o progresso. Ao terminar, o assistente volta para <strong>Sistema</strong> com esse modelo selecionado."
               ],
               [
@@ -89,7 +89,7 @@
                 "Desativado por padrão. Quando ativado, o contêiner é iniciado como última etapa da criação."
               ],
               [
-                "Prepare o sistema para sua primeira inicialização",
+                "Preparar o sistema para a primeira inicialização",
                 "Desativado por padrão. Descrito abaixo."
               ]
             ]
@@ -107,7 +107,7 @@
         },
         {
           "calloutTip": {
-            "title": "Prepare o sistema para sua primeira inicialização",
+            "title": "Preparar o sistema para a primeira inicialização",
             "body": "Antes da primeira inicialização, duas unidades do systemd conhecidas por falhar em alguns modelos são ajustadas no disco do contêiner parado: o certificado é regenerado depois do <code>ssl-cert</code>, e a espera pela rede é ignorada quando o contêiner não tem rede. Arquivos que já existem nunca são sobrescritos, e nada é instalado nem executado dentro do contêiner. Um contêiner com uma GPU NVIDIA ou dispositivos USB também passa por uma preparação antes da primeira inicialização, que configura esses dispositivos; as duas unidades só são ajustadas quando este interruptor está ativado."
           }
         }
@@ -135,7 +135,7 @@
             ],
             "rows": [
               [
-                "Armazenamento de contêineres",
+                "Armazenamento do contêiner",
                 "O primeiro armazenamento que aceita contêineres",
                 "Apenas armazenamentos com conteúdo de contêiner."
               ],
@@ -155,7 +155,7 @@
                 "De 16 até a memória do nó."
               ],
               [
-                "Troca (MiB)",
+                "Swap (MiB)",
                 "512",
                 "0 desativa o swap."
               ]
@@ -209,7 +209,7 @@
       "title": "Rede e DNS",
       "blocks": [
         {
-          "p": "<strong>Ponte de rede</strong> começa em <strong>Sem interface de rede</strong>, então é preciso escolher uma ponte para que o contêiner tenha rede. Com uma ponte, o contêiner obtém seu endereço IPv4 por DHCP, ou um estático com <strong>Use IPv4 estático em vez de DHCP</strong>, seu prefixo e um gateway opcional. <strong>Etiqueta VLAN</strong> (1 a 4094) aparece nas pontes que suportam VLANs. Os servidores DNS e os domínios de pesquisa ficam vazios para usar os do host. O assistente configura apenas IPv4."
+          "p": "<strong>Ponte de rede</strong> começa em <strong>Sem interface de rede</strong>, então é preciso escolher uma ponte para que o contêiner tenha rede. Com uma ponte, o contêiner obtém seu endereço IPv4 por DHCP, ou um estático com <strong>Usar IPv4 estático em vez de DHCP</strong>, seu prefixo e um gateway opcional. <strong>Etiqueta VLAN</strong> (1 a 4094) aparece nas pontes que suportam VLANs. Os servidores DNS e os domínios de pesquisa ficam vazios para usar os do host. O assistente configura apenas IPv4."
         },
         {
           "figure": {
@@ -247,17 +247,17 @@
       "title": "Criação",
       "blocks": [
         {
-          "p": "A criação mostra suas etapas com o tempo de cada uma: <strong>Envie a solicitação para Proxmox</strong>, <strong>Crie o contêiner</strong> e, quando solicitado, <strong>Inicie o contêiner</strong>, <strong>Prepare o contêiner para sua primeira inicialização</strong> ou <strong>Prepare e inicie o contêiner</strong>. <strong>Mostrar log</strong> abre o log da tarefa do Proxmox dessa etapa enquanto ela é executada. Os avisos escritos pelo Proxmox na tarefa, se houver, aparecem sob a respectiva etapa: descrevem a tarefa, não o estado do contêiner."
+          "p": "A criação mostra suas etapas com o tempo de cada uma: <strong>Enviar a solicitação ao Proxmox</strong>, <strong>Criar o contêiner</strong> e, quando solicitado, <strong>Iniciar o contêiner</strong>, <strong>Preparar o contêiner para a primeira inicialização</strong> ou <strong>Preparar e iniciar o contêiner</strong>. <strong>Mostrar log</strong> abre o log da tarefa do Proxmox dessa etapa enquanto ela é executada. Os avisos escritos pelo Proxmox na tarefa, se houver, aparecem sob a respectiva etapa: descrevem a tarefa, não o estado do contêiner."
         },
         {
           "figure": {
             "src": "/vm/lxc/lxc-create-progress.png",
-            "alt": "Criação concluída com as três etapas marcadas e seus tempos, a mensagem Container criado e os botões Fechar, Terminal aberto e Novo contêiner",
+            "alt": "Criação concluída com as três etapas marcadas e seus tempos, a mensagem Container criado e os botões Fechar, Abrir terminal e Novo contêiner",
             "caption": "Criação concluída, com o contêiner iniciado."
           }
         },
         {
-          "p": "Fechar o diálogo não interrompe a criação: quando ele é aberto novamente na mesma aba do navegador, mostra a operação no ponto em que está. Quando o contêiner já iniciou, <strong>Terminal aberto</strong> abre um shell dentro dele, no console do LXC descrito em <terminalLink>Terminal</terminalLink>. Esse botão aparece quando o assistente foi aberto a partir de VMs e LXCs, não da aba Menux."
+          "p": "Fechar o diálogo não interrompe a criação: quando ele é aberto novamente na mesma aba do navegador, mostra a operação no ponto em que está. Quando o contêiner já iniciou, <strong>Abrir terminal</strong> abre um shell dentro dele, no console do LXC descrito em <terminalLink>Terminal</terminalLink>. Esse botão aparece quando o assistente foi aberto a partir de VMs e LXCs, não da aba Menux."
         }
       ]
     },

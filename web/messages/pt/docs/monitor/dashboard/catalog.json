@@ -159,7 +159,7 @@
       "title": "A ficha de um item",
       "blocks": [
         {
-          "p": "Um cartão abre a ficha do item, que o descreve antes de qualquer execução. O cabeçalho mostra o nome, o resumo e selos: a categoria, <strong>1 contêiner</strong> ou <strong>Vários contêineres</strong>, <strong>LXC sem privilégios</strong> ou <strong>LXC com privilégios</strong>, <strong>Testado</strong> para os aplicativos OCI já testados em instalações reais, <strong>Atualizável</strong> para os Community Scripts que podem atualizar o que instalam, e as arquiteturas. Abaixo, conforme o item:"
+          "p": "Um cartão abre a ficha do item, que o descreve antes de qualquer execução. O cabeçalho mostra o nome, o resumo e selos: a categoria, <strong>1 contêiner</strong> ou <strong>Vários contêineres</strong>, <strong>LXC sem privilégios</strong> ou <strong>LXC com privilégios</strong>, <strong>Verificado</strong> para os aplicativos OCI já testados em instalações reais, <strong>Atualizável</strong> para os Community Scripts que podem atualizar o que instalam, e as arquiteturas. Abaixo, conforme o item:"
         },
         {
           "list": {

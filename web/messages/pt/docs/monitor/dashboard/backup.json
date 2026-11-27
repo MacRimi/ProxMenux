@@ -125,7 +125,7 @@
           }
         },
         {
-          "p": "Cada linha mostra o back-end, o selo <strong>apegado</strong>, um cadeado quando o trabalho é criptografado, o perfil (<strong>Padrão</strong> ou <strong>Personalizado</strong>), o destino, o agendamento, a retenção e a próxima e a última execução. Um clique abre o trabalho com suas configurações, o log da última execução e <strong>Corra agora</strong>, <strong>Editar</strong>, <strong>Desativar</strong> e <strong>Excluir</strong>. Excluir remove o trabalho e seu timer, nunca os backups já feitos. Excluir um trabalho anexado deixa a tarefa do Proxmox como está: ela continua fazendo backup de seus convidados, sem este backup do host."
+          "p": "Cada linha mostra o back-end, o selo <strong>anexado</strong>, um cadeado quando o trabalho é criptografado, o perfil (<strong>Padrão</strong> ou <strong>Personalizado</strong>), o destino, o agendamento, a retenção e a próxima e a última execução. Um clique abre o trabalho com suas configurações, o log da última execução e <strong>Executar agora</strong>, <strong>Editar</strong>, <strong>Desativar</strong> e <strong>Excluir</strong>. Excluir remove o trabalho e seu timer, nunca os backups já feitos. Excluir um trabalho anexado deixa a tarefa do Proxmox como está: ela continua fazendo backup de seus convidados, sem este backup do host."
         },
         {
           "calloutTip": {
@@ -270,7 +270,7 @@
       "intro": "Esta vista mostra as tarefas de backup do Proxmox para VMs e contêineres: as tarefas de <code>/cluster/backup</code>, as mesmas de <strong>Datacenter → Backup</strong>. Uma tarefa criada ou alterada aqui aparece lá, e o contrário também vale.",
       "blocks": [
         {
-          "p": "Cada tarefa mostra seu agendamento, armazenamento, modo e compressão, retenção e convidados. Um clique a abre com <strong>Corra agora</strong>, <strong>Editar</strong>, <strong>Desativar</strong> ou <strong>Habilitar</strong>, e <strong>Excluir</strong>. <strong>Corra agora</strong> inicia o backup como uma tarefa do Proxmox com as configurações da tarefa; no modo stop, seus convidados são desligados durante o backup. <strong>Desativar</strong> interrompe as execuções agendadas mas mantém a tarefa, que ainda pode ser executada manualmente. <strong>Excluir</strong> remove só o agendamento: os backups já feitos continuam no armazenamento."
+          "p": "Cada tarefa mostra seu agendamento, armazenamento, modo e compressão, retenção e convidados. Um clique a abre com <strong>Executar agora</strong>, <strong>Editar</strong>, <strong>Desativar</strong> ou <strong>Habilitar</strong>, e <strong>Excluir</strong>. <strong>Executar agora</strong> inicia o backup como uma tarefa do Proxmox com as configurações da tarefa; no modo stop, seus convidados são desligados durante o backup. <strong>Desativar</strong> interrompe as execuções agendadas mas mantém a tarefa, que ainda pode ser executada manualmente. <strong>Excluir</strong> remove só o agendamento: os backups já feitos continuam no armazenamento."
         },
         {
           "p": "<strong>Nova tarefa</strong> abre o formulário:"
@@ -359,7 +359,7 @@
               ],
               [
                 "Armazenamentos de dados",
-                "Capacidade, espaço usado e disponível de cada datastore, com <strong>estimativa completa</strong>."
+                "Capacidade, espaço usado e disponível de cada datastore, com <strong>Lotação prevista</strong>."
               ],
               [
                 "Tarefas recentes",

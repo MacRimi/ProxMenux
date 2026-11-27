@@ -159,7 +159,7 @@
       "title": "Das Datenblatt eines Eintrags",
       "blocks": [
         {
-          "p": "Eine Karte öffnet das Datenblatt des Eintrags, das ihn beschreibt, bevor etwas ausgeführt wird. Sein Kopf zeigt den Namen, die Zusammenfassung und Badges: die Kategorie, <strong>1 Container</strong> oder <strong>Mehrere Container</strong>, <strong>Unprivilegierter LXC</strong> oder <strong>Privilegierter LXC</strong>, <strong>Getestet</strong> für OCI-Anwendungen, die bereits in echten Installationen getestet wurden, <strong>Aktualisierbar</strong> für Community Scripts, die das Installierte aktualisieren können, und die Architekturen. Darunter, je nach Eintrag:"
+          "p": "Eine Karte öffnet das Datenblatt des Eintrags, das ihn beschreibt, bevor etwas ausgeführt wird. Sein Kopf zeigt den Namen, die Zusammenfassung und Badges: die Kategorie, <strong>1 Container</strong> oder <strong>Mehrere Container</strong>, <strong>Unprivilegierter LXC</strong> oder <strong>Privilegierter LXC</strong>, <strong>Geprüft</strong> für OCI-Anwendungen, die bereits in echten Installationen getestet wurden, <strong>Aktualisierbar</strong> für Community Scripts, die das Installierte aktualisieren können, und die Architekturen. Darunter, je nach Eintrag:"
         },
         {
           "list": {

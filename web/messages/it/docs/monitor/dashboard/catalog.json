@@ -159,7 +159,7 @@
       "title": "La scheda informativa di un elemento",
       "blocks": [
         {
-          "p": "Una card apre la scheda informativa dell’elemento, che lo descrive prima di eseguire qualsiasi cosa. L’intestazione mostra il nome, il riepilogo e alcuni badge: la categoria, <strong>1 container</strong> o <strong>Più container</strong>, <strong>LXC non privilegiato</strong> o <strong>LXC privilegiato</strong>, <strong>Testata</strong> per le applicazioni OCI già testate in installazioni reali, <strong>Aggiornabile</strong> per i Community Scripts che possono aggiornare ciò che installano, e le architetture. Sotto, a seconda dell’elemento:"
+          "p": "Una card apre la scheda informativa dell’elemento, che lo descrive prima di eseguire qualsiasi cosa. L’intestazione mostra il nome, il riepilogo e alcuni badge: la categoria, <strong>1 container</strong> o <strong>Più container</strong>, <strong>LXC non privilegiato</strong> o <strong>LXC privilegiato</strong>, <strong>Verificato</strong> per le applicazioni OCI già testate in installazioni reali, <strong>Aggiornabile</strong> per i Community Scripts che possono aggiornare ciò che installano, e le architetture. Sotto, a seconda dell’elemento:"
         },
         {
           "list": {
