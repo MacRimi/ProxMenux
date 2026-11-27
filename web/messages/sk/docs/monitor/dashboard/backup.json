@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Kto kartu vidí",
-            "body": "Karta sa zobrazí, ak profil účtu obsahuje oblasť <strong>Záloha</strong>. Vytváranie, spúšťanie, úprava, obnova, sťahovanie, zobrazenie obsahu zálohy alebo vymazanie vyžaduje akciu <strong>Spravovať zálohy</strong>, rovnako ako správa pripojení PBS a úprava karty <strong>Uchovávanie záloh úložiska</strong>. Bez nej sú zobrazenia len na čítanie a tieto tlačidlá sa nezobrazia. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. Monitor na hostiteľovi Proxmox Backup Server má vlastné karty a kartu Záloha nemá."
+            "body": "Karta sa zobrazí, ak profil účtu obsahuje oblasť <strong>Záloha</strong>. Vytváranie, spúšťanie, úprava, obnova, sťahovanie, zobrazenie obsahu zálohy alebo vymazanie vyžaduje akciu <strong>Spravovať zálohy</strong>, rovnako ako správa pripojení PBS a úprava karty <strong>Uchovávanie záloh úložiska</strong>. Bez nej sú zobrazenia len na čítanie a tieto tlačidlá sa nezobrazia. Profily sú opísané v časti <accessLink>Používatelia a profily</accessLink>. <pbsMonitorLink>Monitor na hostiteľovi Proxmox Backup Server</pbsMonitorLink> má vlastné karty a kartu Záloha nemá."
           }
         }
       ]

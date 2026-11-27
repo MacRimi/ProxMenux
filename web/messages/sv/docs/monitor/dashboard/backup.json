@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Vem som ser fliken",
-            "body": "Fliken visas när kontots profil innehåller området <strong>Säkerhetskopiering</strong>. Att skapa, köra, redigera, återställa, ladda ner, visa innehållet i en säkerhetskopia eller radera den kräver åtgärden <strong>Hantera säkerhetskopior</strong>, liksom att hantera PBS-anslutningarna och redigera <strong>Lagringens bevarandepolicy</strong>. Utan den är vyerna skrivskyddade och knapparna visas inte. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. Monitor på en värd med Proxmox Backup Server har egna flikar och ingen flik för säkerhetskopiering."
+            "body": "Fliken visas när kontots profil innehåller området <strong>Säkerhetskopiering</strong>. Att skapa, köra, redigera, återställa, ladda ner, visa innehållet i en säkerhetskopia eller radera den kräver åtgärden <strong>Hantera säkerhetskopior</strong>, liksom att hantera PBS-anslutningarna och redigera <strong>Lagringens bevarandepolicy</strong>. Utan den är vyerna skrivskyddade och knapparna visas inte. Profiler beskrivs i <accessLink>Användare och profiler</accessLink>. <pbsMonitorLink>Monitor på en värd med Proxmox Backup Server</pbsMonitorLink> har egna flikar och ingen flik för säkerhetskopiering."
           }
         }
       ]

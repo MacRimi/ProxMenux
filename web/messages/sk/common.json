@@ -215,7 +215,8 @@
       "backupRestoreCrossKernel": "Obnova medzi kernelmi",
       "backupRestoreGlossary": "Slovník pojmov",
       "pbs": "Proxmox Backup Server",
-      "pbsOverview": "Prehľad"
+      "pbsOverview": "Prehľad",
+      "pbsMonitor": "ProxMenux Monitor"
     }
   },
   "hero": {

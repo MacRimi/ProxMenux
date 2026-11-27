@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor na Proxmox Backup Server | Dokumentácia ProxMenux",
+    "description": "ProxMenux Monitor na hostiteľovi Proxmox Backup Server: jeho karty, stránky Prehľad, Dátové úložiská a Úlohy, čo sa mení v kartách Sieť a Hardvér, prihlásenie účtami servera, monitor stavu a skryté nastavenia."
+  },
+  "header": {
+    "title": "ProxMenux Monitor na Proxmox Backup Server",
+    "description": "Čo Monitor zobrazuje, keď beží na hostiteľovi Proxmox Backup Server: karty pre dátové úložiská a úlohy namiesto hostí a aplikácií, prihlásenie účtami servera a kontroly stavu zálohovacieho servera.",
+    "section": "Proxmox Backup Server"
+  },
+  "sections": [
+    {
+      "id": "detection",
+      "title": "Ako Monitor zistí, že beží na PBS",
+      "blocks": [
+        {
+          "p": "Monitor sa pýta vlastného servera, aký produkt hostiteľ spúšťa (<code>/api/platform</code>), s rovnakým rozpoznaním ako ponuka, opísaným v časti <detectionLink>Rozpoznanie a podporované verzie</detectionLink>. Server si odpoveď pamätá 60 sekúnd. Na hostiteľovi Proxmox Backup Server hlavička zobrazuje pod názvom Monitora <strong>Prehľad systému Proxmox Backup Server</strong> a prehľad má karty opísané na tejto stránke."
+        }
+      ]
+    },
+    {
+      "id": "tabs",
+      "title": "Karty",
+      "intro": "Hostiteľ Proxmox Backup Server má vlastné karty, vždy v tomto poradí. Každá sa zobrazí, ak profil účtu obsahuje jej oblasť alebo akciu:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Karta", "Čo zobrazuje", "Vyžaduje"],
+            "rows": [
+              ["<strong>Prehľad</strong>", "Stav hostiteľa, s dátovými úložiskami namiesto VM a LXC.", "Oblasť <strong>Prehľad</strong>."],
+              ["<strong>Dátové úložiská</strong>", "Dátové úložiská servera a disky hostiteľa.", "Oblasť <strong>Dátové úložiská</strong>."],
+              ["<strong>Úlohy</strong>", "Nedávne úlohy a plány údržby servera.", "Oblasť <strong>Úlohy</strong>."],
+              ["<strong>Sieť</strong>", "Sieťová karta Proxmox VE, s jedným panelom menej.", "Oblasť <strong>Sieť a hardvér</strong>."],
+              ["<strong>Hardvér</strong>", "Hardvérová karta Proxmox VE, bez jej inštalátorov.", "Oblasť <strong>Sieť a hardvér</strong>."],
+              ["<strong>Terminál</strong>", "Terminál hostiteľa, ako v časti <terminalLink>Karta Terminál</terminalLink> pre Proxmox VE.", "Akcia <strong>Otvárať terminály</strong>."],
+              ["<strong>Správa</strong>", "<strong>Systémové záznamy</strong>, <strong>Bezpečnosť</strong>, <strong>Nastavenia</strong> a <strong>O projekte</strong>.", "Každý profil. <strong>Systémové záznamy</strong> vyžadujú svoju oblasť."]
+            ]
+          }
+        },
+        {
+          "p": "Poradie sa nedá zmeniť: na hostiteľovi PBS nemajú nastavenia panel <strong>Poradie navigácie</strong>. Sieť a Hardvér sú samostatné karty namiesto položiek ponuky <strong>Server</strong>, pretože úložisko servera je v Dátových úložiskách. Karty <strong>Aplikácie</strong>, Catalog, <strong>VM a LXC</strong> ani <strong>Záloha</strong> tu nie sú."
+        }
+      ]
+    },
+    {
+      "id": "overview",
+      "title": "Prehľad",
+      "intro": "Prehľad si zachováva rozloženie opísané v časti <overviewLink>Karta Prehľad systému</overviewLink>, s týmito zmenami:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Panel VM a LXC sa mení na <strong>Dátové úložiská</strong>: počet dátových úložísk, <strong>Všetky dostupné</strong> alebo počet nedostupných a využitie prvých dvoch. Ak ich je viac, riadok pod nimi uvádza koľko.",
+              "Panel úložiska zobrazuje využitie každého dátového úložiska namiesto <strong>Úložisko VM a LXC</strong> a <strong>Lokálne úložisko (systém)</strong>.",
+              "Systémový panel zobrazuje <strong>Verzia PBS:</strong> namiesto <strong>Verzia Proxmoxu:</strong>.",
+              "Grafy histórie čítajú metriky, ktoré si server zaznamenáva sám, pomocou <code>proxmox-backup-debug api get /nodes/localhost/rrd</code>. Tieto metriky nemajú hodnotu ZFS ARC, preto graf pamäte nemá históriu ARC.",
+              "Využitie dátového úložiska zožltne nad 75 % a sčervená nad 90 %, s rovnakými prahmi ako úložisko Proxmox VE. Údaje dátových úložísk sa obnovujú každú minútu."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-overview.png",
+            "alt": "Karta Prehľad Monitora na hostiteľovi Proxmox Backup Server, s panelom Dátové úložiská a riadkom Verzia PBS",
+            "caption": "Prehľad hostiteľa Proxmox Backup Server."
+          }
+        }
+      ]
+    },
+    {
+      "id": "datastores",
+      "title": "Dátové úložiská",
+      "blocks": [
+        {
+          "p": "Karta <strong>Dátové úložiská</strong> má panel pre každé dátové úložisko servera, načítané príkazom <code>proxmox-backup-manager datastore list</code>. Každý panel zobrazuje názov, stav (<strong>aktívne</strong> alebo <strong>chyba</strong>), percento využitia, <strong>Spolu</strong>, <strong>Použité</strong> a <strong>Dostupné</strong> a cestu dátového úložiska. Kapacita je kapacita súborového systému, na ktorom cesta leží. Údaje sa obnovujú každých 30 sekúnd."
+        },
+        {
+          "p": "Dátové úložisko v režime údržby alebo vymeniteľné úložisko, ktorého zariadenie nie je pripojené, zobrazuje namiesto kapacity <strong>Dátové úložisko je odpojené, v režime údržby alebo jeho zariadenie nie je pripojené.</strong>"
+        },
+        {
+          "p": "Pod dátovými úložiskami nasledujú disky a pooly hostiteľa, ako v časti <storageLink>Karta Úložisko</storageLink> pre Proxmox VE, bez jej súhrnných panelov a bez zoznamu úložísk Proxmoxu."
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-datastores.png",
+            "alt": "Karta Dátové úložiská s panelom pre každé dátové úložisko so stavom, využitím, celkovým, použitým a dostupným miestom a cestou, a pod nimi disky hostiteľa",
+            "caption": "Karta Dátové úložiská."
+          }
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "title": "Úlohy",
+      "blocks": [
+        {
+          "p": "Karta <strong>Úlohy</strong> má dve tabuľky, ktoré sa obnovujú každých 30 sekúnd:"
+        },
+        {
+          "table": {
+            "headers": ["Tabuľka", "Čo zobrazuje"],
+            "rows": [
+              [
+                "<strong>Nedávne úlohy</strong>",
+                "Posledných 20 úloh servera z <code>proxmox-backup-manager task list</code>: typ (záloha, obnova, overenie, prune, garbage collection, synchronizácia a ďalšie), čas spustenia, trvanie a výsledok."
+              ],
+              [
+                "<strong>Plány údržby</strong>",
+                "Úlohy synchronizácie, overovania a prune s ich dátovým úložiskom, plánom a výsledkom posledného behu. Ak nie je nastavená žiadna, zobrazuje <strong>Nie sú nastavené žiadne plány synchronizácie, overovania ani odstraňovania starých záloh.</strong>"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-tasks.png",
+            "alt": "Karta Úlohy s tabuľkou Nedávne úlohy a tabuľkou Plány údržby",
+            "caption": "Karta Úlohy."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network-hardware",
+      "title": "Sieť a Hardvér",
+      "intro": "Tieto karty sú tie z Proxmox VE, opísané v častiach <networkLink>Karta Sieť</networkLink> a <hardwareLink>Karta Hardvér</hardwareLink>. Na hostiteľovi Proxmox Backup Server:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Sieť nemá panel <strong>Tok siete</strong>, ktorý kreslí, ako prevádzka prichádza k VM a LXC.",
+              "Hardvér nemá pre GPU ovládací prvok <strong>Režim GPU</strong>, inštalátory ovládačov (<strong>Nainštalovať NVIDIA ovládače</strong>, <strong>Nainštalovať AMD GPU nástroje</strong>, <strong>Nainštalovať Intel GPU nástroje</strong> a <strong>Nainštalovať Coral TPU ovládače</strong>) ani upozornenie <strong>Rozšírené monitorovanie nie je dostupné</strong>, ktoré tieto nástroje ponúka. Akcia <strong>Spúšťať skripty a nástroje</strong> tejto karte nič nepridáva."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Prihlásenie",
+      "intro": "Lokálne účty, profily, 2FA a API tokeny fungujú tak, ako je opísané v časti <accessLink>Prístup a overenie</accessLink>. Účty Proxmoxu, ktoré sa môžu prihlásiť, sú účty zálohovacieho servera a zapínajú sa tak, ako je opísané v časti <proxmoxAccountsLink>Proxmox VE účty</proxmoxAccountsLink>. Čo sa mení:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Prihlasovacia obrazovka má vedľa karty <strong>Lokálny účet</strong> kartu <em>Proxmox Backup Server</em> s poľami <strong>Používateľ</strong>, <strong>Heslo</strong> a <strong>Realm</strong>. Realmy sú tie, ktoré server uvádza. Ak má účet druhý faktor, pole <strong>Dvojfaktorový kód</strong> prijme kód TOTP alebo kľúč na obnovenie.",
+              "Rozhodujú oprávnenia na <code>/</code> servera, ako v Proxmox VE: <code>Sys.Modify</code> dáva profil Administrátor a samotné <code>Sys.Audit</code> profil Pozorovateľ, ak pravidlo nepriradí iný profil. Bez žiadneho z nich sa účet prihlásiť nemôže.",
+              "Účet, ktorého jediným druhým faktorom je bezpečnostný kľúč, sa prihlasuje vo webovom rozhraní servera na porte 8007. Ak je Monitor otvorený cez HTTPS na tej istej adrese, táto relácia prihlási aj do Monitora.",
+              "Proxmox Backup Server nemá skupiny používateľov, preto pravidlo profilu uvádza používateľa.",
+              "Vlastný profil vyberá z oblastí <strong>Prehľad</strong>, <strong>Dátové úložiská</strong>, <strong>Úlohy</strong>, <strong>Sieť a hardvér</strong> a <strong>Systémové záznamy</strong> a z akcií <strong>Spúšťať skripty a nástroje</strong>, <strong>Aktualizovať</strong> a <strong>Otvárať terminály</strong>. Profily sú opísané v časti <profilesLink>Používatelia a profily</profilesLink>."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-login.png",
+            "alt": "Prihlasovacia obrazovka Monitora s kartami Lokálny účet a Proxmox Backup Server, druhá vybraná s poľami Používateľ, Heslo a Realm",
+            "caption": "Prihlásenie účtom servera."
+          }
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "Monitor stavu",
+      "intro": "<healthLink>Monitor stavu</healthLink> kontroluje to, čo zálohovací server má:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Služby PBS</strong> kontroluje <code>proxmox-backup</code> a <code>proxmox-backup-proxy</code> namiesto služieb Proxmox VE a nikdy corosync.",
+              "Kontroly VM a LXC, úložísk Proxmox VE a ich kapacity, koreňových diskov a prípojných bodov LXC a diskov VM sa nespúšťajú. Vzdialené pripojenia NFS, CIFS a SMB hostiteľa sa naďalej kontrolujú.",
+              "<strong>Hranice kontroly stavu</strong> v nastaveniach skrýva prahy týchto kontrol.",
+              "V kategórii <strong>Aktualizácie systému</strong> otvorí tlačidlo <strong>Aktualizovať systém</strong> okno terminálu s <code>pbs_update.sh</code>, aktualizáciou z voľby 6 ponuky PBS, opísanou v časti <updatesLink>Aktualizácia servera</updatesLink>. Vyžaduje akciu <strong>Aktualizovať</strong>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "Nastavenia, Bezpečnosť a Správa",
+      "intro": "Ponuka Správa nemá <strong>Audit a správy</strong> a uvítací karusel ani okno s poznámkami k vydaniu Monitora pre Proxmox VE sa neotvárajú. Tieto časti kariet opísaných v <settingsLink>Karta Nastavenia</settingsLink> a <securityLink>Karta Bezpečnosť</securityLink> sa na hostiteľovi Proxmox Backup Server nezobrazujú:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Stránka", "Nezobrazuje sa"],
+            "rows": [
+              [
+                "<strong>Nastavenia</strong>",
+                "<strong>Poradie navigácie</strong>, <strong>Vylúčené vzdialené úložiská</strong>, <strong>Kontrola aktualizácií v LXC</strong>, <strong>GitHub API</strong>, <strong>Notifikácie</strong>, <strong>Úložisko pre hookscripty</strong> a riadok <strong>VM a kontajnery</strong> v dĺžkach potlačenia panela <strong>Kontrola stavu</strong>."
+              ],
+              ["<strong>Bezpečnosť</strong>", "Skupina Proxmox VE: <strong>Firewall</strong>, Fail2Ban a <strong>Lynis bezpečnostný audit</strong>."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Čo ďalej",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux na Proxmox Backup Server",
+                "href": "/docs/pbs",
+                "tail": "ponuka PBS, aktualizácie balíkov a nastavenie po inštalácii."
+              },
+              {
+                "label": "Prístup a overenie",
+                "href": "/docs/monitor/access-auth",
+                "tail": "lokálne účty, profily, 2FA a API tokeny."
+              },
+              {
+                "label": "Monitor stavu",
+                "href": "/docs/monitor/health-monitor",
+                "tail": "kategórie, ktoré kontroluje, a ako o nich informuje."
+              },
+              {
+                "label": "Prehľad: karta Záloha",
+                "href": "/docs/monitor/dashboard/backup#pbs",
+                "tail": "sledovanie Proxmox Backup Server z Monitora hostiteľa Proxmox VE."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

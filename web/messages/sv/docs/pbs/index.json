@@ -35,7 +35,7 @@
       "title": "Installation",
       "blocks": [
         {
-          "p": "ProxMenux installeras på en Proxmox Backup Server med samma kommando som på Proxmox VE, beskrivet i <installLink>Installera ProxMenux</installLink>. Installationsprogrammet har ingen separat väg för PBS: det installerar även ProxMenux Monitor, som lyssnar på port 8008. Efter installationen öppnar <code>menu</code> PBS-menyn."
+          "p": "ProxMenux installeras på en Proxmox Backup Server med samma kommando som på Proxmox VE, beskrivet i <installLink>Installera ProxMenux</installLink>. Installationsprogrammet har ingen separat väg för PBS: det installerar även ProxMenux Monitor, som lyssnar på port 8008. Efter installationen öppnar <code>menu</code> PBS-menyn. Vad Monitor visar på servern beskrivs i <monitorLink>ProxMenux Monitor på Proxmox Backup Server</monitorLink>."
         }
       ]
     },
@@ -169,6 +169,28 @@
       "blocks": [
         {
           "p": "Den här sidan handlar om ProxMenux installerat på själva säkerhetskopieringsservern. För att följa datalagren och uppgifterna på en Proxmox Backup Server från en Proxmox VE-värd, se <backupTabLink>vyn Proxmox Backup Server på fliken Säkerhetskopiering</backupTabLink>. För att säkerhetskopiera en Proxmox VE-värd till en Proxmox Backup Server, se <pbsDestLink>Mål: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Vidare läsning",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux Monitor på Proxmox Backup Server",
+                "href": "/docs/pbs/monitor",
+                "tail": "flikarna, inloggningen och hälsokontrollerna i Monitor på servern."
+              },
+              {
+                "label": "Efterinstallation på Proxmox Backup Server",
+                "href": "/docs/post-install#pbs",
+                "tail": "vad efterinstallationen ändrar på en säkerhetskopieringsserver."
+              }
+            ]
+          }
         }
       ]
     }

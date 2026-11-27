@@ -391,7 +391,7 @@
   },
   "pveAccounts": {
     "heading": "Account Proxmox VE",
-    "intro": "Gli utenti e i reami di Proxmox VE possono accedere al Monitor, insieme agli account locali o al loro posto.<strong>Sicurezza</strong> → <strong>Account Proxmox VE</strong> → <strong>Modifica</strong> li attiva. La schermata di accesso ha quindi una scheda <em>Proxmox VE</em> con utente, password e realm, seguita dal secondo fattore (codice TOTP o chiave di ripristino) quando l'account ne ha uno.",
+    "intro": "Gli utenti e i reami di Proxmox VE possono accedere al Monitor, insieme agli account locali o al loro posto.<strong>Sicurezza</strong> → <strong>Account Proxmox VE</strong> → <strong>Modifica</strong> li attiva. La schermata di accesso ha quindi una scheda <em>Proxmox VE</em> con utente, password e realm, seguita dal secondo fattore (codice TOTP o chiave di ripristino) quando l'account ne ha uno. Su un host Proxmox Backup Server gli account sono quelli del server di backup: vedi <pbsMonitorLink>Accesso su Proxmox Backup Server</pbsMonitorLink>.",
     "items": [
       "Il Monitor non mantiene alcuna sessione propria: il browser conserva un ticket Proxmox VE e il Monitor lo confronta con il Proxmox VE API locale (<code>/access/permissions</code>) al massimo una volta al minuto. Scadenza, ambiti, 2FA e autorizzazioni rimangono quelli di Proxmox VE e un privilegio rimosso raggiunge il Monitor entro un minuto.",
       "Gli account che accedono con una chiave di sicurezza (WebAuthn) o tramite un dominio OpenID Connect di Proxmox VE, accedono all'interfaccia web Proxmox VE.Con il Monitor aperto su HTTPS con lo stesso nome host, anche quella sessione accede al Monitor.",

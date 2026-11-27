@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor på Proxmox Backup Server | ProxMenux-dokumentation",
+    "description": "ProxMenux Monitor på en värd med Proxmox Backup Server: flikarna, sidorna Översikt, Datalager och Uppgifter, vad som ändras i Nätverk och Hårdvara, inloggning med serverns konton, systemövervakningen och de inställningar som döljs."
+  },
+  "header": {
+    "title": "ProxMenux Monitor på Proxmox Backup Server",
+    "description": "Vad Monitor visar när den körs på en värd med Proxmox Backup Server: flikar för datalager och uppgifter i stället för gäster och appar, inloggning med serverns konton och hälsokontrollerna för en säkerhetskopieringsserver.",
+    "section": "Proxmox Backup Server"
+  },
+  "sections": [
+    {
+      "id": "detection",
+      "title": "Hur Monitor vet att den körs på PBS",
+      "blocks": [
+        {
+          "p": "Monitor frågar sin egen server vilken produkt värden kör (<code>/api/platform</code>), med samma identifiering som menyn, beskriven i <detectionLink>Identifiering och versioner som stöds</detectionLink>. Servern sparar svaret i 60 sekunder. På en värd med Proxmox Backup Server visar sidhuvudet <strong>Proxmox Backup Server Dashboard</strong> under namnet på Monitor, och instrumentpanelen har de flikar som beskrivs på den här sidan."
+        }
+      ]
+    },
+    {
+      "id": "tabs",
+      "title": "Flikar",
+      "intro": "En värd med Proxmox Backup Server har egna flikar, alltid i den här ordningen. Varje flik visas när kontots profil innehåller dess område eller åtgärd:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Flik", "Vad den visar", "Kräver"],
+            "rows": [
+              ["<strong>Översikt</strong>", "Värdens tillstånd, med datalagren i stället för VM och LXC.", "Området <strong>Översikt</strong>."],
+              ["<strong>Datalager</strong>", "Serverns datalager och värdens diskar.", "Området <strong>Datalager</strong>."],
+              ["<strong>Uppgifter</strong>", "Serverns senaste uppgifter och underhållsscheman.", "Området <strong>Uppgifter</strong>."],
+              ["<strong>Nätverk</strong>", "Nätverksfliken i Proxmox VE, med ett kort mindre.", "Området <strong>Nätverk och hårdvara</strong>."],
+              ["<strong>Hårdvara</strong>", "Hårdvarufliken i Proxmox VE, utan dess installationsprogram.", "Området <strong>Nätverk och hårdvara</strong>."],
+              ["<strong>Terminal</strong>", "Värdens terminal, som i <terminalLink>Fliken Terminal</terminalLink> i Proxmox VE.", "Åtgärden <strong>Öppna terminaler</strong>."],
+              ["<strong>Administration</strong>", "<strong>Systemloggar</strong>, <strong>Säkerhet</strong>, <strong>Inställningar</strong> och <strong>Om</strong>.", "Alla profiler. <strong>Systemloggar</strong> kräver sitt område."]
+            ]
+          }
+        },
+        {
+          "p": "Ordningen kan inte ändras: på en PBS-värd har inställningarna inget kort <strong>Navigeringsordning</strong>. Nätverk och Hårdvara är egna flikar i stället för poster i menyn <strong>Nod</strong>, eftersom serverns lagring finns under Datalager. Det finns inga flikar <strong>Apps</strong>, Catalog, <strong>VM och LXC</strong> eller <strong>Säkerhetskopiering</strong>."
+        }
+      ]
+    },
+    {
+      "id": "overview",
+      "title": "Översikt",
+      "intro": "Översikten behåller layouten som beskrivs i <overviewLink>Fliken Systemöversikt</overviewLink>, med dessa ändringar:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Kortet för VM och LXC blir <strong>Datalager</strong>: antalet datalager, <strong>Alla tillgängliga</strong> eller hur många som inte är tillgängliga, och användningen av de två första. Finns det fler anger en rad under dem hur många.",
+              "Lagringskortet visar användningen av varje datalager i stället för <strong>VM/LXC-lagring</strong> och <strong>Lokal lagring (system)</strong>.",
+              "Systemkortet visar <strong>PBS-version:</strong> i stället för <strong>Proxmox-version:</strong>.",
+              "Historikdiagrammen läser de mätvärden som servern själv registrerar, med <code>proxmox-backup-debug api get /nodes/localhost/rrd</code>. De mätvärdena har inget värde för ZFS ARC, så minnesdiagrammet saknar ARC-historik.",
+              "Användningen av ett datalager blir gul över 75 % och röd över 90 %, samma tröskelvärden som för lagringen i Proxmox VE. Datalagrens data uppdateras varje minut."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-overview.png",
+            "alt": "Fliken Översikt i Monitor på en värd med Proxmox Backup Server, med kortet Datalager och raden PBS-version",
+            "caption": "Översikten på en värd med Proxmox Backup Server."
+          }
+        }
+      ]
+    },
+    {
+      "id": "datastores",
+      "title": "Datalager",
+      "blocks": [
+        {
+          "p": "Fliken <strong>Datalager</strong> har ett kort för varje datalager på servern, lästa med <code>proxmox-backup-manager datastore list</code>. Varje kort visar namnet, statusen (<strong>aktiv</strong> eller <strong>fel</strong>), den använda andelen i procent, <strong>Total</strong>, <strong>Använt</strong> och <strong>Tillgänglig</strong> samt datalagrets sökväg. Kapaciteten är den för filsystemet som innehåller sökvägen. Data uppdateras var 30:e sekund."
+        },
+        {
+          "p": "Ett datalager i underhållsläge, eller ett flyttbart datalager vars enhet inte är monterad, visar <strong>Datalagret är offline, i underhållsläge eller så är dess underliggande enhet inte monterad.</strong> i stället för sin kapacitet."
+        },
+        {
+          "p": "Under datalagren kommer värdens diskar och pooler, som i <storageLink>Fliken Lagring</storageLink> i Proxmox VE, utan dess sammanfattningskort och utan dess lista över Proxmox-lagringar."
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-datastores.png",
+            "alt": "Fliken Datalager med ett kort per datalager som visar status, användning, totalt, använt och tillgängligt utrymme och sökväg, och värdens diskar nedanför",
+            "caption": "Fliken Datalager."
+          }
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "title": "Uppgifter",
+      "blocks": [
+        {
+          "p": "Fliken <strong>Uppgifter</strong> har två tabeller som uppdateras var 30:e sekund:"
+        },
+        {
+          "table": {
+            "headers": ["Tabell", "Vad den visar"],
+            "rows": [
+              [
+                "<strong>Senaste uppgifter</strong>",
+                "Serverns 20 senaste uppgifter, från <code>proxmox-backup-manager task list</code>: typen (säkerhetskopiering, återställning, verifiering, beskärning, skräpinsamling, synkronisering och andra), starttiden, varaktigheten och resultatet."
+              ],
+              [
+                "<strong>Underhållsscheman</strong>",
+                "Jobben för synkronisering, verifiering och beskärning, med sitt datalager, sitt schema och resultatet av den senaste körningen. Finns inget konfigurerat visas <strong>Inga synkroniserings-, verifierings- eller beskärningsscheman är konfigurerade.</strong>"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-tasks.png",
+            "alt": "Fliken Uppgifter med tabellen Senaste uppgifter och tabellen Underhållsscheman",
+            "caption": "Fliken Uppgifter."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network-hardware",
+      "title": "Nätverk och Hårdvara",
+      "intro": "Flikarna är desamma som i Proxmox VE och beskrivs i <networkLink>Fliken Nätverk</networkLink> och <hardwareLink>Fliken Maskinvara</hardwareLink>. På en värd med Proxmox Backup Server:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Nätverk saknar kortet <strong>Nätverksflöde</strong>, som ritar hur trafiken når VM och LXC.",
+              "Hårdvara saknar kontrollen <strong>Växla läge</strong> för GPU:er, drivrutinsinstallationerna (<strong>Installera NVIDIA-drivrutiner</strong>, <strong>Installera AMD GPU-verktyg</strong>, <strong>Installera Intel GPU-verktyg</strong> och <strong>Installera Coral TPU-drivrutiner</strong>) och meddelandet <strong>Utökad övervakning inte tillgänglig</strong>, som erbjuder de verktygen. Åtgärden <strong>Köra skript och verktyg</strong> tillför inget på den här fliken."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Inloggning",
+      "intro": "Lokala konton, profiler, 2FA och API-token fungerar som beskrivs i <accessLink>Åtkomst och autentisering</accessLink>. De Proxmox-konton som kan logga in är säkerhetskopieringsserverns, och de slås på som beskrivs i <proxmoxAccountsLink>Proxmox VE konton</proxmoxAccountsLink>. Det här ändras:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Inloggningsskärmen har fliken <em>Proxmox Backup Server</em> bredvid <strong>Lokalt konto</strong>, med <strong>Användare</strong>, <strong>Lösenord</strong> och <strong>Realm</strong>. Realmerna är de som servern listar. När kontot har en andra faktor tar <strong>Tvåfaktorskod</strong> emot en TOTP-kod eller en återställningsnyckel.",
+              "Behörigheterna på serverns <code>/</code> avgör, som i Proxmox VE: <code>Sys.Modify</code> ger Administratör och enbart <code>Sys.Audit</code> ger Observatör, om ingen regel ger en annan profil. Utan någon av dem kan kontot inte logga in.",
+              "Ett konto vars enda andra faktor är en säkerhetsnyckel loggar in i serverns webbgränssnitt, på port 8007. När Monitor är öppnad över HTTPS på samma adress loggar den sessionen även in i Monitor.",
+              "Proxmox Backup Server har inga användargrupper, så en profilregel anger en användare.",
+              "En anpassad profil väljer bland områdena <strong>Översikt</strong>, <strong>Datalager</strong>, <strong>Uppgifter</strong>, <strong>Nätverk och hårdvara</strong> och <strong>Systemloggar</strong>, och åtgärderna <strong>Köra skript och verktyg</strong>, <strong>Uppdatera</strong> och <strong>Öppna terminaler</strong>. Profiler beskrivs i <profilesLink>Användare och profiler</profilesLink>."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-login.png",
+            "alt": "Inloggningsskärmen i Monitor med flikarna Lokalt konto och Proxmox Backup Server, den andra vald med fälten Användare, Lösenord och Realm",
+            "caption": "Inloggning med ett konto på servern."
+          }
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "Systemövervakning",
+      "intro": "<healthLink>Systemövervakning</healthLink> kontrollerar det som en säkerhetskopieringsserver har:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>PBS-tjänster</strong> kontrollerar <code>proxmox-backup</code> och <code>proxmox-backup-proxy</code> i stället för tjänsterna i Proxmox VE, och aldrig corosync.",
+              "Kontrollerna av VM och LXC, av lagringarna i Proxmox VE och deras kapacitet, av LXC:s rotdiskar och monteringspunkter och av VM:s diskar körs inte. Värdens fjärrmonteringar via NFS, CIFS och SMB kontrolleras fortfarande.",
+              "<strong>Health Monitor Trösklar</strong> i inställningarna döljer tröskelvärdena för de kontrollerna.",
+              "I <strong>Systemuppdateringar</strong> öppnar knappen <strong>Uppdatera systemet</strong> ett terminalfönster med <code>pbs_update.sh</code>, uppdateringen i alternativ 6 i PBS-menyn, som beskrivs i <updatesLink>Uppdatera servern</updatesLink>. Den kräver åtgärden <strong>Uppdatera</strong>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "Inställningar, Säkerhet och Administration",
+      "intro": "Menyn Administration saknar <strong>Granskning och rapporter</strong>, och välkomstkarusellen och fönstret med versionsinformation i Monitor för Proxmox VE öppnas inte. De här delarna av <settingsLink>Fliken Inställningar</settingsLink> och <securityLink>Fliken Säkerhet</securityLink> visas inte på en värd med Proxmox Backup Server:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Sida", "Visas inte"],
+            "rows": [
+              [
+                "<strong>Inställningar</strong>",
+                "<strong>Navigeringsordning</strong>, <strong>Exklusioner för fjärrlagring</strong>, <strong>LXC Update Detection</strong>, <strong>GitHub API</strong>, <strong>Aviseringar</strong>, <strong>Lagring för hookscripts</strong> och raden <strong>virtuella datorer och behållare</strong> bland undertryckningstiderna i <strong>Hälsoövervakare</strong>."
+              ],
+              ["<strong>Säkerhet</strong>", "Gruppen Proxmox VE: <strong>Brandvägg</strong>, Fail2Ban och <strong>Lynis säkerhetsrevision</strong>."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Vidare läsning",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux på Proxmox Backup Server",
+                "href": "/docs/pbs",
+                "tail": "PBS-menyn, paketuppdateringarna och efterinstallationen."
+              },
+              {
+                "label": "Åtkomst och autentisering",
+                "href": "/docs/monitor/access-auth",
+                "tail": "lokala konton, profiler, 2FA och API-token."
+              },
+              {
+                "label": "Systemövervakning",
+                "href": "/docs/monitor/health-monitor",
+                "tail": "kategorierna den kontrollerar och hur den rapporterar dem."
+              },
+              {
+                "label": "Översikt: fliken Säkerhetskopiering",
+                "href": "/docs/monitor/dashboard/backup#pbs",
+                "tail": "följa en Proxmox Backup Server från Monitor på en värd med Proxmox VE."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

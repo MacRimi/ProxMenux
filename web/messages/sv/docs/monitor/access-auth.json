@@ -391,7 +391,7 @@
   },
   "pveAccounts": {
     "heading": "Proxmox VE konton",
-    "intro": "Användarna och sfärerna av Proxmox VE kan logga in på monitorn, tillsammans med lokala konton eller istället för dem.<strong>Säkerhet</strong> → <strong>Proxmox VE-konton</strong> → <strong>Redigera</strong> aktiverar dem. Inloggningsskärmen har sedan en flik <em>Proxmox VE</em> med användare, lösenord och sfär, följt av den andra faktorn (TOTP-kod eller återställningsnyckel) när kontot har en.",
+    "intro": "Användarna och sfärerna av Proxmox VE kan logga in på monitorn, tillsammans med lokala konton eller istället för dem.<strong>Säkerhet</strong> → <strong>Proxmox VE-konton</strong> → <strong>Redigera</strong> aktiverar dem. Inloggningsskärmen har sedan en flik <em>Proxmox VE</em> med användare, lösenord och sfär, följt av den andra faktorn (TOTP-kod eller återställningsnyckel) när kontot har en. På en värd med Proxmox Backup Server är det säkerhetskopieringsserverns konton: se <pbsMonitorLink>Inloggning på Proxmox Backup Server</pbsMonitorLink>.",
     "items": [
       "Monitor har inga egna sessioner: webbläsaren håller en Proxmox VE-biljett, och Monitor kontrollerar den mot det lokala Proxmox VE-API:et (<code>/access/permissions</code>) högst en gång per minut. Giltighetstid, realms, 2FA och behörigheter förblir Proxmox VE:s, och en behörighet som tas bort där når Monitor inom en minut.",
       "Konton som loggar in med en säkerhetsnyckel (WebAuthn), eller via en OpenID Connect-sfär av Proxmox VE, loggar in på Proxmox VE webbgränssnittet. Med monitorn öppen över HTTPS vid samma värdnamn loggar den sessionen också in på monitorn.",

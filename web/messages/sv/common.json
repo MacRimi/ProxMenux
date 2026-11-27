@@ -215,7 +215,8 @@
       "backupRestoreCrossKernel": "Återställning mellan kärnversioner",
       "backupRestoreGlossary": "Ordlista",
       "pbs": "Proxmox Backup Server",
-      "pbsOverview": "Översikt"
+      "pbsOverview": "Översikt",
+      "pbsMonitor": "ProxMenux Monitor"
     }
   },
   "hero": {

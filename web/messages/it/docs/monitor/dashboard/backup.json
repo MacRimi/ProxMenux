@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Chi vede la scheda",
-            "body": "La scheda compare quando il profilo dell’account include l’area <strong>Backup</strong>. Creare, eseguire, modificare, ripristinare, scaricare, visualizzare il contenuto di un backup o eliminarlo richiede l’azione <strong>Gestire i backup</strong>, così come gestire le connessioni PBS e modificare <strong>Conservazione dei backup sullo storage</strong>. Senza di essa le viste sono in sola lettura e questi pulsanti non compaiono. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. Il Monitor di un host Proxmox Backup Server ha le proprie schede e non ha la scheda Backup."
+            "body": "La scheda compare quando il profilo dell’account include l’area <strong>Backup</strong>. Creare, eseguire, modificare, ripristinare, scaricare, visualizzare il contenuto di un backup o eliminarlo richiede l’azione <strong>Gestire i backup</strong>, così come gestire le connessioni PBS e modificare <strong>Conservazione dei backup sullo storage</strong>. Senza di essa le viste sono in sola lettura e questi pulsanti non compaiono. I profili sono descritti in <accessLink>Utenti e profili</accessLink>. Il <pbsMonitorLink>Monitor di un host Proxmox Backup Server</pbsMonitorLink> ha le proprie schede e non ha la scheda Backup."
           }
         }
       ]

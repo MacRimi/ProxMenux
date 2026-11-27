@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor auf Proxmox Backup Server | ProxMenux-Dokumentation",
+    "description": "ProxMenux Monitor auf einem Proxmox-Backup-Server-Host: seine Registerkarten, die Seiten Überblick, Datenspeicher und Aufgaben, was sich in Netzwerk und Hardware ändert, die Anmeldung mit den Konten des Servers, die Zustandsüberwachung und die ausgeblendeten Einstellungen."
+  },
+  "header": {
+    "title": "ProxMenux Monitor auf Proxmox Backup Server",
+    "description": "Was der Monitor zeigt, wenn er auf einem Proxmox-Backup-Server-Host läuft: Registerkarten für Datenspeicher und Aufgaben statt für Gäste und Apps, die Anmeldung mit den Konten des Servers und die Zustandsprüfungen eines Backup-Servers.",
+    "section": "Proxmox Backup Server"
+  },
+  "sections": [
+    {
+      "id": "detection",
+      "title": "Wie der Monitor erkennt, dass er auf PBS läuft",
+      "blocks": [
+        {
+          "p": "Der Monitor fragt seinen eigenen Server, welches Produkt der Host ausführt (<code>/api/platform</code>), mit derselben Erkennung wie das Menü, beschrieben in <detectionLink>Erkennung und unterstützte Versionen</detectionLink>. Der Server behält die Antwort 60 Sekunden lang. Auf einem Proxmox-Backup-Server-Host zeigt die Kopfzeile unter dem Namen des Monitors <strong>Proxmox Backup Server Dashboard</strong>, und das Dashboard hat die Registerkarten, die diese Seite beschreibt."
+        }
+      ]
+    },
+    {
+      "id": "tabs",
+      "title": "Registerkarten",
+      "intro": "Ein Proxmox-Backup-Server-Host hat eigene Registerkarten, immer in dieser Reihenfolge. Jede erscheint, wenn das Profil des Kontos ihren Bereich oder ihre Aktion enthält:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Registerkarte", "Was sie zeigt", "Voraussetzung"],
+            "rows": [
+              ["<strong>Überblick</strong>", "Den Zustand des Hosts, mit den Datenspeichern an der Stelle der VMs und LXCs.", "Der Bereich <strong>Überblick</strong>."],
+              ["<strong>Datenspeicher</strong>", "Die Datenspeicher des Servers und die Festplatten des Hosts.", "Der Bereich <strong>Datenspeicher</strong>."],
+              ["<strong>Aufgaben</strong>", "Die letzten Aufgaben und die Wartungszeitpläne des Servers.", "Der Bereich <strong>Aufgaben</strong>."],
+              ["<strong>Netzwerk</strong>", "Die Netzwerk-Registerkarte von Proxmox VE, mit einer Karte weniger.", "Der Bereich <strong>Netzwerk und Hardware</strong>."],
+              ["<strong>Hardware</strong>", "Die Hardware-Registerkarte von Proxmox VE, ohne ihre Installationsprogramme.", "Der Bereich <strong>Netzwerk und Hardware</strong>."],
+              ["<strong>Terminal</strong>", "Das Terminal des Hosts, wie in der <terminalLink>Registerkarte Terminal</terminalLink> von Proxmox VE.", "Die Aktion <strong>Terminals öffnen</strong>."],
+              ["<strong>Admin</strong>", "<strong>Systemprotokolle</strong>, <strong>Sicherheit</strong>, <strong>Einstellungen</strong> und <strong>Über</strong>.", "Jedes Profil. <strong>Systemprotokolle</strong> braucht seinen Bereich."]
+            ]
+          }
+        },
+        {
+          "p": "Die Reihenfolge lässt sich nicht ändern: Auf einem PBS-Host haben die Einstellungen keine Karte <strong>Navigationsreihenfolge</strong>. Netzwerk und Hardware sind eigene Registerkarten statt Einträge im Menü <strong>Knoten</strong>, weil der Speicher des Servers unter Datenspeicher liegt. Es gibt keine Registerkarten <strong>Apps</strong>, Catalog, <strong>VMs und LXCs</strong> oder <strong>Backup</strong>."
+        }
+      ]
+    },
+    {
+      "id": "overview",
+      "title": "Überblick",
+      "intro": "Der Überblick behält das Layout, das in <overviewLink>Registerkarte Systemübersicht</overviewLink> beschrieben ist, mit diesen Änderungen:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Die Karte der VMs und LXCs wird zu <strong>Datenspeicher</strong>: die Anzahl der Datenspeicher, <strong>Alle verfügbar</strong> oder wie viele nicht verfügbar sind, und die Belegung der ersten beiden. Gibt es mehr, nennt eine Zeile darunter ihre Anzahl.",
+              "Die Speicherkarte zeigt die Belegung jedes Datenspeichers an der Stelle von <strong>VM/LXC-Speicher</strong> und <strong>Lokaler Speicher (System)</strong>.",
+              "Die Systemkarte zeigt <strong>PBS-Version:</strong> statt <strong>Proxmox-Version:</strong>.",
+              "Die Verlaufsdiagramme lesen die Messwerte, die der Server selbst aufzeichnet, mit <code>proxmox-backup-debug api get /nodes/localhost/rrd</code>. Diese Messwerte enthalten keinen ZFS-ARC-Wert, daher hat das Speicherdiagramm keinen ARC-Verlauf.",
+              "Die Belegung eines Datenspeichers wird über 75 % gelb und über 90 % rot, mit denselben Schwellenwerten wie der Speicher von Proxmox VE. Die Daten der Datenspeicher werden jede Minute aktualisiert."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-overview.png",
+            "alt": "Registerkarte Überblick des Monitors auf einem Proxmox-Backup-Server-Host, mit der Karte Datenspeicher und der Zeile PBS-Version",
+            "caption": "Der Überblick eines Proxmox-Backup-Server-Hosts."
+          }
+        }
+      ]
+    },
+    {
+      "id": "datastores",
+      "title": "Datenspeicher",
+      "blocks": [
+        {
+          "p": "Die Registerkarte <strong>Datenspeicher</strong> hat eine Karte für jeden Datenspeicher des Servers, gelesen mit <code>proxmox-backup-manager datastore list</code>. Jede Karte zeigt den Namen, den Status (<strong>aktiv</strong> oder <strong>Fehler</strong>), den belegten Anteil in Prozent, <strong>Gesamt</strong>, <strong>Verwendet</strong> und <strong>Verfügbar</strong> sowie den Pfad des Datenspeichers. Die Kapazität ist die des Dateisystems, das den Pfad enthält. Die Daten werden alle 30 Sekunden aktualisiert."
+        },
+        {
+          "p": "Ein Datenspeicher im Wartungsmodus oder ein Wechseldatenspeicher, dessen Gerät nicht eingehängt ist, zeigt statt seiner Kapazität <strong>Der Datenspeicher ist offline, im Wartungsmodus oder sein zugrunde liegendes Gerät ist nicht eingehängt.</strong>"
+        },
+        {
+          "p": "Unter den Datenspeichern folgen die Festplatten und Pools des Hosts wie in der <storageLink>Registerkarte Speicher</storageLink> von Proxmox VE, ohne ihre Übersichtskarten und ihre Liste der Proxmox-Speicher."
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-datastores.png",
+            "alt": "Registerkarte Datenspeicher mit einer Karte je Datenspeicher, die Status, Belegung, gesamten, verwendeten und verfügbaren Platz und den Pfad zeigt, und den Festplatten des Hosts darunter",
+            "caption": "Die Registerkarte Datenspeicher."
+          }
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "title": "Aufgaben",
+      "blocks": [
+        {
+          "p": "Die Registerkarte <strong>Aufgaben</strong> hat zwei Tabellen, die alle 30 Sekunden aktualisiert werden:"
+        },
+        {
+          "table": {
+            "headers": ["Tabelle", "Was sie zeigt"],
+            "rows": [
+              [
+                "<strong>Letzte Aufgaben</strong>",
+                "Die letzten 20 Aufgaben des Servers, aus <code>proxmox-backup-manager task list</code>: der Typ (Backup, Wiederherstellung, Überprüfung, Prune, Garbage Collection, Synchronisierung und andere), die Startzeit, die Dauer und das Ergebnis."
+              ],
+              [
+                "<strong>Wartungszeitpläne</strong>",
+                "Die Synchronisierungs-, Überprüfungs- und Prune-Jobs mit ihrem Datenspeicher, ihrem Zeitplan und dem Ergebnis ihres letzten Laufs. Ist keiner konfiguriert, zeigt sie <strong>Es sind keine Synchronisierungs-, Überprüfungs- oder Löschzeitpläne konfiguriert.</strong>"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-tasks.png",
+            "alt": "Registerkarte Aufgaben mit der Tabelle Letzte Aufgaben und der Tabelle Wartungszeitpläne",
+            "caption": "Die Registerkarte Aufgaben."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network-hardware",
+      "title": "Netzwerk und Hardware",
+      "intro": "Diese Registerkarten sind die von Proxmox VE, beschrieben in <networkLink>Registerkarte Netzwerk</networkLink> und <hardwareLink>Registerkarte Hardware</hardwareLink>. Auf einem Proxmox-Backup-Server-Host:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Netzwerk hat keine Karte <strong>Netzwerkfluss</strong>, die zeigt, wie der Verkehr die VMs und LXCs erreicht.",
+              "Hardware hat für GPUs kein Steuerelement <strong>Modus wechseln</strong>, keine Treiber-Installationsprogramme (<strong>NVIDIA-Treiber installieren</strong>, <strong>Die AMD GPU Tools installieren</strong>, <strong>Die Intel GPU Tools installieren</strong> und <strong>Coral TPU-Treiber installieren</strong>) und keinen Hinweis <strong>Erweiterte Überwachung nicht verfügbar</strong>, der diese Werkzeuge anbietet. Die Aktion <strong>Skripte und Werkzeuge ausführen</strong> fügt dieser Registerkarte nichts hinzu."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Anmeldung",
+      "intro": "Lokale Konten, Profile, 2FA und API-Tokens funktionieren wie in <accessLink>Zugriff und Authentifizierung</accessLink> beschrieben. Die Proxmox-Konten, die sich anmelden können, sind die des Backup-Servers. Sie werden eingeschaltet wie in <proxmoxAccountsLink>Proxmox VE Konten</proxmoxAccountsLink> beschrieben. Was sich ändert:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Der Anmeldebildschirm hat neben <strong>Lokales Konto</strong> eine Registerkarte <em>Proxmox Backup Server</em> mit <strong>Benutzer</strong>, <strong>Passwort</strong> und <strong>Realm</strong>. Die Realms sind die, die der Server auflistet. Hat das Konto einen zweiten Faktor, nimmt <strong>Zwei-Faktor-Code</strong> einen TOTP-Code oder einen Wiederherstellungsschlüssel an.",
+              "Es entscheiden die Berechtigungen auf <code>/</code> des Servers, wie bei Proxmox VE: <code>Sys.Modify</code> ergibt Administrator und <code>Sys.Audit</code> allein ergibt Beobachter, sofern keine Regel ein anderes Profil vergibt. Ohne eine der beiden kann sich das Konto nicht anmelden.",
+              "Ein Konto, dessen einziger zweiter Faktor ein Sicherheitsschlüssel ist, meldet sich an der Weboberfläche des Servers auf Port 8007 an. Ist der Monitor über HTTPS unter derselben Adresse geöffnet, meldet diese Sitzung auch am Monitor an.",
+              "Proxmox Backup Server hat keine Benutzergruppen, daher nennt eine Profilregel einen Benutzer.",
+              "Ein benutzerdefiniertes Profil wählt aus den Bereichen <strong>Überblick</strong>, <strong>Datenspeicher</strong>, <strong>Aufgaben</strong>, <strong>Netzwerk und Hardware</strong> und <strong>Systemprotokolle</strong> und den Aktionen <strong>Skripte und Werkzeuge ausführen</strong>, <strong>Aktualisieren</strong> und <strong>Terminals öffnen</strong>. Profile werden unter <profilesLink>Benutzer und Profile</profilesLink> beschrieben."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-login.png",
+            "alt": "Anmeldebildschirm des Monitors mit den Registerkarten Lokales Konto und Proxmox Backup Server, die zweite ausgewählt mit ihren Feldern Benutzer, Passwort und Realm",
+            "caption": "Anmeldung mit einem Konto des Servers."
+          }
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "Zustandsüberwachung",
+      "intro": "Die <healthLink>Zustandsüberwachung</healthLink> prüft, was ein Backup-Server hat:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>PBS-Dienste</strong> prüft <code>proxmox-backup</code> und <code>proxmox-backup-proxy</code> statt der Dienste von Proxmox VE, und nie corosync.",
+              "Die Prüfungen der VMs und LXCs, der Proxmox-VE-Speicher und ihrer Kapazität, der Root-Festplatten und Einhängepunkte der LXCs und der Festplatten der VMs laufen nicht. Die entfernten NFS-, CIFS- und SMB-Einhängungen des Hosts werden weiterhin geprüft.",
+              "<strong>Schwellenwerte für den Health-Monitor</strong> in den Einstellungen blendet die Schwellenwerte dieser Prüfungen aus.",
+              "In <strong>Systemaktualisierungen</strong> öffnet die Schaltfläche <strong>System aktualisieren</strong> ein Terminalfenster mit <code>pbs_update.sh</code>, der Aktualisierung von Option 6 des PBS-Menüs, beschrieben in <updatesLink>Den Server aktualisieren</updatesLink>. Sie braucht die Aktion <strong>Aktualisieren</strong>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "Einstellungen, Sicherheit und Admin",
+      "intro": "Das Menü Admin hat kein <strong>Audit & Report</strong>, und das Willkommenskarussell und das Fenster mit den Versionshinweisen des Proxmox-VE-Monitors öffnen sich nicht. Diese Teile der <settingsLink>Registerkarte Einstellungen</settingsLink> und der <securityLink>Registerkarte Sicherheit</securityLink> werden auf einem Proxmox-Backup-Server-Host nicht angezeigt:",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Seite", "Nicht angezeigt"],
+            "rows": [
+              [
+                "<strong>Einstellungen</strong>",
+                "<strong>Navigationsreihenfolge</strong>, <strong>Ausschlüsse von Remote-Speicher</strong>, <strong>LXC-Update-Erkennung</strong>, <strong>GitHub API</strong>, <strong>Benachrichtigungen</strong>, <strong>Hookscript-Speicher</strong> und die Zeile <strong>VMs und Container</strong> der Unterdrückungsdauern von <strong>Health-Monitor</strong>."
+              ],
+              ["<strong>Sicherheit</strong>", "Die Gruppe Proxmox VE: <strong>Firewall</strong>, Fail2Ban und <strong>Lynis-Sicherheitsaudit</strong>."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Wie es weitergeht",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux auf Proxmox Backup Server",
+                "href": "/docs/pbs",
+                "tail": "das PBS-Menü, die Paketaktualisierungen und die Nachinstallation."
+              },
+              {
+                "label": "Zugriff und Authentifizierung",
+                "href": "/docs/monitor/access-auth",
+                "tail": "lokale Konten, Profile, 2FA und API-Tokens."
+              },
+              {
+                "label": "Zustandsüberwachung",
+                "href": "/docs/monitor/health-monitor",
+                "tail": "die Kategorien, die sie prüft, und wie sie darüber berichtet."
+              },
+              {
+                "label": "Dashboard: Registerkarte Backup",
+                "href": "/docs/monitor/dashboard/backup#pbs",
+                "tail": "einen Proxmox Backup Server vom Monitor eines Proxmox-VE-Hosts aus verfolgen."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -351,7 +351,7 @@
   },
   "catalogue": {
     "heading": "Catalogue des événements",
-    "intro": "Les types d’événements sont regroupés dans les catégories repliables du panneau Notifications. Chaque événement possède un interrupteur et est activé par défaut, sauf mention (désactivé par défaut). Sur un hôte Proxmox Backup Server, le panneau masque VM/CT, Sauvegardes et Cluster, et ProxMenux ne configure pas le webhook Proxmox VE.",
+    "intro": "Les types d’événements sont regroupés dans les catégories repliables du panneau Notifications. Chaque événement possède un interrupteur et est activé par défaut, sauf mention (désactivé par défaut). Le Monitor d’un hôte Proxmox Backup Server n’a pas de panneau Notifications : voir <pbsMonitorLink>ProxMenux Monitor sur Proxmox Backup Server</pbsMonitorLink>.",
     "headerGroup": "Groupe",
     "headerEvents": "Événements",
     "rows": [

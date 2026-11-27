@@ -351,7 +351,7 @@
   },
   "catalogue": {
     "heading": "Catálogo de eventos",
-    "intro": "Los tipos de evento se agrupan en las categorías del panel de notificaciones. Cada sección desplegable permite activar eventos. Están activos por defecto salvo los marcados (desactivado por defecto). En un host Proxmox Backup Server el panel oculta VM / CT, Backups y Clúster, y ProxMenux no configura el webhook de Proxmox VE.",
+    "intro": "Los tipos de evento se agrupan en las categorías del panel de notificaciones. Cada sección desplegable permite activar eventos. Están activos por defecto salvo los marcados (desactivado por defecto). El Monitor de un host Proxmox Backup Server no tiene panel de notificaciones: consulta <pbsMonitorLink>ProxMenux Monitor en Proxmox Backup Server</pbsMonitorLink>.",
     "headerGroup": "Grupo",
     "headerEvents": "Eventos",
     "rows": [

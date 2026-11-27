@@ -351,7 +351,7 @@
   },
   "catalogue": {
     "heading": "Händelsekatalog",
-    "intro": "Händelsetyperna är indelade i aviseringspanelens kategorier. Panelen visar en utfällbar del per kategori med val för varje händelse. Alla är aktiverade som standard utom de som är märkta (inaktiverad som standard). På en Proxmox Backup Server-värd döljer panelen grupperna VM / CT, Säkerhetskopieringar och Kluster, och ProxMenux konfigurerar inte Proxmox VE-webhooken.",
+    "intro": "Händelsetyperna är indelade i aviseringspanelens kategorier. Panelen visar en utfällbar del per kategori med val för varje händelse. Alla är aktiverade som standard utom de som är märkta (inaktiverad som standard). Monitor på en värd med Proxmox Backup Server har ingen aviseringspanel: se <pbsMonitorLink>ProxMenux Monitor på Proxmox Backup Server</pbsMonitorLink>.",
     "headerGroup": "Grupp",
     "headerEvents": "Händelser",
     "rows": [

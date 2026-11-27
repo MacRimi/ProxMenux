@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "ProxMenux Monitor sur Proxmox Backup Server | Documentation ProxMenux",
+    "description": "ProxMenux Monitor sur un hôte Proxmox Backup Server : ses onglets, les pages Aperçu, Datastores et Tâches, ce qui change dans Réseau et Matériel, la connexion avec les comptes du serveur, la surveillance de l’état du système et les paramètres masqués."
+  },
+  "header": {
+    "title": "ProxMenux Monitor sur Proxmox Backup Server",
+    "description": "Ce que montre le Monitor quand il tourne sur un hôte Proxmox Backup Server : des onglets pour les datastores et les tâches au lieu des invités et des applications, la connexion avec les comptes du serveur et les contrôles d’état d’un serveur de sauvegarde.",
+    "section": "Proxmox Backup Server"
+  },
+  "sections": [
+    {
+      "id": "detection",
+      "title": "Comment le Monitor sait qu’il tourne sur PBS",
+      "blocks": [
+        {
+          "p": "Le Monitor demande à son propre serveur quel produit exécute l’hôte (<code>/api/platform</code>), avec la même détection que le menu, décrite dans <detectionLink>Détection et versions prises en charge</detectionLink>. Le serveur conserve la réponse pendant 60 secondes. Sur un hôte Proxmox Backup Server, l’en-tête affiche <strong>Tableau de bord Proxmox Backup Server</strong> sous le nom du Monitor, et le tableau de bord a les onglets décrits sur cette page."
+        }
+      ]
+    },
+    {
+      "id": "tabs",
+      "title": "Onglets",
+      "intro": "Un hôte Proxmox Backup Server a ses propres onglets, toujours dans cet ordre. Chacun apparaît lorsque le profil du compte inclut sa zone ou son action :",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Onglet", "Ce qu’il affiche", "Nécessite"],
+            "rows": [
+              ["<strong>Aperçu</strong>", "L’état de l’hôte, avec les datastores à la place des VM et des LXC.", "La zone <strong>Aperçu</strong>."],
+              ["<strong>Datastores</strong>", "Les datastores du serveur et les disques de l’hôte.", "La zone <strong>Datastores</strong>."],
+              ["<strong>Tâches</strong>", "Les tâches récentes et les planifications de maintenance du serveur.", "La zone <strong>Tâches</strong>."],
+              ["<strong>Réseau</strong>", "L’onglet réseau de Proxmox VE, avec une carte de moins.", "La zone <strong>Réseau et matériel</strong>."],
+              ["<strong>Matériel</strong>", "L’onglet matériel de Proxmox VE, sans ses installateurs.", "La zone <strong>Réseau et matériel</strong>."],
+              ["<strong>Terminal</strong>", "Le terminal de l’hôte, comme dans l’<terminalLink>Onglet Terminal</terminalLink> de Proxmox VE.", "L’action <strong>Ouvrir des terminaux</strong>."],
+              ["<strong>Administration</strong>", "<strong>Journaux système</strong>, <strong>Sécurité</strong>, <strong>Paramètres</strong> et <strong>À propos</strong>.", "Tous les profils. <strong>Journaux système</strong> nécessite sa zone."]
+            ]
+          }
+        },
+        {
+          "p": "L’ordre ne peut pas être modifié : sur un hôte PBS, les paramètres n’ont pas de carte <strong>Ordre de navigation</strong>. Réseau et Matériel sont des onglets à part entière au lieu d’entrées du menu <strong>Nœud</strong>, car le stockage du serveur se trouve dans Datastores. Il n’y a pas d’onglets <strong>Applications</strong>, Catalog, <strong>VM et LXC</strong> ni <strong>Sauvegarde</strong>."
+        }
+      ]
+    },
+    {
+      "id": "overview",
+      "title": "Aperçu",
+      "intro": "L’Aperçu garde la disposition décrite dans <overviewLink>Onglet Vue d’ensemble du système</overviewLink>, avec ces changements :",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "La carte des VM et des LXC devient <strong>Datastores</strong> : le nombre de datastores, <strong>Tous disponibles</strong> ou le nombre de datastores indisponibles, et l’occupation des deux premiers. S’il y en a plus, une ligne en dessous indique combien.",
+              "La carte de stockage affiche l’occupation de chaque datastore à la place de <strong>Stockage VM/LXC</strong> et <strong>Stockage local (système)</strong>.",
+              "La carte système affiche <strong>Version PBS :</strong> au lieu de <strong>Version Proxmox :</strong>.",
+              "Les graphiques d’historique lisent les métriques que le serveur enregistre lui-même, avec <code>proxmox-backup-debug api get /nodes/localhost/rrd</code>. Ces métriques n’ont pas de valeur d’ARC ZFS, donc le graphique de mémoire n’a pas d’historique de l’ARC.",
+              "L’occupation d’un datastore passe au jaune au-dessus de 75 % et au rouge au-dessus de 90 %, les mêmes seuils que le stockage de Proxmox VE. Les données des datastores sont actualisées toutes les minutes."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-overview.png",
+            "alt": "Onglet Aperçu du Monitor sur un hôte Proxmox Backup Server, avec la carte Datastores et la ligne Version PBS",
+            "caption": "L’Aperçu d’un hôte Proxmox Backup Server."
+          }
+        }
+      ]
+    },
+    {
+      "id": "datastores",
+      "title": "Datastores",
+      "blocks": [
+        {
+          "p": "L’onglet <strong>Datastores</strong> a une carte pour chaque datastore du serveur, lus avec <code>proxmox-backup-manager datastore list</code>. Chaque carte affiche le nom, l’état (<strong>actif</strong> ou <strong>erreur</strong>), le pourcentage utilisé, <strong>Total</strong>, <strong>Utilisé</strong> et <strong>Disponible</strong>, et le chemin du datastore. La capacité est celle du système de fichiers qui contient le chemin. Les données sont actualisées toutes les 30 secondes."
+        },
+        {
+          "p": "Un datastore en mode maintenance, ou un datastore amovible dont le périphérique n’est pas monté, affiche <strong>Le datastore est hors ligne, en mode maintenance, ou son périphérique de stockage n’est pas monté.</strong> à la place de sa capacité."
+        },
+        {
+          "p": "Sous les datastores viennent les disques et les pools de l’hôte, comme dans l’<storageLink>Onglet Stockage</storageLink> de Proxmox VE, sans ses cartes de synthèse ni sa liste des stockages Proxmox."
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-datastores.png",
+            "alt": "Onglet Datastores avec une carte par datastore affichant son état, son occupation, l’espace total, utilisé et disponible et son chemin, et les disques de l’hôte en dessous",
+            "caption": "L’onglet Datastores."
+          }
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "title": "Tâches",
+      "blocks": [
+        {
+          "p": "L’onglet <strong>Tâches</strong> a deux tableaux, actualisés toutes les 30 secondes :"
+        },
+        {
+          "table": {
+            "headers": ["Tableau", "Ce qu’il affiche"],
+            "rows": [
+              [
+                "<strong>Tâches récentes</strong>",
+                "Les 20 dernières tâches du serveur, issues de <code>proxmox-backup-manager task list</code> : le type (sauvegarde, restauration, vérification, purge, nettoyage de la mémoire, synchronisation et autres), l’heure de début, la durée et le résultat."
+              ],
+              [
+                "<strong>Planifications de maintenance</strong>",
+                "Les tâches de synchronisation, de vérification et de purge, avec leur datastore, leur planification et le résultat de leur dernière exécution. S’il n’y en a aucune, il affiche <strong>Aucune planification de synchronisation, de vérification ou de purge n’est configurée.</strong>"
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-tasks.png",
+            "alt": "Onglet Tâches avec le tableau Tâches récentes et le tableau Planifications de maintenance",
+            "caption": "L’onglet Tâches."
+          }
+        }
+      ]
+    },
+    {
+      "id": "network-hardware",
+      "title": "Réseau et Matériel",
+      "intro": "Ces onglets sont ceux de Proxmox VE, décrits dans <networkLink>Onglet Réseau</networkLink> et <hardwareLink>Onglet Matériel</hardwareLink>. Sur un hôte Proxmox Backup Server :",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Réseau n’a pas la carte <strong>Flux réseau</strong>, qui montre comment le trafic atteint les VM et les LXC.",
+              "Matériel n’a pas de contrôle <strong>Mode de basculement</strong> pour les GPU, pas d’installateurs de pilotes (<strong>Installer les pilotes NVIDIA</strong>, <strong>Installer les outils GPU AMD</strong>, <strong>Installer les outils GPU Intel</strong> et <strong>Installer les pilotes Coral TPU</strong>) et pas d’avis <strong>Surveillance étendue non disponible</strong>, qui propose ces outils. L’action <strong>Exécuter des scripts et des outils</strong> n’ajoute rien à cet onglet."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Connexion",
+      "intro": "Les comptes locaux, les profils, la 2FA et les jetons API fonctionnent comme décrit dans <accessLink>Accès et authentification</accessLink>. Les comptes Proxmox qui peuvent se connecter sont ceux du serveur de sauvegarde, activés comme décrit dans <proxmoxAccountsLink>Comptes Proxmox VE</proxmoxAccountsLink>. Ce qui change :",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "L’écran de connexion a un onglet <em>Proxmox Backup Server</em> à côté de <strong>Compte local</strong>, avec <strong>Utilisateur</strong>, <strong>Mot de passe</strong> et <strong>Domaine</strong>. Les domaines sont ceux que liste le serveur. Si le compte a un second facteur, <strong>Code à deux facteurs</strong> accepte un code TOTP ou une clé de récupération.",
+              "Les privilèges sur <code>/</code> du serveur décident, comme sur Proxmox VE : <code>Sys.Modify</code> donne Administrateur et <code>Sys.Audit</code> seul donne Observateur, sauf si une règle donne un autre profil. Sans aucun des deux, le compte ne peut pas se connecter.",
+              "Un compte dont le seul second facteur est une clé de sécurité se connecte à l’interface web du serveur, sur le port 8007. Avec le Monitor ouvert en HTTPS à la même adresse, cette session connecte aussi au Monitor.",
+              "Proxmox Backup Server n’a pas de groupes d’utilisateurs, donc une règle de profil désigne un utilisateur.",
+              "Un profil personnalisé choisit parmi les zones <strong>Aperçu</strong>, <strong>Datastores</strong>, <strong>Tâches</strong>, <strong>Réseau et matériel</strong> et <strong>Journaux système</strong>, et les actions <strong>Exécuter des scripts et des outils</strong>, <strong>Mettre à jour</strong> et <strong>Ouvrir des terminaux</strong>. Les profils sont décrits dans <profilesLink>Utilisateurs et profils</profilesLink>."
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/monitor-login.png",
+            "alt": "Écran de connexion du Monitor avec les onglets Compte local et Proxmox Backup Server, le second sélectionné avec ses champs Utilisateur, Mot de passe et Domaine",
+            "caption": "Connexion avec un compte du serveur."
+          }
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "Surveillance de l’état du système",
+      "intro": "La <healthLink>Surveillance de l’état du système</healthLink> contrôle ce qu’a un serveur de sauvegarde :",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Services PBS</strong> contrôle <code>proxmox-backup</code> et <code>proxmox-backup-proxy</code> au lieu des services de Proxmox VE, et jamais corosync.",
+              "Les contrôles des VM et des LXC, des stockages Proxmox VE et de leur capacité, des disques racine et des points de montage des LXC et des disques des VM ne s’exécutent pas. Les montages distants NFS, CIFS et SMB de l’hôte sont toujours contrôlés.",
+              "<strong>Seuils du moniteur de santé</strong>, dans les paramètres, masque les seuils de ces contrôles.",
+              "Dans <strong>Mises à jour du système</strong>, le bouton <strong>Mettre à jour le système</strong> ouvre une fenêtre de terminal avec <code>pbs_update.sh</code>, la mise à jour de l’option 6 du menu PBS, décrite dans <updatesLink>Mettre à jour le serveur</updatesLink>. Il nécessite l’action <strong>Mettre à jour</strong>."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "Paramètres, Sécurité et Administration",
+      "intro": "Le menu Administration n’a pas <strong>Audit et rapport</strong>, et le carrousel de bienvenue et la fenêtre des notes de version du Monitor de Proxmox VE ne s’ouvrent pas. Ces parties de l’<settingsLink>Onglet Paramètres</settingsLink> et de l’<securityLink>Onglet Sécurité</securityLink> ne s’affichent pas sur un hôte Proxmox Backup Server :",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Page", "Non affiché"],
+            "rows": [
+              [
+                "<strong>Paramètres</strong>",
+                "<strong>Ordre de navigation</strong>, <strong>Exclusions de stockage distant</strong>, <strong>Détection de mise à jour LXC</strong>, <strong>API GitHub</strong>, <strong>Notifications</strong>, <strong>Stockage des hookscripts</strong>, et la ligne <strong>Machines virtuelles et conteneurs</strong> des durées de suppression de <strong>Moniteur de santé</strong>."
+              ],
+              ["<strong>Sécurité</strong>", "Le groupe Proxmox VE : <strong>Pare-feu</strong>, Fail2Ban et <strong>Audit de sécurité Lynis</strong>."]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Pour aller plus loin",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux sur Proxmox Backup Server",
+                "href": "/docs/pbs",
+                "tail": "le menu PBS, les mises à jour des paquets et la post-installation."
+              },
+              {
+                "label": "Accès et authentification",
+                "href": "/docs/monitor/access-auth",
+                "tail": "comptes locaux, profils, 2FA et jetons API."
+              },
+              {
+                "label": "Surveillance de l’état du système",
+                "href": "/docs/monitor/health-monitor",
+                "tail": "les catégories qu’elle contrôle et la façon dont elle les signale."
+              },
+              {
+                "label": "Tableau de bord : onglet Sauvegarde",
+                "href": "/docs/monitor/dashboard/backup#pbs",
+                "tail": "suivre un Proxmox Backup Server depuis le Monitor d’un hôte Proxmox VE."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

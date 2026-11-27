@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Qui voit l’onglet",
-            "body": "L’onglet apparaît lorsque le profil du compte inclut la zone <strong>Sauvegarde</strong>. Créer, exécuter, modifier, restaurer, télécharger, afficher le contenu d’une sauvegarde ou supprimer demande l’action <strong>Gérer les sauvegardes</strong>, tout comme gérer les connexions PBS et modifier la <strong>Rétention du stockage</strong>. Sans elle, les vues sont en lecture seule et ces boutons n’apparaissent pas. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. Le Monitor d’un hôte Proxmox Backup Server a ses propres onglets et pas d’onglet Sauvegarde."
+            "body": "L’onglet apparaît lorsque le profil du compte inclut la zone <strong>Sauvegarde</strong>. Créer, exécuter, modifier, restaurer, télécharger, afficher le contenu d’une sauvegarde ou supprimer demande l’action <strong>Gérer les sauvegardes</strong>, tout comme gérer les connexions PBS et modifier la <strong>Rétention du stockage</strong>. Sans elle, les vues sont en lecture seule et ces boutons n’apparaissent pas. Les profils sont décrits dans <accessLink>Utilisateurs et profils</accessLink>. Le <pbsMonitorLink>Monitor d’un hôte Proxmox Backup Server</pbsMonitorLink> a ses propres onglets et pas d’onglet Sauvegarde."
           }
         }
       ]
