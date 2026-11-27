@@ -33,7 +33,8 @@
     "documentation": "https://docs.opencloud.eu/",
     "repository": "https://github.com/opencloud-eu/opencloud",
     "tips": [
-      "Use the exact HTTPS address in OC_URL when you put OpenCloud behind a reverse proxy. Sign in with your username."
+      "Use the exact HTTPS address in OC_URL when you put OpenCloud behind a reverse proxy. Sign in with your username.",
+      "For NAS storage, choose an existing directory on an NFS 4.2 mount with noac, extended attributes and write permissions for OpenCloud."
     ],
     "mini_changelog": [],
     "display_version": null,
@@ -45,7 +46,7 @@
     "revision": "437c311a55cab2111226904ef559a7ffcb78a43d",
     "image_repository_url": "https://hub.docker.com/r/opencloudeu/opencloud",
     "readme_pushed_at": "",
-    "compose_sha256": "b491c105b0307b720f9819399b028747c3ff762c5d56186d0d40eeb4fe7957ed",
+    "compose_sha256": "8b6cd03beb50c7b9207b18d3be58fe53974b2f0e62379ffd0bbb5313d151ce2e",
     "generated_at": "2026-11-27T17:54:49+00:00",
     "readme_raw_url": "https://raw.githubusercontent.com/opencloud-eu/opencloud/437c311a55cab2111226904ef559a7ffcb78a43d/README.md"
   },
@@ -84,6 +85,14 @@
         "sensitive": true,
         "source": "docker-compose",
         "prompt": "Password of the OpenCloud administrator (admin)"
+      },
+      {
+        "name": "STORAGE_USERS_POSIX_ROOT",
+        "example": "/mnt/opencloud-users/files",
+        "required": true,
+        "sensitive": false,
+        "source": "docker-compose",
+        "prompt_user": false
       }
     ],
     "volumes": [
@@ -116,6 +125,22 @@
           "backup": true,
           "default_size_gb": 32
         }
+      },
+      {
+        "id": "volume-2",
+        "container_path": "/mnt/opencloud-users",
+        "compose_source_example": "opencloud-users",
+        "read_only": false,
+        "required": true,
+        "installation_choice": [
+          "managed-volume",
+          "host-bind"
+        ],
+        "default": "managed-volume",
+        "managed_volume": {
+          "backup": true,
+          "default_size_gb": 32
+        }
       }
     ],
     "ports": [
@@ -130,7 +155,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: opencloud\nservices:\n  opencloud:\n    environment:\n      IDM_ADMIN_PASSWORD: ${IDM_ADMIN_PASSWORD:?Set an administrator password}\n      OC_INSECURE: 'true'\n      OC_URL: ${OC_URL:?Set the public HTTPS address}\n    image: docker.io/opencloudeu/opencloud:latest\n    ports:\n    - 9200:9200\n    volumes:\n    - opencloud-config:/etc/opencloud\n    - opencloud-data:/var/lib/opencloud\n    entrypoint:\n    - /bin/sh\n    - -c\n    command:\n    - if [ ! -f /etc/opencloud/opencloud.yaml ]; then opencloud init --insecure true\n      --admin-password \"$$IDM_ADMIN_PASSWORD\" || exit $$?; fi; exec opencloud server\n    restart: unless-stopped\nvolumes:\n  opencloud-config: &id001 {}\n  opencloud-data: *id001\n"
+    "original_compose": "name: opencloud\nservices:\n  opencloud:\n    environment:\n      IDM_ADMIN_PASSWORD: ${IDM_ADMIN_PASSWORD:?Set an administrator password}\n      OC_INSECURE: 'true'\n      OC_URL: ${OC_URL:?Set the public HTTPS address}\n      STORAGE_USERS_POSIX_ROOT: /mnt/opencloud-users/files\n    image: docker.io/opencloudeu/opencloud:latest\n    ports:\n    - 9200:9200\n    volumes:\n    - opencloud-config:/etc/opencloud\n    - opencloud-data:/var/lib/opencloud\n    - opencloud-users:/mnt/opencloud-users\n    entrypoint:\n    - /bin/sh\n    - -c\n    command:\n    - mkdir -p /mnt/opencloud-users/files || exit $$?; if [ ! -f /etc/opencloud/opencloud.yaml\n      ]; then opencloud init --insecure true --admin-password \"$$IDM_ADMIN_PASSWORD\"\n      || exit $$?; fi; exec opencloud server\n    restart: unless-stopped\nvolumes:\n  opencloud-config: &id001 {}\n  opencloud-data: *id001\n  opencloud-users: {}\n"
   },
   "compose_stack": {
     "project_name": "opencloud",
@@ -152,7 +177,8 @@
           "environment": {
             "IDM_ADMIN_PASSWORD": "${IDM_ADMIN_PASSWORD:?Set an administrator password}",
             "OC_INSECURE": "true",
-            "OC_URL": "${OC_URL:?Set the public HTTPS address}"
+            "OC_URL": "${OC_URL:?Set the public HTTPS address}",
+            "STORAGE_USERS_POSIX_ROOT": "/mnt/opencloud-users/files"
           },
           "image": "docker.io/opencloudeu/opencloud:latest",
           "ports": [
@@ -160,14 +186,15 @@
           ],
           "volumes": [
             "opencloud-config:/etc/opencloud",
-            "opencloud-data:/var/lib/opencloud"
+            "opencloud-data:/var/lib/opencloud",
+            "opencloud-users:/mnt/opencloud-users"
           ],
           "entrypoint": [
             "/bin/sh",
             "-c"
           ],
           "command": [
-            "if [ ! -f /etc/opencloud/opencloud.yaml ]; then opencloud init --insecure true --admin-password \"$$IDM_ADMIN_PASSWORD\" || exit $$?; fi; exec opencloud server"
+            "mkdir -p /mnt/opencloud-users/files || exit $$?; if [ ! -f /etc/opencloud/opencloud.yaml ]; then opencloud init --insecure true --admin-password \"$$IDM_ADMIN_PASSWORD\" || exit $$?; fi; exec opencloud server"
           ],
           "restart": "unless-stopped"
         }
@@ -449,6 +476,12 @@
           "remove_lost_found": true,
           "owner_strategy": "mapped-application-user",
           "only_when_mount_type": "managed-volume"
+        },
+        {
+          "container_path": "/mnt/opencloud-users",
+          "remove_lost_found": true,
+          "owner_strategy": "mapped-application-user",
+          "only_when_mount_type": "managed-volume"
         }
       ],
       "runtime": {
@@ -457,7 +490,7 @@
           "-c"
         ],
         "command": [
-          "if [ ! -f /etc/opencloud/opencloud.yaml ]; then opencloud init --insecure true --admin-password \"$IDM_ADMIN_PASSWORD\" || exit $?; fi; exec opencloud server"
+          "mkdir -p /mnt/opencloud-users/files || exit $?; if [ ! -f /etc/opencloud/opencloud.yaml ]; then opencloud init --insecure true --admin-password \"$IDM_ADMIN_PASSWORD\" || exit $?; fi; exec opencloud server"
         ]
       },
       "volume_owner": {
@@ -478,6 +511,11 @@
           "strategy": "token-hex",
           "bytes": 16,
           "prompt": true
+        }
+      },
+      "host_bind_policies": {
+        "/mnt/opencloud-users": {
+          "create_if_missing": false
         }
       }
     }
