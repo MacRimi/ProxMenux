@@ -1873,6 +1873,17 @@ def recover(root, journal):
     checkpoint(journal, state, 'restoring-backup')
     host_mounts.verify_sources(state.get('original_host_sources', {}))
     restore_archive, restore_args = zfs_recovery.restore(backup, vmid) if zfs_recovery.is_fast(backup) else (backup, [])
+    if current_path.exists():
+        current = owned(vmid, record['installation_id'])
+        previous = state['before_config'].encode()
+        uid = re.compile(r'(?:^|,)uid=([a-z0-9]+)(?:,|$)')
+        current_uid = uid.search(parse_config(current).get('meta', ''))
+        previous_uid = uid.search(parse_config(previous).get('meta', ''))
+        if current_uid and previous_uid and current_uid[1] != previous_uid[1]:
+            # PVE 9.3 assigns a fresh guest UID on recreation. The journal and
+            # backup were verified above and this CT still belongs to the OCI
+            # installation being recovered.
+            restore_args = [*restore_args, '--allow-identity-mismatch', '1']
     run('pct', 'restore', str(vmid), str(restore_archive), '--force', '1', '--storage',
         state['record']['deployment']['rootfs']['storage'], *restore_args)
     move_retained_unused(state, to_stage=False)
