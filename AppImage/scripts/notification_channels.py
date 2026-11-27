@@ -218,6 +218,9 @@ def _format_progress_bar(pct: float, width: int = 10) -> str:
     filled = max(0, min(width, filled))
     return f"[{'█' * filled}{'░' * (width - filled)}] {pct:.1f}%"
 
+_UNSET = object()
+
+
 class TelegramChannel(NotificationChannel):
     """Telegram Bot API channel using HTML and native Rich Message support."""
     
@@ -235,7 +238,9 @@ class TelegramChannel(NotificationChannel):
         'UNKNOWN':  '\u26AA',      # white circle
     }
     
-    def __init__(self, bot_token: str, chat_id: str, topic_id: str = '', rich_format: bool = True, rich_cards: bool = False):
+    def __init__(self, bot_token: str, chat_id: str, topic_id: str = '',
+                 rich_format: bool = True, rich_cards: bool = False,
+                 category_topics: Optional[Dict[str, str]] = None):
         super().__init__()
         token = bot_token.strip()
         if token.lower().startswith('bot') and ':' in token[3:]:
@@ -245,6 +250,33 @@ class TelegramChannel(NotificationChannel):
         self.topic_id = topic_id.strip() if topic_id else ''
         self.rich_format = str(rich_format).lower() in ('true', '1', 'yes') if isinstance(rich_format, str) else bool(rich_format)
         self.rich_cards = str(rich_cards).lower() in ('true', '1', 'yes') if isinstance(rich_cards, str) else bool(rich_cards)
+        self.category_topics: Dict[str, str] = {}
+        if category_topics:
+            for group_key, raw_topic in category_topics.items():
+                cleaned = str(raw_topic).strip() if raw_topic is not None else ''
+                if group_key and cleaned:
+                    self.category_topics[str(group_key).strip()] = cleaned
+
+    def _resolve_topic_id(self, data: Optional[Dict] = None) -> str:
+        """Resolve Telegram message_thread_id for an outgoing notification.
+
+        Priority:
+          1. Explicit `_topic_id` override in `data` (if non-empty)
+          2. Per-category topic configured for `_topic_group` / `_group` / `group`
+          3. Channel default `self.topic_id` (may be empty -> main chat)
+        """
+        if data:
+            explicit = data.get('_topic_id')
+            if explicit is not None and str(explicit).strip():
+                return str(explicit).strip()
+            group = str(
+                data.get('_topic_group') or data.get('_group') or data.get('group') or ''
+            ).strip()
+            if group and group in self.category_topics:
+                cat_topic = self.category_topics[group]
+                if cat_topic:
+                    return cat_topic
+        return self.topic_id
     
     def validate_config(self) -> Tuple[bool, str]:
         if not self.bot_token:
@@ -258,13 +290,17 @@ class TelegramChannel(NotificationChannel):
     def send(self, title: str, message: str, severity: str = 'INFO',
              data: Optional[Dict] = None) -> Dict[str, Any]:
         data = data or {}
+        topic_id = self._resolve_topic_id(data)
         
         # 1. Attempt to send native Rich Cards first if rich_cards is enabled
         use_rich_cards = data.get('_use_rich_cards', self.rich_cards)
         if use_rich_cards:
             try:
                 rich_html, keyboard = self._build_rich_content(title, message, severity, data)
-                res = self._post_rich_message(rich_html, keyboard)
+                if topic_id == self.topic_id:
+                    res = self._post_rich_message(rich_html, keyboard)
+                else:
+                    res = self._post_rich_message(rich_html, keyboard, topic_id=topic_id)
                 if res.get('success'):
                     return {'success': True, 'error': None, 'channel': 'telegram'}
                 logger.warning("[Telegram] Rich card delivery failed (%s), falling back to standard message", res.get('error'))
@@ -284,7 +320,10 @@ class TelegramChannel(NotificationChannel):
         result = {'success': True, 'error': None, 'channel': 'telegram'}
         
         for chunk in chunks:
-            res = self._send_with_retry(lambda c=chunk: self._post_message(c))
+            if topic_id == self.topic_id:
+                res = self._send_with_retry(lambda c=chunk: self._post_message(c))
+            else:
+                res = self._send_with_retry(lambda c=chunk, tid=topic_id: self._post_message(c, topic_id=tid))
             if not res['success']:
                 result = {**res, 'channel': 'telegram'}
                 break
@@ -681,7 +720,8 @@ class TelegramChannel(NotificationChannel):
         return html_out, None
 
 
-    def _post_rich_message(self, html_content: str, keyboard: Optional[List] = None) -> Dict[str, Any]:
+    def _post_rich_message(self, html_content: str, keyboard: Optional[List] = None,
+                           topic_id: Any = _UNSET) -> Dict[str, Any]:
         url = self.API_RICH.format(token=self.bot_token)
         rich_obj = {'html': html_content}
         
@@ -710,9 +750,10 @@ class TelegramChannel(NotificationChannel):
             body.extend(b'\r\n')
             
         add_field('chat_id', self.chat_id)
-        if self.topic_id:
+        resolved_topic = self.topic_id if topic_id is _UNSET else (topic_id or '')
+        if resolved_topic:
             try:
-                add_field('message_thread_id', int(self.topic_id))
+                add_field('message_thread_id', int(resolved_topic))
             except ValueError:
                 pass
                 
@@ -739,16 +780,17 @@ class TelegramChannel(NotificationChannel):
             return {'success': True, 'error': None}
         return {'success': False, 'error': f'HTTP {status_code}: {resp_text}'}
     
-    def send_photo(self, photo_url: str, caption: str = '') -> Dict[str, Any]:
+    def send_photo(self, photo_url: str, caption: str = '', topic_id: Any = _UNSET) -> Dict[str, Any]:
         """Send a photo to Telegram chat."""
         url = self.API_PHOTO.format(token=self.bot_token)
         payload = {
             'chat_id': self.chat_id,
             'photo': photo_url,
         }
-        if self.topic_id:
+        resolved_topic = self.topic_id if topic_id is _UNSET else (topic_id or '')
+        if resolved_topic:
             try:
-                payload['message_thread_id'] = int(self.topic_id)
+                payload['message_thread_id'] = int(resolved_topic)
             except ValueError:
                 pass
         if caption:
@@ -779,7 +821,7 @@ class TelegramChannel(NotificationChannel):
         )
         return result['success'], result.get('error', '')
     
-    def _post_message(self, text: str) -> Tuple[int, str]:
+    def _post_message(self, text: str, topic_id: Any = _UNSET) -> Tuple[int, str]:
         url = self.API_BASE.format(token=self.bot_token)
         payload_dict = {
             'chat_id': self.chat_id,
@@ -787,9 +829,10 @@ class TelegramChannel(NotificationChannel):
             'parse_mode': 'HTML',
             'disable_web_page_preview': True,
         }
-        if self.topic_id:
+        resolved_topic = self.topic_id if topic_id is _UNSET else (topic_id or '')
+        if resolved_topic:
             try:
-                payload_dict['message_thread_id'] = int(self.topic_id)
+                payload_dict['message_thread_id'] = int(resolved_topic)
             except ValueError:
                 pass
         
@@ -2193,7 +2236,8 @@ def create_channel(channel_type: str, config: Dict[str, str]) -> Optional[Notifi
                 chat_id=config.get('chat_id', ''),
                 topic_id=config.get('topic_id', ''),
                 rich_format=is_rf,
-                rich_cards=is_rc
+                rich_cards=is_rc,
+                category_topics=config.get('category_topics'),
             )
         elif channel_type == 'gotify':
             return GotifyChannel(
