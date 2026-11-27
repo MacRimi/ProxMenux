@@ -41,11 +41,11 @@
   "source": {
     "provider": "official",
     "repository": "https://github.com/lemonade-sdk/lemonade",
-    "revision": "355eb6946d9462df2608faa9d99dadc24cc6ddb18a5d88008a3d10d32901f9b4",
+    "revision": "9da34cb1a829085d61c7df98d49fccc7c174520fb0489b7bf51eca27b2407171",
     "image_repository_url": "https://github.com/lemonade-sdk/lemonade/pkgs/container/lemonade-server",
     "readme_pushed_at": "",
-    "compose_sha256": "355eb6946d9462df2608faa9d99dadc24cc6ddb18a5d88008a3d10d32901f9b4",
-    "generated_at": "2026-11-27T18:13:49+00:00"
+    "compose_sha256": "9da34cb1a829085d61c7df98d49fccc7c174520fb0489b7bf51eca27b2407171",
+    "generated_at": "2026-11-27T18:25:17+00:00"
   },
   "container_contract": {
     "service_name": "lemonade",
@@ -102,7 +102,7 @@
       {
         "id": "runtime-cache",
         "container_path": "/opt/lemonade/.cache/lemonade",
-        "compose_source_example": "./lemonade",
+        "compose_source_example": "./lemonade-runtime-cache",
         "read_only": false,
         "required": true,
         "installation_choice": [
@@ -117,7 +117,7 @@
       {
         "id": "config",
         "container_path": "/opt/lemonade/.config/lemonade",
-        "compose_source_example": "./lemonade",
+        "compose_source_example": "./lemonade-config",
         "read_only": false,
         "required": true,
         "installation_choice": [
@@ -142,7 +142,7 @@
     "related_services": [],
     "restart": "unless-stopped",
     "stop_grace_period": null,
-    "original_compose": "name: lemonade\nservices:\n  lemonade:\n    environment:\n      LEMONADE_API_KEY: ${GENERATED_LEMONADE_API_KEY}\n    image: ghcr.io/lemonade-sdk/lemonade-server:latest\n    ports:\n    - 13305:13305\n    volumes:\n    - ./huggingface:/opt/lemonade/.cache/huggingface\n    - ./llama:/opt/lemonade/llama\n    - ./lemonade:/opt/lemonade/.cache/lemonade\n    - ./lemonade:/opt/lemonade/.config/lemonade\n"
+    "original_compose": "name: lemonade\nservices:\n  lemonade:\n    environment:\n      LEMONADE_API_KEY: ${GENERATED_LEMONADE_API_KEY}\n    image: ghcr.io/lemonade-sdk/lemonade-server:latest\n    ports:\n    - 13305:13305\n    volumes:\n    - ./huggingface:/opt/lemonade/.cache/huggingface\n    - ./llama:/opt/lemonade/llama\n    - ./lemonade-runtime-cache:/opt/lemonade/.cache/lemonade\n    - ./lemonade-config:/opt/lemonade/.config/lemonade\n"
   },
   "compose_stack": {
     "project_name": "lemonade",
@@ -171,8 +171,8 @@
           "volumes": [
             "./huggingface:/opt/lemonade/.cache/huggingface",
             "./llama:/opt/lemonade/llama",
-            "./lemonade:/opt/lemonade/.cache/lemonade",
-            "./lemonade:/opt/lemonade/.config/lemonade"
+            "./lemonade-runtime-cache:/opt/lemonade/.cache/lemonade",
+            "./lemonade-config:/opt/lemonade/.config/lemonade"
           ]
         }
       }
