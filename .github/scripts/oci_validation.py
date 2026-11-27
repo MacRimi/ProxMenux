@@ -68,14 +68,15 @@ def render(verification, index):
                  key=lambda app: str(apps[app].get("title") or app).casefold())
     tested = sorted((app for app, entry in entries.items() if community(entry)),
                     key=lambda app: str(apps[app].get("title") or app).casefold())
-    visible = sum(1 for item in apps.values() if not item.get("hidden"))
     verified = len(set(lab) | set(tested))
     lines = [
         "# OCI application validation",
         "",
         "<!-- Generated from oci/catalog/verification.json by .github/scripts/oci_validation.py. Do not edit by hand. -->",
         "",
-        f"{verified} of {visible} applications in the OCI catalog have been tested for real: "
+        # Only what was tested: the size of the catalog changes with every new
+        # application, and would make each one regenerate this file.
+        f"{verified} applications of the OCI catalog have been tested for real: "
         f"{len(lab)} in the ProxMenux lab and {len(tested)} by the community. "
         "The OCI installer shows them as verified, with a ✓ in the lists.",
         "",

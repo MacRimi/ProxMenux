@@ -22,6 +22,7 @@ Thank you for your interest in contributing to **ProxMenux**! This document cove
 9. [Do's and Don'ts](#9-dos-and-donts)
 10. [Submitting a Contribution](#10-submitting-a-contribution)
 11. [Contributing to the Monitor](#11-contributing-to-the-monitor)
+12. [Contributing an OCI application](#12-contributing-an-oci-application)
 
 ---
 
@@ -921,6 +922,42 @@ before extending the explicit manifest.
 - **Python tests** — under `AppImage/scripts/tests/`. Run with `python3 -m unittest discover -s AppImage/scripts/tests`. Add a test file when you add non-trivial backend logic (auth, notifications, background checks).
 - **UI smoke test** — deploy the built AppImage to a test host, restart `proxmenux-monitor.service`, and walk through the affected views in the browser. There is no formal e2e suite yet; a real-host smoke pass is expected for any UI change.
 - **JSON parse** — after editing any i18n catalog, verify it parses: `python3 -c "import json; json.load(open('AppImage/messages/<lang>/common.json'))"`.
+
+---
+
+## 12. Contributing an OCI application
+
+An application of the OCI catalog is suggested and tested as described in [Install an app and add it to the OCI catalog](https://proxmenux.com/docs/oci-manager/contribute-app), in the thread [Suggest an application for the OCI catalog](https://github.com/MacRimi/ProxMenux/discussions/440) and in the [README of the OCI engine](oci/README.md#adding-an-application-to-the-catalog). This section lists what a pull request that adds one contains.
+
+### Files of a new application
+
+- `oci/catalog/curated/<id>.json` — the oci-compose, written and tested by hand — and an identical copy in `oci/catalog/apps/<id>.json`.
+- One entry in `oci/catalog/index.json`, in alphabetical order, with the category of `oci/catalog/categories.json`.
+- `oci/catalog/volume-policy.json`, with the default size of each managed volume.
+- The texts of the oci-compose that the user reads (summary, tips, questions, labels) in the eight files of `lang/`, keyed by the English text. Each file stays sorted by key, and the pull request only adds lines to it.
+- When the catalog already offers the same application from another image, a group in `oci/catalog/categories.json`, so the sheet shows the others under **Also available**.
+
+When the image is not the one the project itself publishes, check whether there is an official image and add it as well, as a separate entry named `<id>-official`.
+
+### Files a new application does not touch
+
+`oci/catalog/verification.json` and `oci/VALIDATION.md` change only when the pull request adds or changes a validation. `VALIDATION.md` is generated from `verification.json` and counts only the applications tested for real, not the size of the catalog, so an application added without a validation leaves it as it is. The catalog keeps no other counter that has to be edited by hand. Several pull requests that add applications can therefore be merged one after another without regenerating anything.
+
+### Adding a validation
+
+A validation adds the entry to `verification.json`, credited to the author of the pull request, and regenerates the page:
+
+```bash
+python3 .github/scripts/oci_validation.py render
+```
+
+### Checks before opening the pull request
+
+```bash
+python3 .github/scripts/oci_validation.py check       # VALIDATION.md matches verification.json
+python3 .github/scripts/check_terminal_catalogs.py   # every new text is translated
+python3 -m unittest discover -s oci/tests -v          # OCI engine and catalog tests
+```
 
 ---
 
