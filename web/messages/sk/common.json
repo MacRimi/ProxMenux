@@ -213,7 +213,9 @@
       "backupRestoreJobs": "Plánované úlohy",
       "backupRestoreRestoring": "Obnova",
       "backupRestoreCrossKernel": "Obnova medzi kernelmi",
-      "backupRestoreGlossary": "Slovník pojmov"
+      "backupRestoreGlossary": "Slovník pojmov",
+      "pbs": "Proxmox Backup Server",
+      "pbsOverview": "Prehľad"
     }
   },
   "hero": {

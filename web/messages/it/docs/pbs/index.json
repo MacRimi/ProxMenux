@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "title": "ProxMenux su Proxmox Backup Server | Documentazione ProxMenux",
+    "description": "ProxMenux installato su un host Proxmox Backup Server: come viene rilevato il server, le versioni supportate, il menu PBS, i due modi di aggiornarne i pacchetti, il controllo dei repository, la post-installazione e le impostazioni."
+  },
+  "header": {
+    "title": "ProxMenux su Proxmox Backup Server",
+    "description": "Cosa fa ProxMenux quando gira su un host Proxmox Backup Server: un menu proprio, aggiornamenti dei pacchetti che mantengono i repository del server e una post-installazione adattata a un server di backup.",
+    "section": "Proxmox Backup Server"
+  },
+  "sections": [
+    {
+      "id": "detection",
+      "title": "Rilevamento e versioni supportate",
+      "blocks": [
+        {
+          "p": "ProxMenux considera un host un Proxmox Backup Server quando è installato il pacchetto <code>proxmox-backup-server</code>. Il solo client di backup, presente su molti host Proxmox VE, non conta. Quando Proxmox VE e Proxmox Backup Server sono installati sullo stesso host, prevale Proxmox VE e ProxMenux apre il suo menu abituale. Il Monitor usa lo stesso rilevamento."
+        },
+        {
+          "table": {
+            "headers": ["Proxmox Backup Server", "Debian"],
+            "rows": [
+              ["3", "12 (<code>bookworm</code>)"],
+              ["4", "13 (<code>trixie</code>)"]
+            ]
+          }
+        },
+        {
+          "p": "Con qualsiasi altra combinazione il menu PBS si apre comunque, ma l’aggiornamento dei pacchetti e il controllo dei repository si fermano con <strong>Questa operazione supporta PBS 3 su Debian 12 e PBS 4 su Debian 13.</strong> L’installazione delle utilità di sistema si apre comunque, ma le sue installazioni si fermano con lo stesso messaggio."
+        }
+      ]
+    },
+    {
+      "id": "installation",
+      "title": "Installazione",
+      "blocks": [
+        {
+          "p": "ProxMenux si installa su un Proxmox Backup Server con lo stesso comando usato su Proxmox VE, descritto in <installLink>Installazione di ProxMenux</installLink>. Il programma di installazione non ha un percorso separato per PBS: installa anche ProxMenux Monitor, in ascolto sulla porta 8008. Dopo l’installazione, <code>menu</code> apre il menu PBS."
+        }
+      ]
+    },
+    {
+      "id": "menu",
+      "title": "Il menu PBS",
+      "intro": "Su un host Proxmox Backup Server, <code>menu</code> apre un menu intitolato <strong>Proxmox Backup Server</strong> al posto del menu principale di Proxmox VE. Il titolo è lo stesso in tutte le lingue.",
+      "blocks": [
+        {
+          "figure": {
+            "src": "/pbs/pbs-menu.png",
+            "alt": "Il menu Proxmox Backup Server di ProxMenux con le sue sei opzioni numerate, Impostazioni e Uscita",
+            "caption": "Il menu PBS."
+          }
+        },
+        {
+          "table": {
+            "headers": ["Tasto", "Opzione", "Cosa fa"],
+            "rows": [
+              ["1", "<strong>Impostazioni post-installazione Proxmox</strong>", "Apre il menu di post-installazione, adattato a un server di backup. Vedi Post-installazione più sotto."],
+              ["2", "<strong>Versione e pacchetti PBS</strong>", "Mostra l’output di <code>proxmox-backup-manager versions --verbose</code>."],
+              ["3", "<strong>Datastore PBS</strong>", "Mostra l’output di <code>proxmox-backup-manager datastore list</code>."],
+              ["4", "<strong>Attività PBS recenti</strong>", "Mostra l’output di <code>proxmox-backup-manager task list --all true --limit 20</code>."],
+              ["5", "<strong>Installazione utilità di sistema</strong>", "Lo stesso programma di installazione di Proxmox VE, descritto in <utilsLink>Installazione di utilità di sistema</utilsLink>. Su PBS installa dai repository già configurati e non li modifica mai."],
+              ["6", "<strong>Aggiorna PBS usando i repository configurati</strong>", "Aggiorna i pacchetti del server. Vedi Aggiornare il server più sotto."],
+              ["s", "<strong>Impostazioni</strong>", "Il menu delle impostazioni di ProxMenux. Vedi Impostazioni più sotto."],
+              ["0", "<strong>Uscita</strong>", "Chiude ProxMenux."]
+            ]
+          }
+        },
+        {
+          "p": "Le opzioni da 2 a 4 si limitano a leggere: mostrano l’output del comando in una casella di testo. Se il comando non riesce, la casella si intitola <strong>Comando non riuscito</strong> e mostra l’errore."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Aggiornare il server",
+      "intro": "Due script aggiornano i pacchetti di un Proxmox Backup Server. Nessuno dei due esegue i passaggi di aggiornamento di Proxmox VE.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Dettaglio", "Aggiornamento dei pacchetti PBS", "Aggiornamento del sistema della post-installazione"],
+            "rows": [
+              [
+                "Da dove parte",
+                "L’opzione 6, <strong>Aggiorna PBS usando i repository configurati</strong>, e il pulsante <strong>Aggiorna sistema</strong> della categoria <strong>Aggiornamenti di sistema</strong> nel <healthLink>Monitoraggio dello stato</healthLink> del Monitor del server, visibile quando ci sono aggiornamenti in sospeso.",
+                "<strong>Aggiorna gli elenchi dei pacchetti e il sistema</strong>, un passaggio dello <strong>Script post-installazione automatizzato</strong> e un’opzione dello <strong>Script post-installazione personalizzabile</strong>."
+              ],
+              ["Script", "<code>scripts/utilities/pbs_update.sh</code>", "<code>scripts/global/update-pbs.sh</code>"],
+              [
+                "Repository",
+                "Aggiorna gli elenchi dei pacchetti dalle sorgenti configurate e non modifica mai una sorgente. Se l’aggiornamento degli elenchi non riesce, si ferma e rimanda all’abbonamento e ai repository nell’interfaccia web di PBS.",
+                "Esegue prima il controllo descritto in Repository."
+              ],
+              ["Spazio libero", "Non controllato.", "Richiede 1 GB libero in <code>/var/cache/apt/archives</code>."],
+              [
+                "Revisione",
+                "Mostra l’output di <code>apt-get -s full-upgrade</code> in <strong>Esamina l’aggiornamento dei pacchetti</strong>, poi chiede se applicarlo, con No selezionato.",
+                "Mostra la versione installata di Proxmox Backup Server, quella disponibile quando è diversa e il numero di aggiornamenti dei pacchetti e di sicurezza. Se ci sono pacchetti da aggiornare, li elenca e chiede se procedere. Se non ce ne sono, indica <strong>Il sistema è già aggiornato</strong> e termina senza chiedere nulla."
+              ],
+              [
+                "Aggiornamento",
+                "<code>apt-get -y full-upgrade</code>.",
+                "<code>apt full-upgrade</code> mantenendo i file di configurazione attuali, poi <code>apt-get autoremove</code> e <code>apt-get autoclean</code>."
+              ],
+              ["Log", "Nessuno.", "<code>/var/log/proxmox-update-YYYYMMDD-HHMMSS.log</code>"],
+              [
+                "Kernel",
+                "Non controllato. Il messaggio finale chiede di verificare se serve un riavvio prima della prossima finestra di backup.",
+                "Avvisa quando serve un riavvio o è installato un kernel più recente. Non riavvia mai."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "repositories",
+      "title": "Repository",
+      "intro": "ProxMenux modifica le sorgenti APT di un Proxmox Backup Server solo dalla post-installazione: l’aggiornamento del sistema e l’opzione <strong>Configura i repository APT Proxmox</strong> dello script personalizzabile eseguono prima lo stesso controllo. L’opzione 6, l’aggiornamento dal Monitor e l’installazione delle utilità di sistema usano le sorgenti così come sono.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Se è già attivo un repository PBS no-subscription o di test, non cambia nulla.",
+              "Con un abbonamento attivo e un repository PBS, non cambia nulla. Con un abbonamento attivo e nessun repository PBS, il controllo si ferma e chiede di configurare la sorgente Enterprise in <em>Administration > Repositories</em>.",
+              "Senza abbonamento, o con un abbonamento scaduto, il controllo richiede un repository di base Debian attivo. Poi chiede conferma prima di passare al repository PBS no-subscription e di disattivare la sorgente Enterprise di PBS, che richiede un abbonamento.",
+              "Il passaggio avviene tramite l’API dei repository del server stesso, con <code>proxmox-backup-debug api set /nodes/localhost/apt/repositories --handle no-subscription</code>, e poi aggiorna gli elenchi dei pacchetti.",
+              "Se rispondi No, nessuna sorgente cambia e l’aggiornamento si ferma. In modalità non interattiva il controllo non cambia nulla e rimanda a <em>Administration > Repositories</em>.",
+              "Un repository PBS scritto per un’altra versione di Debian ferma il controllo, che indica il file perché tu possa correggerlo."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "post-install",
+      "title": "Post-installazione",
+      "intro": "<strong>Impostazioni post-installazione Proxmox</strong> apre il menu di post-installazione di Proxmox VE, adattato a un server di backup. Cosa cambia è descritto in <postLink>Post-installazione su Proxmox Backup Server</postLink>. Valgono altri due dettagli:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Lo <strong>Script post-installazione automatizzato</strong> esegue l’aggiornamento del sistema della post-installazione descritto sopra e chiede conferma prima di rimuovere il banner dell’abbonamento dall’interfaccia web di Proxmox Backup Server.",
+              "La voce <strong>Subscription Banner Removal</strong> di <strong>Disinstalla ottimizzazioni</strong> ripristina il file dell’interfaccia web dalla copia che ProxMenux ne ha fatto. Se non c’è una copia utilizzabile, reinstalla <code>proxmox-widget-toolkit</code> e <code>libjs-extjs</code>, i pacchetti presenti su un Proxmox Backup Server, invece di quelli di Proxmox VE."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Impostazioni",
+      "blocks": [
+        {
+          "p": "<strong>Impostazioni</strong> apre lo stesso menu delle impostazioni di Proxmox VE: il servizio del Monitor, il canale di rilascio, la lingua, le informazioni sulla versione e la disinstallazione, descritti in <settingsLink>Impostazioni di ProxMenux</settingsLink>. <strong>Torna al menu principale</strong> riporta al menu PBS."
+        }
+      ]
+    },
+    {
+      "id": "from-pve",
+      "title": "Seguire un Proxmox Backup Server da Proxmox VE",
+      "blocks": [
+        {
+          "p": "Questa pagina riguarda ProxMenux installato sul server di backup stesso. Per seguire i datastore e le attività di un Proxmox Backup Server da un host Proxmox VE, vedi la <backupTabLink>vista Proxmox Backup Server della scheda Backup</backupTabLink>. Per eseguire il backup di un host Proxmox VE su un Proxmox Backup Server, vedi <pbsDestLink>Destinazioni: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    }
+  ]
+}

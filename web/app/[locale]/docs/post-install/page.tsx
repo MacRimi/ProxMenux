@@ -110,6 +110,9 @@ export default async function PostInstallPage({
   const uninstallLink = (chunks: React.ReactNode) => (
     <Link href="/docs/post-install/uninstall" className="text-blue-700 hover:underline">{chunks}</Link>
   )
+  const pbslink = (chunks: React.ReactNode) => (
+    <Link href="/docs/pbs" className="text-blue-700 hover:underline">{chunks}</Link>
+  )
   const xshokAnchor = (chunks: React.ReactNode) => (
     <a
       href="https://github.com/extremeshok/xshok-proxmox"
@@ -211,8 +214,8 @@ export default async function PostInstallPage({
         {t.rich("community.body", { em, code, a: communityAnchor, link: externalRepoLink })}
       </p>
 
-      <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("pbs.heading")}</h2>
-      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pbs.body", { strong })}</p>
+      <h2 id="pbs" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("pbs.heading")}</h2>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pbs.body", { strong, pbslink })}</p>
       <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-2">
         {pbsItems.map((_, i) => (
           <li key={i}>{t.rich(`pbs.items.${i}`, { strong, em })}</li>

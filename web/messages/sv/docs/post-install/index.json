@@ -80,7 +80,7 @@
   },
   "pbs": {
     "heading": "På Proxmox Backup Server",
-    "body": "På en Proxmox Backup Server-värd öppnas samma meny från <strong>Inställningar efter installation av Proxmox</strong> i PBS-menyn. Automatiserat, Anpassningsbart, Tillämpa tillgängliga uppdateringar och Avinstallera optimeringar fungerar som på Proxmox VE, med dessa skillnader:",
+    "body": "På en Proxmox Backup Server-värd öppnas samma meny från <strong>Inställningar efter installation av Proxmox</strong> i PBS-menyn. Själva PBS-menyn, paketuppdateringarna och paketförråden beskrivs i <pbslink>ProxMenux på Proxmox Backup Server</pbslink>. Automatiserat, Anpassningsbart, Tillämpa tillgängliga uppdateringar och Avinstallera optimeringar fungerar som på Proxmox VE, med dessa skillnader:",
     "items": [
       "<strong>Paketkällor och uppgradering:</strong> när servern saknar prenumeration och bara Enterprise-källan för PBS är aktiv frågar ProxMenux innan den byter till PBS-källan utan prenumeration. Bytet görs via serverns egen API för paketkällor, samma som används i <em>Administration > Repositories</em>. Med en aktiv prenumeration, eller med en källa utan prenumeration eller en testkälla redan konfigurerad, lämnas källorna som de är.",
       "<strong>Anpassningsbar lista:</strong> alternativ som bara gäller Proxmox VE visas inte: gästagent, VFIO IOMMU, Open vSwitch, hastighet för vzdump-backuper, pigz, Appliance Manager, Ceph, hög tillgänglighet och OVH Real Time Monitoring.",

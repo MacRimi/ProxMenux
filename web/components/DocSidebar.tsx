@@ -315,6 +315,15 @@ export const sidebarItems: MenuItem[] = [
   },
 
   {
+    title: "Proxmox Backup Server",
+    i18nKey: "pbs",
+    href: "/docs/pbs",
+    submenu: [
+      { title: "Overview", i18nKey: "pbsOverview", href: "/docs/pbs" },
+    ],
+  },
+
+  {
     title: "Commands Reference",
     i18nKey: "commandsReference",
     submenu: [

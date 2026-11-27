@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "title": "ProxMenux na Proxmox Backup Server | Dokumentácia ProxMenux",
+    "description": "ProxMenux nainštalovaný na hostiteľovi Proxmox Backup Server: ako sa server rozpozná, podporované verzie, ponuka PBS, dva spôsoby aktualizácie jeho balíkov, kontrola repozitárov, nastavenie po inštalácii a nastavenia."
+  },
+  "header": {
+    "title": "ProxMenux na Proxmox Backup Server",
+    "description": "Čo robí ProxMenux na hostiteľovi Proxmox Backup Server: vlastnú ponuku, aktualizácie balíkov, ktoré zachovajú repozitáre servera, a nastavenie po inštalácii prispôsobené zálohovaciemu serveru.",
+    "section": "Proxmox Backup Server"
+  },
+  "sections": [
+    {
+      "id": "detection",
+      "title": "Rozpoznanie a podporované verzie",
+      "blocks": [
+        {
+          "p": "ProxMenux považuje hostiteľa za Proxmox Backup Server, keď je nainštalovaný balík <code>proxmox-backup-server</code>. Samotný zálohovací klient, ktorý má mnoho hostiteľov Proxmox VE, sa nepočíta. Ak sú Proxmox VE aj Proxmox Backup Server nainštalované na tom istom hostiteľovi, prednosť má Proxmox VE a ProxMenux otvorí svoju bežnú ponuku. Monitor používa rovnaké rozpoznanie."
+        },
+        {
+          "table": {
+            "headers": ["Proxmox Backup Server", "Debian"],
+            "rows": [
+              ["3", "12 (<code>bookworm</code>)"],
+              ["4", "13 (<code>trixie</code>)"]
+            ]
+          }
+        },
+        {
+          "p": "Pri akejkoľvek inej kombinácii sa ponuka PBS aj tak otvorí, ale aktualizácia balíkov a kontrola repozitárov sa zastavia so správou <strong>Táto operácia podporuje PBS 3 na Debiane 12 a PBS 4 na Debiane 13.</strong> Inštalátor systémových nástrojov sa stále otvorí, ale jeho inštalácie sa zastavia s rovnakou správou."
+        }
+      ]
+    },
+    {
+      "id": "installation",
+      "title": "Inštalácia",
+      "blocks": [
+        {
+          "p": "ProxMenux sa na Proxmox Backup Server inštaluje rovnakým príkazom ako na Proxmox VE, opísaným v časti <installLink>Inštalácia ProxMenuxu</installLink>. Inštalátor nemá pre PBS samostatnú cestu: nainštaluje aj ProxMenux Monitor, ktorý počúva na porte 8008. Po inštalácii príkaz <code>menu</code> otvorí ponuku PBS."
+        }
+      ]
+    },
+    {
+      "id": "menu",
+      "title": "Ponuka PBS",
+      "intro": "Na hostiteľovi Proxmox Backup Server príkaz <code>menu</code> otvorí namiesto hlavnej ponuky Proxmox VE ponuku s názvom <strong>Proxmox Backup Server</strong>. Názov je rovnaký vo všetkých jazykoch.",
+      "blocks": [
+        {
+          "figure": {
+            "src": "/pbs/pbs-menu.png",
+            "alt": "Ponuka Proxmox Backup Server v ProxMenuxe so šiestimi očíslovanými možnosťami, Nastavenia a Ukončiť",
+            "caption": "Ponuka PBS."
+          }
+        },
+        {
+          "table": {
+            "headers": ["Kláves", "Možnosť", "Čo robí"],
+            "rows": [
+              ["1", "<strong>Nastavenie Proxmoxu po inštalácii</strong>", "Otvorí ponuku nastavenia po inštalácii, prispôsobenú zálohovaciemu serveru. Pozrite časť Nastavenie po inštalácii nižšie."],
+              ["2", "<strong>Verzia PBS a balíky</strong>", "Zobrazí výstup <code>proxmox-backup-manager versions --verbose</code>."],
+              ["3", "<strong>Dátové úložiská PBS</strong>", "Zobrazí výstup <code>proxmox-backup-manager datastore list</code>."],
+              ["4", "<strong>Nedávne úlohy PBS</strong>", "Zobrazí výstup <code>proxmox-backup-manager task list --all true --limit 20</code>."],
+              ["5", "<strong>Inštalátor systémových nástrojov</strong>", "Rovnaký inštalátor ako na Proxmox VE, opísaný v časti <utilsLink>Inštalátor systémových nástrojov</utilsLink>. Na PBS inštaluje z už nakonfigurovaných repozitárov a nikdy ich nemení."],
+              ["6", "<strong>Aktualizovať PBS pomocou nakonfigurovaných repozitárov</strong>", "Aktualizuje balíky servera. Pozrite časť Aktualizácia servera nižšie."],
+              ["s", "<strong>Nastavenia</strong>", "Ponuka nastavení ProxMenuxu. Pozrite časť Nastavenia nižšie."],
+              ["0", "<strong>Ukončiť</strong>", "Zatvorí ProxMenux."]
+            ]
+          }
+        },
+        {
+          "p": "Možnosti 2 až 4 iba čítajú: výstup príkazu zobrazia v textovom okne. Ak príkaz zlyhá, okno má názov <strong>Príkaz zlyhal</strong> a zobrazí chybu."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Aktualizácia servera",
+      "intro": "Balíky Proxmox Backup Server aktualizujú dva skripty. Žiadny z nich nespúšťa aktualizačné kroky Proxmox VE.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Podrobnosť", "Aktualizácia balíkov PBS", "Aktualizácia systému v nastavení po inštalácii"],
+            "rows": [
+              [
+                "Odkiaľ sa spúšťa",
+                "Možnosť 6, <strong>Aktualizovať PBS pomocou nakonfigurovaných repozitárov</strong>, a tlačidlo <strong>Aktualizovať systém</strong> v kategórii <strong>Aktualizácie systému</strong> v časti <healthLink>Monitor stavu</healthLink> v Monitore servera, ktoré sa zobrazí, keď čakajú aktualizácie.",
+                "<strong>Aktualizovať systém</strong>, krok skriptu <strong>Automatický skript po inštalácii</strong> a možnosť skriptu <strong>Prispôsobiteľný skript po inštalácii</strong>."
+              ],
+              ["Skript", "<code>scripts/utilities/pbs_update.sh</code>", "<code>scripts/global/update-pbs.sh</code>"],
+              [
+                "Repozitáre",
+                "Obnoví zoznamy balíkov z nakonfigurovaných zdrojov a nikdy nezmení zdroj. Ak obnovenie zlyhá, zastaví sa a odkáže na predplatné a repozitáre vo webovom rozhraní PBS.",
+                "Najprv spustí kontrolu opísanú v časti Repozitáre."
+              ],
+              ["Voľné miesto", "Nekontroluje sa.", "Potrebuje 1 GB voľného miesta v <code>/var/cache/apt/archives</code>."],
+              [
+                "Kontrola",
+                "Zobrazí výstup <code>apt-get -s full-upgrade</code> v okne <strong>Skontrolovať aktualizáciu balíkov</strong> a potom sa opýta, či ju použiť, s predvolenou voľbou Nie.",
+                "Zobrazí nainštalovanú verziu Proxmox Backup Server, dostupnú verziu, ak sa líši, a počet aktualizácií balíkov a bezpečnostných aktualizácií. Ak sú balíky na aktualizáciu, vypíše ich a opýta sa, či pokračovať. Ak nie sú žiadne, oznámi <strong>Systém je už aktuálny</strong> a skončí bez otázky."
+              ],
+              [
+                "Aktualizácia",
+                "<code>apt-get -y full-upgrade</code>.",
+                "<code>apt full-upgrade</code> so zachovaním aktuálnych konfiguračných súborov, potom <code>apt-get autoremove</code> a <code>apt-get autoclean</code>."
+              ],
+              ["Záznam", "Žiadny.", "<code>/var/log/proxmox-update-YYYYMMDD-HHMMSS.log</code>"],
+              [
+                "Jadro",
+                "Nekontroluje sa. Záverečná správa vás požiada overiť, či je pred ďalším zálohovacím oknom potrebný reštart.",
+                "Upozorní, keď je potrebný reštart alebo je nainštalované novšie jadro. Nikdy nereštartuje."
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "repositories",
+      "title": "Repozitáre",
+      "intro": "ProxMenux mení zdroje APT na Proxmox Backup Server len z nastavenia po inštalácii: aktualizácia systému a možnosť <strong>Nastaviť APT repozitáre Proxmoxu</strong> prispôsobiteľného skriptu najprv spustia rovnakú kontrolu. Možnosť 6, aktualizácia z Monitora a inštalátor systémových nástrojov používajú zdroje tak, ako sú.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Ak je už povolený repozitár PBS no-subscription alebo testovací repozitár, nič sa nezmení.",
+              "S aktívnym predplatným a repozitárom PBS sa nič nezmení. S aktívnym predplatným bez repozitára PBS sa kontrola zastaví a požiada vás nastaviť zdroj Enterprise v <em>Administration > Repositories</em>.",
+              "Bez predplatného alebo s predplatným, ktorého platnosť vypršala, kontrola potrebuje aktívny základný repozitár Debianu. Potom sa opýta, skôr ako prepne na repozitár PBS no-subscription a vypne zdroj Enterprise pre PBS, ktorý potrebuje predplatné.",
+              "Prepnutie prebehne cez API repozitárov samotného servera príkazom <code>proxmox-backup-debug api set /nodes/localhost/apt/repositories --handle no-subscription</code> a potom sa obnovia zoznamy balíkov.",
+              "Ak odpoviete Nie, žiadny zdroj sa nezmení a aktualizácia sa zastaví. V neinteraktívnom režime kontrola nič nezmení a odkáže na <em>Administration > Repositories</em>.",
+              "Repozitár PBS zapísaný pre inú verziu Debianu kontrolu zastaví; kontrola uvedie súbor, aby ste ho mohli opraviť."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "post-install",
+      "title": "Nastavenie po inštalácii",
+      "intro": "<strong>Nastavenie Proxmoxu po inštalácii</strong> otvorí ponuku nastavenia po inštalácii z Proxmox VE, prispôsobenú zálohovaciemu serveru. Čo sa mení, opisuje časť <postLink>Nastavenie po inštalácii na Proxmox Backup Server</postLink>. Platia ešte dve podrobnosti:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Automatický skript po inštalácii</strong> spustí aktualizáciu systému opísanú vyššie a pred odstránením upozornenia na predplatné z webového rozhrania Proxmox Backup Server sa opýta.",
+              "Položka <strong>Subscription Banner Removal</strong> v <strong>Odstrániť optimalizácie</strong> obnoví súbor webového rozhrania zo zálohy, ktorú si z neho ProxMenux urobil. Ak nie je k dispozícii použiteľná záloha, preinštaluje <code>proxmox-widget-toolkit</code> a <code>libjs-extjs</code>, teda balíky, ktoré Proxmox Backup Server má, namiesto balíkov Proxmox VE."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Nastavenia",
+      "blocks": [
+        {
+          "p": "<strong>Nastavenia</strong> otvorí rovnakú ponuku nastavení ako na Proxmox VE: službu Monitora, kanál vydaní, jazyk, informácie o verzii a odinštalovanie, opísané v časti <settingsLink>Nastavenia ProxMenux</settingsLink>. <strong>Späť do hlavného menu</strong> sa vráti do ponuky PBS."
+        }
+      ]
+    },
+    {
+      "id": "from-pve",
+      "title": "Sledovanie Proxmox Backup Server z Proxmox VE",
+      "blocks": [
+        {
+          "p": "Táto stránka sa týka ProxMenuxu nainštalovaného priamo na zálohovacom serveri. Ak chcete z hostiteľa Proxmox VE sledovať dátové úložiská a úlohy Proxmox Backup Server, pozrite <backupTabLink>zobrazenie Proxmox Backup Server na karte Záloha</backupTabLink>. Ak chcete zálohovať hostiteľa Proxmox VE na Proxmox Backup Server, pozrite <pbsDestLink>Ciele: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    }
+  ]
+}

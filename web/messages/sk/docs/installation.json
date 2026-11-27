@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Inštalácia ProxMenuxu",
-    "description": "Inštalátor spustíte jedným riadkom na ľubovoľnom hostiteľovi Proxmox VE 8 alebo novšom. Automaticky nainštaluje závislosti, stiahne skripty, nastaví spúšťač ponuky a pri prvom spustení požiada o výber jazyka. K dispozícii sú dva kanály: stabilný (predvolený) a beta.",
+    "description": "Inštalátor spustíte jedným riadkom na ľubovoľnom hostiteľovi Proxmox VE 8 alebo novšom a na Proxmox Backup Server 3 a 4. Automaticky nainštaluje závislosti, stiahne skripty, nastaví spúšťač ponuky a pri prvom spustení požiada o výber jazyka. K dispozícii sú dva kanály: stabilný (predvolený) a beta.",
     "section": "Inštalácia"
   },
   "stable": {
@@ -80,12 +80,13 @@
     "heading": "Čo ďalej?",
     "postInstall": "<postlink>Skript po inštalácii</postlink> — úpravy a zabezpečenie čerstvo nainštalovaného hostiteľa Proxmox.",
     "introduction": "<introlink>Úvod</introlink> — úplný prehľad funkcií.",
-    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — webový panel hostiteľa, ktorý sa automaticky inštaluje spolu s ponukou."
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — webový panel hostiteľa, ktorý sa automaticky inštaluje spolu s ponukou.",
+    "pbs": "<pbslink>ProxMenux na Proxmox Backup Server</pbslink>: ponuka, aktualizácie a nastavenie po inštalácii na zálohovacom serveri."
   },
   "requirements": {
     "heading": "Požiadavky a osvedčené postupy",
     "reqTitle": "Požiadavky",
-    "reqBody": "Proxmox VE <strong>8.x alebo novší</strong>. PVE 7 a staršie verzie nie sú podporované. Hostiteľ potrebuje prístup na internet na stiahnutie skriptov, závislostí a AppImage ProxMenux Monitora. Inštalátor spúšťajte ako <strong>root</strong> na hostiteľovi Proxmox.",
+    "reqBody": "Proxmox VE <strong>8.x alebo novší</strong> alebo Proxmox Backup Server 3 či 4 (pozrite <pbslink>ProxMenux na Proxmox Backup Server</pbslink>). PVE 7 a staršie verzie nie sú podporované. Hostiteľ potrebuje prístup na internet na stiahnutie skriptov, závislostí a AppImage ProxMenux Monitora. Inštalátor spúšťajte ako <strong>root</strong> na hostiteľovi Proxmox.",
     "inspectTitle": "Vždy skontrolujte skripty, ktoré spustíte z internetu",
     "inspectReview": "<sourcelink>Pred spustením si prezrite zdroj inštalátora</sourcelink>.",
     "inspectCoc": "Všetky spustiteľné odkazy dodržiavajú <coclink>kódex správania ProxMenuxu</coclink>."
