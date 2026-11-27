@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -83,10 +84,9 @@ export default async function SystemOverviewTabPage({
       </Callout>
 
       <figure className="my-8">
-        <img
+        <Screenshot
           src="/monitor/dashboard-home.png"
           alt={t("captureAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("captureCaption")}
@@ -150,10 +150,9 @@ export default async function SystemOverviewTabPage({
       </ul>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/system-overview-top-processes.png"
           alt={t("processes.captureListAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("processes.captureListCaption")}
@@ -174,10 +173,9 @@ export default async function SystemOverviewTabPage({
       </p>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/system-overview-process-detail.png"
           alt={t("processes.captureDetailAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("processes.captureDetailCaption")}

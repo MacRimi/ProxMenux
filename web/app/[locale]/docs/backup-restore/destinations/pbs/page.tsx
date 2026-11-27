@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Star, ExternalLink, BookOpen } from "lucide-react"
-import Image from "next/image"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -235,12 +235,10 @@ export default async function PbsDestinationPage({
           className="block cursor-zoom-in group"
           aria-label={t("encryption.blobUploadImageAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/pbs-paired-backup-groups.png"
             alt={t("encryption.blobUploadImageAlt")}
-            width={1400}
-            height={700}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">

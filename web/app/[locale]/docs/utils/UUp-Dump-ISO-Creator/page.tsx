@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { getTranslations, getMessages } from "next-intl/server"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -106,17 +106,11 @@ export default async function UUPDumpISOCreatorPage({
       </Callout>
 
       <div className="flex flex-col items-center my-6">
-        <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-          <Image
-            src="/utils/uup-dump-iso-creator.png"
-            alt={t("hero.imageAlt")}
-            width={768}
-            height={0}
-            style={{ height: "auto" }}
-            className="w-full object-contain"
-            sizes="(max-width: 768px) 100vw, 768px"
-          />
-        </div>
+        <Screenshot
+          src="/utils/uup-dump-iso-creator.png"
+          alt={t("hero.imageAlt")}
+          className="rounded-md border border-gray-200"
+        />
         <span className="mt-2 text-sm text-gray-600">{t("hero.caption")}</span>
       </div>
 
@@ -193,17 +187,11 @@ export default async function UUPDumpISOCreatorPage({
             {item.bodyRich ? t.rich(`step1.items.${idx}.bodyRich`, { code, strong, em }) : item.body}
           </p>
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-              <Image
-                src={item.img}
-                alt={item.caption}
-                width={768}
-                height={0}
-                style={{ height: "auto" }}
-                className="w-full object-contain"
-                sizes="(max-width: 768px) 100vw, 768px"
-              />
-            </div>
+            <Screenshot
+              src={item.img}
+              alt={item.caption}
+              className="rounded-md border border-gray-200"
+            />
             <span className="mt-2 text-sm text-gray-600">{item.caption}</span>
           </div>
         </section>
@@ -224,17 +212,11 @@ export default async function UUPDumpISOCreatorPage({
             {item.bodyRich ? t.rich(`step2.items.${idx}.bodyRich`, { code, strong, em }) : item.body}
           </p>
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-              <Image
-                src={item.img}
-                alt={item.caption}
-                width={768}
-                height={0}
-                style={{ height: "auto" }}
-                className="w-full object-contain"
-                sizes="(max-width: 768px) 100vw, 768px"
-              />
-            </div>
+            <Screenshot
+              src={item.img}
+              alt={item.caption}
+              className="rounded-md border border-gray-200"
+            />
             <span className="mt-2 text-sm text-gray-600">{item.caption}</span>
           </div>
         </section>

@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ArrowRight, HardDrive, FileDown, Cpu, Boxes, Eraser, Activity, Server, Wrench } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -125,11 +125,9 @@ export default async function DiskManagerOverviewPage({
         {t.rich("opening.body", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/disk/disk-manager-menu.png"
         alt={t("opening.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

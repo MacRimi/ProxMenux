@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Prerequisites } from "@/components/ui/prerequisites"
 import { Steps } from "@/components/ui/steps"
 import { SwitchModeGraphic } from "@/components/ui/switch-mode-graphic"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -135,11 +135,9 @@ export default async function SwitchGpuModePage({
         {t.rich("running.body", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/gpu-tpu/gpu-switch-01-menu-entry.png"
         alt={t("running.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
@@ -249,11 +247,9 @@ export default async function SwitchGpuModePage({
       <Steps>
         <Steps.Step title={t("walkthrough.detect.title")}>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.detect.body", { code })}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-switch-02-gpu-select.png"
             alt={t("walkthrough.detect.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -300,11 +296,9 @@ export default async function SwitchGpuModePage({
               </tbody>
             </table>
           </div>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-switch-03-conflict-policy.png"
             alt={t("walkthrough.conflict.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -320,11 +314,9 @@ export default async function SwitchGpuModePage({
 
         <Steps.Step title={t("walkthrough.reboot.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.reboot.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-switch-04-summary.png"
             alt={t("walkthrough.reboot.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>

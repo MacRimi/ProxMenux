@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Prerequisites } from "@/components/ui/prerequisites"
 import { Steps } from "@/components/ui/steps"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -126,11 +126,9 @@ export default async function NvidiaHostPage({
         {t.rich("running.body", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/gpu-tpu/nvidia-host-01-menu-entry.png"
         alt={t("running.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
@@ -143,11 +141,9 @@ export default async function NvidiaHostPage({
         <Steps.Step title={t("walkthrough.detect.title")}>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.detect.body1", { em })}</p>
           <p className="mb-3 text-gray-800">{t("walkthrough.detect.body2")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/nvidia-host-02-overview.png"
             alt={t("walkthrough.detect.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -160,11 +156,9 @@ export default async function NvidiaHostPage({
             {t("walkthrough.version.whyBody")}
           </Callout>
 
-          <Image
+          <Screenshot
             src="/gpu-tpu/nvidia-host-03-version-menu.png"
             alt={t("walkthrough.version.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -194,11 +188,9 @@ sh NVIDIA-Linux-x86_64-VERSION.run \\
   --dkms`}
             className="my-4"
           />
-          <Image
+          <Screenshot
             src="/gpu-tpu/nvidia-host-04-install-progress.png"
             alt={t("walkthrough.download.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -217,11 +209,9 @@ sh NVIDIA-Linux-x86_64-VERSION.run \\
         <Steps.Step title={t("walkthrough.propagate.title")}>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.propagate.body1", { code, strong })}</p>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.propagate.body2", { code, strong })}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/nvidia-host-05-lxc-update.png"
             alt={t("walkthrough.propagate.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-6"
           />
         </Steps.Step>
@@ -238,12 +228,9 @@ sh NVIDIA-Linux-x86_64-VERSION.run \\
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/gpu-tpu/nvidia-host-06-action-menu.png"
           alt={t("reinstallUninstall.imageAlt")}
-          width={1200}
-          height={680}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("reinstallUninstall.imageCaption")}
@@ -298,11 +285,9 @@ sh NVIDIA-Linux-x86_64-VERSION.run \\
         className="my-4"
       />
 
-      <Image
+      <Screenshot
         src="/gpu-tpu/nvidia-host-06-nvidia-smi-ok.png"
         alt={t("verify.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react"
-import Image from "next/image"
 import { getMessages, getTranslations } from "next-intl/server"
 import {
   Archive,
@@ -25,6 +24,7 @@ import { Callout } from "@/components/ui/callout"
 import { DataFlowDiagram } from "@/components/ui/data-flow-diagram"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Mermaid } from "@/components/ui/mermaid"
+import { Screenshot } from "@/components/docs/Screenshot"
 import { STACK_DEPENDENCY_HOOK_SOURCE } from "@/components/oci/stackDependencyHookSource"
 
 /*
@@ -252,13 +252,7 @@ export async function DocPage({
       case "figure":
         return (
           <figure key={index} className="my-6">
-            <Image
-              src={data.src}
-              alt={t(`${base}.alt`)}
-              width={data.width ?? 1600}
-              height={data.height ?? 1000}
-              className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
-            />
+            <Screenshot src={data.src} alt={t(`${base}.alt`)} density={data.density} />
             {data.caption && (
               <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{rich(`${base}.caption`)}</figcaption>
             )}

@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Prerequisites } from "@/components/ui/prerequisites"
 import { Steps } from "@/components/ui/steps"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -134,11 +134,9 @@ export default async function AddGpuToLxcPage({
         {t.rich("running.body", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/gpu-tpu/gpu-lxc-01-menu-entry.png"
         alt={t("running.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
@@ -158,32 +156,26 @@ export default async function AddGpuToLxcPage({
 
         <Steps.Step title={t("walkthrough.pickCt.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.pickCt.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/select-container.png"
             alt={t("walkthrough.pickCt.imageAlt")}
-            width={800}
-            height={400}
             className="rounded shadow-lg my-4"
           />
         </Steps.Step>
 
         <Steps.Step title={t("walkthrough.selectGpu.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.selectGpu.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-lxc-02-gpu-select.png"
             alt={t("walkthrough.selectGpu.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-4"
           />
         </Steps.Step>
 
         <Steps.Step title={t("walkthrough.preflight.title")}>
-          <Image
+          <Screenshot
             src="/gpu-tpu/gpu-lxc-03-switch-mode.png"
             alt={t("walkthrough.preflight.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-4"
           />
           <p className="mb-3 text-gray-800">{t("walkthrough.preflight.intro")}</p>

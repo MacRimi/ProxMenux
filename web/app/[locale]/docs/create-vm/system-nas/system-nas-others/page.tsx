@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink, Database, Server, HardDrive, MonitorIcon } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -317,17 +317,13 @@ function NASSection({
           {shellImg && (
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">{shellLabel}</h4>
-              <div className="overflow-hidden rounded-md border border-gray-200">
-                <Image src={shellImg} alt={shellAlt ?? `${title} shell interface`} width={600} height={400} className="w-full object-contain" />
-              </div>
+              <Screenshot src={shellImg} alt={shellAlt ?? `${title} shell interface`} className="rounded-md border border-gray-200" />
             </div>
           )}
           {webImg && (
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">{webLabel}</h4>
-              <div className="overflow-hidden rounded-md border border-gray-200">
-                <Image src={webImg} alt={webAlt ?? `${title} web interface`} width={600} height={400} className="w-full object-contain" />
-              </div>
+              <Screenshot src={webImg} alt={webAlt ?? `${title} web interface`} className="rounded-md border border-gray-200" />
             </div>
           )}
         </div>

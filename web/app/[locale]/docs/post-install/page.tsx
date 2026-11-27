@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Zap, SlidersHorizontal, Undo2, ExternalLink, RefreshCw } from "lucide-react"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -155,11 +155,9 @@ export default async function PostInstallPage({
         {t.rich("openingMenu.body", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/post-install/post-install-menu.png"
         alt={t("openingMenu.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { Zap, MessageSquare, BookOpen, ExternalLink } from "lucide-react"
 import { Youtube } from "@/components/ui/brand-icons"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { YouTubeEmbed } from "@/components/ui/youtube-embed"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -144,11 +144,9 @@ export default async function UpgradePve8Pve9Page({
         {t.rich("modeMenu.intro", { em })}
       </p>
 
-      <Image
+      <Screenshot
         src="/utils/upgrade-pve8-pve9-menu.png"
         alt={t("modeMenu.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

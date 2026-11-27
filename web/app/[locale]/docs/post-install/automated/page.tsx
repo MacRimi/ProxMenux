@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -160,11 +160,9 @@ export default async function AutomatedPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("endResult.heading")}</h2>
       <p className="mb-4 text-gray-800 leading-relaxed">{t("endResult.body")}</p>
 
-      <Image
+      <Screenshot
         src="/post-install/automated-result.png"
         alt={t("endResult.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

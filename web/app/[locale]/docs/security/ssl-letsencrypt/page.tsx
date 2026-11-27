@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { getTranslations, getMessages } from "next-intl/server"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -114,12 +114,9 @@ export default async function SslLetsEncryptPage({
       </p>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/security/ssl-https-card.png"
           alt={t("wheresetting.imageAlt")}
-          width={2000}
-          height={1124}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("wheresetting.caption")}

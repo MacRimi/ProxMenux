@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { DataFlowDiagram } from "@/components/ui/data-flow-diagram"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -186,7 +186,7 @@ export default async function NotificationsPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/notifications-disabled.png" alt={t("enabling.disabledAlt")} width={2000} height={552} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/notifications-disabled.png" alt={t("enabling.disabledAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("enabling.disabledCaption")}</figcaption>
       </figure>
 
@@ -198,7 +198,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/notifications-active.png" alt={t("enabling.activeAlt")} width={2000} height={1142} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/notifications-active.png" alt={t("enabling.activeAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("enabling.activeCaption", { em })}</figcaption>
       </figure>
 
@@ -254,7 +254,7 @@ export default async function NotificationsPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/telegram-setup-guide.png" alt={t("telegram.guideAlt")} width={1923} height={2000} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/telegram-setup-guide.png" alt={t("telegram.guideAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("telegram.guideCaption", { em })}</figcaption>
       </figure>
 
@@ -289,7 +289,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/telegram-private-chat.png" alt={t("telegram.privateAlt")} width={2000} height={768} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/telegram-private-chat.png" alt={t("telegram.privateAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("telegram.privateCaption")}</figcaption>
       </figure>
 
@@ -303,7 +303,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/telegram-group-chat.png" alt={t("telegram.groupAlt")} width={2000} height={768} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/telegram-group-chat.png" alt={t("telegram.groupAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("telegram.groupCaption", { code, em })}</figcaption>
       </figure>
 
@@ -326,7 +326,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/discord-channel.png" alt={t("discord.imageAlt")} width={2000} height={435} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/discord-channel.png" alt={t("discord.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("discord.imageCaption", { em })}</figcaption>
       </figure>
 
@@ -343,7 +343,7 @@ export default async function NotificationsPage({
       </ol>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/gotify-channel.png" alt={t("gotify.imageAlt")} width={2000} height={573} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/gotify-channel.png" alt={t("gotify.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("gotify.imageCaption")}</figcaption>
       </figure>
 
@@ -352,7 +352,7 @@ export default async function NotificationsPage({
       <p className="mb-4 text-gray-800 leading-relaxed">{t("email.intro")}</p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/email-channel.png" alt={t("email.imageAlt")} width={2000} height={1248} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/email-channel.png" alt={t("email.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("email.imageCaption")}</figcaption>
       </figure>
 
@@ -464,7 +464,7 @@ export default async function NotificationsPage({
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/notification-categories.png" alt={t("rich.imageAlt")} width={2000} height={1668} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/notification-categories.png" alt={t("rich.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t.rich("rich.imageCaption", { em })}</figcaption>
       </figure>
 
@@ -522,7 +522,7 @@ running on node pve-01
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/quiet-hours-and-digest-config.png" alt={t("quiet.imageAlt")} width={1600} height={1200} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/quiet-hours-and-digest-config.png" alt={t("quiet.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("quiet.imageCaption")}</figcaption>
       </figure>
 
@@ -588,7 +588,7 @@ running on node pve-01
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/display-name.png" alt={t("displayName.imageAlt")} width={2000} height={256} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto" />
+        <Screenshot src="/monitor/settings/display-name.png" alt={t("displayName.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("displayName.imageCaption")}</figcaption>
       </figure>
 
@@ -648,7 +648,7 @@ running on node pve-01
       </p>
 
       <figure className="my-4">
-        <Image src="/monitor/settings/pve-webhook-target.png" alt={t("pveWebhook.imageAlt")} width={1452} height={1360} className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto" />
+        <Screenshot src="/monitor/settings/pve-webhook-target.png" alt={t("pveWebhook.imageAlt")} />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">{t("pveWebhook.imageCaption")}</figcaption>
       </figure>
 

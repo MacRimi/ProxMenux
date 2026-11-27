@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { Prerequisites } from "@/components/ui/prerequisites"
 import { Steps } from "@/components/ui/steps"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -154,11 +154,9 @@ export default async function InstallCoralTPUHostPage({
         {t.rich("running.body", { strong })}
       </p>
 
-      <Image
+      <Screenshot
         src="/gpu-tpu/coral-host-01-menu-entry.png"
         alt={t("running.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 
@@ -181,11 +179,9 @@ export default async function InstallCoralTPUHostPage({
 
         <Steps.Step title={t("walkthrough.prompt.title")}>
           <p className="mb-3 text-gray-800">{t("walkthrough.prompt.body")}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/coral-host-02-pre-install.png"
             alt={t("walkthrough.prompt.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-4"
           />
         </Steps.Step>
@@ -208,11 +204,9 @@ export default async function InstallCoralTPUHostPage({
               <li key={`after-${idx}`}>{t.rich(`walkthrough.pcie.afterItems.${idx}`, { strong, code })}</li>
             ))}
           </ol>
-          <Image
+          <Screenshot
             src="/gpu-tpu/coral-host-03-dkms-build.png"
             alt={t("walkthrough.pcie.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-4"
           />
         </Steps.Step>
@@ -231,11 +225,9 @@ export default async function InstallCoralTPUHostPage({
 
         <Steps.Step title={t("walkthrough.reboot.title")}>
           <p className="mb-3 text-gray-800">{t.rich("walkthrough.reboot.body", { code })}</p>
-          <Image
+          <Screenshot
             src="/gpu-tpu/coral-host-04-summary.png"
             alt={t("walkthrough.reboot.imageAlt")}
-            width={900}
-            height={500}
             className="rounded shadow-lg my-4"
           />
         </Steps.Step>
@@ -261,12 +253,9 @@ export default async function InstallCoralTPUHostPage({
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/gpu-tpu/coral-host-05-action-menu.png"
           alt={t("reinstallUninstall.imageAlt")}
-          width={1200}
-          height={680}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("reinstallUninstall.imageCaption", { code })}

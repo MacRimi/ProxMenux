@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -92,12 +92,9 @@ export default async function TerminalTabPage({
       </Callout>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/terminal/single-terminal.png"
           alt={t("singleAlt")}
-          width={1600}
-          height={1000}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("singleCaption", { em })}
@@ -132,12 +129,9 @@ export default async function TerminalTabPage({
       </p>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/terminal/grid-4-terminals.png"
           alt={t("gridAlt")}
-          width={1600}
-          height={1000}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("gridCaption", { code })}
@@ -188,12 +182,9 @@ export default async function TerminalTabPage({
       </Callout>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/terminal/lxc-console-modal.png"
           alt={t("lxcAlt")}
-          width={1600}
-          height={1200}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("lxcCaption", { em })}
@@ -206,12 +197,9 @@ export default async function TerminalTabPage({
       </p>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/terminal/search-commands.png"
           alt={t("search.modalAlt")}
-          width={1600}
-          height={1200}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("search.modalCaption", { code, em })}

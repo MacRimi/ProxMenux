@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -138,12 +138,9 @@ export default async function SettingsTabPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("networkUnits.heading")}</h2>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/network-units.png"
           alt={t("networkUnits.imageAlt")}
-          width={2000}
-          height={374}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("networkUnits.imageCaption")}
@@ -166,12 +163,9 @@ export default async function SettingsTabPage({
       </ul>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/health-suppression-settings.png"
           alt={t("health.imageAlt")}
-          width={2010}
-          height={1816}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("health.imageCaption")}
@@ -298,12 +292,9 @@ export default async function SettingsTabPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("lxcDetection.heading")}</h2>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/lxc-update-detection.png"
           alt={t("lxcDetection.imageAlt")}
-          width={2000}
-          height={620}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("lxcDetection.imageCaption", { code })}
@@ -344,12 +335,9 @@ export default async function SettingsTabPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("storageExclusions.heading")}</h2>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/storage-exclusions.png"
           alt={t("storageExclusions.imageAlt")}
-          width={2000}
-          height={1120}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("storageExclusions.imageCaption", { em })}
@@ -369,12 +357,9 @@ export default async function SettingsTabPage({
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("interfaceExclusions.heading")}</h2>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/interface-exclusions.png"
           alt={t("interfaceExclusions.imageAlt")}
-          width={2000}
-          height={1142}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("interfaceExclusions.imageCaption", { em })}
@@ -412,12 +397,9 @@ export default async function SettingsTabPage({
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/proxmenux-optimizations.png"
           alt={t("optimizations.imageAlt")}
-          width={2000}
-          height={1146}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("optimizations.imageCaption", { em })}
@@ -437,12 +419,9 @@ export default async function SettingsTabPage({
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/optimization-detail.png"
           alt={t("optimizations.detailAlt")}
-          width={2000}
-          height={1040}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("optimizations.detailCaption", { em, code })}
@@ -459,12 +438,9 @@ export default async function SettingsTabPage({
       </p>
 
       <figure className="my-4">
-        <Image
+        <Screenshot
           src="/monitor/settings/proxmenux-optimizations-update-banner.png"
           alt={t("optimizations.updatesAlt")}
-          width={2000}
-          height={1146}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("optimizations.updatesCaption", { link: updatesLink })}

@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { DataFlowDiagram } from "@/components/ui/data-flow-diagram"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -141,13 +141,10 @@ export default async function HealthMonitorPage({
 
       <h2 className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("categories.heading")}</h2>
 
-      <figure className="my-6">
-        <Image
+      <figure className="my-6 mx-auto max-w-2xl">
+        <Screenshot
           src="/monitor/health-monitor.png"
           alt={t("categories.imageAlt")}
-          width={1608}
-          height={1752}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto mx-auto max-w-2xl"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("categories.imageCaption")}
@@ -251,12 +248,9 @@ export default async function HealthMonitorPage({
       </ol>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/dismiss-duration-dropdown.png"
           alt={t("dismiss.dropdownImageAlt")}
-          width={1540}
-          height={1072}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("dismiss.dropdownImageCaption", { em })}
@@ -264,12 +258,9 @@ export default async function HealthMonitorPage({
       </figure>
 
       <figure className="my-6">
-        <Image
+        <Screenshot
           src="/monitor/health-suppression-settings.png"
           alt={t("dismiss.imageAlt")}
-          width={2010}
-          height={1816}
-          className="rounded-lg border border-gray-200 shadow-xs w-full h-auto"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("dismiss.imageCaption")}

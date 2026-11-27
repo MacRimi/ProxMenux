@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
-import Image from "next/image"
 import { Link } from "@/i18n/navigation"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -139,12 +139,10 @@ export default async function CreatingBackupsPage({
           className="block cursor-zoom-in group"
           aria-label={t("modes.monitorAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/scheduled-backup-monitor.png"
             alt={t("modes.monitorAlt")}
-            width={1400}
-            height={700}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -211,12 +209,10 @@ export default async function CreatingBackupsPage({
           className="block cursor-zoom-in group"
           aria-label={t("profiles.customPickerAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/custom-picker.png"
             alt={t("profiles.customPickerAlt")}
-            width={1400}
-            height={700}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -232,12 +228,10 @@ export default async function CreatingBackupsPage({
           className="block cursor-zoom-in group"
           aria-label={t("profiles.manageCustomAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/manage-custom-paths.png"
             alt={t("profiles.manageCustomAlt")}
-            width={1400}
-            height={700}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -404,12 +398,10 @@ export default async function CreatingBackupsPage({
           className="block cursor-zoom-in group"
           aria-label={t("finishedScreens.scriptsAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/backup-finished-scripts.png"
             alt={t("finishedScreens.scriptsAlt")}
-            width={1400}
-            height={700}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
@@ -425,12 +417,10 @@ export default async function CreatingBackupsPage({
           className="block cursor-zoom-in group"
           aria-label={t("finishedScreens.monitorAlt")}
         >
-          <Image
+          <Screenshot
             src="/images/docs/backup-restore/backup-finished-monitor.png"
             alt={t("finishedScreens.monitorAlt")}
-            width={1400}
-            height={700}
-            className="rounded-lg border border-gray-200 shadow-xs w-full h-auto transition group-hover:shadow-md"
+            className="rounded-lg border border-gray-200 shadow-xs transition group-hover:shadow-md"
           />
         </a>
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">

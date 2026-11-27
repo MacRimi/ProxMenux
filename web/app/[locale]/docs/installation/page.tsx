@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
-import Image from "next/image"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { Terminal, FileCode, ShieldCheck, ExternalLink } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
@@ -95,11 +95,9 @@ export default async function InstallationPage({ params }: { params: Promise<{ l
 
       <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("during.outro", { code, strong })}</p>
 
-      <Image
+      <Screenshot
         src="/install/install.png"
         alt={t("during.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

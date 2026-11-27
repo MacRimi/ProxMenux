@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import { DataFlowDiagram } from "@/components/ui/data-flow-diagram"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -88,11 +88,9 @@ export default async function ImportVmPage({
       </ul>
       <p className="mb-6 text-gray-800 leading-relaxed">{t.rich("picker.outro", { code })}</p>
 
-      <Image
+      <Screenshot
         src="/utils/import-vm-picker.png"
         alt={t("picker.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

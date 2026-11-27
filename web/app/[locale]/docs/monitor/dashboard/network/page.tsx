@@ -5,6 +5,7 @@ import { Download } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
 import CopyableCode from "@/components/CopyableCode"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -104,10 +105,9 @@ export default async function NetworkTabPage({
       </p>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/network-flow-overview.png"
           alt={t("flow.imageAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("flow.imageCaption")}
@@ -206,10 +206,9 @@ export default async function NetworkTabPage({
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("latency.mode1Title")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/network-latency-historical.png"
           alt={t("latency.mode1Alt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("latency.mode1Caption")}
@@ -226,10 +225,9 @@ export default async function NetworkTabPage({
       <h3 className="text-lg font-semibold mt-6 mb-2 text-gray-900">{t("latency.mode2Title")}</h3>
 
       <figure className="my-4">
-        <img
+        <Screenshot
           src="/monitor/network-latency-realtime.png"
           alt={t("latency.mode2Alt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t.rich("latency.mode2Caption", { em })}
@@ -271,10 +269,9 @@ export default async function NetworkTabPage({
       </p>
 
       <figure className="my-6">
-        <img
+        <Screenshot
           src="/monitor/network-latency-report-preview.png"
           alt={t("latency.reportPreviewAlt")}
-          className="rounded-lg border border-gray-200 shadow-xs w-full"
         />
         <figcaption className="text-sm text-gray-500 mt-2 text-center italic">
           {t("latency.reportPreviewCaption")}

@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations, getMessages } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
-import Image from "next/image"
 import {
   ArrowRight,
   Terminal,
@@ -15,6 +14,7 @@ import {
 } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -121,11 +121,9 @@ export default async function HelpAndInfoPage({
         {t.rich("opening.body", { kbd })}
       </p>
 
-      <Image
+      <Screenshot
         src="/help/help-info-menu.png"
         alt={t("opening.imageAlt")}
-        width={900}
-        height={500}
         className="rounded shadow-lg my-6"
       />
 

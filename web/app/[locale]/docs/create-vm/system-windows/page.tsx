@@ -5,6 +5,7 @@ import Image from "next/image"
 import { ExternalLink, Server } from "lucide-react"
 import { DocHeader } from "@/components/ui/doc-header"
 import { Callout } from "@/components/ui/callout"
+import { Screenshot } from "@/components/docs/Screenshot"
 
 export async function generateMetadata({
   params,
@@ -88,17 +89,11 @@ export default async function SystemWindowsPage({
       </Callout>
 
       <div className="flex flex-col items-center my-6">
-        <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-          <Image
-            src="/vm/menu_windows.png"
-            alt={t("image.alt")}
-            width={768}
-            height={0}
-            style={{ height: "auto" }}
-            className="w-full object-contain"
-            sizes="(max-width: 768px) 100vw, 768px"
-          />
-        </div>
+        <Screenshot
+          src="/vm/menu_windows.png"
+          alt={t("image.alt")}
+          className="rounded-md border border-gray-200"
+        />
         <span className="mt-2 text-sm text-gray-600">{t("image.caption")}</span>
       </div>
 
@@ -250,9 +245,7 @@ export default async function SystemWindowsPage({
           <p className="text-sm text-gray-700 leading-relaxed mb-4">
             {t.rich("installOptions.localBody", { code })}
           </p>
-          <div className="mt-4 overflow-hidden rounded-md border border-gray-200">
-            <Image src="/vm/local-store-windows.png" alt={t("installOptions.localImageAlt")} width={600} height={400} className="w-full object-contain" />
-          </div>
+          <Screenshot src="/vm/local-store-windows.png" alt={t("installOptions.localImageAlt")} className="mt-4 rounded-md border border-gray-200" />
           <p className="mt-2 text-xs text-gray-600">{t("installOptions.localImageCaption")}</p>
         </div>
       </div>
@@ -285,9 +278,7 @@ export default async function SystemWindowsPage({
             {step.bodyRich ? t.rich(`virtio.steps.${idx}.bodyRich`, { strong, code }) : step.body}
           </p>
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-[768px] overflow-hidden rounded-md border border-gray-200">
-              <Image src={step.img} alt={step.caption} width={768} height={0} style={{ height: "auto" }} className="w-full object-contain" sizes="(max-width: 768px) 100vw, 768px" />
-            </div>
+            <Screenshot src={step.img} alt={step.caption} className="rounded-md border border-gray-200" />
             <span className="mt-2 text-sm text-gray-600">{step.caption}</span>
           </div>
         </section>
