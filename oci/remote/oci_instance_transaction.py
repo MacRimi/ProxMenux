@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import copy
+import functools
 import hashlib
 import io
 import json
@@ -301,6 +302,20 @@ def run(*args):
     if result.returncode:
         raise RuntimeError(f"{args[0]} {translate('failed with exit code')} {result.returncode}")
     return result.stdout
+
+
+@functools.lru_cache(maxsize=1)
+def restore_identity_args():
+    """Proxmox VE 9.3 refuses to restore a backup over a container with another
+    identity (the uid of its `meta:` line). An update replaces the container
+    with a new one, so restoring the previous installation over it needs
+    --allow-identity-mismatch. Versions without the check do not have the
+    option either."""
+    try:
+        usage = subprocess.run(['pct', 'help', 'restore'], capture_output=True, text=True, timeout=60).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ()
+    return ('--allow-identity-mismatch', '1') if 'allow-identity-mismatch' in usage else ()
 
 
 def verify_recovery_archive(path, compression='zstd'):
@@ -1874,7 +1889,7 @@ def recover(root, journal):
     host_mounts.verify_sources(state.get('original_host_sources', {}))
     restore_archive, restore_args = zfs_recovery.restore(backup, vmid) if zfs_recovery.is_fast(backup) else (backup, [])
     run('pct', 'restore', str(vmid), str(restore_archive), '--force', '1', '--storage',
-        state['record']['deployment']['rootfs']['storage'], *restore_args)
+        state['record']['deployment']['rootfs']['storage'], *restore_args, *restore_identity_args())
     move_retained_unused(state, to_stage=False)
     state['restore_config_sha256'] = sha(owned(vmid, state['record']['installation_id']))
     checkpoint(journal, state, 'checking-recovery')

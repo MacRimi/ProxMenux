@@ -12149,6 +12149,37 @@
       "template_id": "image-openclaw"
     },
     {
+      "id": "opencloud",
+      "provider": "github",
+      "template_family": "curated-profile",
+      "title": "OpenCloud",
+      "repository": "https://github.com/opencloud-eu/opencloud",
+      "description": "Sync and share files with personal and shared spaces.",
+      "website": "https://opencloud.eu/",
+      "icon": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/opencloud.webp",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "updated_at": null,
+      "main_image": "docker.io/opencloudeu/opencloud:latest",
+      "category": "sharing",
+      "category_label": "Files & Sharing",
+      "replaces_discovered_ids": [],
+      "curated_path": "catalog/curated/opencloud.json",
+      "template_id": "image-opencloud",
+      "template": "apps/opencloud.json",
+      "template_status": "generated-unvalidated",
+      "automatic_install_candidate": true,
+      "untranslated_blockers": [],
+      "requires_privileged_lxc": false,
+      "optional_privileged_lxc": false,
+      "requires_host_pid_namespace": false,
+      "requires_relaxed_confinement": false,
+      "requires_security_confirmation": false,
+      "hidden": false
+    },
+    {
       "id": "opengist",
       "provider": "thomiceli",
       "template_family": "curated-profile",
