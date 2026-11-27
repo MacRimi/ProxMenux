@@ -80,7 +80,7 @@
   },
   "pbs": {
     "heading": "Na Proxmox Backup Server",
-    "body": "Na hostiteľovi Proxmox Backup Server sa rovnaká ponuka otvára cez <strong>Nastavenie Proxmoxu po inštalácii</strong> v ponuke PBS. Automatický, Prispôsobiteľný, Nainštalovať dostupné aktualizácie a Odinštalovať optimalizácie fungujú ako na Proxmox VE, s týmito rozdielmi:",
+    "body": "Na hostiteľovi Proxmox Backup Server sa rovnaká ponuka otvára cez <strong>Nastavenie Proxmoxu po inštalácii</strong> v ponuke PBS. Samotnú ponuku PBS, aktualizáciu balíkov a repozitáre opisuje stránka <pbslink>ProxMenux na Proxmox Backup Server</pbslink>. Automatický, Prispôsobiteľný, Nainštalovať dostupné aktualizácie a Odinštalovať optimalizácie fungujú ako na Proxmox VE, s týmito rozdielmi:",
     "items": [
       "<strong>Repozitáre a aktualizácia:</strong> keď server nemá predplatné a aktívny je iba repozitár Enterprise pre PBS, ProxMenux sa pred prepnutím na repozitár PBS bez predplatného opýta. Prepnutie prebieha cez API repozitárov samotného servera, rovnaké, aké používa <em>Administration > Repositories</em>. Pri aktívnom predplatnom alebo pri už nastavenom repozitári bez predplatného či testovacom repozitári zostanú zdroje bez zmeny.",
       "<strong>Prispôsobiteľný zoznam:</strong> možnosti, ktoré platia iba pre Proxmox VE, sa nezobrazujú: hosťovský agent, VFIO IOMMU, Open vSwitch, rýchlosť záloh vzdump, pigz, Appliance Manager, Ceph, vysoká dostupnosť a OVH Real Time Monitoring.",

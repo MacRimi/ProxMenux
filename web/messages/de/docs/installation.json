@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Installation von ProxMenux",
-    "description": "Der Installer wird mit einem Befehl auf einem Proxmox-VE-Host ab Version 8 gestartet. Er installiert die nötigen Abhängigkeiten, lädt die Skripte herunter, richtet den Menüstarter ein und fragt beim ersten Durchlauf nach der Sprache. Zwei Kanäle stehen bereit: stabil (Standard) und Beta.",
+    "description": "Der Installer wird mit einem Befehl auf einem Proxmox-VE-Host ab Version 8 oder auf Proxmox Backup Server 3 und 4 gestartet. Er installiert die nötigen Abhängigkeiten, lädt die Skripte herunter, richtet den Menüstarter ein und fragt beim ersten Durchlauf nach der Sprache. Zwei Kanäle stehen bereit: stabil (Standard) und Beta.",
     "section": "Installation"
   },
   "stable": {
@@ -80,12 +80,13 @@
     "heading": "Was kommt als nächstes",
     "postInstall": "<postlink>Skript nach der Installation</postlink> — Anpassungen und Absicherung eines frisch installierten Proxmox-Hosts.",
     "introduction": "<introlink>Einführung</introlink> — vollständiger Überblick über die Funktionen.",
-    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — Web-Dashboard für den Host (automatisch neben dem Menü installiert)."
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — Web-Dashboard für den Host (automatisch neben dem Menü installiert).",
+    "pbs": "<pbslink>ProxMenux auf Proxmox Backup Server</pbslink>: Menü, Updates und Nachinstallation auf einem Backup-Server."
   },
   "requirements": {
     "heading": "Anforderungen und bewährte Verfahren",
     "reqTitle": "Anforderungen",
-    "reqBody": "Proxmox VE <strong>8.x oder neuer</strong>. PVE 7 und ältere Versionen werden nicht unterstützt. Der Host benötigt Internetzugang für Skripte, Abhängigkeiten und die AppImage von ProxMenux Monitor. Führen Sie den Installer als <strong>root</strong> auf dem Proxmox-Host aus.",
+    "reqBody": "Proxmox VE <strong>8.x oder neuer</strong> oder Proxmox Backup Server 3 oder 4 (siehe <pbslink>ProxMenux auf Proxmox Backup Server</pbslink>). PVE 7 und ältere Versionen werden nicht unterstützt. Der Host benötigt Internetzugang für Skripte, Abhängigkeiten und die AppImage von ProxMenux Monitor. Führen Sie den Installer als <strong>root</strong> auf dem Proxmox-Host aus.",
     "inspectTitle": "Überprüfen Sie immer Skripte, die Sie aus dem Internet ausführen",
     "inspectReview": "<sourcelink>Prüfen Sie den Quellcode des Installers</sourcelink>, bevor Sie ihn ausführen.",
     "inspectCoc": "Alle ausführbaren Links entsprechen dem <coclink>ProxMenux-Verhaltenskodex</coclink>."

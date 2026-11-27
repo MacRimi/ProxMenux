@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Instalar o ProxMenux",
-    "description": "Um instalador que se inicia em uma linha em qualquer host Proxmox VE 8 ou posterior. Instala automaticamente as dependências, baixa os scripts, configura o comando de inicialização do menu e pede o idioma na primeira execução. Dois canais: estável (padrão) e beta.",
+    "description": "Um instalador que se inicia em uma linha em qualquer host Proxmox VE 8 ou posterior e no Proxmox Backup Server 3 e 4. Instala automaticamente as dependências, baixa os scripts, configura o comando de inicialização do menu e pede o idioma na primeira execução. Dois canais: estável (padrão) e beta.",
     "section": "Instalação"
   },
   "stable": {
@@ -80,12 +80,13 @@
     "heading": "E agora?",
     "postInstall": "<postlink>Script de pós-instalação</postlink> — ajustes e reforço de segurança de um host Proxmox recém-instalado.",
     "introduction": "<introlink>Introdução</introlink> — apresentação completa das funcionalidades.",
-    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — painel web para o host (instalado automaticamente ao lado do menu)."
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — painel web para o host (instalado automaticamente ao lado do menu).",
+    "pbs": "<pbslink>ProxMenux no Proxmox Backup Server</pbslink>: o menu, as atualizações e a pós-instalação em um servidor de backup."
   },
   "requirements": {
     "heading": "Requisitos e boas práticas",
     "reqTitle": "Requisitos",
-    "reqBody": "Proxmox VE <strong>8.x ou posterior</strong>. O PVE 7 e as versões anteriores não são suportados. O host precisa de acesso à Internet para baixar scripts, dependências e a AppImage do ProxMenux Monitor. Execute o instalador como <strong>root</strong> no host Proxmox.",
+    "reqBody": "Proxmox VE <strong>8.x ou posterior</strong>, ou Proxmox Backup Server 3 ou 4 (veja <pbslink>ProxMenux no Proxmox Backup Server</pbslink>). O PVE 7 e as versões anteriores não são suportados. O host precisa de acesso à Internet para baixar scripts, dependências e a AppImage do ProxMenux Monitor. Execute o instalador como <strong>root</strong> no host Proxmox.",
     "inspectTitle": "Sempre inspecione scripts que você executa da internet",
     "inspectReview": "<sourcelink>Reveja o código do instalador</sourcelink> antes de executar.",
     "inspectCoc": "Todos os links executáveis seguem o <coclink>código de conduta do ProxMenux</coclink>."

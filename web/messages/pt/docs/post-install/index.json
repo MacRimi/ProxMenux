@@ -80,7 +80,7 @@
   },
   "pbs": {
     "heading": "No Proxmox Backup Server",
-    "body": "Em um host Proxmox Backup Server, o mesmo menu abre-se a partir de <strong>Configurações pós-instalação do Proxmox</strong> no menu do PBS. Automatizado, Personalizável, Aplicar atualizações disponíveis e Desinstalar otimizações funcionam como no Proxmox VE, com estas diferenças:",
+    "body": "Em um host Proxmox Backup Server, o mesmo menu abre-se a partir de <strong>Configurações pós-instalação do Proxmox</strong> no menu do PBS. Esse menu, suas atualizações de pacotes e seus repositórios estão descritos em <pbslink>ProxMenux no Proxmox Backup Server</pbslink>. Automatizado, Personalizável, Aplicar atualizações disponíveis e Desinstalar otimizações funcionam como no Proxmox VE, com estas diferenças:",
     "items": [
       "<strong>Repositórios e atualização:</strong> quando o servidor não tem assinatura e apenas o repositório Enterprise do PBS está ativo, o ProxMenux pergunta antes de mudar para o repositório sem assinatura do PBS. A mudança é feita através da API de repositórios do próprio servidor, a mesma usada em <em>Administration > Repositories</em>. Com uma assinatura ativa, ou com um repositório sem assinatura ou de teste já configurado, as fontes mantêm-se como estão.",
       "<strong>Lista personalizável:</strong> as opções que só se aplicam ao Proxmox VE não são mostradas: agente convidado, VFIO IOMMU, Open vSwitch, velocidade dos backups vzdump, pigz, Appliance Manager, Ceph, alta disponibilidade e OVH Real Time Monitoring.",

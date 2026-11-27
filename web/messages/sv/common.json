@@ -213,7 +213,9 @@
       "backupRestoreJobs": "Schemalagda jobb",
       "backupRestoreRestoring": "Återställning",
       "backupRestoreCrossKernel": "Återställning mellan kärnversioner",
-      "backupRestoreGlossary": "Ordlista"
+      "backupRestoreGlossary": "Ordlista",
+      "pbs": "Proxmox Backup Server",
+      "pbsOverview": "Översikt"
     }
   },
   "hero": {

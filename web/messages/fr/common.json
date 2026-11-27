@@ -213,7 +213,9 @@
       "backupRestoreJobs": "Tâches planifiées",
       "backupRestoreRestoring": "Restaurer",
       "backupRestoreCrossKernel": "Restauration entre versions du noyau",
-      "backupRestoreGlossary": "Glossaire"
+      "backupRestoreGlossary": "Glossaire",
+      "pbs": "Proxmox Backup Server",
+      "pbsOverview": "Vue d’ensemble"
     }
   },
   "hero": {

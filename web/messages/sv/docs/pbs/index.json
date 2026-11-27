@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "title": "ProxMenux på Proxmox Backup Server | ProxMenux-dokumentation",
+    "description": "ProxMenux installerat på en Proxmox Backup Server-värd: hur servern identifieras, vilka versioner som stöds, PBS-menyn, de två sätten att uppdatera paketen, kontrollen av paketförråd, efterinstallationen och inställningarna."
+  },
+  "header": {
+    "title": "ProxMenux på Proxmox Backup Server",
+    "description": "Vad ProxMenux gör när det körs på en Proxmox Backup Server-värd: en egen meny, paketuppdateringar som behåller serverns paketförråd och en efterinstallation anpassad till en säkerhetskopieringsserver.",
+    "section": "Proxmox Backup Server"
+  },
+  "sections": [
+    {
+      "id": "detection",
+      "title": "Identifiering och versioner som stöds",
+      "blocks": [
+        {
+          "p": "ProxMenux behandlar en värd som en Proxmox Backup Server när paketet <code>proxmox-backup-server</code> är installerat. Enbart säkerhetskopieringsklienten, som många Proxmox VE-värdar har, räknas inte. När både Proxmox VE och Proxmox Backup Server är installerade på samma värd går Proxmox VE före och ProxMenux öppnar sin vanliga meny. Monitor använder samma identifiering."
+        },
+        {
+          "table": {
+            "headers": ["Proxmox Backup Server", "Debian"],
+            "rows": [
+              ["3", "12 (<code>bookworm</code>)"],
+              ["4", "13 (<code>trixie</code>)"]
+            ]
+          }
+        },
+        {
+          "p": "Med alla andra kombinationer öppnas PBS-menyn ändå, men paketuppdateringen, kontrollen av paketförråd och installationsprogrammet för systemverktyg stoppar med <strong>Denna åtgärd stöder PBS 3 på Debian 12 och PBS 4 på Debian 13.</strong>"
+        }
+      ]
+    },
+    {
+      "id": "installation",
+      "title": "Installation",
+      "blocks": [
+        {
+          "p": "ProxMenux installeras på en Proxmox Backup Server med samma kommando som på Proxmox VE, beskrivet i <installLink>Installera ProxMenux</installLink>. Installationsprogrammet har ingen separat väg för PBS: det installerar även ProxMenux Monitor, som lyssnar på port 8008. Efter installationen öppnar <code>menu</code> PBS-menyn."
+        }
+      ]
+    },
+    {
+      "id": "menu",
+      "title": "PBS-menyn",
+      "intro": "På en Proxmox Backup Server-värd öppnar <code>menu</code> en meny med titeln <strong>Proxmox Backup Server</strong> i stället för huvudmenyn i Proxmox VE. Titeln är densamma på alla språk.",
+      "blocks": [
+        {
+          "figure": {
+            "src": "/pbs/pbs-menu.png",
+            "alt": "ProxMenux meny Proxmox Backup Server med de sex numrerade alternativen, Inställningar och Utgång",
+            "caption": "PBS-menyn."
+          }
+        },
+        {
+          "table": {
+            "headers": ["Tangent", "Alternativ", "Vad det gör"],
+            "rows": [
+              ["1", "<strong>Inställningar efter installation av Proxmox</strong>", "Öppnar efterinstallationsmenyn, anpassad till en säkerhetskopieringsserver. Se Efterinstallation nedan."],
+              ["2", "<strong>PBS-version och paket</strong>", "Visar utdata från <code>proxmox-backup-manager versions --verbose</code>."],
+              ["3", "<strong>PBS-datalager</strong>", "Visar utdata från <code>proxmox-backup-manager datastore list</code>."],
+              ["4", "<strong>Senaste PBS-uppgifter</strong>", "Visar utdata från <code>proxmox-backup-manager task list --all true --limit 20</code>."],
+              ["5", "<strong>Installationsprogram för systemverktyg</strong>", "Samma installationsprogram som på Proxmox VE, beskrivet i <utilsLink>Installera systemverktyg</utilsLink>. På PBS installerar det från de paketförråd som redan är konfigurerade och ändrar dem aldrig."],
+              ["6", "<strong>Uppdatera PBS med de konfigurerade paketförråden</strong>", "Uppdaterar serverns paket. Se Uppdatera servern nedan."],
+              ["s", "<strong>Inställningar</strong>", "ProxMenux inställningsmeny. Se Inställningar nedan."],
+              ["0", "<strong>Utgång</strong>", "Stänger ProxMenux."]
+            ]
+          }
+        },
+        {
+          "p": "Alternativ 2 till 4 läser bara: de visar kommandots utdata i en textruta. Om kommandot misslyckas får rutan titeln <strong>Kommandot misslyckades</strong> och visar felet."
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Uppdatera servern",
+      "intro": "Två skript uppdaterar paketen på en Proxmox Backup Server. Inget av dem kör uppdateringsstegen för Proxmox VE.",
+      "blocks": [
+        {
+          "table": {
+            "headers": ["Detalj", "PBS-paketuppdatering", "Systemuppdatering i efterinstallationen"],
+            "rows": [
+              [
+                "Var den startar",
+                "Alternativ 6, <strong>Uppdatera PBS med de konfigurerade paketförråden</strong>, och knappen <strong>Uppdatera systemet</strong> i kategorin <strong>Systemuppdateringar</strong> i <healthLink>Systemövervakning</healthLink> i serverns Monitor, som visas när uppdateringar väntar.",
+                "<strong>Uppdatera och uppgradera systemet</strong>, ett steg i <strong>Automatiserat skript efter installation</strong> och ett alternativ i <strong>Anpassningsbart skript efter installation</strong>."
+              ],
+              ["Skript", "<code>scripts/utilities/pbs_update.sh</code>", "<code>scripts/global/update-pbs.sh</code>"],
+              [
+                "Paketförråd",
+                "Uppdaterar paketlistorna från de konfigurerade källorna och ändrar aldrig en källa. Om uppdateringen misslyckas stoppar den och hänvisar till prenumerationen och paketförråden i PBS webbgränssnitt.",
+                "Kör först kontrollen som beskrivs under Paketförråd."
+              ],
+              ["Ledigt utrymme", "Kontrolleras inte.", "Kräver 1 GB ledigt i <code>/var/cache/apt/archives</code>."],
+              [
+                "Granskning",
+                "Visar utdata från <code>apt-get -s full-upgrade</code> i <strong>Granska paketuppgraderingen</strong> och frågar sedan om den ska tillämpas, med Nej förvalt.",
+                "Visar installerad och tillgänglig version av Proxmox Backup Server, antalet paket- och säkerhetsuppdateringar och paketen som ska uppgraderas, och frågar sedan om den ska fortsätta."
+              ],
+              [
+                "Uppgradering",
+                "<code>apt-get -y full-upgrade</code>.",
+                "<code>apt full-upgrade</code> som behåller de nuvarande konfigurationsfilerna, sedan <code>apt-get autoremove</code> och <code>apt-get autoclean</code>."
+              ],
+              ["Logg", "Ingen.", "<code>/var/log/proxmox-update-YYYYMMDD-HHMMSS.log</code>"],
+              [
+                "Kärna",
+                "Kontrolleras inte. Slutmeddelandet ber dig kontrollera om en omstart behövs före nästa säkerhetskopieringsfönster.",
+                "Varnar när en omstart behövs eller en nyare kärna är installerad. Den startar aldrig om."
+              ]
+            ]
+          }
+        },
+        {
+          "figure": {
+            "src": "/pbs/pbs-update-review.png",
+            "alt": "Textrutan Granska paketuppgraderingen i alternativ 6 med utdata från den simulerade full-upgrade",
+            "caption": "Alternativ 6 visar den simulerade uppgraderingen innan den frågar om den ska tillämpas."
+          }
+        }
+      ]
+    },
+    {
+      "id": "repositories",
+      "title": "Paketförråd",
+      "intro": "ProxMenux ändrar APT-källorna på en Proxmox Backup Server bara från efterinstallationen: systemuppdateringen och alternativet <strong>Konfigurera Proxmox APT-förråd</strong> i det anpassningsbara skriptet kör först samma kontroll. Alternativ 6, uppdateringen från Monitor och installationsprogrammet för systemverktyg använder källorna som de är.",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "Om ett no-subscription- eller testförråd för PBS redan är aktiverat ändras ingenting.",
+              "Med en aktiv prenumeration och ett PBS-förråd ändras ingenting. Med en aktiv prenumeration och inget PBS-förråd stoppar kontrollen och ber dig konfigurera Enterprise-källan i <em>Administration > Repositories</em>.",
+              "Utan prenumeration, eller med en utgången prenumeration, kräver kontrollen ett aktivt Debian-basförråd. Sedan frågar den innan den byter till PBS no-subscription-förrådet och inaktiverar Enterprise-källan för PBS, som kräver en prenumeration.",
+              "Bytet görs via serverns eget förråds-API, med <code>proxmox-backup-debug api set /nodes/localhost/apt/repositories --handle no-subscription</code>, och uppdaterar sedan paketlistorna.",
+              "Om du svarar Nej ändras ingen källa och uppdateringen stoppar. I icke-interaktivt läge ändrar kontrollen ingenting och hänvisar till <em>Administration > Repositories</em>.",
+              "Ett PBS-förråd skrivet för en annan Debian-version stoppar kontrollen, som namnger filen så att du kan rätta den."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "post-install",
+      "title": "Efterinstallation",
+      "intro": "<strong>Inställningar efter installation av Proxmox</strong> öppnar efterinstallationsmenyn från Proxmox VE, anpassad till en säkerhetskopieringsserver. Vad som ändras beskrivs i <postLink>Efterinstallation på Proxmox Backup Server</postLink>. Två detaljer till gäller:",
+      "blocks": [
+        {
+          "list": {
+            "items": [
+              "<strong>Automatiserat skript efter installation</strong> kör systemuppdateringen i efterinstallationen som beskrivs ovan och frågar innan den tar bort prenumerationsbannern från webbgränssnittet i Proxmox Backup Server.",
+              "<strong>Avinstallera optimeringar</strong> återställer webbgränssnittets fil från den kopia som ProxMenux gjorde av den. Om det inte finns någon användbar kopia installerar den om <code>proxmox-widget-toolkit</code> och <code>libjs-extjs</code>, de paket som en Proxmox Backup Server har, i stället för paketen i Proxmox VE."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Inställningar",
+      "blocks": [
+        {
+          "p": "<strong>Inställningar</strong> öppnar samma inställningsmeny som på Proxmox VE: Monitor-tjänsten, versionskanalen, språket, versionsinformationen och avinstallationen, beskrivna i <settingsLink>ProxMenux-inställningar</settingsLink>. <strong>Återgå till huvudmenyn</strong> går tillbaka till PBS-menyn."
+        }
+      ]
+    },
+    {
+      "id": "from-pve",
+      "title": "Följa en Proxmox Backup Server från Proxmox VE",
+      "blocks": [
+        {
+          "p": "Den här sidan handlar om ProxMenux installerat på själva säkerhetskopieringsservern. För att följa datalagren och uppgifterna på en Proxmox Backup Server från en Proxmox VE-värd, se <backupTabLink>vyn Proxmox Backup Server på fliken Säkerhetskopiering</backupTabLink>. För att säkerhetskopiera en Proxmox VE-värd till en Proxmox Backup Server, se <pbsDestLink>Mål: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    }
+  ]
+}

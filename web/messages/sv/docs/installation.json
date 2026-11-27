@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Installera ProxMenux",
-    "description": "Installationsprogrammet startas med en rad på en Proxmox VE-värd med version 8 eller senare. Det installerar beroenden, laddar ned skripten, skapar menyns startkommando och frågar efter språk vid första körningen. Två kanaler finns: stabil (standard) och beta.",
+    "description": "Installationsprogrammet startas med en rad på en Proxmox VE-värd med version 8 eller senare och på Proxmox Backup Server 3 och 4. Det installerar beroenden, laddar ned skripten, skapar menyns startkommando och frågar efter språk vid första körningen. Två kanaler finns: stabil (standard) och beta.",
     "section": "Installation"
   },
   "stable": {
@@ -80,12 +80,13 @@
     "heading": "Nästa steg",
     "postInstall": "<postlink>Efterinstallationsskript</postlink> — anpassningar och härdning av en nyinstallerad Proxmox-värd.",
     "introduction": "<introlink>Introduktion</introlink> — fullständig genomgång av funktionerna.",
-    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — webbpanel för värden som installeras automatiskt tillsammans med menyn."
+    "monitor": "<monitorlink>ProxMenux Monitor</monitorlink> — webbpanel för värden som installeras automatiskt tillsammans med menyn.",
+    "pbs": "<pbslink>ProxMenux på Proxmox Backup Server</pbslink>: menyn, uppdateringar och efterinstallation på en säkerhetskopieringsserver."
   },
   "requirements": {
     "heading": "Krav och god praxis",
     "reqTitle": "Krav",
-    "reqBody": "Proxmox VE <strong>8.x eller senare</strong>. PVE 7 och tidigare stöds inte. Värden behöver internetåtkomst för att hämta skript, beroenden och ProxMenux Monitors AppImage. Kör installationsprogrammet som <strong>root</strong> på Proxmox-värden.",
+    "reqBody": "Proxmox VE <strong>8.x eller senare</strong>, eller Proxmox Backup Server 3 eller 4 (se <pbslink>ProxMenux på Proxmox Backup Server</pbslink>). PVE 7 och tidigare stöds inte. Värden behöver internetåtkomst för att hämta skript, beroenden och ProxMenux Monitors AppImage. Kör installationsprogrammet som <strong>root</strong> på Proxmox-värden.",
     "inspectTitle": "Inspektera alltid skript du kör från internet",
     "inspectReview": "<sourcelink>Granska installationsprogrammets källkod</sourcelink> innan du kör det.",
     "inspectCoc": "Alla körbara länkar följer <coclink>ProxMenux uppförandekod</coclink>."
