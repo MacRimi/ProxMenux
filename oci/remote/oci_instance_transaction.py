@@ -1657,11 +1657,54 @@ def remove_empty_format_directories(rootfs, deployment):
     from oci_managed_volumes import remove_empty_format_directories as clean
     return clean(rootfs, deployment)
 
-def cleanup_restored_format_dirs(vmid, deployment, installation_id):
-    owned(vmid, installation_id)
+def restore_volume_owners(rootfs, deployment, template, config):
+    """A restore formats the managed volumes again: Proxmox gives the root of
+    each one to the root of the container and keeps the owner of everything
+    inside. The roots the recipe prepares get back the owner and mode the
+    installation gave them, so an application that does not run as root can
+    still write there. Host directories, read-only volumes and volumes with
+    their own ID mapping are left as they are."""
+    preparations = ((template or {}).get('proxmox', {}).get('installer_profile', {})
+                    .get('volume_preparations') or [])
+    mounts = deployment.get('mounts', [])
+    offset = 100000 if deployment.get('security', {}).get('unprivileged', True) is not False else 0
+    root = Path(rootfs).resolve()
+    application = None
+    for item in preparations:
+        target = item.get('container_path')
+        strategy = item.get('owner_strategy')
+        if not isinstance(target, str) or not target.startswith('/') \
+                or strategy not in ('mapped-root', 'mapped-application-user'):
+            continue
+        volume = next((m for m in mounts if m.get('container_path') == target), None)
+        if volume is None or volume.get('type') != 'managed-volume' or volume.get('idmap') \
+                or volume.get('read_only'):
+            continue
+        if item.get('only_when_mount_type') not in (None, volume['type']):
+            continue
+        if strategy == 'mapped-root':
+            uid, gid = 0, 0
+        else:
+            if application is None:
+                application = mount_idmap.application_ids(deployment, template, config)
+            uid, gid = application
+        path = root / target.lstrip('/')
+        if path.is_symlink() or not path.is_dir() or not path.resolve().is_relative_to(root):
+            continue
+        os.chown(path, uid + offset, gid + offset, follow_symlinks=False)
+        mode = str(item.get('mode') or '')
+        if re.fullmatch(r'[0-7]{3,4}', mode):
+            os.chmod(path, int(mode, 8))
+
+
+def cleanup_restored_format_dirs(vmid, deployment, installation_id, template=None):
+    config = owned(vmid, installation_id)
     run('pct', 'mount', str(vmid))
     try:
-        remove_empty_format_directories(Path('/var/lib/lxc') / str(vmid) / 'rootfs', deployment)
+        rootfs = Path('/var/lib/lxc') / str(vmid) / 'rootfs'
+        remove_empty_format_directories(rootfs, deployment)
+        if template is not None:
+            restore_volume_owners(rootfs, deployment, template, config)
     finally:
         oci_mount_lock.release(vmid, run)
 
@@ -1677,7 +1720,8 @@ def complete_recovery(root, journal, state):
     expected = state['restore_config_sha256']
     if sha(config) != expected:
         raise ValueError(translate('The configuration changed after the backup was restored; the recovery is not confirmed'))
-    cleanup_restored_format_dirs(vmid, state['record']['deployment'], state['record']['installation_id'])
+    cleanup_restored_format_dirs(vmid, state['record']['deployment'], state['record']['installation_id'],
+                                 state['record'].get('template'))
     runtime_settings.restore(state['record']['deployment'], vmid)
     public_routes.restore(state['record']['deployment'], vmid, state['record']['installation_id'])
     # The udev rule lives on the host: it goes back to the USB devices of the

@@ -635,7 +635,8 @@ class NativeAdapter:
             if child['phase'] == 'rolled-back':
                 if sha(member_tx.owned(vmid, original['installation_id'])) != child['restore_config_sha256']:
                     raise ValueError(translate('A member was modified after it was recovered'))
-                member_tx.cleanup_restored_format_dirs(vmid, original['deployment'], original['installation_id'])
+                member_tx.cleanup_restored_format_dirs(vmid, original['deployment'], original['installation_id'],
+                                                       original.get('template'))
                 return
         else:
             directory = self.journal.parent / ('recovery-%s' % vmid)

@@ -830,9 +830,13 @@ def clean_format_directories(entry):
                            'read_only': options.get('ro', '0') != '0'})
     if not eligible_paths({'mounts': mounts}):
         return
+    record = (entry.get('copy') or {}).get('record') or {}
     with carried.container_root(entry['vmid']) as rootfs:
         if rootfs is not None:
             transaction.remove_empty_format_directories(rootfs, {'mounts': mounts})
+            if record.get('deployment') and record.get('template'):
+                transaction.restore_volume_owners(rootfs, record['deployment'], record['template'],
+                                                  entry['config'].encode())
 
 
 def volume_options(value):
