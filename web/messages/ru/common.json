@@ -213,7 +213,9 @@
       "backupRestoreJobs": "Задания по расписанию",
       "backupRestoreRestoring": "Восстановление",
       "backupRestoreCrossKernel": "Восстановление с другой версией ядра",
-      "backupRestoreGlossary": "Глоссарий"
+      "backupRestoreGlossary": "Глоссарий",
+      "pbs": "Proxmox Backup Server",
+      "pbsOverview": "Обзор"
     }
   },
   "hero": {
