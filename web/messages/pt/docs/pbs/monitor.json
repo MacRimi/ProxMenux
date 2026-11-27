@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Rede não tem o cartão <strong>Fluxo de rede</strong>, que desenha como o tráfego chega às VMs e aos LXCs.",
-              "Hardware não tem o controle <strong>Modo de troca</strong> das GPUs, nem os instaladores de drivers (<strong>Instale drivers NVIDIA</strong>, <strong>Instale ferramentas de GPU AMD</strong>, <strong>Instale ferramentas de GPU Intel</strong> e <strong>Instale os drivers Coral TPU</strong>), nem o aviso <strong>Monitoramento estendido não disponível</strong>, que oferece essas ferramentas. A ação <strong>Executar scripts e ferramentas</strong> não acrescenta nada a esta aba."
+              "Hardware não tem o controle <strong>Modo de troca</strong> das GPUs, nem instaladores de drivers, nem o aviso <strong>Monitoramento estendido não disponível</strong>. A ação <strong>Executar scripts e ferramentas</strong> não acrescenta nada a esta aba."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Login",
-      "intro": "As contas locais, os perfis, o 2FA e os tokens de API funcionam como descrito em <accessLink>Acesso e autenticação</accessLink>. As contas do Proxmox que podem fazer login são as do servidor de backup, ativadas como descrito em <proxmoxAccountsLink>Contas Proxmox VE</proxmoxAccountsLink>. O que muda:",
+      "intro": "As contas locais, os perfis, o 2FA e os tokens de API funcionam como descrito em <accessLink>Acesso e autenticação</accessLink>. As contas do Proxmox que podem fazer login são as do servidor de backup. Elas são ativadas no cartão <strong>Contas do Proxmox Backup Server</strong> de <strong>Segurança</strong>, que funciona como descrito em <proxmoxAccountsLink>Contas Proxmox VE</proxmoxAccountsLink>. O que muda:",
       "blocks": [
         {
           "list": {
             "items": [
-              "A tela de login tem uma aba <em>Proxmox Backup Server</em> ao lado de <strong>Conta local</strong>, com <strong>Usuário</strong>, <strong>Senha</strong> e <strong>Realm</strong>. Os realms são os que o servidor lista. Quando a conta tem segundo fator, <strong>Código de dois fatores</strong> aceita um código TOTP ou uma chave de recuperação.",
+              "Quando as contas locais também podem fazer login, a tela de login tem duas abas, <strong>Conta local</strong> e <em>Proxmox Backup Server</em>. Caso contrário, mostra só o formulário do servidor. O formulário tem <strong>Usuário</strong>, <strong>Senha</strong> e <strong>Realm</strong>, e os realms são os que o servidor lista. Quando a conta tem segundo fator, <strong>Código de dois fatores</strong> aceita um código TOTP ou uma chave de recuperação.",
               "Os privilégios em <code>/</code> do servidor decidem, como no Proxmox VE: <code>Sys.Modify</code> dá Administrador e <code>Sys.Audit</code> sozinho dá Observador, a menos que uma regra dê outro perfil. Sem nenhum dos dois, a conta não consegue fazer login.",
               "Uma conta cujo único segundo fator é uma chave de segurança faz login na interface web do servidor, na porta 8007. Com o Monitor aberto por HTTPS no mesmo endereço, essa sessão também faz login no Monitor.",
               "O Proxmox Backup Server não tem grupos de usuários, então uma regra de perfil indica um usuário.",
@@ -171,7 +171,7 @@
               "A categoria <strong>serviços PBS</strong> verifica <code>proxmox-backup</code> e <code>proxmox-backup-proxy</code> em vez dos serviços do Proxmox VE, e nunca o corosync.",
               "As verificações de VMs e LXCs, dos armazenamentos do Proxmox VE e da sua capacidade, dos discos raiz e pontos de montagem dos LXCs e dos discos das VMs não são executadas. As montagens remotas NFS, CIFS e SMB do host continuam sendo verificadas.",
               "<strong>Limites do Monitor de Integridade</strong>, nas configurações, oculta os limites dessas verificações.",
-              "Em <strong>Atualizações do sistema</strong>, o botão <strong>Sistema de atualização</strong> abre uma janela de terminal com <code>pbs_update.sh</code>, a atualização da opção 6 do menu do PBS, descrita em <updatesLink>Atualizar o servidor</updatesLink>. Ele exige a ação <strong>Atualizar</strong>."
+              "Em <strong>Atualizações do sistema</strong>, quando há atualizações pendentes, o botão <strong>Sistema de atualização</strong> abre uma janela de terminal com <code>pbs_update.sh</code>, a atualização da opção 6 do menu do PBS, descrita em <updatesLink>Atualizar o servidor</updatesLink>. Ele exige a ação <strong>Atualizar</strong>."
             ]
           }
         }

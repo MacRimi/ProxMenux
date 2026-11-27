@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Netzwerk hat keine Karte <strong>Netzwerkfluss</strong>, die zeigt, wie der Verkehr die VMs und LXCs erreicht.",
-              "Hardware hat für GPUs kein Steuerelement <strong>Modus wechseln</strong>, keine Treiber-Installationsprogramme (<strong>NVIDIA-Treiber installieren</strong>, <strong>Die AMD GPU Tools installieren</strong>, <strong>Die Intel GPU Tools installieren</strong> und <strong>Coral TPU-Treiber installieren</strong>) und keinen Hinweis <strong>Erweiterte Überwachung nicht verfügbar</strong>, der diese Werkzeuge anbietet. Die Aktion <strong>Skripte und Werkzeuge ausführen</strong> fügt dieser Registerkarte nichts hinzu."
+              "Hardware hat für GPUs kein Steuerelement <strong>Modus wechseln</strong>, keine Treiber-Installationsprogramme und keinen Hinweis <strong>Erweiterte Überwachung nicht verfügbar</strong>. Die Aktion <strong>Skripte und Werkzeuge ausführen</strong> fügt dieser Registerkarte nichts hinzu."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Anmeldung",
-      "intro": "Lokale Konten, Profile, 2FA und API-Tokens funktionieren wie in <accessLink>Zugriff und Authentifizierung</accessLink> beschrieben. Die Proxmox-Konten, die sich anmelden können, sind die des Backup-Servers. Sie werden eingeschaltet wie in <proxmoxAccountsLink>Proxmox VE Konten</proxmoxAccountsLink> beschrieben. Was sich ändert:",
+      "intro": "Lokale Konten, Profile, 2FA und API-Tokens funktionieren wie in <accessLink>Zugriff und Authentifizierung</accessLink> beschrieben. Die Proxmox-Konten, die sich anmelden können, sind die des Backup-Servers. Sie werden in der Karte <strong>Proxmox Backup Server-Konten</strong> unter <strong>Sicherheit</strong> eingeschaltet, die wie in <proxmoxAccountsLink>Proxmox VE Konten</proxmoxAccountsLink> beschrieben funktioniert. Was sich ändert:",
       "blocks": [
         {
           "list": {
             "items": [
-              "Der Anmeldebildschirm hat neben <strong>Lokales Konto</strong> eine Registerkarte <em>Proxmox Backup Server</em> mit <strong>Benutzer</strong>, <strong>Passwort</strong> und <strong>Realm</strong>. Die Realms sind die, die der Server auflistet. Hat das Konto einen zweiten Faktor, nimmt <strong>Zwei-Faktor-Code</strong> einen TOTP-Code oder einen Wiederherstellungsschlüssel an.",
+              "Wenn sich auch lokale Konten anmelden können, hat der Anmeldebildschirm zwei Registerkarten, <strong>Lokales Konto</strong> und <em>Proxmox Backup Server</em>. Sonst zeigt er nur das Formular des Servers. Das Formular hat <strong>Benutzer</strong>, <strong>Passwort</strong> und <strong>Realm</strong>, und die Realms sind die, die der Server auflistet. Hat das Konto einen zweiten Faktor, nimmt <strong>Zwei-Faktor-Code</strong> einen TOTP-Code oder einen Wiederherstellungsschlüssel an.",
               "Es entscheiden die Berechtigungen auf <code>/</code> des Servers, wie bei Proxmox VE: <code>Sys.Modify</code> ergibt Administrator und <code>Sys.Audit</code> allein ergibt Beobachter, sofern keine Regel ein anderes Profil vergibt. Ohne eine der beiden kann sich das Konto nicht anmelden.",
               "Ein Konto, dessen einziger zweiter Faktor ein Sicherheitsschlüssel ist, meldet sich an der Weboberfläche des Servers auf Port 8007 an. Ist der Monitor über HTTPS unter derselben Adresse geöffnet, meldet diese Sitzung auch am Monitor an.",
               "Proxmox Backup Server hat keine Benutzergruppen, daher nennt eine Profilregel einen Benutzer.",
@@ -171,7 +171,7 @@
               "<strong>PBS-Dienste</strong> prüft <code>proxmox-backup</code> und <code>proxmox-backup-proxy</code> statt der Dienste von Proxmox VE, und nie corosync.",
               "Die Prüfungen der VMs und LXCs, der Proxmox-VE-Speicher und ihrer Kapazität, der Root-Festplatten und Einhängepunkte der LXCs und der Festplatten der VMs laufen nicht. Die entfernten NFS-, CIFS- und SMB-Einhängungen des Hosts werden weiterhin geprüft.",
               "<strong>Schwellenwerte für den Health-Monitor</strong> in den Einstellungen blendet die Schwellenwerte dieser Prüfungen aus.",
-              "In <strong>Systemaktualisierungen</strong> öffnet die Schaltfläche <strong>System aktualisieren</strong> ein Terminalfenster mit <code>pbs_update.sh</code>, der Aktualisierung von Option 6 des PBS-Menüs, beschrieben in <updatesLink>Den Server aktualisieren</updatesLink>. Sie braucht die Aktion <strong>Aktualisieren</strong>."
+              "In <strong>Systemaktualisierungen</strong> öffnet die Schaltfläche <strong>System aktualisieren</strong>, wenn Aktualisierungen ausstehen, ein Terminalfenster mit <code>pbs_update.sh</code>, der Aktualisierung von Option 6 des PBS-Menüs, beschrieben in <updatesLink>Den Server aktualisieren</updatesLink>. Sie braucht die Aktion <strong>Aktualisieren</strong>."
             ]
           }
         }

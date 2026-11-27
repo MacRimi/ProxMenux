@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Nätverk saknar kortet <strong>Nätverksflöde</strong>, som ritar hur trafiken når VM och LXC.",
-              "Hårdvara saknar kontrollen <strong>Växla läge</strong> för GPU:er, drivrutinsinstallationerna (<strong>Installera NVIDIA-drivrutiner</strong>, <strong>Installera AMD GPU-verktyg</strong>, <strong>Installera Intel GPU-verktyg</strong> och <strong>Installera Coral TPU-drivrutiner</strong>) och meddelandet <strong>Utökad övervakning inte tillgänglig</strong>, som erbjuder de verktygen. Åtgärden <strong>Köra skript och verktyg</strong> tillför inget på den här fliken."
+              "Hårdvara saknar kontrollen <strong>Växla läge</strong> för GPU:er, drivrutinsinstallationer och meddelandet <strong>Utökad övervakning inte tillgänglig</strong>. Åtgärden <strong>Köra skript och verktyg</strong> tillför inget på den här fliken."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Inloggning",
-      "intro": "Lokala konton, profiler, 2FA och API-token fungerar som beskrivs i <accessLink>Åtkomst och autentisering</accessLink>. De Proxmox-konton som kan logga in är säkerhetskopieringsserverns, och de slås på som beskrivs i <proxmoxAccountsLink>Proxmox VE konton</proxmoxAccountsLink>. Det här ändras:",
+      "intro": "Lokala konton, profiler, 2FA och API-token fungerar som beskrivs i <accessLink>Åtkomst och autentisering</accessLink>. De Proxmox-konton som kan logga in är säkerhetskopieringsserverns. De slås på i kortet <strong>Proxmox Backup Server-konton</strong> under <strong>Säkerhet</strong>, som fungerar som beskrivs i <proxmoxAccountsLink>Proxmox VE konton</proxmoxAccountsLink>. Det här ändras:",
       "blocks": [
         {
           "list": {
             "items": [
-              "Inloggningsskärmen har fliken <em>Proxmox Backup Server</em> bredvid <strong>Lokalt konto</strong>, med <strong>Användare</strong>, <strong>Lösenord</strong> och <strong>Realm</strong>. Realmerna är de som servern listar. När kontot har en andra faktor tar <strong>Tvåfaktorskod</strong> emot en TOTP-kod eller en återställningsnyckel.",
+              "När även lokala konton kan logga in har inloggningsskärmen två flikar, <strong>Lokalt konto</strong> och <em>Proxmox Backup Server</em>. Annars visar den bara serverns formulär. Formuläret har <strong>Användare</strong>, <strong>Lösenord</strong> och <strong>Realm</strong>, och realmerna är de som servern listar. När kontot har en andra faktor tar <strong>Tvåfaktorskod</strong> emot en TOTP-kod eller en återställningsnyckel.",
               "Behörigheterna på serverns <code>/</code> avgör, som i Proxmox VE: <code>Sys.Modify</code> ger Administratör och enbart <code>Sys.Audit</code> ger Observatör, om ingen regel ger en annan profil. Utan någon av dem kan kontot inte logga in.",
               "Ett konto vars enda andra faktor är en säkerhetsnyckel loggar in i serverns webbgränssnitt, på port 8007. När Monitor är öppnad över HTTPS på samma adress loggar den sessionen även in i Monitor.",
               "Proxmox Backup Server har inga användargrupper, så en profilregel anger en användare.",
@@ -171,7 +171,7 @@
               "<strong>PBS-tjänster</strong> kontrollerar <code>proxmox-backup</code> och <code>proxmox-backup-proxy</code> i stället för tjänsterna i Proxmox VE, och aldrig corosync.",
               "Kontrollerna av VM och LXC, av lagringarna i Proxmox VE och deras kapacitet, av LXC:s rotdiskar och monteringspunkter och av VM:s diskar körs inte. Värdens fjärrmonteringar via NFS, CIFS och SMB kontrolleras fortfarande.",
               "<strong>Health Monitor Trösklar</strong> i inställningarna döljer tröskelvärdena för de kontrollerna.",
-              "I <strong>Systemuppdateringar</strong> öppnar knappen <strong>Uppdatera systemet</strong> ett terminalfönster med <code>pbs_update.sh</code>, uppdateringen i alternativ 6 i PBS-menyn, som beskrivs i <updatesLink>Uppdatera servern</updatesLink>. Den kräver åtgärden <strong>Uppdatera</strong>."
+              "I <strong>Systemuppdateringar</strong> öppnar knappen <strong>Uppdatera systemet</strong>, när uppdateringar väntar, ett terminalfönster med <code>pbs_update.sh</code>, uppdateringen i alternativ 6 i PBS-menyn, som beskrivs i <updatesLink>Uppdatera servern</updatesLink>. Den kräver åtgärden <strong>Uppdatera</strong>."
             ]
           }
         }

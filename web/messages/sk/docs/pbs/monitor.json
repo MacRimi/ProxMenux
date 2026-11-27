@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Sieť nemá panel <strong>Tok siete</strong>, ktorý kreslí, ako prevádzka prichádza k VM a LXC.",
-              "Hardvér nemá pre GPU ovládací prvok <strong>Režim GPU</strong>, inštalátory ovládačov (<strong>Nainštalovať NVIDIA ovládače</strong>, <strong>Nainštalovať AMD GPU nástroje</strong>, <strong>Nainštalovať Intel GPU nástroje</strong> a <strong>Nainštalovať Coral TPU ovládače</strong>) ani upozornenie <strong>Rozšírené monitorovanie nie je dostupné</strong>, ktoré tieto nástroje ponúka. Akcia <strong>Spúšťať skripty a nástroje</strong> tejto karte nič nepridáva."
+              "Hardvér nemá pre GPU ovládací prvok <strong>Režim GPU</strong>, inštalátory ovládačov ani upozornenie <strong>Rozšírené monitorovanie nie je dostupné</strong>. Akcia <strong>Spúšťať skripty a nástroje</strong> tejto karte nič nepridáva."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Prihlásenie",
-      "intro": "Lokálne účty, profily, 2FA a API tokeny fungujú tak, ako je opísané v časti <accessLink>Prístup a overenie</accessLink>. Účty Proxmoxu, ktoré sa môžu prihlásiť, sú účty zálohovacieho servera a zapínajú sa tak, ako je opísané v časti <proxmoxAccountsLink>Proxmox VE účty</proxmoxAccountsLink>. Čo sa mení:",
+      "intro": "Lokálne účty, profily, 2FA a API tokeny fungujú tak, ako je opísané v časti <accessLink>Prístup a overenie</accessLink>. Účty Proxmoxu, ktoré sa môžu prihlásiť, sú účty zálohovacieho servera. Zapínajú sa na paneli <strong>Účty Proxmox Backup Server</strong> v časti <strong>Bezpečnosť</strong>, ktorý funguje tak, ako je opísané v časti <proxmoxAccountsLink>Proxmox VE účty</proxmoxAccountsLink>. Čo sa mení:",
       "blocks": [
         {
           "list": {
             "items": [
-              "Prihlasovacia obrazovka má vedľa karty <strong>Lokálny účet</strong> kartu <em>Proxmox Backup Server</em> s poľami <strong>Používateľ</strong>, <strong>Heslo</strong> a <strong>Realm</strong>. Realmy sú tie, ktoré server uvádza. Ak má účet druhý faktor, pole <strong>Dvojfaktorový kód</strong> prijme kód TOTP alebo kľúč na obnovenie.",
+              "Ak sa môžu prihlásiť aj lokálne účty, prihlasovacia obrazovka má dve karty, <strong>Lokálny účet</strong> a <em>Proxmox Backup Server</em>. Inak zobrazuje iba formulár servera. Formulár má polia <strong>Používateľ</strong>, <strong>Heslo</strong> a <strong>Realm</strong> a realmy sú tie, ktoré server uvádza. Ak má účet druhý faktor, pole <strong>Dvojfaktorový kód</strong> prijme kód TOTP alebo kľúč na obnovenie.",
               "Rozhodujú oprávnenia na <code>/</code> servera, ako v Proxmox VE: <code>Sys.Modify</code> dáva profil Administrátor a samotné <code>Sys.Audit</code> profil Pozorovateľ, ak pravidlo nepriradí iný profil. Bez žiadneho z nich sa účet prihlásiť nemôže.",
               "Účet, ktorého jediným druhým faktorom je bezpečnostný kľúč, sa prihlasuje vo webovom rozhraní servera na porte 8007. Ak je Monitor otvorený cez HTTPS na tej istej adrese, táto relácia prihlási aj do Monitora.",
               "Proxmox Backup Server nemá skupiny používateľov, preto pravidlo profilu uvádza používateľa.",
@@ -171,7 +171,7 @@
               "<strong>Služby PBS</strong> kontroluje <code>proxmox-backup</code> a <code>proxmox-backup-proxy</code> namiesto služieb Proxmox VE a nikdy corosync.",
               "Kontroly VM a LXC, úložísk Proxmox VE a ich kapacity, koreňových diskov a prípojných bodov LXC a diskov VM sa nespúšťajú. Vzdialené pripojenia NFS, CIFS a SMB hostiteľa sa naďalej kontrolujú.",
               "<strong>Hranice kontroly stavu</strong> v nastaveniach skrýva prahy týchto kontrol.",
-              "V kategórii <strong>Aktualizácie systému</strong> otvorí tlačidlo <strong>Aktualizovať systém</strong> okno terminálu s <code>pbs_update.sh</code>, aktualizáciou z voľby 6 ponuky PBS, opísanou v časti <updatesLink>Aktualizácia servera</updatesLink>. Vyžaduje akciu <strong>Aktualizovať</strong>."
+              "V kategórii <strong>Aktualizácie systému</strong> otvorí tlačidlo <strong>Aktualizovať systém</strong>, keď čakajú aktualizácie, okno terminálu s <code>pbs_update.sh</code>, aktualizáciou z voľby 6 ponuky PBS, opísanou v časti <updatesLink>Aktualizácia servera</updatesLink>. Vyžaduje akciu <strong>Aktualizovať</strong>."
             ]
           }
         }

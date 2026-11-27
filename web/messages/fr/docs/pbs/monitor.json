@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Réseau n’a pas la carte <strong>Flux réseau</strong>, qui montre comment le trafic atteint les VM et les LXC.",
-              "Matériel n’a pas de contrôle <strong>Mode de basculement</strong> pour les GPU, pas d’installateurs de pilotes (<strong>Installer les pilotes NVIDIA</strong>, <strong>Installer les outils GPU AMD</strong>, <strong>Installer les outils GPU Intel</strong> et <strong>Installer les pilotes Coral TPU</strong>) et pas d’avis <strong>Surveillance étendue non disponible</strong>, qui propose ces outils. L’action <strong>Exécuter des scripts et des outils</strong> n’ajoute rien à cet onglet."
+              "Matériel n’a pas de contrôle <strong>Mode de basculement</strong> pour les GPU, pas d’installateurs de pilotes et pas d’avis <strong>Surveillance étendue non disponible</strong>. L’action <strong>Exécuter des scripts et des outils</strong> n’ajoute rien à cet onglet."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Connexion",
-      "intro": "Les comptes locaux, les profils, la 2FA et les jetons API fonctionnent comme décrit dans <accessLink>Accès et authentification</accessLink>. Les comptes Proxmox qui peuvent se connecter sont ceux du serveur de sauvegarde, activés comme décrit dans <proxmoxAccountsLink>Comptes Proxmox VE</proxmoxAccountsLink>. Ce qui change :",
+      "intro": "Les comptes locaux, les profils, la 2FA et les jetons API fonctionnent comme décrit dans <accessLink>Accès et authentification</accessLink>. Les comptes Proxmox qui peuvent se connecter sont ceux du serveur de sauvegarde. Ils s’activent dans la carte <strong>Comptes Proxmox Backup Server</strong> de <strong>Sécurité</strong>, qui fonctionne comme décrit dans <proxmoxAccountsLink>Comptes Proxmox VE</proxmoxAccountsLink>. Ce qui change :",
       "blocks": [
         {
           "list": {
             "items": [
-              "L’écran de connexion a un onglet <em>Proxmox Backup Server</em> à côté de <strong>Compte local</strong>, avec <strong>Utilisateur</strong>, <strong>Mot de passe</strong> et <strong>Domaine</strong>. Les domaines sont ceux que liste le serveur. Si le compte a un second facteur, <strong>Code à deux facteurs</strong> accepte un code TOTP ou une clé de récupération.",
+              "Lorsque les comptes locaux peuvent aussi se connecter, l’écran de connexion a deux onglets, <strong>Compte local</strong> et <em>Proxmox Backup Server</em>. Sinon, il n’affiche que le formulaire du serveur. Le formulaire a <strong>Utilisateur</strong>, <strong>Mot de passe</strong> et <strong>Domaine</strong>, et les domaines sont ceux que liste le serveur. Si le compte a un second facteur, <strong>Code à deux facteurs</strong> accepte un code TOTP ou une clé de récupération.",
               "Les privilèges sur <code>/</code> du serveur décident, comme sur Proxmox VE : <code>Sys.Modify</code> donne Administrateur et <code>Sys.Audit</code> seul donne Observateur, sauf si une règle donne un autre profil. Sans aucun des deux, le compte ne peut pas se connecter.",
               "Un compte dont le seul second facteur est une clé de sécurité se connecte à l’interface web du serveur, sur le port 8007. Avec le Monitor ouvert en HTTPS à la même adresse, cette session connecte aussi au Monitor.",
               "Proxmox Backup Server n’a pas de groupes d’utilisateurs, donc une règle de profil désigne un utilisateur.",
@@ -171,7 +171,7 @@
               "<strong>Services PBS</strong> contrôle <code>proxmox-backup</code> et <code>proxmox-backup-proxy</code> au lieu des services de Proxmox VE, et jamais corosync.",
               "Les contrôles des VM et des LXC, des stockages Proxmox VE et de leur capacité, des disques racine et des points de montage des LXC et des disques des VM ne s’exécutent pas. Les montages distants NFS, CIFS et SMB de l’hôte sont toujours contrôlés.",
               "<strong>Seuils du moniteur de santé</strong>, dans les paramètres, masque les seuils de ces contrôles.",
-              "Dans <strong>Mises à jour du système</strong>, le bouton <strong>Mettre à jour le système</strong> ouvre une fenêtre de terminal avec <code>pbs_update.sh</code>, la mise à jour de l’option 6 du menu PBS, décrite dans <updatesLink>Mettre à jour le serveur</updatesLink>. Il nécessite l’action <strong>Mettre à jour</strong>."
+              "Dans <strong>Mises à jour du système</strong>, lorsque des mises à jour sont en attente, le bouton <strong>Mettre à jour le système</strong> ouvre une fenêtre de terminal avec <code>pbs_update.sh</code>, la mise à jour de l’option 6 du menu PBS, décrite dans <updatesLink>Mettre à jour le serveur</updatesLink>. Il nécessite l’action <strong>Mettre à jour</strong>."
             ]
           }
         }

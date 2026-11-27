@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Rete non ha il riquadro <strong>Flusso rete</strong>, che disegna come il traffico raggiunge le VM e gli LXC.",
-              "Hardware non ha il controllo <strong>Cambia modalità</strong> delle GPU, né i programmi di installazione dei driver (<strong>Installa driver NVIDIA</strong>, <strong>Installa strumenti GPU AMD</strong>, <strong>Installa strumenti GPU Intel</strong> e <strong>Installa driver Coral TPU</strong>), né l’avviso <strong>Monitoraggio esteso non disponibile</strong>, che propone questi strumenti. L’azione <strong>Eseguire script e strumenti</strong> non aggiunge nulla a questa scheda."
+              "Hardware non ha il controllo <strong>Cambia modalità</strong> delle GPU, né programmi di installazione dei driver, né l’avviso <strong>Monitoraggio esteso non disponibile</strong>. L’azione <strong>Eseguire script e strumenti</strong> non aggiunge nulla a questa scheda."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Accesso",
-      "intro": "Gli account locali, i profili, la 2FA e i token API funzionano come descritto in <accessLink>Accesso e autenticazione</accessLink>. Gli account Proxmox che possono accedere sono quelli del server di backup, attivati come descritto in <proxmoxAccountsLink>Account Proxmox VE</proxmoxAccountsLink>. Cosa cambia:",
+      "intro": "Gli account locali, i profili, la 2FA e i token API funzionano come descritto in <accessLink>Accesso e autenticazione</accessLink>. Gli account Proxmox che possono accedere sono quelli del server di backup. Si attivano nel riquadro <strong>Account Proxmox Backup Server</strong> di <strong>Sicurezza</strong>, che funziona come descritto in <proxmoxAccountsLink>Account Proxmox VE</proxmoxAccountsLink>. Cosa cambia:",
       "blocks": [
         {
           "list": {
             "items": [
-              "La schermata di accesso ha una scheda <em>Proxmox Backup Server</em> accanto a <strong>Account locale</strong>, con <strong>Utente</strong>, <strong>Password</strong> e <strong>Realm</strong>. I realm sono quelli che il server elenca. Se l’account ha un secondo fattore, <strong>Codice a due fattori</strong> accetta un codice TOTP o una chiave di recupero.",
+              "Quando possono accedere anche gli account locali, la schermata di accesso ha due schede, <strong>Account locale</strong> e <em>Proxmox Backup Server</em>. Altrimenti mostra solo il modulo del server. Il modulo ha <strong>Utente</strong>, <strong>Password</strong> e <strong>Realm</strong>, e i realm sono quelli che il server elenca. Se l’account ha un secondo fattore, <strong>Codice a due fattori</strong> accetta un codice TOTP o una chiave di recupero.",
               "Decidono i privilegi su <code>/</code> del server, come su Proxmox VE: <code>Sys.Modify</code> dà Amministratore e <code>Sys.Audit</code> da solo dà Osservatore, a meno che una regola non dia un altro profilo. Senza nessuno dei due l’account non può accedere.",
               "Un account il cui unico secondo fattore è una chiave di sicurezza accede all’interfaccia web del server, sulla porta 8007. Con il Monitor aperto in HTTPS allo stesso indirizzo, quella sessione accede anche al Monitor.",
               "Proxmox Backup Server non ha gruppi di utenti, quindi una regola di profilo indica un utente.",
@@ -171,7 +171,7 @@
               "La categoria <strong>servizi PBS</strong> controlla <code>proxmox-backup</code> e <code>proxmox-backup-proxy</code> invece dei servizi di Proxmox VE, e mai corosync.",
               "I controlli di VM e LXC, degli storage di Proxmox VE e della loro capacità, dei dischi root e dei punti di montaggio degli LXC e dei dischi delle VM non vengono eseguiti. I mount remoti NFS, CIFS e SMB dell’host vengono ancora controllati.",
               "<strong>Soglie monitoraggio integrità</strong>, nelle impostazioni, nasconde le soglie di questi controlli.",
-              "In <strong>Aggiornamenti di sistema</strong>, il pulsante <strong>Aggiorna sistema</strong> apre una finestra di terminale con <code>pbs_update.sh</code>, l’aggiornamento dell’opzione 6 del menu PBS, descritto in <updatesLink>Aggiornare il server</updatesLink>. Richiede l’azione <strong>Aggiornare</strong>."
+              "In <strong>Aggiornamenti di sistema</strong>, quando ci sono aggiornamenti in sospeso, il pulsante <strong>Aggiorna sistema</strong> apre una finestra di terminale con <code>pbs_update.sh</code>, l’aggiornamento dell’opzione 6 del menu PBS, descritto in <updatesLink>Aggiornare il server</updatesLink>. Richiede l’azione <strong>Aggiornare</strong>."
             ]
           }
         }

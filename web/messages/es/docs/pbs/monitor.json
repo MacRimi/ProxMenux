@@ -129,7 +129,7 @@
           "list": {
             "items": [
               "Red no tiene la tarjeta <strong>Flujo de red</strong>, que dibuja cómo llega el tráfico a las VM y los LXC.",
-              "Hardware no tiene el control <strong>Modo de cambio</strong> de las GPU, ni los instaladores de controladores (<strong>Instalar controladores NVIDIA</strong>, <strong>Instalar herramientas de GPU AMD</strong>, <strong>Instalar herramientas Intel GPU</strong> e <strong>Instalar los controladores Coral TPU</strong>), ni el aviso <strong>Monitorización extendida no disponible</strong>, que ofrece esas herramientas. La acción <strong>Ejecutar scripts y herramientas</strong> no añade nada a esta pestaña."
+              "Hardware no tiene el control <strong>Modo de cambio</strong> de las GPU, ni instaladores de controladores, ni el aviso <strong>Monitorización extendida no disponible</strong>. La acción <strong>Ejecutar scripts y herramientas</strong> no añade nada a esta pestaña."
             ]
           }
         }
@@ -138,12 +138,12 @@
     {
       "id": "access",
       "title": "Inicio de sesión",
-      "intro": "Las cuentas locales, los perfiles, el 2FA y los API tokens funcionan como se describe en <accessLink>Acceso y autenticación</accessLink>. Las cuentas de Proxmox que pueden iniciar sesión son las del servidor de backups, y se activan como se describe en <proxmoxAccountsLink>Cuentas de Proxmox VE</proxmoxAccountsLink>. Lo que cambia:",
+      "intro": "Las cuentas locales, los perfiles, el 2FA y los API tokens funcionan como se describe en <accessLink>Acceso y autenticación</accessLink>. Las cuentas de Proxmox que pueden iniciar sesión son las del servidor de backups. Se activan en la tarjeta <strong>Cuentas de Proxmox Backup Server</strong> de <strong>Seguridad</strong>, que funciona como se describe en <proxmoxAccountsLink>Cuentas de Proxmox VE</proxmoxAccountsLink>. Lo que cambia:",
       "blocks": [
         {
           "list": {
             "items": [
-              "La pantalla de inicio de sesión tiene una pestaña <em>Proxmox Backup Server</em> junto a <strong>Cuenta local</strong>, con <strong>Usuario</strong>, <strong>Contraseña</strong> y <strong>Realm</strong>. Los realms son los que lista el servidor. Si la cuenta tiene segundo factor, <strong>Código del segundo factor</strong> admite un código TOTP o una clave de recuperación.",
+              "Cuando las cuentas locales también pueden iniciar sesión, la pantalla de inicio de sesión tiene dos pestañas, <strong>Cuenta local</strong> y <em>Proxmox Backup Server</em>. Si no, muestra solo el formulario del servidor. El formulario tiene <strong>Usuario</strong>, <strong>Contraseña</strong> y <strong>Realm</strong>, y los realms son los que lista el servidor. Si la cuenta tiene segundo factor, <strong>Código del segundo factor</strong> admite un código TOTP o una clave de recuperación.",
               "Deciden los privilegios sobre <code>/</code> del servidor, como en Proxmox VE: <code>Sys.Modify</code> da Administrador y <code>Sys.Audit</code> solo da Observador, salvo que una regla dé otro perfil. Sin ninguno de los dos, la cuenta no puede iniciar sesión.",
               "Una cuenta cuyo único segundo factor es una llave de seguridad inicia sesión en la interfaz web del servidor, en el puerto 8007. Con el Monitor abierto por HTTPS en la misma dirección, esa sesión también inicia sesión en el Monitor.",
               "Proxmox Backup Server no tiene grupos de usuarios, así que una regla de perfil nombra a un usuario.",
@@ -171,7 +171,7 @@
               "<strong>Servicios PBS</strong> comprueba <code>proxmox-backup</code> y <code>proxmox-backup-proxy</code> en lugar de los servicios de Proxmox VE, y nunca corosync.",
               "Las comprobaciones de VM y LXC, de los almacenamientos de Proxmox VE y su capacidad, de los discos raíz y los puntos de montaje de los LXC y de los discos de las VM no se ejecutan. Los montajes remotos NFS, CIFS y SMB del host se siguen comprobando.",
               "<strong>Umbrales del monitor de salud</strong>, en Ajustes, oculta los umbrales de esas comprobaciones.",
-              "En <strong>Actualizaciones del sistema</strong>, el botón <strong>sistema de actualización</strong> abre una ventana de terminal con <code>pbs_update.sh</code>, la actualización de la opción 6 del menú de PBS, descrita en <updatesLink>Actualizar el servidor</updatesLink>. Requiere la acción <strong>Actualizar</strong>."
+              "En <strong>Actualizaciones del sistema</strong>, cuando hay actualizaciones pendientes, el botón <strong>sistema de actualización</strong> abre una ventana de terminal con <code>pbs_update.sh</code>, la actualización de la opción 6 del menú de PBS, descrita en <updatesLink>Actualizar el servidor</updatesLink>. Requiere la acción <strong>Actualizar</strong>."
             ]
           }
         }
