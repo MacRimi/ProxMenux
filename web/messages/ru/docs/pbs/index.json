@@ -35,7 +35,7 @@
       "title": "Установка",
       "blocks": [
         {
-          "p": "ProxMenux устанавливается на Proxmox Backup Server той же командой, что и на Proxmox VE; она описана на странице <installLink>Установка ProxMenux</installLink>. Отдельного пути для PBS у установщика нет: он также устанавливает ProxMenux Monitor, который слушает порт 8008. После установки команда <code>menu</code> открывает меню PBS."
+          "p": "ProxMenux устанавливается на Proxmox Backup Server той же командой, что и на Proxmox VE; она описана на странице <installLink>Установка ProxMenux</installLink>. Отдельного пути для PBS у установщика нет: он также устанавливает ProxMenux Monitor, который слушает порт 8008. После установки команда <code>menu</code> открывает меню PBS. Что показывает Monitor на сервере, описано на странице <monitorLink>ProxMenux Monitor на Proxmox Backup Server</monitorLink>."
         }
       ]
     },
@@ -162,6 +162,28 @@
       "blocks": [
         {
           "p": "Эта страница описывает ProxMenux, установленный на самом сервере резервного копирования. Чтобы следить за хранилищами данных и задачами Proxmox Backup Server с хоста Proxmox VE, см. <backupTabLink>представление Proxmox Backup Server на вкладке «Резервные копии»</backupTabLink>. Чтобы создавать резервные копии хоста Proxmox VE на Proxmox Backup Server, см. <pbsDestLink>Места хранения: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Что дальше",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux Monitor на Proxmox Backup Server",
+                "href": "/docs/pbs/monitor",
+                "tail": "вкладки, вход и проверки состояния Monitor на сервере."
+              },
+              {
+                "label": "Послеустановочная настройка на Proxmox Backup Server",
+                "href": "/docs/post-install#pbs",
+                "tail": "что послеустановочная настройка меняет на сервере резервного копирования."
+              }
+            ]
+          }
         }
       ]
     }

@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Quem vê a aba",
-            "body": "A aba aparece quando o perfil da conta inclui a área <strong>Backup</strong>. Criar, executar, editar, restaurar, baixar, ver o conteúdo de um backup ou excluir exige a ação <strong>Gerenciar backups</strong>, assim como gerenciar as conexões do PBS e editar <strong>Retenção do armazenamento</strong>. Sem ela, as vistas são somente leitura e esses botões não aparecem. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O Monitor de um host Proxmox Backup Server tem suas próprias abas e não tem a aba Backup."
+            "body": "A aba aparece quando o perfil da conta inclui a área <strong>Backup</strong>. Criar, executar, editar, restaurar, baixar, ver o conteúdo de um backup ou excluir exige a ação <strong>Gerenciar backups</strong>, assim como gerenciar as conexões do PBS e editar <strong>Retenção do armazenamento</strong>. Sem ela, as vistas são somente leitura e esses botões não aparecem. Os perfis estão descritos em <accessLink>Usuários e perfis</accessLink>. O <pbsMonitorLink>Monitor de um host Proxmox Backup Server</pbsMonitorLink> tem suas próprias abas e não tem a aba Backup."
           }
         }
       ]

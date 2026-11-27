@@ -47,7 +47,7 @@
         {
           "calloutInfo": {
             "title": "Who sees the tab",
-            "body": "The tab appears when the profile of the account includes the <strong>Backup</strong> area. Creating, running, editing, restoring, downloading, viewing the contents of a backup or deleting needs the action <strong>Manage backups</strong>, and so do managing the PBS connections and editing <strong>Storage retention</strong>. Without it the views are read-only and those buttons do not appear. Profiles are described in <accessLink>Users and profiles</accessLink>. The Monitor of a Proxmox Backup Server host has its own tabs and no Backup tab."
+            "body": "The tab appears when the profile of the account includes the <strong>Backup</strong> area. Creating, running, editing, restoring, downloading, viewing the contents of a backup or deleting needs the action <strong>Manage backups</strong>, and so do managing the PBS connections and editing <strong>Storage retention</strong>. Without it the views are read-only and those buttons do not appear. Profiles are described in <accessLink>Users and profiles</accessLink>. The <pbsMonitorLink>Monitor of a Proxmox Backup Server host</pbsMonitorLink> has its own tabs and no Backup tab."
           }
         }
       ]

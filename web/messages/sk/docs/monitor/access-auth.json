@@ -391,7 +391,7 @@
   },
   "pveAccounts": {
     "heading": "Proxmox VE účty",
-    "intro": "Používatelia a sféry Proxmox VE sa môžu prihlásiť do Monitora spolu s lokálnymi účtami alebo namiesto nich.<strong>Bezpečnosť</strong> → <strong>Účty Proxmox VE</strong> → <strong>Upraviť</strong> ich zapne. Prihlasovacia obrazovka potom obsahuje kartu <em>Proxmox VE</em> s používateľom, heslom a sférou, za ktorou nasleduje druhý faktor (kód TOTP alebo kľúč na obnovenie), ak ho má účet.",
+    "intro": "Používatelia a sféry Proxmox VE sa môžu prihlásiť do Monitora spolu s lokálnymi účtami alebo namiesto nich.<strong>Bezpečnosť</strong> → <strong>Účty Proxmox VE</strong> → <strong>Upraviť</strong> ich zapne. Prihlasovacia obrazovka potom obsahuje kartu <em>Proxmox VE</em> s používateľom, heslom a sférou, za ktorou nasleduje druhý faktor (kód TOTP alebo kľúč na obnovenie), ak ho má účet. Na hostiteľovi Proxmox Backup Server sú to účty zálohovacieho servera: pozrite <pbsMonitorLink>Prihlásenie na Proxmox Backup Server</pbsMonitorLink>.",
     "items": [
       "Monitor neuchováva žiadnu vlastnú reláciu: prehliadač drží lístok Proxmox VE a Monitor ho porovná s miestnym Proxmox VE API (<code>/access/permissions</code>) maximálne raz za minútu. Platnosť, sféry, 2FA a oprávnenia zostávajú tými Proxmox VE a privilégium, ktoré je tam odstránené, sa dostane na monitor do minúty.",
       "Účty, ktoré sa prihlasujú pomocou bezpečnostného kľúča (WebAuthn) alebo prostredníctvom OpenID Connect pripojenia Proxmox VE, sa prihláste na webovom rozhraní Proxmox VE.Keď je monitor otvorený cez HTTPS s rovnakým názvom hostiteľa, táto relácia sa tiež prihlási do monitora.",

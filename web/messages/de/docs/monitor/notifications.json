@@ -351,7 +351,7 @@
   },
   "catalogue": {
     "heading": "Ereigniskatalog",
-    "intro": "Die Ereignistypen sind in die Kategorien des Benachrichtigungsfelds unterteilt. Es zeigt einen zusammenklappbaren Abschnitt pro Gruppe mit einem Umschalter für jedes Ereignis darin. Jedes Ereignis ist standardmäßig aktiviert, sofern es nicht als (standardmäßig deaktiviert) gekennzeichnet ist. Auf einem Proxmox Backup Server blendet das Feld die Gruppen VM / CT, Sicherungen und Cluster aus, und ProxMenux richtet den Proxmox-VE-Webhook nicht ein.",
+    "intro": "Die Ereignistypen sind in die Kategorien des Benachrichtigungsfelds unterteilt. Es zeigt einen zusammenklappbaren Abschnitt pro Gruppe mit einem Umschalter für jedes Ereignis darin. Jedes Ereignis ist standardmäßig aktiviert, sofern es nicht als (standardmäßig deaktiviert) gekennzeichnet ist. Der Monitor eines Proxmox-Backup-Server-Hosts hat kein Benachrichtigungsfeld: siehe <pbsMonitorLink>ProxMenux Monitor auf Proxmox Backup Server</pbsMonitorLink>.",
     "headerGroup": "Gruppe",
     "headerEvents": "Ereignisse",
     "rows": [

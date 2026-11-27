@@ -215,7 +215,8 @@
       "backupRestoreCrossKernel": "Restauration entre versions du noyau",
       "backupRestoreGlossary": "Glossaire",
       "pbs": "Proxmox Backup Server",
-      "pbsOverview": "Vue d’ensemble"
+      "pbsOverview": "Vue d’ensemble",
+      "pbsMonitor": "ProxMenux Monitor"
     }
   },
   "hero": {

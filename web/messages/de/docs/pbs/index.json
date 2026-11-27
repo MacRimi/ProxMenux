@@ -35,7 +35,7 @@
       "title": "Installation",
       "blocks": [
         {
-          "p": "ProxMenux wird auf einem Proxmox Backup Server mit demselben Befehl installiert wie auf Proxmox VE, beschrieben in <installLink>Installation von ProxMenux</installLink>. Der Installer hat keinen eigenen Weg für PBS: Er installiert auch ProxMenux Monitor, der auf Port 8008 lauscht. Nach der Installation öffnet <code>menu</code> das PBS-Menü."
+          "p": "ProxMenux wird auf einem Proxmox Backup Server mit demselben Befehl installiert wie auf Proxmox VE, beschrieben in <installLink>Installation von ProxMenux</installLink>. Der Installer hat keinen eigenen Weg für PBS: Er installiert auch ProxMenux Monitor, der auf Port 8008 lauscht. Nach der Installation öffnet <code>menu</code> das PBS-Menü. Was der Monitor auf dem Server zeigt, beschreibt <monitorLink>ProxMenux Monitor auf Proxmox Backup Server</monitorLink>."
         }
       ]
     },
@@ -162,6 +162,28 @@
       "blocks": [
         {
           "p": "Diese Seite behandelt ProxMenux, das auf dem Backup-Server selbst installiert ist. Um die Datenspeicher und Aufgaben eines Proxmox Backup Server von einem Proxmox-VE-Host aus zu verfolgen, siehe die <backupTabLink>Ansicht Proxmox Backup Server der Registerkarte Backup</backupTabLink>. Um einen Proxmox-VE-Host auf einen Proxmox Backup Server zu sichern, siehe <pbsDestLink>Ziele: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Wie es weitergeht",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux Monitor auf Proxmox Backup Server",
+                "href": "/docs/pbs/monitor",
+                "tail": "die Registerkarten, die Anmeldung und die Zustandsprüfungen des Monitors auf dem Server."
+              },
+              {
+                "label": "Nachinstallation auf Proxmox Backup Server",
+                "href": "/docs/post-install#pbs",
+                "tail": "was die Nachinstallation auf einem Backup-Server ändert."
+              }
+            ]
+          }
         }
       ]
     }

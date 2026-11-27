@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Wer die Registerkarte sieht",
-            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Backup</strong> enthält. Zum Erstellen, Ausführen, Bearbeiten, Wiederherstellen, Herunterladen, Ansehen des Inhalts eines Backups und zum Löschen ist die Aktion <strong>Backups verwalten</strong> nötig, ebenso zum Verwalten der PBS-Verbindungen und zum Bearbeiten von <strong>Aufbewahrung im Speicher</strong>. Ohne sie sind die Ansichten schreibgeschützt und diese Schaltflächen erscheinen nicht. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der Monitor eines Proxmox-Backup-Server-Hosts hat eigene Registerkarten und keine Registerkarte Backup."
+            "body": "Die Registerkarte erscheint, wenn das Profil des Kontos den Bereich <strong>Backup</strong> enthält. Zum Erstellen, Ausführen, Bearbeiten, Wiederherstellen, Herunterladen, Ansehen des Inhalts eines Backups und zum Löschen ist die Aktion <strong>Backups verwalten</strong> nötig, ebenso zum Verwalten der PBS-Verbindungen und zum Bearbeiten von <strong>Aufbewahrung im Speicher</strong>. Ohne sie sind die Ansichten schreibgeschützt und diese Schaltflächen erscheinen nicht. Profile werden unter <accessLink>Benutzer und Profile</accessLink> beschrieben. Der <pbsMonitorLink>Monitor eines Proxmox-Backup-Server-Hosts</pbsMonitorLink> hat eigene Registerkarten und keine Registerkarte Backup."
           }
         }
       ]

@@ -35,7 +35,7 @@
       "title": "Inštalácia",
       "blocks": [
         {
-          "p": "ProxMenux sa na Proxmox Backup Server inštaluje rovnakým príkazom ako na Proxmox VE, opísaným v časti <installLink>Inštalácia ProxMenuxu</installLink>. Inštalátor nemá pre PBS samostatnú cestu: nainštaluje aj ProxMenux Monitor, ktorý počúva na porte 8008. Po inštalácii príkaz <code>menu</code> otvorí ponuku PBS."
+          "p": "ProxMenux sa na Proxmox Backup Server inštaluje rovnakým príkazom ako na Proxmox VE, opísaným v časti <installLink>Inštalácia ProxMenuxu</installLink>. Inštalátor nemá pre PBS samostatnú cestu: nainštaluje aj ProxMenux Monitor, ktorý počúva na porte 8008. Po inštalácii príkaz <code>menu</code> otvorí ponuku PBS. Čo Monitor na serveri zobrazuje, opisuje časť <monitorLink>ProxMenux Monitor na Proxmox Backup Server</monitorLink>."
         }
       ]
     },
@@ -162,6 +162,28 @@
       "blocks": [
         {
           "p": "Táto stránka sa týka ProxMenuxu nainštalovaného priamo na zálohovacom serveri. Ak chcete z hostiteľa Proxmox VE sledovať dátové úložiská a úlohy Proxmox Backup Server, pozrite <backupTabLink>zobrazenie Proxmox Backup Server na karte Záloha</backupTabLink>. Ak chcete zálohovať hostiteľa Proxmox VE na Proxmox Backup Server, pozrite <pbsDestLink>Ciele: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Čo ďalej",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux Monitor na Proxmox Backup Server",
+                "href": "/docs/pbs/monitor",
+                "tail": "karty, prihlásenie a kontroly stavu Monitora na serveri."
+              },
+              {
+                "label": "Nastavenie po inštalácii na Proxmox Backup Server",
+                "href": "/docs/post-install#pbs",
+                "tail": "čo nastavenie po inštalácii mení na zálohovacom serveri."
+              }
+            ]
+          }
         }
       ]
     }

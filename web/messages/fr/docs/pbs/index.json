@@ -35,7 +35,7 @@
       "title": "Installation",
       "blocks": [
         {
-          "p": "ProxMenux s’installe sur un Proxmox Backup Server avec la même commande que sur Proxmox VE, décrite dans <installLink>Installation de ProxMenux</installLink>. L’installateur n’a pas de chemin séparé pour PBS : il installe aussi ProxMenux Monitor, qui écoute sur le port 8008. Après l’installation, <code>menu</code> ouvre le menu PBS."
+          "p": "ProxMenux s’installe sur un Proxmox Backup Server avec la même commande que sur Proxmox VE, décrite dans <installLink>Installation de ProxMenux</installLink>. L’installateur n’a pas de chemin séparé pour PBS : il installe aussi ProxMenux Monitor, qui écoute sur le port 8008. Après l’installation, <code>menu</code> ouvre le menu PBS. Ce que le Monitor affiche sur le serveur est décrit dans <monitorLink>ProxMenux Monitor sur Proxmox Backup Server</monitorLink>."
         }
       ]
     },
@@ -162,6 +162,28 @@
       "blocks": [
         {
           "p": "Cette page traite de ProxMenux installé sur le serveur de sauvegarde lui-même. Pour suivre les datastores et les tâches d’un Proxmox Backup Server depuis un hôte Proxmox VE, voir la <backupTabLink>vue Proxmox Backup Server de l’onglet Sauvegarde</backupTabLink>. Pour sauvegarder un hôte Proxmox VE sur un Proxmox Backup Server, voir <pbsDestLink>Destinations : Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Pour aller plus loin",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux Monitor sur Proxmox Backup Server",
+                "href": "/docs/pbs/monitor",
+                "tail": "les onglets, la connexion et les contrôles d’état du Monitor sur le serveur."
+              },
+              {
+                "label": "Post-installation sur Proxmox Backup Server",
+                "href": "/docs/post-install#pbs",
+                "tail": "ce que la post-installation change sur un serveur de sauvegarde."
+              }
+            ]
+          }
         }
       ]
     }

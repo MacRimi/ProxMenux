@@ -51,7 +51,7 @@
         {
           "calloutInfo": {
             "title": "Quién ve la pestaña",
-            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Backup</strong>. Crear, ejecutar, editar, restaurar, descargar, ver el contenido de un backup o eliminarlo requiere la acción <strong>Gestionar backups</strong>, igual que gestionar las conexiones de PBS y editar <strong>Retención del almacenamiento</strong>. Sin ella las vistas son de solo lectura y esos botones no aparecen. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El Monitor de un host con Proxmox Backup Server tiene sus propias pestañas y no tiene la pestaña Backup."
+            "body": "La pestaña aparece cuando el perfil de la cuenta incluye el área <strong>Backup</strong>. Crear, ejecutar, editar, restaurar, descargar, ver el contenido de un backup o eliminarlo requiere la acción <strong>Gestionar backups</strong>, igual que gestionar las conexiones de PBS y editar <strong>Retención del almacenamiento</strong>. Sin ella las vistas son de solo lectura y esos botones no aparecen. Los perfiles se describen en <accessLink>Usuarios y perfiles</accessLink>. El <pbsMonitorLink>Monitor de un host con Proxmox Backup Server</pbsMonitorLink> tiene sus propias pestañas y no tiene la pestaña Backup."
           }
         }
       ]

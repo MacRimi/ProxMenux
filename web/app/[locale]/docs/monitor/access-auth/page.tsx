@@ -136,6 +136,9 @@ export default async function MonitorAccessAuthPage({
   const fail2banLink = (chunks: React.ReactNode) => (
     <Link href="/docs/security/fail2ban" className="text-blue-700 hover:underline">{chunks}</Link>
   )
+  const pbsMonitorLink = (chunks: React.ReactNode) => (
+    <Link href="/docs/pbs/monitor#access" className="text-blue-600 hover:underline">{chunks}</Link>
+  )
   const tailscaleAnchor = (chunks: React.ReactNode) => (
     <a href="https://tailscale.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">
       {chunks}
@@ -634,7 +637,7 @@ curl -X DELETE http://<host>:8008/api/auth/api-tokens/<token-id> \\
       </p>
 
       <h2 id="proxmox-ve-accounts" className="text-2xl font-semibold mt-10 mb-4 text-gray-900">{t("pveAccounts.heading")}</h2>
-      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pveAccounts.intro", { strong, em })}</p>
+      <p className="mb-4 text-gray-800 leading-relaxed">{t.rich("pveAccounts.intro", { strong, em, pbsMonitorLink })}</p>
       <ul className="list-disc pl-6 mb-4 text-gray-800 leading-relaxed space-y-1">
         {pveItems.map((_, idx) => (
           <li key={idx}>{t.rich(`pveAccounts.items.${idx}`, { code })}</li>

@@ -35,7 +35,7 @@
       "title": "Installazione",
       "blocks": [
         {
-          "p": "ProxMenux si installa su un Proxmox Backup Server con lo stesso comando usato su Proxmox VE, descritto in <installLink>Installazione di ProxMenux</installLink>. Il programma di installazione non ha un percorso separato per PBS: installa anche ProxMenux Monitor, in ascolto sulla porta 8008. Dopo l’installazione, <code>menu</code> apre il menu PBS."
+          "p": "ProxMenux si installa su un Proxmox Backup Server con lo stesso comando usato su Proxmox VE, descritto in <installLink>Installazione di ProxMenux</installLink>. Il programma di installazione non ha un percorso separato per PBS: installa anche ProxMenux Monitor, in ascolto sulla porta 8008. Dopo l’installazione, <code>menu</code> apre il menu PBS. Cosa mostra il Monitor sul server è descritto in <monitorLink>ProxMenux Monitor su Proxmox Backup Server</monitorLink>."
         }
       ]
     },
@@ -162,6 +162,28 @@
       "blocks": [
         {
           "p": "Questa pagina riguarda ProxMenux installato sul server di backup stesso. Per seguire i datastore e le attività di un Proxmox Backup Server da un host Proxmox VE, vedi la <backupTabLink>vista Proxmox Backup Server della scheda Backup</backupTabLink>. Per eseguire il backup di un host Proxmox VE su un Proxmox Backup Server, vedi <pbsDestLink>Destinazioni: Proxmox Backup Server</pbsDestLink>."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Per proseguire",
+      "blocks": [
+        {
+          "next": {
+            "items": [
+              {
+                "label": "ProxMenux Monitor su Proxmox Backup Server",
+                "href": "/docs/pbs/monitor",
+                "tail": "le schede, l’accesso e i controlli di stato del Monitor sul server."
+              },
+              {
+                "label": "Post-installazione su Proxmox Backup Server",
+                "href": "/docs/post-install#pbs",
+                "tail": "cosa cambia la post-installazione su un server di backup."
+              }
+            ]
+          }
         }
       ]
     }

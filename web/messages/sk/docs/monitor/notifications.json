@@ -351,7 +351,7 @@
   },
   "catalogue": {
     "heading": "Katalóg udalostí",
-    "intro": "Typy udalostí sú rozdelené do kategórií panela oznámení. Každá rozbaľovacia skupina ponúka prepínače udalostí. Predvolene sú zapnuté, okrem udalostí označených (predvolene vypnuté). Na hostiteľovi Proxmox Backup Server panel skryje skupiny VM / CT, Zálohy a Klaster a ProxMenux nenastaví webhook Proxmox VE.",
+    "intro": "Typy udalostí sú rozdelené do kategórií panela oznámení. Každá rozbaľovacia skupina ponúka prepínače udalostí. Predvolene sú zapnuté, okrem udalostí označených (predvolene vypnuté). Monitor na hostiteľovi Proxmox Backup Server panel oznámení nemá: pozrite <pbsMonitorLink>ProxMenux Monitor na Proxmox Backup Server</pbsMonitorLink>.",
     "headerGroup": "Skupina",
     "headerEvents": "Udalosti",
     "rows": [
