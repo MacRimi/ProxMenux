@@ -228,6 +228,29 @@
         },
         {
           "p": "The texts of the ProxMenux tools and the OCI applications follow the language of the Monitor. The texts of the Community Scripts come from their project and are shown in English."
+        },
+        {
+          "p": "When the list cannot be loaded, the tab shows <strong>The catalog could not be loaded. Try again in a moment.</strong> with a <strong>Retry</strong> button. When the renewal of the Community Scripts fails, the tab keeps showing the saved list. A host that has never saved it and has no connection shows no Community Scripts. In both cases the Monitor tries the download again the next time the list is loaded, once five minutes have passed."
+        },
+        {
+          "p": "The tab reads two endpoints of the Monitor API. Both need a profile that includes the <strong>Menux</strong> area:"
+        },
+        {
+          "table": {
+            "headers": ["What it loads", "Endpoint", "Source"],
+            "rows": [
+              [
+                "The list of items",
+                "<code>GET /api/catalog/items?lang=</code>",
+                "The catalog of OCI manager Apps, the options of the console menu and the saved list of Community Scripts, in <code>/var/lib/proxmenux/catalog_scripts.json</code>."
+              ],
+              [
+                "The sheet of an item",
+                "<code>GET /api/catalog/items/&lt;kind&gt;/&lt;id&gt;?lang=</code>",
+                "<code>&lt;kind&gt;</code> is <code>oci</code>, <code>pmx</code> or <code>cs</code>, with the same sources as the list. The sheet of a Community Scripts script adds its record in the database of the Community Scripts project."
+              ]
+            ]
+          }
         }
       ]
     },
@@ -241,6 +264,7 @@
               { "href": "/docs/oci-manager", "label": "OCI manager Apps", "tail": "how an OCI image becomes an LXC and how it is installed." },
               { "href": "/docs/monitor/dashboard/apps", "label": "Apps tab", "tail": "the applications already installed, with their links and updates." },
               { "href": "/docs/create-vm/lxc", "label": "Create LXC from template", "tail": "the wizard opened from the Catalog." },
+              { "href": "/docs/external-repositories", "label": "External Repositories", "tail": "the third-party projects ProxMenux runs, Community Scripts among them, and where to report their problems." },
               { "href": "/docs/monitor/dashboard/settings#navigation-order", "label": "Settings tab", "tail": "the order of the tabs in the top bar." }
             ]
           }

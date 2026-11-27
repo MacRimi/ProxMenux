@@ -49,6 +49,9 @@ export default async function AppsDashboardPage({
   const updatesLink = (chunks: React.ReactNode) => (
     <Link href="/docs/monitor/dashboard/vms-lxcs/updates" className="text-blue-600 hover:underline">{chunks}</Link>
   )
+  const catalogLink = (chunks: React.ReactNode) => (
+    <Link href="/docs/monitor/dashboard/catalog" className="text-blue-600 hover:underline">{chunks}</Link>
+  )
   const settingsLink = (chunks: React.ReactNode) => (
     <Link href="/docs/monitor/dashboard/settings#navigation-order" className="text-blue-600 hover:underline">{chunks}</Link>
   )
@@ -70,7 +73,7 @@ export default async function AppsDashboardPage({
       />
 
       <Callout variant="info" title={t("intro.title")}>
-        {t.rich("intro.body", { strong, appTabLink })}
+        {t.rich("intro.body", { strong, appTabLink, catalogLink })}
       </Callout>
 
       <h2 className="mt-10 mb-4 text-2xl font-semibold text-gray-900">{t("sources.heading")}</h2>

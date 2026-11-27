@@ -10,7 +10,7 @@
   },
   "intro": {
     "title": "A launcher, not an application installer",
-    "body": "The <strong>Apps</strong> tab does not install software or discover services by itself. It turns saved Web Links into one searchable grid. LXC-owned links are configured in the guest's <appTabLink>App tab</appTabLink>; custom links let you include VM services, reverse proxies and external dashboards."
+    "body": "The <strong>Apps</strong> tab does not install software or discover services by itself. It turns saved Web Links into one searchable grid. LXC-owned links are configured in the guest's <appTabLink>App tab</appTabLink>; custom links let you include VM services, reverse proxies and external dashboards. In the Monitor, applications are installed from the <catalogLink>Catalog tab</catalogLink>."
   },
   "sources": {
     "heading": "What appears in Apps",

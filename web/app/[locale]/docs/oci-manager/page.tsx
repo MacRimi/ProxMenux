@@ -5,6 +5,10 @@ import { DocPage } from "@/components/docs/DocBlocks"
 const NAMESPACE = "docs.ociManager"
 const URL = "https://proxmenux.com/docs/oci-manager"
 
+const LINKS = {
+  catalogLink: "/docs/monitor/dashboard/catalog",
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: `${NAMESPACE}.meta` })
@@ -18,5 +22,5 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return <DocPage locale={locale} namespace={NAMESPACE} minutes={4} />
+  return <DocPage locale={locale} namespace={NAMESPACE} minutes={4} links={LINKS} />
 }
