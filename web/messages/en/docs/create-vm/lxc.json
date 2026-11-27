@@ -24,12 +24,12 @@
                 "<strong>Create LXC</strong>, in the header of the <strong>Virtual Machines & Containers</strong> card of the <vmsLxcsLink>VMs & LXCs</vmsLxcsLink> tab."
               ],
               [
-                "Catalog of the Monitor",
-                "The <strong>Create LXC from template</strong> entry of the <catalogLink>Catalog</catalogLink> tab, shown as Menux in the top bar, opens the same wizard."
+                "Menux tab of the Monitor",
+                "The <strong>Create LXC from template</strong> entry of the <catalogLink>Menux</catalogLink> tab opens the same wizard."
               ],
               [
                 "Console menu",
-                "Main menu → <strong>Create VM and LXC from template or script</strong> → <strong>Create LXC from template</strong>. The steps are the same, as dialogs, with the title <strong>N/5</strong>."
+                "Main menu → <strong>Create VM and LXC from template or script</strong> → <strong>Create LXC from template</strong>. The steps are the same, as dialogs numbered 1/5 to 5/5 in their title."
               ]
             ]
           }
@@ -37,7 +37,7 @@
         {
           "calloutInfo": {
             "title": "Who can use it",
-            "body": "In the Monitor the wizard needs the <strong>Administrator</strong> profile, and the button does not appear for other profiles. In the Catalog, a profile with <strong>Run scripts and tools</strong> that is not Administrator gets an <strong>Open</strong> button in the entry, which runs the console wizard in a terminal; without that action the entry shows only its description. Profiles are described in <accessLink>Users and profiles</accessLink>. The console wizard runs as root. Neither is available on a Proxmox Backup Server host."
+            "body": "In the Monitor the wizard needs the <strong>Administrator</strong> profile, and the button does not appear for other profiles. In the Menux tab, a profile with <strong>Run scripts and tools</strong> that is not Administrator gets an <strong>Open</strong> button in the entry, which runs the console wizard in a terminal; without that action the entry shows only its description. Profiles are described in <accessLink>Users and profiles</accessLink>. The console wizard runs as root. Neither is available on a Proxmox Backup Server host."
           }
         }
       ]
@@ -64,7 +64,7 @@
               ],
               [
                 "Download an official template",
-                "Searches the official catalog, picks the storage for templates and downloads the one chosen, with its progress. When it ends, <strong>Use this template</strong> selects it."
+                "Searches the official catalog, picks the storage for templates and downloads the one chosen, with its progress. When it ends, the wizard returns to <strong>System</strong> with that template selected."
               ],
               [
                 "Container hostname",
@@ -97,12 +97,12 @@
           }
         },
         {
-          "p": "The downloaded template is checked against the SHA-512 of the official catalog before it can be used. Only templates from <code>download.proxmox.com</code> and TurnKey can be downloaded, and archives of OCI or Docker images never appear in the list: those are handled by <ociLink>OCI Manager Apps</ociLink>. The console wizard also lists TurnKey templates and local archives; for a local archive it asks for its architecture (amd64 or arm64)."
+          "p": "The downloaded template is checked against the SHA-512 of the official catalog before it can be used. The Monitor downloads only the system templates of <code>download.proxmox.com</code>, and the console also those of TurnKey. Archives of OCI or Docker images never appear in the list: those are handled by <ociLink>OCI manager Apps</ociLink>. The console wizard also lists TurnKey templates and local archives; for a local archive it asks for its architecture (amd64 or arm64)."
         },
         {
           "calloutTip": {
             "title": "Prepare the system for its first boot",
-            "body": "Before the first start, two systemd units known to fail in some templates are adjusted on the stopped disk of the container: the certificate is regenerated after <code>ssl-cert</code>, and waiting for the network is skipped when the container has no network. Files that already exist are never overwritten, and nothing is installed or run inside the container. This step also runs on its own when the container gets an NVIDIA GPU or USB devices."
+            "body": "Before the first start, two systemd units known to fail in some templates are adjusted on the stopped disk of the container: the certificate is regenerated after <code>ssl-cert</code>, and waiting for the network is skipped when the container has no network. Files that already exist are never overwritten, and nothing is installed or run inside the container. A container with an NVIDIA GPU or USB devices also goes through a preparation before its first start, which sets up those devices; the two units are adjusted only when this switch is on."
           }
         }
       ]
@@ -133,7 +133,7 @@
           }
         },
         {
-          "p": "On thin storage, such as LVM-thin or ZFS, a disk larger than the free space is allowed with a warning in the review. On other storage it is refused."
+          "p": "On LVM-thin or ZFS storage, a disk larger than the free space is allowed with a warning in the review. On other storage it is refused."
         },
         {
           "p": "<strong>Add mount point</strong> adds up to 16 mount points of two types:"
@@ -213,7 +213,7 @@
       "title": "Creation",
       "blocks": [
         {
-          "p": "The creation shows its steps with the time of each one: <strong>Send the request to Proxmox</strong>, <strong>Create the container</strong> and, when requested, <strong>Start the container</strong> or <strong>Prepare and start the container</strong>. <strong>Show log</strong> opens the log of the Proxmox task of that step while it runs. Warnings written by Proxmox in the task, if any, appear under their step: they describe the task, not the health of the container."
+          "p": "The creation shows its steps with the time of each one: <strong>Send the request to Proxmox</strong>, <strong>Create the container</strong> and, when requested, <strong>Start the container</strong>, <strong>Prepare the container for its first start</strong> or <strong>Prepare and start the container</strong>. <strong>Show log</strong> opens the log of the Proxmox task of that step while it runs. Warnings written by Proxmox in the task, if any, appear under their step: they describe the task, not the health of the container."
         },
         {
           "figure": {
@@ -223,7 +223,7 @@
           }
         },
         {
-          "p": "Closing the dialog does not stop the creation: when it is opened again in the same browser tab it shows the operation where it is. When the container has started, <strong>Open terminal</strong> opens a shell inside it in the <terminalLink>Terminal</terminalLink> of the Monitor."
+          "p": "Closing the dialog does not stop the creation: when it is opened again in the same browser tab it shows the operation where it is. When the container has started, <strong>Open terminal</strong> opens a shell inside it, in the LXC console described in <terminalLink>Terminal</terminalLink>. That button appears when the wizard was opened from VMs & LXCs, not from the Menux tab."
         }
       ]
     },
@@ -232,7 +232,7 @@
       "title": "The container created",
       "blocks": [
         {
-          "p": "The container is always unprivileged, and in Proxmox it has the tags <code>proxmenux</code>, <code>lxc</code> and the name of the distribution, and these <strong>Notes</strong> with its template, resources, mount points, network and hardware. If the Notes are changed in Proxmox before the creation ends, they are kept as they are."
+          "p": "The container is always unprivileged, and in Proxmox it has the tags <code>proxmenux</code>, <code>lxc</code> and the name of the distribution, and these <strong>Notes</strong> with its template, resources, mount points, network and hardware, and a Docs badge that links to this page. If the Notes are changed in Proxmox before the creation ends, they are kept as they are."
         },
         {
           "figure": {
@@ -256,7 +256,7 @@
         {
           "calloutWarning": {
             "title": "When it cannot be removed from the Monitor",
-            "body": "The Monitor removes only containers with a single root disk and no special configuration. It refuses, among others, a running, protected or locked container, one with a mount point or an unused disk, one with a host directory, and one with USB devices, a Coral USB or an NVIDIA GPU, which add raw LXC settings. The reason is shown in the dialog. Those containers are removed from Proxmox."
+            "body": "The Monitor removes only containers with a single root disk and no special configuration. It refuses, among others, a running, protected or locked container, one with a mount point or an unused disk, one with a host directory, and one with USB devices, a Coral USB or an NVIDIA GPU, which add raw LXC settings. The reason is shown in the dialog, and those containers are removed from Proxmox. When the only reason is the removal protection, the dialog offers <strong>Disable protection…</strong> and then removes the container."
           }
         }
       ]
@@ -271,7 +271,7 @@
               "Privileged containers: the container is always unprivileged.",
               "Architectures other than amd64 and arm64.",
               "IPv6 addresses and DNS servers.",
-              "Containers from OCI or Docker images: <ociLink>OCI Manager Apps</ociLink> creates those.",
+              "Containers from OCI or Docker images: <ociLink>OCI manager Apps</ociLink> creates those.",
               "Raw LXC settings typed by hand, or installing software inside the container."
             ]
           }
