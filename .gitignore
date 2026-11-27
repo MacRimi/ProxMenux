@@ -78,5 +78,10 @@ Thumbs.db
 # Ensure these directories are not ignored
 !web/
 
+# Local AppImage build artifacts
+AppImage/dist/
+AppImage/.next/
+AppImage/out/
+
 # GitHub authentication
 .github/auth.sh
