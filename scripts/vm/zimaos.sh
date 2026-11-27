@@ -768,7 +768,7 @@ function select_loader() {
 
   # Create the loader selection menu for ZimaOS
   LOADER_OPTION=$(whiptail --backtitle "ProxMenuX" --title "SELECT ZIMAOS IMAGE" --menu "$(translate "Choose ZimaOS image option:")" 15 70 4 \
-    "1" "Download Latest ZimaOS Release" \
+    "1" "$(translate "Download a ZimaOS release")" \
     "2" "Use Existing ZimaOS Image" \
     3>&1 1>&2 2>&3)
 
@@ -779,7 +779,7 @@ function select_loader() {
   case $LOADER_OPTION in
     1)
       LOADER_TYPE="latest"
-      LOADER_NAME="ZimaOS Latest"
+      LOADER_NAME="ZimaOS"
       LOADER_URL="https://github.com/IceWhaleTech/ZimaOS/"
       echo -e "${DGN}${TAB}Selected: ${BGN}$LOADER_NAME${CL}"
       download_loader
@@ -892,28 +892,54 @@ function download_loader_() {
 
 
 
+# ZimaOS publishes its betas as regular GitHub releases, so the "latest"
+# release can be a beta. The recent releases with an installer are listed,
+# marked stable or beta, with the newest stable one selected.
+function select_zimaos_release() {
+  local releases tag kind url default_tag="" options=()
+  releases=$(curl -fsSL "https://api.github.com/repos/IceWhaleTech/ZimaOS/releases?per_page=30" | python3 -c '
+import json, re, sys
+shown = 0
+for release in json.load(sys.stdin):
+    tag = release.get("tag_name") or ""
+    url = next((a.get("browser_download_url", "") for a in release.get("assets", [])
+                if re.fullmatch(r"zimaos-x86_64-.+_installer\.img", a.get("name", ""))), "")
+    if release.get("draft") or not tag or not url:
+        continue
+    beta = release.get("prerelease") or re.search(r"-(alpha|beta|rc)", tag, re.I)
+    print(tag, "beta" if beta else "stable", url, sep="\t")
+    shown += 1
+    if shown == 10:
+        break
+' 2>/dev/null)
+
+  if [[ -z "$releases" ]]; then
+    msg_error "$(translate "Could not get the list of ZimaOS releases")"
+    return 1
+  fi
+
+  while IFS=$'\t' read -r tag kind url; do
+    if [[ "$kind" == "stable" ]]; then
+      options+=("$tag" "$(translate "Stable")")
+      [[ -z "$default_tag" ]] && default_tag="$tag"
+    else
+      options+=("$tag" "$(translate "Beta")")
+    fi
+  done <<< "$releases"
+  [[ -z "$default_tag" ]] && default_tag="${options[0]}"
+
+  tag=$(whiptail --backtitle "ProxMenuX" --title "ZimaOS" --default-item "$default_tag" \
+    --menu "$(translate "Choose the ZimaOS version to install:")" 20 70 10 "${options[@]}" 3>&1 1>&2 2>&3) || return 1
+
+  DOWNLOAD_URL=$(awk -F'\t' -v tag="$tag" '$1 == tag { print $3; exit }' <<< "$releases")
+  [[ -n "$DOWNLOAD_URL" ]]
+}
+
+
 function download_loader() {
   echo -e "${DGN}${TAB}Retrieving ZimaOS image${CL}"
 
-
-  API_URL="https://api.github.com/repos/IceWhaleTech/ZimaOS/releases/latest"
-
-
-  DOWNLOAD_URL=$(curl -fsSL "$API_URL" \
-    | grep -Eo '"browser_download_url":\s*"[^"]*zimaos-x86_64-[^"]*_installer\.img"' \
-    | head -1 \
-    | cut -d '"' -f 4)
-
-
-#  if [[ -z "$DOWNLOAD_URL" ]]; then
-#    TAG=$(curl -fsSL "$API_URL" | grep -Eo '"tag_name":\s*"[^"]+"' | cut -d '"' -f 4 | head -1)
-#    if [[ -n "$TAG" ]]; then
-#      DOWNLOAD_URL="https://github.com/IceWhaleTech/ZimaOS/releases/download/${TAG}/zimaos-x86_64-${TAG}_installer.img"
-#    fi
-#  fi
-
-  if [[ -z "$DOWNLOAD_URL" ]]; then
-    msg_error "Failed to get latest ZimaOS release URL"
+  if ! select_zimaos_release; then
     sleep 2; select_loader; return
   fi
 
