@@ -223,6 +223,9 @@
     },
     "opencloud": {
       "/etc/opencloud": 2
+    },
+    "papyra": {
+      "/data": 8
     }
   }
 }
