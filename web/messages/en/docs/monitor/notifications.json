@@ -120,10 +120,10 @@
       "Add the bot to the group as a member (and make it admin if the group requires it to post).",
       "Send any message in the group.",
       "Open <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> in a browser. Look for <code>chat.id</code> in the JSON response — for groups it is a negative number, for supergroups it starts with <code>-100</code>.",
-      "For supergroups with <em>Topics</em> enabled, also note the <code>message_thread_id</code> of the topic you want to target — that goes in the optional <em>Topic ID</em> field."
+      "For supergroups with <em>Topics</em> enabled, also note the <code>message_thread_id</code> of the topic you want to target — set a fallback in <em>Default Topic ID (optional)</em>, or assign a dedicated Topic ID per notification category (e.g. Backups, Security, Storage) in edit mode."
     ],
-    "groupAlt": "Telegram channel form with Bot Token (masked), negative Chat ID prefixed with -100 indicating a supergroup, and Topic ID 3 set to deliver into a specific topic",
-    "groupCaption": "Supergroup — Chat ID starts with <code>-100…</code> and the optional <em>Topic ID</em> targets a specific thread.",
+    "groupAlt": "Telegram channel form with Bot Token (masked), negative Chat ID prefixed with -100 indicating a supergroup, and Default Topic ID 3 set as fallback",
+    "groupCaption": "Supergroup — Chat ID starts with <code>-100…</code>, <em>Default Topic ID</em> sets the fallback thread, and individual categories can override it with their own Topic ID.",
     "step3Title": "3 · Save and test",
     "step3Body": "Paste the Bot Token and Chat ID into the Telegram tab, save, and press <em>Send Test</em> at the bottom of the panel. A test message should arrive within a second; if it doesn't, the History section records the failure with the exact reason (invalid token, bot not in group, blocked by user, etc.)."
   },
@@ -226,7 +226,8 @@
     "togglesIntro": "Each channel independently controls categories and individual event types. Turning a category off suppresses its events for that channel. Individual event toggles apply within enabled categories; there is no global master-event filter in the dispatcher.",
     "togglesItems": [
       "<strong>Per-channel category toggle.</strong> For example, disabling the VM/CT category suppresses <code>vm_start</code> and its peers for that channel. Category preferences are stored as <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
-      "<strong>Per-channel event toggle.</strong> Within an enabled category, you can choose <em>send <code>backup_complete</code> to Discord but not Telegram</em>. Individual preferences are stored as <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+      "<strong>Per-channel event toggle.</strong> Within an enabled category, you can choose <em>send <code>backup_complete</code> to Discord but not Telegram</em>. Individual preferences are stored as <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>.",
+      "<strong>Per-category Telegram Topic ID.</strong> On Telegram, each enabled category also accepts an optional Topic ID override (<code>telegram.topic_id.&lt;group&gt;</code>). When set, events in that category route to that supergroup topic; when left empty, they fall back to the channel's <em>Default Topic ID</em>."
     ],
     "togglesOutro": "Each category header in the screenshot also shows the count of events <em>currently enabled</em> / <em>total</em> for that group, and a category-level toggle that flips every event inside it on or off in one click — the shortcut for muting a whole group (e.g. all <code>info</code> backups, all update-related events) without expanding the section."
   },

@@ -66,6 +66,7 @@ interface EventTypeInfo {
 interface ChannelOverrides {
   categories: Record<string, boolean>
   events: Record<string, boolean>
+  topics?: Record<string, string>
 }
 
 interface NotificationConfig {
@@ -696,6 +697,8 @@ export function NotificationSettings() {
   const renderChannelCategories = (chName: string) => {
     const overrides = config.channel_overrides?.[chName] || { categories: {}, events: {} }
     const evtByGroup = config.event_types_by_group || {}
+    const isTelegram = chName === "telegram"
+    const defaultTelegramTopic = isTelegram ? (config.channels.telegram?.topic_id || "").trim() : ""
     const eventTitle = (evt: EventTypeInfo) => {
       const key = `settings.notifications.eventTypes.${evt.type}`
       const translated = t(key)
@@ -712,6 +715,7 @@ export function NotificationSettings() {
           {EVENT_CATEGORIES.filter(cat => cat.key !== "other" && !(isPbs && PVE_ONLY_CATEGORIES.has(cat.key))).map(cat => {
             const isEnabled = overrides.categories[cat.key] ?? true
             const isExpanded = expandedCategories.has(`${chName}.${cat.key}`)
+            const categoryTopicId = isTelegram ? (overrides.topics?.[cat.key] || "") : ""
             // Hide the LXC update toggle when the user has disabled the
             // dedicated detection setting upstream. The backend still
             // returns the event type in the catalog (so its stored
@@ -754,6 +758,54 @@ export function NotificationSettings() {
                     }`}>{t(`settings.notifications.categories.${cat.key}.label`)}</span>
                   </div>
 
+                  {/* Per-category Telegram Topic ID override */}
+                  {isTelegram && isEnabled && !editMode && categoryTopicId.trim() && (
+                    <span
+                      className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 shrink-0"
+                      title={`${t("settings.notifications.ui.topicId")}: ${categoryTopicId.trim()}`}
+                    >
+                      #{categoryTopicId.trim()}
+                    </span>
+                  )}
+                  {isTelegram && isEnabled && editMode && (
+                    <div
+                      className="relative flex items-center shrink-0"
+                      onClick={e => e.stopPropagation()}
+                      onKeyDown={e => e.stopPropagation()}
+                    >
+                      <span className="pointer-events-none absolute left-2 z-10 text-[10px] font-mono text-muted-foreground/70">#</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        aria-label={`${t(`settings.notifications.categories.${cat.key}.label`)} ${t("settings.notifications.ui.topicId")}`}
+                        title={t("settings.notifications.ui.topicId")}
+                        placeholder={
+                          defaultTelegramTopic
+                            ? t("settings.notifications.ui.topicDefaultWithId", { id: defaultTelegramTopic })
+                            : t("settings.notifications.ui.topicDefault")
+                        }
+                        value={categoryTopicId}
+                        onChange={e => {
+                          const cleaned = e.target.value.replace(/[^\d]/g, "")
+                          updateConfig(p => {
+                            const ch = { ...(p.channel_overrides?.[chName] || { categories: {}, events: {} }) }
+                            return {
+                              ...p,
+                              channel_overrides: {
+                                ...p.channel_overrides,
+                                [chName]: {
+                                  ...ch,
+                                  topics: { ...(ch.topics || {}), [cat.key]: cleaned },
+                                },
+                              },
+                            }
+                          })
+                        }}
+                        className="h-6 w-24 sm:w-28 pl-4 pr-1.5 py-0 text-[11px] font-mono bg-background"
+                      />
+                    </div>
+                  )}
+
                   {/* Count badge */}
                   {isEnabled && eventsForGroup.length > 0 && (
                     <span className="text-[10px] text-muted-foreground tabular-nums">
@@ -786,7 +838,7 @@ export function NotificationSettings() {
                           ...p,
                           channel_overrides: {
                             ...p.channel_overrides,
-                            [chName]: { categories: { ...ch.categories, [cat.key]: newEnabled }, events: newEvents },
+                            [chName]: { ...ch, categories: { ...ch.categories, [cat.key]: newEnabled }, events: newEvents },
                           },
                         }
                       })
@@ -907,6 +959,11 @@ export function NotificationSettings() {
         if (overrides.events) {
           for (const [evt, enabled] of Object.entries(overrides.events)) {
             flat[`${chName}.event.${evt}`] = String(enabled)
+          }
+        }
+        if (overrides.topics) {
+          for (const [cat, topicId] of Object.entries(overrides.topics)) {
+            flat[`${chName}.topic_id.${cat}`] = String(topicId ?? "").trim()
           }
         }
       }
@@ -1557,7 +1614,7 @@ export function NotificationSettings() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.topicId")} <span className="text-muted-foreground/60">({t("settings.notifications.ui.optional")})</span></Label>
+                        <Label className="text-[11px] text-muted-foreground">{t("settings.notifications.ui.defaultTopicId")} <span className="text-muted-foreground/60">({t("settings.notifications.ui.optional")})</span></Label>
                         <Input
                           className={`h-7 text-xs font-mono ${!editMode ? "opacity-50" : ""}`}
                           placeholder="123456"
@@ -1565,7 +1622,7 @@ export function NotificationSettings() {
                           onChange={e => updateChannel("telegram", "topic_id", e.target.value)}
                           disabled={!editMode}
                         />
-                        <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.topicHint")}</p>
+                        <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.defaultTopicHint")}</p>
                       </div>
                       {/* Message format */}
                       <div className="flex items-center justify-between py-1">

@@ -1061,6 +1061,17 @@ class NotificationManager:
             'ai_allow_suggestions': self._config.get('ai_allow_suggestions', 'false'),
         }
     
+    def _telegram_category_topics(self) -> Dict[str, str]:
+        """Return configured per-category Telegram topic IDs ({group: topic_id})."""
+        topics: Dict[str, str] = {}
+        for group_key in EVENT_GROUPS:
+            if group_key == 'other':
+                continue
+            val = str(self._config.get(f'telegram.topic_id.{group_key}', '') or '').strip()
+            if val:
+                topics[group_key] = val
+        return topics
+
     def _rebuild_channels(self):
         """Rebuild channel instances from current config.
 
@@ -1078,12 +1089,14 @@ class NotificationManager:
                 continue
 
             # Gather config keys for this channel
-            ch_config = {}
+            ch_config: Dict[str, Any] = {}
             for config_key in CHANNEL_TYPES[ch_type]['config_keys']:
                 full_key = f'{ch_type}.{config_key}'
                 ch_config[config_key] = self._config.get(full_key, '')
             ch_config['rich_format'] = self._config.get(f'{ch_type}.rich_format', 'true')
             ch_config['rich_cards'] = self._config.get(f'{ch_type}.rich_cards', 'false')
+            if ch_type == 'telegram':
+                ch_config['category_topics'] = self._telegram_category_topics()
 
             channel = create_channel(ch_type, ch_config)
             if channel:
@@ -1629,6 +1642,7 @@ class NotificationManager:
                     )
                 
                 ch_data = dict(data) if data else {}
+                ch_data['_topic_group'] = event_group
                 ch_data['_use_rich_format'] = use_rich_format
                 ch_data['_use_rich_cards'] = use_rich_cards
                 result = channel.send(ch_title, ch_body, severity, ch_data)
@@ -2708,6 +2722,7 @@ class NotificationManager:
                 runtime_data['_backup_analysis'] = rendered['backup_analysis']
 
         data = runtime_data
+        _, event_group = self._filter_event(event_type, data)
         
         # AI config for enhancement
         ai_config = self._build_ai_config()
@@ -2754,6 +2769,7 @@ class NotificationManager:
                 rich_cards_key = f'{ch_name}.rich_cards'
                 use_rich_cards = self._config.get(rich_cards_key, 'false') == 'true'
                 ch_data = dict(data) if data else {}
+                ch_data['_topic_group'] = event_group
                 ch_data['_use_rich_format'] = use_rich_format
                 ch_data['_use_rich_cards'] = use_rich_cards
                 result = channel.send(ch_title, ch_message, severity, ch_data)
@@ -2830,11 +2846,13 @@ class NotificationManager:
             targets = {channel_name: self._channels[channel_name]}
         else:
             # Try to create channel from config even if not enabled
-            ch_config = {}
+            ch_config: Dict[str, Any] = {}
             for config_key in CHANNEL_TYPES.get(channel_name, {}).get('config_keys', []):
                 ch_config[config_key] = self._config.get(f'{channel_name}.{config_key}', '')
             ch_config['rich_format'] = self._config.get(f'{channel_name}.rich_format', 'true')
             ch_config['rich_cards'] = self._config.get(f'{channel_name}.rich_cards', 'false')
+            if channel_name == 'telegram':
+                ch_config['category_topics'] = self._telegram_category_topics()
             
             channel = create_channel(channel_name, ch_config)
             if channel:
@@ -3164,7 +3182,7 @@ class NotificationManager:
         # Defaults: categories default to true, events default to template default_enabled.
         channel_overrides = {}
         for ch_type in CHANNEL_TYPES:
-            ch_overrides = {'categories': {}, 'events': {}}
+            ch_overrides: Dict[str, Any] = {'categories': {}, 'events': {}}
             for group_key in EVENT_GROUPS:
                 saved = self._config.get(f'{ch_type}.events.{group_key}')
                 ch_overrides['categories'][group_key] = (saved or 'true') == 'true'
@@ -3172,6 +3190,12 @@ class NotificationManager:
                 default = 'true' if tmpl.get('default_enabled', True) else 'false'
                 saved = self._config.get(f'{ch_type}.event.{event_type_key}')
                 ch_overrides['events'][event_type_key] = (saved or default) == 'true'
+            if ch_type == 'telegram':
+                ch_overrides['topics'] = {
+                    group_key: self._config.get(f'telegram.topic_id.{group_key}', '')
+                    for group_key in EVENT_GROUPS
+                    if group_key != 'other'
+                }
             channel_overrides[ch_type] = ch_overrides
         
         # Build AI detail levels per channel
@@ -3276,8 +3300,9 @@ class NotificationManager:
     
     def save_settings(self, settings: Dict[str, str]) -> Dict[str, Any]:
         """Save multiple notification settings at once."""
+        previous_config = dict(self._config)
+        conn = None
         try:
-            previous_config = dict(self._config)
             conn = sqlite3.connect(str(DB_PATH), timeout=10)
             conn.execute('PRAGMA journal_mode=WAL')
             conn.execute('PRAGMA busy_timeout=5000')
@@ -3342,6 +3367,18 @@ class NotificationManager:
                         raise ValueError(
                             f"Invalid notification_language: must be one of {RUNTIME_NOTIFICATION_LANGUAGES}"
                         )
+
+                # Validate Telegram topic IDs (default and per-category):
+                # empty string clears the topic; otherwise require a positive integer.
+                if short_key == 'telegram.topic_id' or short_key.startswith('telegram.topic_id.'):
+                    if short_key.startswith('telegram.topic_id.'):
+                        topic_group = short_key[len('telegram.topic_id.'):]
+                        if topic_group not in EVENT_GROUPS or topic_group == 'other':
+                            raise ValueError(f"Invalid Telegram topic category: {topic_group}")
+                    raw_topic = str(value).strip() if value is not None else ''
+                    if raw_topic and (not raw_topic.isdigit() or int(raw_topic) <= 0):
+                        raise ValueError("Invalid Telegram topic ID: must be a positive integer")
+                    value = raw_topic
 
                 # Encrypt sensitive values before storing. Skip if the value is
                 # already in either encrypted form — `encrypt_sensitive_value`
@@ -3444,6 +3481,13 @@ class NotificationManager:
                 result['pve_webhook'] = pve_webhook_result
             return result
         except Exception as e:
+            self._config = previous_config
+            if conn is not None:
+                try:
+                    conn.rollback()
+                    conn.close()
+                except Exception:
+                    pass
             return {'success': False, 'error': str(e)}
 
 
