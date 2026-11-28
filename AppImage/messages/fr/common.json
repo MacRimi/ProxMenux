@@ -4195,7 +4195,15 @@
       "ociNewApps": "Nouveautés du catalogue OCI — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX et dix autres applications, et Ollama et llama.cpp fonctionnent sur les GPU intégrés Intel et AMD.",
       "hostUpdateJob": "Des mises à jour Proxmox qui continuent après la déconnexion — la mise à jour s’exécute comme une tâche sur le serveur et se rouvre à la reconnexion. Un redémarrage en attente s’affiche après un nouveau noyau, avec un bouton qui vérifie d’abord l’hôte.",
       "storageDetails": "Détails du stockage — les pools ZFS affichent leur structure, leur scrub et l’état de leurs périphériques, et chaque disque indique son contrôleur, y compris sur la page Matériel. Les seuils de disque des VM arrivent dans les Paramètres.",
-      "log2ramV2": "Log2RAM 2.0 — le journal et les journaux de tâches de Proxmox restent sur disque avec leur historique, et seuls les journaux qui changent sans cesse vont en RAM. Les hôtes qui l’utilisent déjà se mettent à jour avec ProxMenux."
+      "log2ramV2": "Log2RAM 2.0 — le journal et les journaux de tâches de Proxmox restent sur disque avec leur historique, et seuls les journaux qui changent sans cesse vont en RAM. Les hôtes qui l’utilisent déjà se mettent à jour avec ProxMenux.",
+      "users": "Plusieurs utilisateurs, chacun avec son profil — utilisateurs locaux, comptes Proxmox VE et connexion OpenID Connect, avec des profils fixes ou personnalisés qui définissent ce que chacun voit et peut faire, et un journal des accès indiquant qui a fait quoi.",
+      "menuxTab": "Onglet Menux — tout ce que ProxMenux peut installer ou exécuter au même endroit : applications OCI, machines virtuelles et Community Scripts, chacun avec sa fiche et installable depuis le Monitor.",
+      "lxcFromMonitor": "Créer et supprimer des LXC depuis le Monitor — de nouveaux conteneurs à partir d'un modèle Proxmox officiel, les conteneurs OCI comme type à part entière et une liste compacte des VM et LXC.",
+      "pbsMonitor": "Proxmox Backup Server — le Monitor fonctionne sur un PBS avec ses propres comptes et profils, et affiche son réseau et son matériel.",
+      "arm64": "ARM64 — ProxMenux Monitor fonctionne nativement sur les hôtes ARM64 (contribution de @domotick et @jcastro), et un hôte ARM ne se voit proposer que ce qui fonctionne sur ARM.",
+      "ociEngine": "OCI manager Apps — Mettre à jour et Modifier fonctionnent sur Proxmox VE 9.2.33 et versions ultérieures, les mises à jour sont plus rapides, une mise à jour échouée restaure d'elle-même l'installation précédente, et de nombreuses applications rejoignent le catalogue.",
+      "notifications": "Notifications — cartes enrichies Telegram et un sujet pour chaque catégorie dans un supergroupe (contribution de @devil1210 et @ilopmar), et Messages enrichis pour Apprise.",
+      "russian": "Russe — le Monitor, ses notifications, les menus de la console et la documentation sont disponibles en russe (suggéré par @Umnov91)."
     }
   },
   "network": {

@@ -19,6 +19,26 @@ interface ReleaseNote {
 }
 
 export const CHANGELOG: Record<string, ReleaseNote> = {
+  "1.2.9": {
+    date: "November 30, 2026",
+    changes: {
+      added: [
+        "Several users with fixed or custom profiles, sign-in with Proxmox VE accounts and OpenID Connect (contributed by @jcastro), and an access log.",
+        "The Menux tab gathers OCI applications, virtual machines and Community Scripts, and LXC can be created and removed from the Monitor.",
+        "ProxMenux Monitor on Proxmox Backup Server with its own accounts and profiles, and natively on ARM64 hosts (contributed by @domotick and @jcastro).",
+        "Telegram rich cards (contributed by @devil1210), a Telegram topic for each category (contributed by @ilopmar) and Rich messages for Apprise.",
+        "The Monitor, notifications, menus and documentation in Russian (suggested by @Umnov91).",
+      ],
+      changed: [
+        "OCI manager Apps: Update and Modify work on Proxmox VE 9.2.33 and later, updates are faster and a failed update restores the previous installation by itself.",
+        "How often the Monitor reads CPU, memory and temperature can be changed, and the Overview follows the host live.",
+      ],
+      fixed: [
+        "Four security issues in ProxMenux Monitor (reported by Rajan Nagarajan, Liam Giannini, hackchang and IS).",
+        "A restored OCI application can write to its volumes again, and images with absolute paths in their layers install.",
+      ],
+    },
+  },
   "1.2.8": {
     date: "November 2, 2026",
     changes: {
@@ -364,39 +384,44 @@ export const CHANGELOG: Record<string, ReleaseNote> = {
 // that haven't been curated by hand.
 const CURRENT_VERSION_FEATURES = [
   {
+    icon: <Shield className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.users",
+    text: "Several users, each with a profile — local users, Proxmox VE accounts and OpenID Connect sign-in, with fixed or custom profiles that choose what each one sees and does, and an access log of who did what.",
+  },
+  {
     icon: <Package className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.composeStacks",
-    text: "Compose files with several services — Custom image installs one LXC per service on a private network, started in dependency order. Updates, backups and removal work on the whole application.",
+    key: "releaseNotes.currentFeatures.menuxTab",
+    text: "Menux tab — everything ProxMenux can install or run in one place: OCI applications, virtual machines and Community Scripts, each with its own sheet and installed from the Monitor.",
+  },
+  {
+    icon: <Server className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.lxcFromMonitor",
+    text: "Create and remove LXC from the Monitor — new containers from an official Proxmox template, OCI containers as their own type, and a compact list of VMs and LXC.",
+  },
+  {
+    icon: <DatabaseBackup className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.pbsMonitor",
+    text: "Proxmox Backup Server — the Monitor runs on a PBS with its own accounts and profiles, and shows its network and hardware.",
+  },
+  {
+    icon: <Cpu className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.arm64",
+    text: "ARM64 — ProxMenux Monitor runs natively on ARM64 hosts (contributed by @domotick and @jcastro), and an ARM host is offered only what runs on ARM.",
   },
   {
     icon: <RefreshCw className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.keepProxmoxChanges",
-    text: "OCI updates keep what you change in Proxmox — variables, start command, network options, DNS, features, disk sizes and lxc.* lines stay on the rebuilt container, also in scheduled updates and on every member of a stack.",
+    key: "releaseNotes.currentFeatures.ociEngine",
+    text: "OCI manager Apps — Update and Modify work on Proxmox VE 9.2.33 and later, updates are faster, a failed update restores the previous installation by itself, and many new applications join the catalog.",
   },
   {
-    icon: <Globe className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociVlan",
-    text: "VLAN tag for OCI applications — the advanced installation asks for it next to the address, and Modify changes it on a single application. The host needs no access to that VLAN.",
+    icon: <Bell className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.notifications",
+    text: "Notifications — Telegram rich cards and a topic for each category in a supergroup (contributed by @devil1210 and @ilopmar), and Rich messages for Apprise.",
   },
   {
-    icon: <Sparkles className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.ociNewApps",
-    text: "New in the OCI catalog — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX and ten more applications, and Ollama and llama.cpp run on Intel and AMD integrated GPUs.",
-  },
-  {
-    icon: <ArrowUpCircle className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.hostUpdateJob",
-    text: "Proxmox updates that carry on after signing out — the update runs as a job on the server and signing back in reopens it. A pending reboot is shown after a new kernel, with a restart button that checks the host first.",
-  },
-  {
-    icon: <HardDrive className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.storageDetails",
-    text: "Storage details — ZFS pools show their layout, scrub and device health, and each disk shows the storage controller it hangs off, also in the Hardware page. VM disk thresholds join Settings.",
-  },
-  {
-    icon: <Zap className="h-5 w-5" />,
-    key: "releaseNotes.currentFeatures.log2ramV2",
-    text: "Log2RAM 2.0 — the journal and the task logs of Proxmox stay on disk with their history, and only the logs that change all the time go to RAM. Installed hosts update to it with ProxMenux.",
+    icon: <Languages className="h-5 w-5" />,
+    key: "releaseNotes.currentFeatures.russian",
+    text: "Russian — the Monitor, its notifications, the console menus and the documentation are available in Russian (suggested by @Umnov91).",
   },
 ]
 

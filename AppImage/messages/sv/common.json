@@ -2521,7 +2521,7 @@
         "defaultTopicHint": "För supergrupper med ämnen aktiverade. Används när en kategori saknar ett eget ämnes-ID.",
         "topicDefault": "standard",
         "topicDefaultWithId": "standard ({id})",
-        "richMessages": "Riktiga meddelanden",
+        "richMessages": "Formaterade meddelanden",
         "richMessagesDescription": "Berika meddelanden med kontextuella emojis och ikoner",
         "sendTest": "Skicka test",
         "enableGotify": "Aktivera Gotify",
@@ -4195,7 +4195,15 @@
       "ociNewApps": "Nytt i OCI-katalogen — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX och tio program till, och Ollama och llama.cpp körs på integrerade GPU:er från Intel och AMD.",
       "hostUpdateJob": "Proxmox-uppdateringar som fortsätter efter utloggning — uppdateringen körs som ett jobb på servern och öppnas igen när du loggar in. Efter en ny kärna visas en väntande omstart, med en knapp som först kontrollerar värden.",
       "storageDetails": "Lagringsdetaljer — ZFS-pooler visar sin struktur, scrub och enheternas hälsa, och varje disk visar sin lagringskontroller, även på sidan Hårdvara. Tröskelvärden för VM-diskar finns nu i Inställningar.",
-      "log2ramV2": "Log2RAM 2.0 — journalen och Proxmox uppgiftsloggar stannar på disken med sin historik, och bara loggar som ändras hela tiden går till RAM. Värdar som redan använder det uppdateras med ProxMenux."
+      "log2ramV2": "Log2RAM 2.0 — journalen och Proxmox uppgiftsloggar stannar på disken med sin historik, och bara loggar som ändras hela tiden går till RAM. Värdar som redan använder det uppdateras med ProxMenux.",
+      "users": "Flera användare, var och en med sin profil — lokala användare, Proxmox VE-konton och inloggning med OpenID Connect, med fasta eller anpassade profiler som avgör vad var och en ser och får göra, och en åtkomstlogg som visar vem som gjorde vad.",
+      "menuxTab": "Fliken Menux — allt som ProxMenux kan installera eller köra på ett ställe: OCI-program, virtuella maskiner och Community Scripts, vart och ett med sitt eget faktablad och installation från Monitor.",
+      "lxcFromMonitor": "Skapa och ta bort LXC från Monitor — nya containrar från en officiell Proxmox-mall, OCI-containrar som en egen typ och en kompakt lista över VM och LXC.",
+      "pbsMonitor": "Proxmox Backup Server — Monitor körs på en PBS med dess egna konton och profiler och visar dess nätverk och hårdvara.",
+      "arm64": "ARM64 — ProxMenux Monitor körs nativt på ARM64-värdar (bidrag av @domotick och @jcastro), och en ARM-värd erbjuds bara det som fungerar på ARM.",
+      "ociEngine": "OCI manager Apps — Uppdatera och Ändra fungerar i Proxmox VE 9.2.33 och senare, uppdateringar går snabbare, en misslyckad uppdatering återställer den tidigare installationen av sig själv, och många nya program kommer till katalogen.",
+      "notifications": "Aviseringar — Rich cards för Telegram och ett eget ämne för varje kategori i en supergrupp (bidrag av @devil1210 och @ilopmar), och Formaterade meddelanden för Apprise.",
+      "russian": "Ryska — Monitor, dess aviseringar, konsolmenyerna och dokumentationen finns på ryska (föreslaget av @Umnov91)."
     }
   },
   "network": {

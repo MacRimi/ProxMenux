@@ -4195,7 +4195,15 @@
       "ociNewApps": "Novidades no catálogo OCI — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX e mais dez aplicações, e o Ollama e o llama.cpp funcionam em GPU integradas Intel e AMD.",
       "hostUpdateJob": "Atualizações do Proxmox que continuam após encerrar a sessão — a atualização é executada como uma tarefa no servidor e reabre ao voltar a entrar. Após um novo kernel é mostrado o reinício pendente, com um botão que verifica primeiro o host.",
       "storageDetails": "Detalhes do armazenamento — os pools ZFS mostram sua estrutura, scrub e estado dos dispositivos, e cada disco mostra sua controladora, também na página de Hardware. Os limites de disco das VM chegam às Configurações.",
-      "log2ramV2": "Log2RAM 2.0 — o journal e os registros de tarefas do Proxmox ficam em disco com seu histórico, e só os registros que mudam constantemente vão para a RAM. Os hosts que já o usam atualizam-se com o ProxMenux."
+      "log2ramV2": "Log2RAM 2.0 — o journal e os registros de tarefas do Proxmox ficam em disco com seu histórico, e só os registros que mudam constantemente vão para a RAM. Os hosts que já o usam atualizam-se com o ProxMenux.",
+      "users": "Vários usuários, cada um com seu perfil — usuários locais, contas do Proxmox VE e login com OpenID Connect, com perfis fixos ou personalizados que definem o que cada um vê e pode fazer, e um registro de acessos que mostra quem fez o quê.",
+      "menuxTab": "Aba Menux — tudo o que o ProxMenux pode instalar ou executar em um só lugar: aplicativos OCI, máquinas virtuais e Community Scripts, cada um com sua ficha e instalação pelo Monitor.",
+      "lxcFromMonitor": "Criar e remover LXC pelo Monitor — novos contêineres a partir de um template oficial do Proxmox, os contêineres OCI como tipo próprio e uma lista compacta de VMs e LXC.",
+      "pbsMonitor": "Proxmox Backup Server — o Monitor funciona em um PBS com suas próprias contas e perfis, e mostra sua rede e seu hardware.",
+      "arm64": "ARM64 — o ProxMenux Monitor funciona de forma nativa em hosts ARM64 (contribuição de @domotick e @jcastro), e um host ARM recebe apenas o que funciona em ARM.",
+      "ociEngine": "OCI manager Apps — Atualizar e Modificar funcionam no Proxmox VE 9.2.33 e posteriores, as atualizações são mais rápidas, uma atualização que falha restaura sozinha a instalação anterior e muitos aplicativos novos chegam ao catálogo.",
+      "notifications": "Notificações — cartões avançados do Telegram e um tópico para cada categoria em um supergrupo (contribuição de @devil1210 e @ilopmar), e Mensagens ricas para o Apprise.",
+      "russian": "Russo — o Monitor, suas notificações, os menus do console e a documentação estão disponíveis em russo (sugerido por @Umnov91)."
     }
   },
   "network": {

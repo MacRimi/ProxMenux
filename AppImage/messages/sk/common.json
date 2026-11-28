@@ -4346,7 +4346,15 @@
       "ociNewApps": "Novinky v katalógu OCI — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX a ďalších desať aplikácií. Ollama a llama.cpp teraz fungujú aj s integrovanými GPU Intel a AMD.",
       "hostUpdateJob": "Aktualizácie Proxmoxu pokračujú aj po odhlásení — bežia ako úloha na serveri a po opätovnom prihlásení sa ich priebeh znova otvorí. Po inštalácii nového jadra sa zobrazí požadovaný reštart s tlačidlom, ktoré najprv skontroluje server.",
       "storageDetails": "Podrobnosti úložiska — pri ZFS pooloch sa zobrazuje ich rozloženie, kontrola integrity a stav zariadení. Každý disk má uvedený svoj radič, aj na stránke Hardvér. V Nastaveniach pribudli prahové hodnoty zaplnenia diskov VM.",
-      "log2ramV2": "Log2RAM 2.0 — žurnál a záznamy úloh Proxmoxu zostávajú na disku aj so svojou históriou. Do RAM sa ukladajú iba priebežne sa meniace záznamy. Na serveroch, ktoré už Log2RAM používajú, sa nová verzia nainštaluje pri aktualizácii ProxMenuxu."
+      "log2ramV2": "Log2RAM 2.0 — žurnál a záznamy úloh Proxmoxu zostávajú na disku aj so svojou históriou. Do RAM sa ukladajú iba priebežne sa meniace záznamy. Na serveroch, ktoré už Log2RAM používajú, sa nová verzia nainštaluje pri aktualizácii ProxMenuxu.",
+      "users": "Viacero používateľov, každý so svojím profilom — lokálni používatelia, účty Proxmox VE a prihlásenie cez OpenID Connect, s pevnými alebo vlastnými profilmi, ktoré určujú, čo kto vidí a môže robiť, a záznam prístupov, ktorý ukazuje, kto čo urobil.",
+      "menuxTab": "Karta Menux — všetko, čo ProxMenux dokáže nainštalovať alebo spustiť, na jednom mieste: aplikácie OCI, virtuálne stroje a Community Scripts, každá s vlastnou kartou a s inštaláciou z Monitora.",
+      "lxcFromMonitor": "Vytváranie a odstraňovanie LXC z Monitora — nové kontajnery z oficiálnej šablóny Proxmoxu, kontajnery OCI ako samostatný typ a kompaktný zoznam VM a LXC.",
+      "pbsMonitor": "Proxmox Backup Server — Monitor beží na PBS s jeho vlastnými účtami a profilmi a zobrazuje jeho sieť a hardvér.",
+      "arm64": "ARM64 — ProxMenux Monitor beží natívne na hostiteľoch ARM64 (prispeli @domotick a @jcastro) a hostiteľovi ARM sa ponúka len to, čo na ARM funguje.",
+      "ociEngine": "OCI manager Apps — Aktualizovať a Upraviť fungujú v Proxmox VE 9.2.33 a novších, aktualizácie sú rýchlejšie, neúspešná aktualizácia sama obnoví predchádzajúcu inštaláciu a do katalógu pribudlo mnoho nových aplikácií.",
+      "notifications": "Notifikácie — rozšírené karty Telegramu a samostatná téma pre každú kategóriu v superskupine (prispeli @devil1210 a @ilopmar) a Rozšírené správy pre Apprise.",
+      "russian": "Ruština — Monitor, jeho notifikácie, ponuky konzoly a dokumentácia sú dostupné v ruštine (navrhol @Umnov91)."
     }
   },
   "network": {

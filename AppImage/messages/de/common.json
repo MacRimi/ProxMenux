@@ -2521,7 +2521,7 @@
         "defaultTopicHint": "Für Supergruppen mit aktivierten Themen. Wird verwendet, wenn eine Kategorie keine eigene Themen-ID hat.",
         "topicDefault": "Standard",
         "topicDefaultWithId": "Standard ({id})",
-        "richMessages": "Reichhaltige Botschaften",
+        "richMessages": "Rich-Nachrichten",
         "richMessagesDescription": "Bereichern Sie Benachrichtigungen mit kontextbezogenen Emojis und Symbolen",
         "sendTest": "Test senden",
         "enableGotify": "Aktivieren Sie Gotify",
@@ -4195,7 +4195,15 @@
       "ociNewApps": "Neu im OCI-Katalog — Authentik, TeslaMate, Zigbee2MQTT, Scanopy, Umami, Scrypted, NetAlertX und zehn weitere Anwendungen, und Ollama und llama.cpp laufen auf integrierten GPUs von Intel und AMD.",
       "hostUpdateJob": "Proxmox-Updates, die nach dem Abmelden weiterlaufen — das Update läuft als Auftrag auf dem Server und öffnet sich bei der erneuten Anmeldung wieder. Nach einem neuen Kernel wird ein ausstehender Neustart angezeigt, mit einer Schaltfläche, die zuerst den Host prüft.",
       "storageDetails": "Speicherdetails — ZFS-Pools zeigen Aufbau, Scrub und Gerätezustand, und jede Festplatte zeigt ihren Speichercontroller, auch auf der Hardware-Seite. Die Schwellenwerte für VM-Festplatten kommen in die Einstellungen.",
-      "log2ramV2": "Log2RAM 2.0 — das Journal und die Aufgabenprotokolle von Proxmox bleiben mit ihrem Verlauf auf der Festplatte, und nur ständig wechselnde Protokolle kommen in den RAM. Bestehende Installationen werden mit ProxMenux aktualisiert."
+      "log2ramV2": "Log2RAM 2.0 — das Journal und die Aufgabenprotokolle von Proxmox bleiben mit ihrem Verlauf auf der Festplatte, und nur ständig wechselnde Protokolle kommen in den RAM. Bestehende Installationen werden mit ProxMenux aktualisiert.",
+      "users": "Mehrere Benutzer mit jeweils eigenem Profil — lokale Benutzer, Proxmox-VE-Konten und Anmeldung über OpenID Connect, mit festen oder eigenen Profilen, die festlegen, was jeder sieht und tun darf, und ein Zugriffsprotokoll, das zeigt, wer was getan hat.",
+      "menuxTab": "Menux-Tab — alles, was ProxMenux installieren oder ausführen kann, an einem Ort: OCI-Anwendungen, virtuelle Maschinen und Community Scripts, jeweils mit eigenem Steckbrief und direkt aus dem Monitor installierbar.",
+      "lxcFromMonitor": "LXC im Monitor erstellen und entfernen — neue Container aus einer offiziellen Proxmox-Vorlage, OCI-Container als eigener Typ und eine kompakte Liste der VMs und LXC.",
+      "pbsMonitor": "Proxmox Backup Server — der Monitor läuft auf einem PBS mit dessen eigenen Konten und Profilen und zeigt sein Netzwerk und seine Hardware.",
+      "arm64": "ARM64 — ProxMenux Monitor läuft nativ auf ARM64-Hosts (beigetragen von @domotick und @jcastro), und einem ARM-Host wird nur angeboten, was auf ARM läuft.",
+      "ociEngine": "OCI manager Apps — Aktualisieren und Ändern funktionieren unter Proxmox VE 9.2.33 und neuer, Updates sind schneller, ein fehlgeschlagenes Update stellt die vorherige Installation selbst wieder her, und viele neue Anwendungen kommen in den Katalog.",
+      "notifications": "Benachrichtigungen — Rich Cards für Telegram und ein eigenes Thema pro Kategorie in einer Supergruppe (beigetragen von @devil1210 und @ilopmar) sowie Rich-Nachrichten für Apprise.",
+      "russian": "Russisch — der Monitor, seine Benachrichtigungen, die Konsolenmenüs und die Dokumentation sind auf Russisch verfügbar (vorgeschlagen von @Umnov91)."
     }
   },
   "network": {
