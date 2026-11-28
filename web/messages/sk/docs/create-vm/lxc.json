@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Kedy sa nedá odstrániť z Monitora",
-            "body": "Monitor odstraňuje len kontajnery s jediným koreňovým diskom a bez špeciálnej konfigurácie. Odmietne okrem iného spustený, chránený alebo uzamknutý kontajner, kontajner s bodom pripojenia alebo nepoužívaným diskom, kontajner s adresárom hostiteľa a kontajner so zariadeniami USB, Coral USB alebo GPU NVIDIA, ktoré pridávajú surové nastavenia LXC. Dôvod sa zobrazí v dialógu a takéto kontajnery sa odstraňujú z Proxmoxu. Keď je jediným dôvodom ochrana proti odstráneniu, dialóg ponúkne <strong>Vypnúť ochranu…</strong> a potom kontajner odstráni."
+            "body": "Monitor odstraňuje len kontajnery s jediným koreňovým diskom a bez špeciálnej konfigurácie. Odmietne okrem iného spustený, chránený alebo uzamknutý kontajner, kontajner s bodom pripojenia alebo nepoužívaným diskom, kontajner s adresárom hostiteľa a kontajner so zariadeniami USB, Coral USB alebo GPU NVIDIA, ktoré pridávajú surové nastavenia LXC. Dôvod sa zobrazí v dialógu. Kontajnery, ktoré Monitor nedokáže odstrániť, odstráňte v rozhraní Proxmoxu. Ak je jedinou prekážkou ochrana pred odstránením, vyberte <strong>Vypnúť ochranu…</strong> a potvrďte zmenu. Monitor kontajner znova skontroluje. Ak ho možno odstrániť, zadajte jeho ID a vyberte Odstrániť LXC."
           }
         }
       ]
