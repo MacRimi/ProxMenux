@@ -458,12 +458,9 @@ const fetcher = async (url: string) => {
 }
 
 const formatBytes = (bytes: number | undefined, isNetwork: boolean = false): string => {
-  if (!bytes || bytes === 0) return isNetwork ? "0 B/s" : "0 B"
-  
-  if (isNetwork) {
-    const networkUnit = getNetworkUnit()
-    return formatNetworkTraffic(bytes, networkUnit, 2)
-  }
+  // Network values here are totals since the guest started, never rates.
+  if (isNetwork) return formatNetworkTraffic(bytes || 0, getNetworkUnit(), 2)
+  if (!bytes) return "0 B"
   
   // For non-network (disk), use standard bytes
   const k = 1024
