@@ -1091,7 +1091,7 @@ export function NetworkFlow({
       <CardHeader className="p-0">
         <button type="button" onClick={toggleFolded} aria-expanded={!folded}
           className="flex w-full items-center gap-3 p-6 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
-          <CardTitle className="text-foreground flex flex-1 items-center text-base">
+          <CardTitle className="text-foreground flex flex-1 items-center">
             <Activity className="h-5 w-5 mr-2" />
             {t("network.flow.title")}
           </CardTitle>
