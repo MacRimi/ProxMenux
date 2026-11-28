@@ -1431,7 +1431,7 @@
   "Communication & Community": "Comunicación y comunidad",
   "Communications": "Comunicaciones",
   "Community Home Assistant OS image, derived from HAOS One, adapted as a native Proxmox OCI LXC with persistent Supervisor, Core, add-ons and backups under /mnt/data.": "Imagen comunitaria de Home Assistant OS, derivada de HAOS One, adaptada como LXC OCI nativo de Proxmox con Supervisor, Core, complementos y backups persistentes en /mnt/data.",
-  "Community Scripts": "Scripts comunitarios",
+  "Community Scripts": "Community Scripts",
   "Community Scripts logo applied": "Logotipo de Community Scripts aplicado",
   "Community packaging by Dockur; not an official Proxmox container image.": "Empaquetado comunitario de Dockur; no es una imagen de contenedor oficial de Proxmox.",
   "Community single-container Home Assistant OS image": "Imagen comunitaria de Home Assistant OS en un solo contenedor",

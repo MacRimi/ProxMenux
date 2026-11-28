@@ -86,7 +86,7 @@
       "<strong>Anpassningsbar lista:</strong> alternativ som bara gäller Proxmox VE visas inte: gästagent, VFIO IOMMU, Open vSwitch, hastighet för vzdump-backuper, pigz, Appliance Manager, Ceph, hög tillgänglighet och OVH Real Time Monitoring.",
       "<strong>Prenumerationsbanner:</strong> patchen gäller webbgränssnittet för Proxmox Backup Server, och Avinstallera optimeringar återställer det.",
       "<strong>Figurine:</strong> installeras utan Proxmox VE-aliasen.",
-      "<strong>Communityskript:</strong> avsnittet erbjuder <em>Proxmox Backup Server Post Install</em> och <em>Proxmox Backup Server Microcode</em> i stället för Proxmox VE-skripten."
+      "<strong>Community Scripts:</strong> avsnittet erbjuder <em>Proxmox Backup Server Post Install</em> och <em>Proxmox Backup Server Microcode</em> i stället för Proxmox VE-skripten."
     ]
   },
   "related": {

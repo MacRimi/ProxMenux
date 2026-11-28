@@ -86,7 +86,7 @@
       "<strong>Lista personalizável:</strong> as opções que só se aplicam ao Proxmox VE não são mostradas: agente convidado, VFIO IOMMU, Open vSwitch, velocidade dos backups vzdump, pigz, Appliance Manager, Ceph, alta disponibilidade e OVH Real Time Monitoring.",
       "<strong>Banner de assinatura:</strong> o patch aplica-se à interface web do Proxmox Backup Server, e Desinstalar otimizações o restaura.",
       "<strong>Figurine:</strong> é instalado sem os aliases do Proxmox VE.",
-      "<strong>Scripts da comunidade:</strong> a seção oferece <em>Proxmox Backup Server Post Install</em> e <em>Proxmox Backup Server Microcode</em> em vez dos scripts do Proxmox VE."
+      "<strong>Community Scripts:</strong> a seção oferece <em>Proxmox Backup Server Post Install</em> e <em>Proxmox Backup Server Microcode</em> em vez dos scripts do Proxmox VE."
     ]
   },
   "related": {

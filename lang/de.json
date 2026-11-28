@@ -1432,7 +1432,7 @@
   "Common root for the published views": "Gemeinsame Wurzel für die veröffentlichten Ansichten",
   "Communication & Community": "Kommunikation und Community",
   "Community Home Assistant OS image, derived from HAOS One, adapted as a native Proxmox OCI LXC with persistent Supervisor, Core, add-ons and backups under /mnt/data.": "Community-Image für Home Assistant OS, abgeleitet von HAOS One, angepasst als nativer Proxmox-OCI-LXC mit persistentem Supervisor, Core, Add-ons und Backups unter /mnt/data.",
-  "Community Scripts": "Community-Skripte",
+  "Community Scripts": "Community Scripts",
   "Community Scripts logo applied": "Community-Scripts-Logo angewendet",
   "Community packaging by Dockur; not an official Proxmox container image.": "Community-Paket von Dockur; kein offizielles Proxmox-Container-Image.",
   "Community single-container Home Assistant OS image": "Einbehälter-Bild in der Gemeinschaft Home Assistant OS",

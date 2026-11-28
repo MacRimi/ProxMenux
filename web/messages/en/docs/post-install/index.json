@@ -86,7 +86,7 @@
       "<strong>Customizable list:</strong> the options that only apply to Proxmox VE are not listed: guest agent, VFIO IOMMU, Open vSwitch, vzdump backup speed, pigz, Appliance Manager, Ceph, High Availability and OVH Real Time Monitoring.",
       "<strong>Subscription banner:</strong> the patch applies to the Proxmox Backup Server web interface, and Uninstall Optimizations restores it.",
       "<strong>Figurine:</strong> installs without the Proxmox VE aliases.",
-      "<strong>Community scripts:</strong> the section offers <em>Proxmox Backup Server Post Install</em> and <em>Proxmox Backup Server Microcode</em> in place of the Proxmox VE scripts."
+      "<strong>Community Scripts:</strong> the section offers <em>Proxmox Backup Server Post Install</em> and <em>Proxmox Backup Server Microcode</em> in place of the Proxmox VE scripts."
     ]
   },
   "related": {
