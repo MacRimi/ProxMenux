@@ -120,10 +120,10 @@
       "Lägg till boten som medlem i gruppen och ge den administratörsrättigheter om det krävs för att skicka meddelanden.",
       "Skicka ett meddelande i gruppen.",
       "Öppna <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> i en webbläsare. Leta efter <code>chat.id</code> i JSON-svaret - för grupper är det ett negativt nummer, för supergrupper börjar det med <code>-100</code>.",
-      "För supergrupper med <em>Ämnen</em> aktiverat: hämta även önskat <code>message_thread_id</code> och fyll i det valfria fältet <em>Ämnes-ID</em>."
+      "För supergrupper med <em>Ämnen</em> aktiverat: hämta även önskat <code>message_thread_id</code>. Ange det i <em>Standardämnes-ID (valfritt)</em> som allmänt mål, eller ge varje aviseringskategori (till exempel Säkerhetskopieringar, Säkerhet eller Lagring) ett eget ämne i redigeringsläget."
     ],
-    "groupAlt": "Telegram-formulär med maskerad bottoken, negativt chatt-ID som börjar med -100 för en supergrupp och ämnes-ID 3 för en särskild tråd",
-    "groupCaption": "Supergrupp: chatt-ID börjar med <code>-100…</code>. Det valfria fältet <em>Ämnes-ID</em> väljer en särskild tråd.",
+    "groupAlt": "Telegram-formulär med maskerad bottoken, negativt chatt-ID som börjar med -100 för en supergrupp och standardämnes-ID 3 som allmänt mål",
+    "groupCaption": "Supergrupp: chatt-ID börjar med <code>-100…</code>. <em>Standardämnes-ID</em> anger den allmänna tråden, och varje kategori kan använda ett eget ämne.",
     "step3Title": "3 · Spara och testa",
     "step3Body": "Klistra in token och chatt-ID, spara och välj <em>Skicka test</em> längst ned. Testet bör komma inom en sekund. Annars visar Historik orsaken, till exempel ogiltig token, boten saknas i gruppen eller användaren har blockerat den."
   },
@@ -226,7 +226,8 @@
     "togglesIntro": "Varje kanal styr sina kategorier och händelsetyper. En avstängd kategori stoppar dess händelser för kanalen. Enskilda händelseval gäller inom aktiverade kategorier; sändningshanteraren har inget globalt huvudfilter för händelser.",
     "togglesItems": [
       "<strong>Kategorival per kanal.</strong> Avstängd VM/CT-kategori stoppar <code>vm_start</code> och liknande händelser för kanalen. Valet lagras som <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
-      "<strong>Händelseval per kanal.</strong> I en aktiverad kategori kan du välja att <em>skicka <code>backup_complete</code> till Discord men inte Telegram</em>. Valet lagras som <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+      "<strong>Händelseval per kanal.</strong> I en aktiverad kategori kan du välja att <em>skicka <code>backup_complete</code> till Discord men inte Telegram</em>. Valet lagras som <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>.",
+      "<strong>Telegram-ämne per kategori.</strong> I Telegram tar varje aktiverad kategori även emot ett eget ämnes-ID (<code>telegram.topic_id.&lt;group&gt;</code>). När det är angivet går kategorins händelser till det ämnet i supergruppen; när det är tomt används kanalens <em>Standardämnes-ID</em>."
     ],
     "togglesOutro": "Kategorirubriken visar <em>aktiverade</em> / <em>totalt</em> och en kontroll för hela gruppen. Du kan därmed stänga av exempelvis alla säkerhetskopieringar med nivån <code>info</code> eller alla uppdateringar utan att öppna kategorin."
   },

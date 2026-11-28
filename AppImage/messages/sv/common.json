@@ -865,12 +865,12 @@
         "smrTitle": "SMR-enhet upptäckt - Skrivbegränsningar",
         "smrText": "SMR-diskar skriver slumpmässiga data långsammare och kan stanna under en tung blandad arbetsbelastning. De passar säkerhetskopior och arkiv, men rekommenderas inte som primär Proxmox-lagring eller ZFS vdevs.",
         "passedTitle": "Granska de rapporterade resultaten",
-        "passedText": "En PASSED-status kan samexistera med varningar eller registrerade fel.Granska rapportdetaljerna, fortsätt regelbunden övervakning och behåll aktuella säkerhetskopior."
+        "passedText": "En PASSED-status kan samexistera med varningar eller registrerade fel. Granska rapportdetaljerna, fortsätt regelbunden övervakning och behåll aktuella säkerhetskopior."
       },
-      "passedAssessment": "Den medföljande SMART-statusen har godkänts.Denna status ensam fastställer inte att varje attribut är inom räckhåll eller att disken är fri från fel.Starttid visas: {uptime}.Temperatur visad: {temperature}.{sectors}",
-      "noReallocatedSectorsReported": "Det angivna omfördelade värdet för sektorn är noll eller inte tillgängligt;detta slår inte fast att det inte finns några dåliga sektorer.",
+      "passedAssessment": "Den medföljande SMART-statusen har godkänts. Denna status ensam fastställer inte att varje attribut är inom räckhåll eller att disken är fri från fel. Starttid visas: {uptime}.Temperatur visad: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "Det angivna omfördelade värdet för sektorn är noll eller inte tillgängligt; detta slår inte fast att det inte finns några dåliga sektorer.",
       "passedMeaningTitle": "Vad betyder en godkänd status?",
-      "passedMeaning": "PASSED är den övergripande statusen som ges till denna rapport, inte bevis på ett genomfört självtest eller en garanti mot misslyckande.Granska attribut, felloggar och självtestresultat och behåll aktuella säkerhetskopior."
+      "passedMeaning": "PASSED är den övergripande statusen som ges till denna rapport, inte bevis på ett genomfört självtest eller en garanti mot misslyckande. Granska attribut, felloggar och självtestresultat och behåll aktuella säkerhetskopior."
     },
     "ataErrors": {
       "idnf": "Sektoradress hittades inte - möjligen dålig sektor eller kabelproblem",
@@ -1912,7 +1912,7 @@
       "notifyUpstreamLabel": "Meddela mig när en ny uppströmsversion är tillgänglig",
       "notifyUpstreamHelp": "Skickar `app_update_available` till de kanaler som är aktiverade i Inställningar → Aviseringar. Stäng av om den här appen inte kan uppdateras på din box.",
       "excludeFromBadgeLabel": "Uteslut från LXC-uppdateringsräknaren",
-      "excludeFromBadgeHelp": "Räkna inte den här appen i det samlade uppdateringsmärket på LXC-listkortet. Användbart när du är fäst till en specifik version med avsikt (spårningskrav, frysning av kompatibilitet).Påverkar inte appflikens eget tillstånd eller det utgående meddelandet.",
+      "excludeFromBadgeHelp": "Räkna inte den här appen i det samlade uppdateringsmärket på LXC-listkortet. Användbart när du är fäst till en specifik version med avsikt (spårningskrav, frysning av kompatibilitet). Påverkar inte appflikens eget tillstånd eller det utgående meddelandet.",
       "ociLabelPlaceholder": "org.opencontainers.image.version",
       "portCategoryPlaceholder": "Kategori för Apps dashboard (tillval)",
       "portCategoryCustomPlaceholder": "Skriv en kategori och tryck på Enter (Esc för att avbryta)",
@@ -2119,8 +2119,8 @@
       "uptimeHour": "{count}h",
       "uptimeMinute": "{count}m",
       "uptimeRecent": "< 1 min",
-      "networkTransfer": "Mottog {first}, skickade {second} sedan start.Barer delar samma skala mellan gäster.",
-      "diskTransfer": "Läs {first}, skrev {second} sedan starten.Barer delar samma skala mellan gäster."
+      "networkTransfer": "Mottaget {first}, skickat {second} sedan start. Staplarna använder samma skala för alla VM och LXC.",
+      "diskTransfer": "Läst {first}, skrivet {second} sedan start. Staplarna använder samma skala för alla VM och LXC."
     },
     "typeFilter": {
       "ariaLabel": "Filtrera efter gästtyp",
@@ -2516,7 +2516,7 @@
         "chatId": "Chatt-ID",
         "topicId": "Ämnes-ID",
         "defaultTopicId": "Standardämnes-ID",
-        "optional": "frivillig",
+        "optional": "valfritt",
         "topicHint": "För supergrupper med ämnen aktiverade. Lämna tomt för vanliga chattar.",
         "defaultTopicHint": "För supergrupper med ämnen aktiverade. Används när en kategori saknar ett eget ämnes-ID.",
         "topicDefault": "standard",
@@ -2882,8 +2882,8 @@
         },
         "sampling_intervals": {
           "title": "Samplingsintervall",
-          "description": "Hur ofta monitorn läser CPU, temperatur och minne för värden.Längre intervaller använder mindre CPU;kortare uppdaterar figurerna tidigare.",
-          "cpu": "CPU intervall",
+          "description": "Hur ofta Monitor läser värdens CPU, temperatur och minne. Längre intervall använder mindre CPU, kortare uppdaterar värdena snabbare.",
+          "cpu": "CPU-intervall",
           "temperature": "Temperaturintervall",
           "memory": "Minnesintervall"
         }
@@ -3750,7 +3750,7 @@
         "authKeyRequired": "Ange en Tailscale auth-nyckel.",
         "updateAuthKeyFailed": "Det gick inte att uppdatera autentiseringsnyckeln",
         "couldNotLoadSetupData": "Det gick inte att ladda inställningsdata.",
-        "packageInstallFailed": "Tailscale kunde inte installeras i gateway-behållaren: {detail}. Behållaren togs bort. Detta betyder vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga;kontrollera det och försök igen.",
+        "packageInstallFailed": "Tailscale kunde inte installeras i gateway-behållaren: {detail}. Behållaren togs bort. Detta betyder vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga; kontrollera det och försök igen.",
         "packageInstallFailedKept": "Tailscale kunde inte installeras i gateway-behållaren: {detail}. Ta bort behållaren {vmid} innan du försöker igen. Detta innebär vanligtvis att den inte har någon adress eller internetåtkomst på sin brygga."
       },
       "messages": {
@@ -4922,10 +4922,10 @@
       "unmountTitle": "Avmontera denna destination",
       "whereIsBorgRepo": "Var finns Borgarkivet?",
       "backupsKeptMessage": "Befintliga säkerhetskopieringsarkiv tas inte bort.",
-      "localAttachHelpMessage": "Montera USB-enheter först.Lämna tomt för att använda PVE-lagringssökvägen + /dump (fallback: /var/lib/vz/dump).",
+      "localAttachHelpMessage": "Montera USB-enheter först. Lämna tomt för att använda PVE-lagringssökvägen + /dump (fallback: /var/lib/vz/dump).",
       "sshAuthorizedKeyHelp": "Granska raden nedan innan du lägger till den i ~/.ssh/authorized_keys för {user} på fjärrvärden.",
-      "sshKeyHelpMessage": "Privat nyckelsökväg på denna värd.Använd {action}, granska och lägg sedan till den offentliga nyckelraden som visas till fjärranvändarens ~/.ssh/authorized_keys.",
-      "sshKeySetupHelp": "Skapar en nyckel vid den angivna lokala sökvägen om ingen finns;annars läser dess publika nyckel.Ingen nyckel är installerad på fjärrvärden.",
+      "sshKeyHelpMessage": "Privat nyckelsökväg på denna värd. Använd {action}, granska och lägg sedan till den offentliga nyckelraden som visas till fjärranvändarens ~/.ssh/authorized_keys.",
+      "sshKeySetupHelp": "Skapar en nyckel vid den angivna lokala sökvägen om ingen finns; annars läser dess publika nyckel. Ingen nyckel är installerad på fjärrvärden.",
       "sshKeySetupTitle": "SSH-nyckelinställning",
       "sshUserHelpMessage": "Fjärrkonto som används för att komma åt Borg-förvaret, till exempel borg."
     },
@@ -4964,7 +4964,7 @@
       "savePassphraseNow": "Spara lösenordsfras för schemalagda körningar",
       "unrecoverable": "Utan nyckeln kan krypterade säkerhetskopior inte återställas.",
       "usesSharedKeyfileAt": "Använder delad nyckelfil på",
-      "pbsHelp": "Monitor använder {keyfile} med {option} för krypterade PBS-säkerhetskopior och -återställningar.Nyckelfilen lagras i läge {mode}.Förvara en säker kopia utanför denna värd."
+      "pbsHelp": "Monitor använder {keyfile} med {option} för krypterade PBS-säkerhetskopior och -återställningar. Nyckelfilen lagras i läge {mode}.Förvara en säker kopia utanför denna värd."
     },
     "errors": {
       "backendNoStagingPath": "Backend returnerade inte en mellanstationsbana.",
@@ -5872,8 +5872,8 @@
       "cancel": "Avbryt",
       "confirm": "Bekräfta omstart",
       "blocked": "Omstart kommer att vara tillgänglig när värduppdateringen är klar.",
-      "accepted": "Begäran om omstart accepteras.Kontrollera att servern återgår online.",
-      "unconfirmed": "Omstartsbegäran kunde inte verifieras.Kontrollera servern innan du försöker igen."
+      "accepted": "Begäran om omstart accepteras. Kontrollera att servern återgår online.",
+      "unconfirmed": "Omstartsbegäran kunde inte verifieras. Kontrollera servern innan du försöker igen."
     },
     "versions": {
       "title": "ProxMenux uppdatering",
@@ -5890,15 +5890,15 @@
       "checked": "Senaste lyckade kontroll: {time}"
     },
     "hostUpdate": {
-      "running": "Värduppdateringen fortsätter även om du loggar ut.Öppna den igen efter att ha loggat in.",
-      "finished": "Den senaste värduppdateringen har slutförts.Resultatet är tillgängligt.",
-      "attention": "Värduppdateringen behöver uppmärksamhet.Det har inte stoppats;återanslut för att inspektera den.",
+      "running": "Värduppdateringen fortsätter även om du loggar ut. Öppna den igen efter att ha loggat in.",
+      "finished": "Den senaste värduppdateringen har slutförts. Resultatet är tillgängligt.",
+      "attention": "Värduppdateringen behöver uppmärksamhet. Det har inte stoppats; återanslut för att inspektera den.",
       "view": "Visa uppdatering",
       "viewResult": "Visa resultat",
       "hideResult": "Dölj resultatet",
       "resultTitle": "Värduppdateringsresultat",
-      "resultReadOnly": "Sparad utdata från en slutförd uppdatering.Att öppna den kör inte en annan uppdatering.",
-      "resultUnavailable": "Det sparade resultatet kunde inte laddas.Ingen uppdatering startades.",
+      "resultReadOnly": "Sparad utdata från en slutförd uppdatering. Att öppna den kör inte en annan uppdatering.",
+      "resultUnavailable": "Det sparade resultatet kunde inte laddas. Ingen uppdatering startades.",
       "retryResult": "Ladda om resultatet",
       "loadingResult": "Laddar sparat resultat...",
       "closeResult": "Stäng resultat",
@@ -5908,7 +5908,7 @@
       "rebootKernel": "En omstart krävs för att aktivera {installed}.Körs för närvarande: {running}."
     },
     "updateSystem": "Uppdatera systemet",
-    "packagePlanNote": "Planen innehåller också nya paket, till exempel en ny kärna.Översikten räknar endast uppdateringar av befintliga paket.",
+    "packagePlanNote": "Planen innehåller också nya paket, till exempel en ny kärna. Översikten räknar endast uppdateringar av befintliga paket.",
     "snapshotUnavailable": "Nya hälsoresultat är inte tillgängliga ännu.",
     "lastKnownResults": "Visar de senaste tillgängliga resultaten med deras ursprungliga kontrolltid."
   },
@@ -7886,7 +7886,7 @@
         },
         "mount_readonly": {
           "title": "{hostname}: fjärrmontering {mount_target} är skrivskyddad",
-          "body": "Fjärrmontering {mount_target} ({fstype}) från {mount_source} är monterad skrivskyddad{lxc_scope}.Skriver misslyckas. Om detta var oavsiktligt, montera om med rw.",
+          "body": "Fjärrmonteringen {mount_target} ({fstype}) från {mount_source} är monterad skrivskyddad{lxc_scope}. Skrivningar misslyckas. Om detta inte var avsiktligt, montera om med rw.",
           "label": "Fjärrmontering skrivskyddad"
         },
         "lxc_disk_low": {
@@ -8697,7 +8697,7 @@
       "no_network": "Behållaren kommer inte att ha något nätverksgränssnitt.",
       "nesting_enabled": "Nesting tillåter körning av behållare inuti denna LXC och minskar isoleringen.",
       "storage_overcommit": "Den logiska diskstorleken överstiger det för närvarande tillgängliga lagringsutrymmet.",
-      "bind_mount": "Bind-montering exponerar värddata och ingår inte i behållarsäkerhetskopiorna. Behörigheterna hålls oförändrade;en oprivilegierad behållare kan behöva befintliga UID/GID-behörigheter.",
+      "bind_mount": "Bind-montering exponerar värddata och ingår inte i behållarsäkerhetskopiorna. Behörigheterna hålls oförändrade; en oprivilegierad behållare kan behöva befintliga UID/GID-behörigheter.",
       "device_passthrough": "Device passthrough använder de befintliga värddrivrutinerna och delar de valda enhetsnoderna. Nödvändig programvara inuti behållaren installeras inte automatiskt."
     },
     "error": {

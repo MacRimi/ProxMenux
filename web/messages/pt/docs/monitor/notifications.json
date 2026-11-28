@@ -120,10 +120,10 @@
       "Adicione o bot ao grupo como membro (e torne-o administrador se o grupo exigir que ele publique).",
       "Envie qualquer mensagem no grupo.",
       "Abra <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> em um navegador. Procure <code>chat.id</code> na resposta JSON — para grupos é um número negativo, para supergrupos começa com <code>-100</code>.",
-      "Nos supergrupos com <em>Tópicos</em>, anote também o <code>message_thread_id</code> do destino e coloque-o no campo opcional <em>ID do tópico</em>."
+      "Nos supergrupos com <em>Tópicos</em>, anote também o <code>message_thread_id</code> do tópico de destino: coloque-o em <em>ID do tópico padrão (opcional)</em> como destino geral ou, no modo de edição, defina um tópico próprio para cada categoria de notificação (por exemplo, Backups, Segurança ou Armazenamento)."
     ],
-    "groupAlt": "Formulário Telegram para supergrupo: token oculto, ID da conversa negativo com prefixo -100 e ID do tópico 3",
-    "groupCaption": "Supergrupo: o ID da conversa começa por <code>-100…</code>; <em>ID do tópico</em> seleciona uma conversa específica.",
+    "groupAlt": "Formulário Telegram para supergrupo: token oculto, ID da conversa negativo com prefixo -100 e ID do tópico padrão 3 como destino geral",
+    "groupCaption": "Supergrupo: o ID da conversa começa com <code>-100…</code>; o <em>ID do tópico padrão</em> define o tópico geral, e cada categoria pode usar seu próprio tópico.",
     "step3Title": "3 · Salvar e testar",
     "step3Body": "Insira token e ID da conversa, salve e pressione <em>Enviar teste</em>. Se não chegar, consulte o histórico: token inválido, bot ausente do grupo ou bloqueado, etc."
   },
@@ -226,7 +226,8 @@
     "togglesIntro": "Cada canal controla categorias e eventos individualmente. Desativar uma categoria suprime seus eventos nesse canal; as opções individuais aplicam-se nas categorias ativas. Não existe um filtro global principal de eventos no processo de envio.",
     "togglesItems": [
       "<strong>Categoria por canal.</strong> Desativar VM/CT suprime <code>vm_start</code> e eventos relacionados nesse canal. As preferências ficam em <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
-      "<strong>Evento por canal.</strong> Em uma categoria ativa pode <em>enviar <code>backup_complete</code> para Discord mas não Telegram</em>. A preferência fica em <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+      "<strong>Evento por canal.</strong> Em uma categoria ativa pode <em>enviar <code>backup_complete</code> para Discord mas não Telegram</em>. A preferência fica em <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>.",
+      "<strong>Tópico do Telegram por categoria.</strong> No Telegram, cada categoria ativa também aceita um ID de tópico próprio (<code>telegram.topic_id.&lt;group&gt;</code>). Quando definido, os eventos dessa categoria vão para esse tópico do supergrupo; quando fica vazio, usam o <em>ID do tópico padrão</em> do canal."
     ],
     "togglesOutro": "Cada categoria mostra eventos <em>ativos</em>/<em>totais</em> e uma opção para os ativar ou desativar em conjunto, como cópias <code>info</code> ou atualizações, sem expandir a seção."
   },

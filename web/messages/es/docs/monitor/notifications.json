@@ -120,10 +120,10 @@
       "Añade el bot al grupo como miembro (y hazlo admin si el grupo lo requiere para publicar).",
       "Envía cualquier mensaje en el grupo.",
       "Abre <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> en un navegador. Busca <code>chat.id</code> en la respuesta JSON — para grupos es un número negativo, para supergrupos empieza con <code>-100</code>.",
-      "En supergrupos con <em>Temas</em>, anota el <code>message_thread_id</code> de destino e introdúcelo en el campo opcional <em>ID de tema</em>."
+      "En supergrupos con <em>Temas</em>, anota el <code>message_thread_id</code> del tema de destino: ponlo en <em>ID de tema predeterminado (opcional)</em> como destino general, o asigna en modo edición un tema propio a cada categoría de notificación (por ejemplo, Backups, Seguridad o Almacenamiento)."
     ],
-    "groupAlt": "Formulario de canal Telegram con Bot Token (enmascarado), Chat ID negativo prefijado con -100 indicando un supergrupo, y Topic ID 3 configurado para entregar a un tema específico",
-    "groupCaption": "Supergrupo — el Chat ID empieza con <code>-100…</code> y el <em>Topic ID</em> opcional apunta a un hilo específico.",
+    "groupAlt": "Formulario de canal Telegram con Bot Token (enmascarado), Chat ID negativo prefijado con -100 indicando un supergrupo, e ID de tema predeterminado 3 como destino general",
+    "groupCaption": "Supergrupo — el Chat ID empieza con <code>-100…</code>, el <em>ID de tema predeterminado</em> fija el hilo general y cada categoría puede usar su propio tema.",
     "step3Title": "3 · Guarda y prueba",
     "step3Body": "Pega el token del bot y el ID del chat en Telegram, guarda y pulsa <em>Enviar prueba</em>. El mensaje debería llegar en un segundo; si no, el Historial muestra el motivo del fallo, como token inválido, bot fuera del grupo o bloqueo por el usuario."
   },
@@ -226,7 +226,8 @@
     "togglesIntro": "Cada canal controla sus categorías y tipos de evento de forma independiente. Desactivar una categoría suprime sus eventos en ese canal. Los controles individuales se aplican dentro de las categorías activas; el distribuidor no tiene un control maestro global por evento.",
     "togglesItems": [
       "<strong>Control de categoría por canal.</strong> Por ejemplo, desactivar VM/CT suprime <code>vm_start</code> y sus equivalentes para ese canal. Se guarda como <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
-      "<strong>Control de evento por canal.</strong> En una categoría activa puedes elegir <em>enviar <code>backup_complete</code> a Discord pero no a Telegram</em>. Se guarda como <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+      "<strong>Control de evento por canal.</strong> En una categoría activa puedes elegir <em>enviar <code>backup_complete</code> a Discord pero no a Telegram</em>. Se guarda como <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>.",
+      "<strong>Tema de Telegram por categoría.</strong> En Telegram, cada categoría activa acepta además un ID de tema propio (<code>telegram.topic_id.&lt;group&gt;</code>). Si se indica, los eventos de esa categoría van a ese tema del supergrupo; si se deja vacío, usan el <em>ID de tema predeterminado</em> del canal."
     ],
     "togglesOutro": "Cada categoría indica los eventos <em>activados</em> frente al <em>total</em> y permite activar o desactivar el grupo completo con un clic, por ejemplo backups <code>info</code> o avisos de actualización, sin abrirlo."
   },

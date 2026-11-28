@@ -1020,8 +1020,8 @@
         "passedTitle": "revisar los resultados informados",
         "passedText": "Un estado APROBADO puede coexistir con advertencias o errores registrados. Revisa los detalles del informe, continúa con la monitorización regular y mantén backups actualizados."
       },
-      "passedAssessment": "El estado SMART proporcionado es APROBADO.Este estado por sí solo no establece que todos los atributos estén dentro del rango o que el disco esté libre de fallos. Hora de encendido mostrada: {uptime}.Temperatura mostrada: {temperature}.{sectors}",
-      "noReallocatedSectorsReported": "el valor del sector reasignado proporcionado es cero o no está disponible;esto no establece que no haya sectores malos.",
+      "passedAssessment": "El estado SMART proporcionado es APROBADO. Este estado por sí solo no establece que todos los atributos estén dentro del rango o que el disco esté libre de fallos. Hora de encendido mostrada: {uptime}.Temperatura mostrada: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "el valor del sector reasignado proporcionado es cero o no está disponible; esto no establece que no haya sectores malos.",
       "passedMeaningTitle": "¿Qué significa un estado APROBADO?",
       "passedMeaning": "APROBADO es el estado general proporcionado en este informe, no una prueba de una autoprueba completa ni una garantía contra fallos. Revisa los atributos, los registros de errores y los resultados de las autopruebas, y mantén backups actualizados."
     },
@@ -5075,7 +5075,7 @@
       "unmountTitle": "Desmontar este destino",
       "whereIsBorgRepo": "¿Dónde está el repositorio Borg?",
       "backupsKeptMessage": "Los archivos de backup existentes no se eliminan.",
-      "localAttachHelpMessage": "Monta primero las unidades USB.Déjalo en blanco para usar la ruta de almacenamiento PVE + /dump (alternativa: /var/lib/vz/dump).",
+      "localAttachHelpMessage": "Monta primero las unidades USB. Déjalo en blanco para usar la ruta de almacenamiento PVE + /dump (alternativa: /var/lib/vz/dump).",
       "sshAuthorizedKeyHelp": "revisa la línea siguiente antes de añadirla a ~/.ssh/authorized_keys para {user} en el host remoto.",
       "sshKeyHelpMessage": "ruta de clave privada en este host. Utiliza {action}, luego revisa y añade la línea de clave pública mostrada al ~/.ssh/authorized_keys del usuario remoto.",
       "sshKeySetupHelp": "crea una clave en la ruta local especificada si no existe ninguna; de lo contrario lee su clave pública. No hay ninguna clave instalada en el host remoto.",
@@ -6026,7 +6026,7 @@
       "confirm": "confirmar reinicio",
       "blocked": "el reinicio estará disponible una vez que finalice la actualización del host.",
       "accepted": "Solicitud de reinicio aceptada. Comprueba que el servidor vuelva a estar en línea.",
-      "unconfirmed": "No se pudo verificar la solicitud de reinicio.Verifique el servidor antes de volver a intentarlo."
+      "unconfirmed": "No se pudo verificar la solicitud de reinicio. Verifique el servidor antes de volver a intentarlo."
     },
     "versions": {
       "title": "actualización ProxMenux",
@@ -6043,15 +6043,15 @@
       "checked": "Última verificación exitosa: {time}"
     },
     "hostUpdate": {
-      "running": "la actualización del host continúa incluso si cierra sesión.Vuelva a abrirlo después de iniciar sesión.",
-      "finished": "La última actualización del host ha finalizado.Su resultado está disponible.",
-      "attention": "La actualización del host necesita atención.No ha sido detenido;Vuelva a conectarlo para inspeccionarlo.",
+      "running": "la actualización del host continúa incluso si cierra sesión. Vuelva a abrirlo después de iniciar sesión.",
+      "finished": "La última actualización del host ha finalizado. Su resultado está disponible.",
+      "attention": "La actualización del host necesita atención. No se ha detenido; vuelva a conectarse para revisarla.",
       "view": "Ver actualización",
       "viewResult": "Ver resultado",
       "hideResult": "Ocultar resultado",
       "resultTitle": "resultado de la actualización del host",
-      "resultReadOnly": "resultado guardado de una actualización completa.Al abrirlo no se ejecuta otra actualización.",
-      "resultUnavailable": "No se pudo cargar el resultado guardado.No se inició ninguna actualización.",
+      "resultReadOnly": "resultado guardado de una actualización completa. Al abrirlo no se ejecuta otra actualización.",
+      "resultUnavailable": "No se pudo cargar el resultado guardado. No se inició ninguna actualización.",
       "retryResult": "recargar resultado",
       "loadingResult": "Cargando resultado guardado…",
       "closeResult": "Cerrar resultado",
@@ -6061,7 +6061,7 @@
       "rebootKernel": "Es necesario reiniciar para activar {installed}.Actualmente en ejecución: {running}."
     },
     "updateSystem": "Actualizar el sistema",
-    "packagePlanNote": "el plan también incluye nuevos paquetes, como un nuevo kernel.La descripción general cuenta únicamente las actualizaciones de los paquetes existentes.",
+    "packagePlanNote": "El plan también incluye paquetes nuevos, como un kernel nuevo. El resumen solo cuenta las actualizaciones de los paquetes ya instalados.",
     "snapshotUnavailable": "Los nuevos resultados de salud aún no están disponibles.",
     "lastKnownResults": "muestra los últimos resultados disponibles con su hora de verificación original."
   },

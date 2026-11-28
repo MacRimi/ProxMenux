@@ -120,10 +120,10 @@
       "Bot als Mitglied hinzufügen; bei Bedarf Schreibrechte als Administrator erteilen.",
       "Senden Sie eine Nachricht in der Gruppe.",
       "Öffnen Sie <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code> in einem Browser. Suchen Sie nach <code>chat.id</code> in der JSON-Antwort - für Gruppen ist es eine negative Zahl, für Supergruppen beginnt es mit <code>-100</code>.",
-      "Bei Supergruppen mit <em>Themen</em> die gewünschte <code>message_thread_id</code> im optionalen Feld <em>Themen-ID</em> eintragen."
+      "Bei Supergruppen mit <em>Themen</em> die gewünschte <code>message_thread_id</code> notieren: als allgemeines Ziel in <em>Standard-Themen-ID (optional)</em> eintragen oder im Bearbeitungsmodus jeder Benachrichtigungskategorie (z. B. Backups, Sicherheit, Speicher) ein eigenes Thema zuweisen."
     ],
-    "groupAlt": "Telegram-Formular mit maskiertem Bot-Token, negativer Supergruppen-ID beginnend mit -100 und Themen-ID 3",
-    "groupCaption": "Die Chat ID beginnt mit <code>-100…</code> und die optionale <em>Topic ID</em> zielt auf einen bestimmten Thread ab.",
+    "groupAlt": "Telegram-Formular mit maskiertem Bot-Token, negativer Supergruppen-ID beginnend mit -100 und Standard-Themen-ID 3 als allgemeines Ziel",
+    "groupCaption": "Die Chat-ID beginnt mit <code>-100…</code>, die <em>Standard-Themen-ID</em> legt den allgemeinen Thread fest, und einzelne Kategorien können ein eigenes Thema verwenden.",
     "step3Title": "3 · Speichern und Testen",
     "step3Body": "Bot-Token und Chat-ID eintragen, speichern und <em>Test senden</em> wählen. Die Nachricht sollte binnen einer Sekunde eintreffen. Bei Fehlern zeigt der Verlauf den Grund, etwa ungültiges Token, fehlende Gruppenmitgliedschaft oder Blockierung durch den Benutzer."
   },
@@ -226,7 +226,8 @@
     "togglesIntro": "Jeder Kanal steuert Kategorien und Ereignisse unabhängig. Eine deaktivierte Kategorie unterdrückt ihre Ereignisse für diesen Kanal. Einzelne Schalter wirken innerhalb aktivierter Kategorien; im Dispatcher gibt es keinen globalen Ereignis-Hauptschalter.",
     "togglesItems": [
       "<strong>Kategorieschalter je Kanal.</strong> Eine deaktivierte VM/CT-Kategorie unterdrückt <code>vm_start</code> und verwandte Ereignisse. Gespeichert als <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
-      "<strong>Ereignisschalter je Kanal.</strong> In einer aktiven Kategorie etwa <em><code>backup_complete</code> an Discord, aber nicht an Telegram senden</em>. Gespeichert als <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+      "<strong>Ereignisschalter je Kanal.</strong> In einer aktiven Kategorie etwa <em><code>backup_complete</code> an Discord, aber nicht an Telegram senden</em>. Gespeichert als <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>.",
+      "<strong>Telegram-Thema je Kategorie.</strong> Bei Telegram akzeptiert jede aktive Kategorie zusätzlich eine eigene Themen-ID (<code>telegram.topic_id.&lt;group&gt;</code>). Ist sie gesetzt, gehen die Ereignisse dieser Kategorie in dieses Thema der Supergruppe; bleibt sie leer, gilt die <em>Standard-Themen-ID</em> des Kanals."
     ],
     "togglesOutro": "Jede Kategorie zeigt <em>aktivierte Ereignisse</em> / <em>Gesamtzahl</em> und einen Schalter für die ganze Gruppe, etwa <code>info</code>-Sicherungen oder Update-Meldungen, ohne Aufklappen."
   },

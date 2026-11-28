@@ -2119,8 +2119,8 @@
       "uptimeHour": "{count}h",
       "uptimeMinute": "{count}m",
       "uptimeRecent": "< 1 Min",
-      "networkTransfer": "{first} empfangen, {second} seit dem Start gesendet.Bars haben für alle Gäste die gleiche Größe.",
-      "diskTransfer": "{first} gelesen, {second} seit dem Start geschrieben.Bars haben für alle Gäste die gleiche Größe."
+      "networkTransfer": "Seit dem Start {first} empfangen, {second} gesendet. Die Balken verwenden für alle VMs und LXC dieselbe Skala.",
+      "diskTransfer": "Seit dem Start {first} gelesen, {second} geschrieben. Die Balken verwenden für alle VMs und LXC dieselbe Skala."
     },
     "typeFilter": {
       "ariaLabel": "Nach Gasttyp filtern",
@@ -2882,7 +2882,7 @@
         },
         "sampling_intervals": {
           "title": "Abtastintervalle",
-          "description": "Wie oft der Monitor CPU, Temperatur und Speicher des Hosts liest.Längere Intervalle verbrauchen weniger CPU;kürzere aktualisieren die Zahlen früher.",
+          "description": "Wie oft der Monitor CPU, Temperatur und Speicher des Hosts ausliest. Längere Intervalle verbrauchen weniger CPU, kürzere aktualisieren die Werte schneller.",
           "cpu": "CPU-Intervall",
           "temperature": "Temperaturintervall",
           "memory": "Speicherintervall"
@@ -5872,8 +5872,8 @@
       "cancel": "Abbrechen",
       "confirm": "Neustart bestätigen",
       "blocked": "Neustart ist verfügbar, nachdem das Host-Update abgeschlossen ist.",
-      "accepted": "Neustartanforderung angenommen.Überprüfen Sie, ob der Server wieder online ist.",
-      "unconfirmed": "Die Neustartanforderung konnte nicht überprüft werden.Überprüfen Sie den Server, bevor Sie es erneut versuchen."
+      "accepted": "Neustartanforderung angenommen. Überprüfen Sie, ob der Server wieder online ist.",
+      "unconfirmed": "Die Neustartanforderung konnte nicht überprüft werden. Überprüfen Sie den Server, bevor Sie es erneut versuchen."
     },
     "versions": {
       "title": "ProxMenux-Update",
@@ -5890,25 +5890,25 @@
       "checked": "Letzte erfolgreiche Prüfung: {time}"
     },
     "hostUpdate": {
-      "running": "Das Host-Update wird auch dann fortgesetzt, wenn Sie sich abmelden.Öffnen Sie es nach der Anmeldung erneut.",
-      "finished": "Das letzte Host-Update ist abgeschlossen.Das Ergebnis liegt vor.",
-      "attention": "Das Host-Update erfordert Aufmerksamkeit.Es wurde nicht gestoppt;Stellen Sie die Verbindung erneut her, um es zu überprüfen.",
+      "running": "Das Host-Update wird auch dann fortgesetzt, wenn Sie sich abmelden. Öffnen Sie es nach der Anmeldung erneut.",
+      "finished": "Das letzte Host-Update ist abgeschlossen. Das Ergebnis liegt vor.",
+      "attention": "Das Host-Update erfordert Aufmerksamkeit. Es wurde nicht gestoppt; stellen Sie die Verbindung erneut her, um es zu überprüfen.",
       "view": "Update anzeigen",
       "viewResult": "Ergebnis anzeigen",
       "hideResult": "Ergebnis ausblenden",
       "resultTitle": "Host-Update-Ergebnis",
-      "resultReadOnly": "Gespeicherte Ausgabe eines abgeschlossenen Updates.Beim Öffnen wird kein weiteres Update ausgeführt.",
-      "resultUnavailable": "Das gespeicherte Ergebnis konnte nicht geladen werden.Es wurde kein Update gestartet.",
+      "resultReadOnly": "Gespeicherte Ausgabe eines abgeschlossenen Updates. Beim Öffnen wird kein weiteres Update ausgeführt.",
+      "resultUnavailable": "Das gespeicherte Ergebnis konnte nicht geladen werden. Es wurde kein Update gestartet.",
       "retryResult": "Ergebnis neu laden",
       "loadingResult": "Gespeichertes Ergebnis wird geladen…",
       "closeResult": "Ergebnis schließen",
       "noReboot": "Kein Neustart erforderlich",
       "rebootMarker": "Das Betriebssystem erfordert einen Neustart.",
       "rebootUnknown": "Es konnte nicht festgestellt werden, ob ein Neustart erforderlich ist.",
-      "rebootKernel": "Zum Aktivieren von {installed} ist ein Neustart erforderlich.Derzeit läuft: {running}."
+      "rebootKernel": "Zum Aktivieren von {installed} ist ein Neustart erforderlich. Derzeit läuft: {running}."
     },
     "updateSystem": "System aktualisieren",
-    "packagePlanNote": "Der Plan umfasst auch neue Pakete, etwa einen neuen Kernel.Die Übersicht zählt nur Aktualisierungen bestehender Pakete.",
+    "packagePlanNote": "Der Plan umfasst auch neue Pakete, etwa einen neuen Kernel. Die Übersicht zählt nur Aktualisierungen bestehender Pakete.",
     "snapshotUnavailable": "Es sind noch keine neuen Gesundheitsergebnisse verfügbar.",
     "lastKnownResults": "Zeigt die letzten verfügbaren Ergebnisse mit ihrer ursprünglichen Prüfzeit an."
   },
@@ -7886,7 +7886,7 @@
         },
         "mount_readonly": {
           "title": "{hostname}: Remote-Mount {mount_target} ist schreibgeschützt",
-          "body": "Remote-Mount {mount_target} ({fstype}) von {mount_source} ist schreibgeschützt gemountet{lxc_scope}.Schreibvorgänge schlagen fehl. Wenn dies unbeabsichtigt war, mounten Sie es erneut mit RW.",
+          "body": "Remote-Mount {mount_target} ({fstype}) von {mount_source} ist schreibgeschützt gemountet{lxc_scope}. Schreibvorgänge schlagen fehl. Wenn dies unbeabsichtigt war, mounten Sie es erneut mit rw.",
           "label": "Remote-Mount schreibgeschützt"
         },
         "lxc_disk_low": {

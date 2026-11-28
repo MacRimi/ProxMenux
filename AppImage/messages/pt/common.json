@@ -144,7 +144,7 @@
     "overview": "Visão geral",
     "apps": "Apps",
     "catalog": "Catálogo",
-    "storage": "Armazenar",
+    "storage": "Armazenamento",
     "network": "Rede",
     "virtualMachines": "VMs e LXCs",
     "hardware": "Hardware",
@@ -865,12 +865,12 @@
         "smrTitle": "Unidade SMR detectada - Limitações de gravação",
         "smrText": "Os discos SMR gravam dados aleatórios mais lentamente e podem travar sob uma carga de trabalho mista pesada. Eles são adequados para backups e arquivamentos, mas não são recomendados como armazenamento Proxmox primário ou vdevs ZFS.",
         "passedTitle": "revise os resultados relatados",
-        "passedText": "Um status PASSADO pode coexistir com avisos ou erros registrados.Revise os detalhes do relatório, continue o monitoramento regular e mantenha backups atualizados."
+        "passedText": "Um status PASSADO pode coexistir com avisos ou erros registrados. Revise os detalhes do relatório, continue o monitoramento regular e mantenha backups atualizados."
       },
-      "passedAssessment": "O status SMART fornecido é PASSADO.Este status por si só não estabelece que todos os atributos estão dentro do intervalo ou que o disco está livre de falhas.Hora de inicialização mostrada: {uptime}.Temperatura mostrada: {temperature}.{sectors}",
-      "noReallocatedSectorsReported": "O valor do setor realocado fornecido é zero ou indisponível;isso não estabelece que não haja setores defeituosos.",
+      "passedAssessment": "O status SMART fornecido é APROVADO. Este status por si só não estabelece que todos os atributos estão dentro do intervalo ou que o disco está livre de falhas. Hora de inicialização mostrada: {uptime}.Temperatura mostrada: {temperature}.{sectors}",
+      "noReallocatedSectorsReported": "O valor do setor realocado fornecido é zero ou indisponível; isso não estabelece que não haja setores defeituosos.",
       "passedMeaningTitle": "O que significa um status APROVADO?",
-      "passedMeaning": "PASSADO é o status geral fornecido a este relatório, não uma prova de um autoteste concluído ou uma garantia contra falhas.Revise os atributos, logs de erros e resultados de autoteste e mantenha backups atualizados."
+      "passedMeaning": "PASSADO é o status geral fornecido a este relatório, não uma prova de um autoteste concluído ou uma garantia contra falhas. Revise os atributos, logs de erros e resultados de autoteste e mantenha backups atualizados."
     },
     "ataErrors": {
       "idnf": "Endereço do setor não encontrado – possível setor defeituoso ou problema de cabo",
@@ -1185,7 +1185,7 @@
       "off": "desligado",
       "included": "incluído",
       "excluded": "excluído",
-      "storage": "Armazenar",
+      "storage": "Armazenamento",
       "rootFilesystem": "Sistema de arquivos raiz",
       "efiDisk": "Disco EFI",
       "tpmState": "Estado do TPM",
@@ -1328,7 +1328,7 @@
     "backupModal": {
       "title": "Backup {type} {vmid} ({name})",
       "description": "Configure opções de backup para este {type}",
-      "storage": "Armazenar",
+      "storage": "Armazenamento",
       "selectStorage": "Selecione armazenamento",
       "free": "livre",
       "mode": "Modo",
@@ -1912,7 +1912,7 @@
       "notifyUpstreamLabel": "Notifique-me quando uma nova versão upstream estiver disponível",
       "notifyUpstreamHelp": "Envia `app_update_available` para os canais habilitados em Configurações → Notificações. Desligue se este aplicativo não puder ser atualizado em sua caixa.",
       "excludeFromBadgeLabel": "Excluir do contador de atualizações LXC",
-      "excludeFromBadgeHelp": "não conte este aplicativo no selo de atualizações agregadas no cartão de lista LXC.Útil quando você está fixado em uma versão específica propositalmente (requisito do rastreador, congelamento de compatibilidade).Não afeta o próprio estado da guia Aplicativo ou a notificação de saída.",
+      "excludeFromBadgeHelp": "não conte este aplicativo no selo de atualizações agregadas no cartão de lista LXC. Útil quando você está fixado em uma versão específica propositalmente (requisito do rastreador, congelamento de compatibilidade). Não afeta o próprio estado da guia Aplicativo ou a notificação de saída.",
       "ociLabelPlaceholder": "org.opencontainers.image.version",
       "portCategoryPlaceholder": "Categoria para o painel de aplicativos (opcional)",
       "portCategoryCustomPlaceholder": "Digite uma categoria e pressione Enter (Esc para cancelar)",
@@ -2119,8 +2119,8 @@
       "uptimeHour": "{count}h",
       "uptimeMinute": "{count}m",
       "uptimeRecent": "< 1 min",
-      "networkTransfer": "{first} recebido, enviado {second} desde o início.Os bares compartilham a mesma escala entre os hóspedes.",
-      "diskTransfer": "Leia {first}, escrevi {second} desde o início.Os bares compartilham a mesma escala entre os hóspedes."
+      "networkTransfer": "Recebido {first}, enviado {second} desde a inicialização. As barras usam a mesma escala em todas as VMs e LXCs.",
+      "diskTransfer": "Lido {first}, gravado {second} desde a inicialização. As barras usam a mesma escala em todas as VMs e LXCs."
     },
     "typeFilter": {
       "ariaLabel": "Filtrar por tipo de convidado",
@@ -2273,7 +2273,7 @@
       "description": "Exclua armazenamentos remotos (PBS, NFS, CIFS, etc.) do monitoramento e notificações de integridade. Use isso para armazenamentos intencionalmente off-line ou com acesso limitado à API.",
       "emptyTitle": "Nenhum armazenamento remoto detectado",
       "emptyDescription": "PBS, NFS, CIFS e outros armazenamentos remotos aparecerão aqui quando configurados",
-      "storage": "Armazenar",
+      "storage": "Armazenamento",
       "offline": "Off-line ou indisponível",
       "namespaceRestricted": "Acessível; tamanho do armazenamento de dados oculto pela ACL",
       "healthHelp": "Quando DESLIGADO, esse armazenamento não acionará avisos ou alertas críticos no Health Monitor.",
@@ -2358,7 +2358,7 @@
           "label": "Recursos"
         },
         "storage": {
-          "label": "Armazenar"
+          "label": "Armazenamento"
         },
         "network": {
           "label": "Rede"
@@ -2881,11 +2881,11 @@
           "description": "Os pools ZFS no nível do host, independentemente do registro do PVE, portanto, o rpool e os pools de backup dedicados também são monitorados."
         },
         "sampling_intervals": {
-          "title": "intervalos de amostragem",
-          "description": "Com que frequência o Monitor lê o CPU, temperatura e memória do host.Intervalos mais longos usam menos CPU;os mais curtos atualizam os números mais cedo.",
-          "cpu": "intervalo CPU",
+          "title": "Intervalos de amostragem",
+          "description": "Com que frequência o Monitor lê a CPU, a temperatura e a memória do host. Intervalos mais longos usam menos CPU; os mais curtos atualizam os valores mais cedo.",
+          "cpu": "Intervalo da CPU",
           "temperature": "Intervalo de temperatura",
-          "memory": "intervalo de memória"
+          "memory": "Intervalo da memória"
         }
       },
       "swapPressure": "Pressão de memória",
@@ -3750,7 +3750,7 @@
         "authKeyRequired": "Insira uma chave de autenticação Tailscale.",
         "updateAuthKeyFailed": "Falha ao atualizar a chave de autenticação",
         "couldNotLoadSetupData": "Não foi possível carregar os dados de configuração.",
-        "packageInstallFailed": "Tailscale não pôde ser instalado no contêiner de gateway: {detail}. O contêiner foi removido. Isso geralmente significa que ele não possui endereço ou acesso à Internet em sua ponte;verifique isso e tente novamente.",
+        "packageInstallFailed": "Tailscale não pôde ser instalado no contêiner de gateway: {detail}. O contêiner foi removido. Isso geralmente significa que ele não possui endereço ou acesso à Internet em sua ponte; verifique isso e tente novamente.",
         "packageInstallFailedKept": "Tailscale não pôde ser instalado no contêiner de gateway: {detail}. Remova o contêiner {vmid} antes de tentar novamente. Isso geralmente significa que ele não possui endereço ou acesso à Internet em sua ponte."
       },
       "messages": {
@@ -3788,7 +3788,7 @@
         "gbAvailable": "{amount} GB disponíveis",
         "configurationSummary": "Resumo da configuração",
         "hostname": "Nome do host",
-        "storage": "Armazenar",
+        "storage": "Armazenamento",
         "accessMode": "Modo de acesso",
         "accessModes": {
           "hostOnly": "Somente Proxmox",
@@ -4063,7 +4063,7 @@
       "duration": "Duração",
       "startTime": "Hora de início",
       "endTime": "Hora de término",
-      "storage": "Armazenar",
+      "storage": "Armazenamento",
       "storageType": "Tipo de armazenamento",
       "size": "Tamanho",
       "created": "Criado",
@@ -4626,7 +4626,7 @@
       "wireless": "Wi-fi",
       "wirelessController": "Controlador sem fio",
       "wifi": "Wi-fi",
-      "storage": "Armazenar",
+      "storage": "Armazenamento",
       "storageController": "Controlador de armazenamento",
       "hid": "HID",
       "vendorSpecific": "Específico do fabricante",
@@ -4844,7 +4844,7 @@
       "restorePlan": "Plano de restauração",
       "restorePlanUnavailable": "Plano de restauração indisponível: {error}",
       "rollbackPlan": "Plano de reversão",
-      "storage": "Armazenar",
+      "storage": "Armazenamento",
       "title": "Conteúdo de backup",
       "totalFiles": "(total {count})"
     },
@@ -4922,10 +4922,10 @@
       "unmountTitle": "Desmontar este destino",
       "whereIsBorgRepo": "Onde está o repositório Borg?",
       "backupsKeptMessage": "os arquivos de backup existentes não são excluídos.",
-      "localAttachHelpMessage": "Monte as unidades USB primeiro.Deixe em branco para usar o caminho de armazenamento PVE + /dump (fallback: /var/lib/vz/dump).",
+      "localAttachHelpMessage": "Monte as unidades USB primeiro. Deixe em branco para usar o caminho de armazenamento PVE + /dump (fallback: /var/lib/vz/dump).",
       "sshAuthorizedKeyHelp": "revise a linha abaixo antes de adicioná-la a ~/.ssh/authorized_keys para {user} no host remoto.",
-      "sshKeyHelpMessage": "Caminho da chave privada neste host.Use {action}, revise e adicione a linha de chave pública exibida ao ~/.ssh/authorized_keys do usuário remoto.",
-      "sshKeySetupHelp": "Cria uma chave no caminho local especificado se não existir;caso contrário, lê sua chave pública.Nenhuma chave está instalada no host remoto.",
+      "sshKeyHelpMessage": "Caminho da chave privada neste host. Use {action}, revise e adicione a linha de chave pública exibida ao ~/.ssh/authorized_keys do usuário remoto.",
+      "sshKeySetupHelp": "Cria uma chave no caminho local especificado se não existir; caso contrário, lê sua chave pública. Nenhuma chave está instalada no host remoto.",
       "sshKeySetupTitle": "configuração da chave SSH",
       "sshUserHelpMessage": "conta remota usada para acessar o repositório Borg, por exemplo borg."
     },
@@ -4964,7 +4964,7 @@
       "savePassphraseNow": "Salvar senha para execuções agendadas",
       "unrecoverable": "Sem a chave, os backups criptografados não podem ser restaurados.",
       "usesSharedKeyfileAt": "Usa arquivo-chave compartilhado em",
-      "pbsHelp": "o monitor usa {keyfile} com {option} para backups e restaurações criptografadas de PBS.O arquivo-chave é armazenado com o modo {mode}.Mantenha uma cópia segura fora deste host."
+      "pbsHelp": "o monitor usa {keyfile} com {option} para backups e restaurações criptografadas de PBS. O arquivo-chave é armazenado com o modo {mode}.Mantenha uma cópia segura fora deste host."
     },
     "errors": {
       "backendNoStagingPath": "O back-end não retornou um caminho de teste.",
@@ -5067,7 +5067,7 @@
       "sshKeyPath": "Caminho da chave SSH",
       "sshUser": "Usuário SSH",
       "status": "Status",
-      "storageLabel": "Armazenar",
+      "storageLabel": "Armazenamento",
       "target": "Alvo",
       "timeOfDay": "Hora do dia",
       "type": "Tipo",
@@ -5872,8 +5872,8 @@
       "cancel": "Cancelar",
       "confirm": "Confirmar reinicialização",
       "blocked": "A reinicialização estará disponível após a conclusão da atualização do host.",
-      "accepted": "solicitação de reinicialização aceita.Verifique se o servidor retorna online.",
-      "unconfirmed": "A solicitação de reinicialização não pôde ser verificada.Verifique o servidor antes de tentar novamente."
+      "accepted": "solicitação de reinicialização aceita. Verifique se o servidor retorna online.",
+      "unconfirmed": "A solicitação de reinicialização não pôde ser verificada. Verifique o servidor antes de tentar novamente."
     },
     "versions": {
       "title": "atualização ProxMenux",
@@ -5890,15 +5890,15 @@
       "checked": "Última verificação bem-sucedida: {time}"
     },
     "hostUpdate": {
-      "running": "A atualização do host continua mesmo se você sair.Reabra-o após fazer login.",
-      "finished": "A última atualização do host foi concluída.Seu resultado está disponível.",
-      "attention": "A atualização do host precisa de atenção.Não foi interrompido;reconecte para inspecioná-lo.",
+      "running": "A atualização do host continua mesmo se você sair. Reabra-o após fazer login.",
+      "finished": "A última atualização do host foi concluída. Seu resultado está disponível.",
+      "attention": "A atualização do host precisa de atenção. Não foi interrompido; reconecte para inspecioná-lo.",
       "view": "Ver atualização",
       "viewResult": "Ver resultado",
       "hideResult": "ocultar resultado",
       "resultTitle": "resultado da atualização do host",
-      "resultReadOnly": "Saída salva de uma atualização concluída.Abri-lo não executa outra atualização.",
-      "resultUnavailable": "O resultado salvo não pôde ser carregado.Nenhuma atualização foi iniciada.",
+      "resultReadOnly": "Saída salva de uma atualização concluída. Abri-lo não executa outra atualização.",
+      "resultUnavailable": "O resultado salvo não pôde ser carregado. Nenhuma atualização foi iniciada.",
       "retryResult": "Recarregar resultado",
       "loadingResult": "Carregando resultado salvo…",
       "closeResult": "Fechar resultado",
@@ -5908,7 +5908,7 @@
       "rebootKernel": "É necessária uma reinicialização para ativar o {installed}.Atualmente em execução: {running}."
     },
     "updateSystem": "Atualizar o sistema",
-    "packagePlanNote": "O plano também inclui novos pacotes, como um novo kernel.A visão geral conta atualizações apenas para pacotes existentes.",
+    "packagePlanNote": "O plano também inclui novos pacotes, como um novo kernel. A visão geral conta atualizações apenas para pacotes existentes.",
     "snapshotUnavailable": "Novos resultados de saúde ainda não estão disponíveis.",
     "lastKnownResults": "Mostra os últimos resultados disponíveis com o horário de verificação original."
   },
@@ -7886,7 +7886,7 @@
         },
         "mount_readonly": {
           "title": "{hostname}: montagem remota {mount_target} é somente leitura",
-          "body": "A montagem remota {mount_target} ({fstype}) de {mount_source} é montada somente leitura{lxc_scope}.As gravações falharão. Se isso não foi intencional, remonte com rw.",
+          "body": "A montagem remota {mount_target} ({fstype}) de {mount_source} está montada como somente leitura{lxc_scope}. As gravações falharão. Se isso não foi intencional, remonte com rw.",
           "label": "Montagem remota somente leitura"
         },
         "lxc_disk_low": {
@@ -8697,7 +8697,7 @@
       "no_network": "O contêiner não terá interface de rede.",
       "nesting_enabled": "O aninhamento permite a execução de contêineres dentro deste LXC e reduz o isolamento.",
       "storage_overcommit": "O tamanho do disco lógico excede o armazenamento disponível atualmente.",
-      "bind_mount": "As montagens de ligação expõem os dados do host e não são incluídas nos backups do contêiner. As permissões são mantidas inalteradas;um contêiner sem privilégios pode precisar de permissões UID/GID existentes.",
+      "bind_mount": "As montagens de ligação expõem os dados do host e não são incluídas nos backups do contêiner. As permissões são mantidas inalteradas; um contêiner sem privilégios pode precisar de permissões UID/GID existentes.",
       "device_passthrough": "A passagem do dispositivo usa os drivers de host existentes e compartilha os nós do dispositivo selecionado. O software necessário dentro do contêiner não é instalado automaticamente."
     },
     "error": {
