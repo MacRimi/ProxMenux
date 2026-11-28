@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Activity } from "lucide-react"
+import { Activity, ChevronDown } from "lucide-react"
 import { useT } from "../lib/i18n/provider"
 import { getNetworkUnit, type NetworkUnit } from "../lib/format-network"
 
@@ -195,6 +195,7 @@ function svgIcon(kind: string, cx: number, cy: number, size: number, color: stri
 
 function orthLink(x1: number, y1: number, x2: number, y2: number, r = 12): string {
   if (Math.abs(y2 - y1) < 2) return `M ${x1} ${y1} L ${x2} ${y2}`
+  r = Math.min(r, Math.abs(y2 - y1) / 2)
   const midX = (x1 + x2) / 2
   const dy = y2 > y1 ? 1 : -1
   return [
@@ -208,6 +209,7 @@ function orthLink(x1: number, y1: number, x2: number, y2: number, r = 12): strin
 }
 function orthLinkV(x1: number, y1: number, x2: number, y2: number, r = 10): string {
   if (Math.abs(x2 - x1) < 2) return `M ${x1} ${y1} L ${x2} ${y2}`
+  r = Math.min(r, Math.abs(x2 - x1) / 2)
   const midY = (y1 + y2) / 2
   const dx = x2 > x1 ? 1 : -1
   return [
@@ -229,8 +231,8 @@ function buildFullFlowPath(
   busX0: number, busY: number,
   cx: number, targetY: number, tapR: number,
 ): string {
-  const hbPath = orthLink(hostX + radHost, hostY, bridgesX - radBridge, bridgeY, 14)
-  const bbPath = orthLink(bridgesX + radBridge, bridgeY, busX0, busY, 12)
+  const hbPath = orthLink(hostX + radHost + 5, hostY, bridgesX - radBridge - 5, bridgeY, 14)
+  const bbPath = orthLink(bridgesX + radBridge + 5, bridgeY, busX0, busY, 12)
   const dy = targetY > busY ? 1 : -1
   const tail = `L ${cx - tapR} ${busY} Q ${cx} ${busY} ${cx} ${busY + dy * tapR} L ${cx} ${targetY}`
   return `${hbPath} ${bbPath} ${tail}`
@@ -248,31 +250,35 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
   const { bonds, bondOfNic, nics } = resolveBonds(data)
 
   const tight = W < 1100
-  const nicX = tight ? 70 : 90
-  const hostX = tight ? 280 : 340
-  const bridgesX = tight ? 470 : 540
-  const busX0 = tight ? 580 : 660
+  const radNic = tight ? 20 : 22
+  const radHost = tight ? 30 : 34
+  const radBridge = tight ? 17 : 19
+  const radGuest = 15
+  const radBond = tight ? 17 : 19
+
+  // The left columns (NICs, bonds, host) are only as wide as their texts
+  // need, so the guests get the rest of the width. Texts are 11px
+  // monospace, about 6.6 units per character.
+  const CHAR_W = 6.6
+  const halfText = (texts: string[]) => Math.max(0, ...texts.map((x) => (x || "").length)) * CHAR_W / 2
+  const nicHalf = Math.max(radNic, halfText(nics.flatMap((n) => [n.id, nicSubLabel(n, labels)])))
+  const nicX = Math.max(tight ? 44 : 52, nicHalf + 6)
+  const bondHalf = Math.max(radBond, halfText(bonds.flatMap((b) => [b.id, b.mode || "bond", fmt(b.rx + b.tx, unit)])))
+  const bondX = Math.round(nicX + nicHalf + 28 + bondHalf)
+  const hostX = Math.max(tight ? 170 : 190, bonds.length ? bondX + bondHalf + 28 + radHost : nicX + nicHalf + 60 + radHost)
+  const bridgesX = hostX + radHost + (tight ? 86 : 96)
+  const busX0 = bridgesX + (tight ? 70 : 75)
   const busXEnd = W - 40
   const busAvail = busXEnd - busX0
-
-  const radNic = tight ? 26 : 30
-  const radHost = tight ? 38 : 44
-  const radBridge = tight ? 22 : 26
-  const radGuest = 22
-  const radBond = tight ? 22 : 26
-  // Bond column sits halfway between the NICs and the host — the gap
-  // between those two columns was already wide enough to host it, so
-  // nothing downstream (bridges, bus, guests) has to move.
-  const bondX = Math.round((nicX + hostX) / 2)
 
   // More vertical breathing room around each guest. The previous 110
   // crammed circle+label+sub close to the bus; bumping to 135 lets
   // the text halo fully clear the trunk pulses behind it.
-  const topCellH = 135
+  const topCellH = 92
   // Bot was 135; bumped to 160 because we moved the bot guest 30 px
   // further from the bus so the tap beam has room to flow.
-  const botCellH = 160
-  const minCellW = 140
+  const botCellH = 104
+  const minCellW = 104
   const maxGuestsPerRow = Math.max(2, Math.floor(busAvail / minCellW))
 
   // Sort bridges so the ones WITH guests come first. Idle bridges
@@ -298,15 +304,19 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
     for (let r = 0; r < busRowCount; r++) {
       const sliceStart = r * pairsPerBus * 2
       const slice = guests.slice(sliceStart, sliceStart + pairsPerBus * 2)
+      // A bridge whose guests fit in one row keeps them all above its bus:
+      // half the height, and a small group such as a stack reads as one.
+      const oneSided = guests.length <= pairsPerBus
       const pairs: Array<{ top: Guest | null; bot: Guest | null }> = []
-      for (let p = 0; p < Math.ceil(slice.length / 2); p++) {
+      if (oneSided) slice.forEach((g) => pairs.push({ top: g, bot: null }))
+      else for (let p = 0; p < Math.ceil(slice.length / 2); p++) {
         pairs.push({ top: slice[p * 2] || null, bot: slice[p * 2 + 1] || null })
       }
       const cellCount = pairs.length
-      const cellW = Math.max(minCellW, Math.min(220, busAvail / Math.max(1, cellCount)))
+      const cellW = Math.max(minCellW, Math.min(150, busAvail / Math.max(1, cellCount)))
       const busY = cursorY + topCellH
       buses.push({ pairs, busY, cellW })
-      cursorY += topCellH + botCellH
+      cursorY += topCellH + (oneSided ? 26 : botCellH)
     }
     let sectionTop: number, sectionBot: number, bridgeY: number
     if (buses.length > 0) {
@@ -330,7 +340,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
   // room. Was 118; bumped to 132 because the new 9-px-wide trunk
   // line passing near sibling NICs ate into the label/sub area
   // visually (the line and the text were "stuck" together).
-  const nicPitchMin = 132
+  const nicPitchMin = 96
   const nicMinH = 80 + nicCount * nicPitchMin
   const H = Math.max(220, nicMinH, cursorY + 20)
   const sectionsTop = sections.length ? sections[0].sectionTop : 40
@@ -368,7 +378,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
     const opacity = !active ? 0.45 : n.role === "standby" ? 0.72 : 1
     nodes.push(`<g data-node-id="${n.id}" data-node-kind="nic" style="cursor:pointer;opacity:${opacity}">
       <circle class="nf-circle" cx="${nicX}" cy="${y}" r="${radNic}" stroke="${stroke}" />
-      ${svgIcon("nic", nicX, y, 18, stroke)}
+      ${svgIcon("nic", nicX, y, 14, stroke)}
       <text class="nf-label" x="${nicX}" y="${y + radNic + 14}">${n.id}</text>
       <text class="nf-sub"   x="${nicX}" y="${y + radNic + 26}">${nicSubLabel(n, labels)}</text>
     </g>`)
@@ -396,11 +406,29 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
       hasLooseNics ? Math.min(centre, bondCeiling) : centre,
     )
     bondYById.set(b.id, y)
+  })
+  // Two bonds lifted to the same ceiling would sit on top of each other:
+  // keep each one a full node (circle and its three texts) above the next.
+  const bondGap = radBond * 2 + BOND_TEXT_BLOCK + 10
+  const bondOrder = bonds.filter((b) => bondYById.has(b.id))
+    .sort((a, b) => (bondYById.get(a.id) as number) - (bondYById.get(b.id) as number))
+  for (let i = bondOrder.length - 2; i >= 0; i--) {
+    const below = bondYById.get(bondOrder[i + 1].id) as number
+    bondYById.set(bondOrder[i].id, Math.min(bondYById.get(bondOrder[i].id) as number, below - bondGap))
+  }
+  const firstBondY = bondOrder.length ? (bondYById.get(bondOrder[0].id) as number) : 0
+  if (bondOrder.length && firstBondY < radBond + 8) {
+    const shift = radBond + 8 - firstBondY
+    bondOrder.forEach((b) => bondYById.set(b.id, (bondYById.get(b.id) as number) + shift))
+  }
+  bonds.forEach((b) => {
+    const y = bondYById.get(b.id)
+    if (y === undefined) return
     const up = b.status ? b.status === "up" : true
     const stroke = up ? COLORS.bond : COLORS.gray
     nodes.push(`<g data-node-id="${b.id}" data-node-kind="bond" style="cursor:pointer;opacity:${up ? 1 : 0.45}">
       <circle class="nf-circle" cx="${bondX}" cy="${y}" r="${radBond}" stroke="${stroke}" />
-      ${svgIcon("bond", bondX, y, 16, stroke)}
+      ${svgIcon("bond", bondX, y, 13, stroke)}
       <text class="nf-label" x="${bondX}" y="${y + radBond + 14}">${b.id}</text>
       <text class="nf-sub"   x="${bondX}" y="${y + radBond + 26}">${b.mode || "bond"}</text>
       <text class="nf-sub"   x="${bondX}" y="${y + radBond + 38}">${fmt(b.rx + b.tx, unit)}</text>
@@ -409,7 +437,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
 
   nodes.push(`<g>
     <circle class="nf-circle" cx="${hostX}" cy="${hostY}" r="${radHost}" stroke="${COLORS.host}" stroke-width="2.5" />
-    ${svgIcon("host", hostX, hostY, 24, COLORS.host)}
+    ${svgIcon("host", hostX, hostY, 19, COLORS.host)}
     <text class="nf-label" x="${hostX}" y="${hostY + radHost + 14}" font-weight="600">PROXMOX</text>
     <text class="nf-sub"   x="${hostX}" y="${hostY + radHost + 26}">${fmt((host?.rx || 0) + (host?.tx || 0), unit)}</text>
   </g>`)
@@ -443,8 +471,8 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
   // each other in opposite directions). dashes/gradient still apply a
   // small perpendicular offset, but 5 px is enough for those too —
   // 9 px was leftover from a previous two-lane experiment.
-  const TRUNK_WIDTH = 5
-  const TRUNK_PULSE_WIDTH = 3
+  const TRUNK_WIDTH = 3.5
+  const TRUNK_PULSE_WIDTH = 2.5
   const TAP_WIDTH = TRUNK_WIDTH
   const TAP_PULSE_WIDTH = TRUNK_PULSE_WIDTH
   sections.forEach((sec) => {
@@ -457,7 +485,7 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
 
     nodes.push(`<g data-node-id="${sec.b.id}" data-node-kind="bridge" style="cursor:pointer">
       <circle class="nf-circle" cx="${bridgesX}" cy="${sec.bridgeY}" r="${radBridge}" stroke="${COLORS.bridge}" />
-      ${svgIcon("bridge", bridgesX, sec.bridgeY, 16, COLORS.bridge)}
+      ${svgIcon("bridge", bridgesX, sec.bridgeY, 13, COLORS.bridge)}
       <text class="nf-label" x="${bridgesX}" y="${sec.bridgeY + radBridge + 14}">${sec.b.id}</text>
       <text class="nf-sub"   x="${bridgesX}" y="${sec.bridgeY + radBridge + 26}">${fmt(bridgeRate, unit)}</text>
     </g>`)
@@ -489,11 +517,13 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
         const haloSVG = rateMBs >= 5
           ? `<circle class="nf-guest-halo" cx="${cx}" cy="${circleY}" r="${radGuest}" stroke="${stroke}" style="--halo-r0:${radGuest}px;--halo-r1:${radGuest + 16}px" />`
           : ""
+        const shownLabel = fitLabel(g.label, Math.floor(bus.cellW / 6.4))
         nodes.push(`<g data-node-id="${g.id}" data-node-kind="${g.kind}" style="cursor:pointer">
+          ${shownLabel !== g.label ? `<title>${g.label}</title>` : ""}
           ${haloSVG}
           <circle class="nf-circle" cx="${cx}" cy="${circleY}" r="${radGuest}" stroke="${stroke}" />
-          ${svgIcon(g.kind, cx, circleY, 14, stroke)}
-          <text class="nf-label" x="${cx}" y="${labelY}">${g.label}</text>
+          ${svgIcon(g.kind, cx, circleY, 11, stroke)}
+          <text class="nf-label" x="${cx}" y="${labelY}">${shownLabel}</text>
           <text class="nf-sub"   x="${cx}" y="${subY}">${fmt(g.rx + g.tx, unit)}</text>
         </g>`)
       }
@@ -502,18 +532,18 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
         const cx = busX0 + col * bus.cellW + bus.cellW / 2
         if (pair.top) {
           const g = pair.top
-          const circleY = bus.busY - topCellH + radGuest + 8
+          const circleY = bus.busY - topCellH + radGuest + 4
           // Text sits BELOW the circle (between circle and bus) —
           // this is the locked layout convention. The tap therefore
           // must STOP where the text begins, otherwise it would
           // visually overlap the label/rate.
-          const labelY = circleY + radGuest + 14
-          const subY = labelY + 14
+          const labelY = circleY + radGuest + 11
+          const subY = labelY + 12
           // Coming from the bus (below) the tap stops just under the
           // SUB text — the first text element it would meet. 8 px of
           // padding so the tap visibly approaches the text block
           // without crossing it.
-          const tapTopEnd = subY + 8
+          const tapTopEnd = subY + 9
           const tap = curvedTap(cx, bus.busY, tapTopEnd, tapR)
           linksStatic.push(`<path class="nf-link" d="${tap}" stroke-width="${TAP_WIDTH}" />`)
           if (g.rx > 0.005 || g.tx > 0.005) {
@@ -537,9 +567,9 @@ function renderHorizontal(data: NetworkFlowData, W: number, labels: FlowLabels, 
           // Was bus.busY + 30 + radGuest — moved the guest farther
           // from the bus so the tap is long enough for the beam to
           // visibly travel down between the curve and the circle.
-          const circleY = bus.busY + 60 + radGuest
-          const labelY = circleY + radGuest + 14
-          const subY = labelY + 14
+          const circleY = bus.busY + 36 + radGuest
+          const labelY = circleY + radGuest + 11
+          const subY = labelY + 12
           // Coming from the bus (above) the tap stops 5 px above
           // the circle's top edge — never crosses the circle ring.
           // The label/rate sit BELOW the circle and remain free.
@@ -646,12 +676,12 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: Network
   const BRIDGE_X     = HOST_X + COL_STEP
   const SUB_TRUNK_X  = HOST_X + COL_STEP * 2
   const GUEST_X      = Math.round((SUB_TRUNK_X + W) / 2)
-  // Guest labels are centred on GUEST_X in a 12.5px monospace font (about 7.5 units per character); longer names are shortened so they stay inside the canvas.
-  const GUEST_LABEL_MAX = Math.floor((2 * (W - GUEST_X - 4)) / 7.5)
+  // Guest labels are centred on GUEST_X in an 11px monospace font (about 6.6 units per character); longer names are shortened so they stay inside the canvas.
+  const GUEST_LABEL_MAX = Math.floor((2 * (W - GUEST_X - 4)) / 6.6)
   const RAD_HOST = 26
   const RAD_NIC = 22
-  const RAD_BRIDGE = 24
-  const RAD_GUEST = 20
+  const RAD_BRIDGE = 19
+  const RAD_GUEST = 15
   const RAD_BOND = 22
   // Extra rows the bond level needs when at least one bond exists:
   // the gap between where the NIC lines start and the bond circle, and
@@ -677,14 +707,14 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: Network
   const NIC_PATH_START_OFFSET = 46    // clears SUB_OFFSET_Y + text height
   const NIC_VERTICAL_LEG = 56
   const HOST_GAP_FROM_CONVERGE = 56
-  const GUEST_ROW_H = 100          // enough vertical room that one guest's
+  const GUEST_ROW_H = 66          // enough vertical room that one guest's
                                    // sub clears the next guest's circle
   const BRIDGE_PITCH_PAD = 36
   // Vertical positions of the label and the sub (rate) BELOW each
   // node's circle. Both grew when the font went up to 12.5 px; this
   // matched gap keeps them readable without overlap.
-  const LABEL_OFFSET_Y = 16        // gap circle bottom → label baseline
-  const SUB_OFFSET_Y   = 32        // gap circle bottom → sub baseline
+  const LABEL_OFFSET_Y = 12        // gap circle bottom → label baseline
+  const SUB_OFFSET_Y   = 25        // gap circle bottom → sub baseline
                                    // (16 px between label and sub)
   const CORNER_R = 12
   const PULSE_THRESHOLD = 0.005
@@ -933,9 +963,9 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: Network
         ${shownLabel !== g.label ? `<title>${g.label}</title>` : ""}
         ${haloSVG}
         <circle class="nf-circle" cx="${gCx}" cy="${gCy}" r="${gR}" stroke="${stroke}" />
-        ${svgIcon(g.kind, gCx, gCy, 13, stroke)}
-        <text class="nf-label" x="${gCx}" y="${gCy + gR + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${shownLabel}</text>
-        <text class="nf-sub"   x="${gCx}" y="${gCy + gR + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:12.5px">${fmt(gRate, unit)}</text>
+        ${svgIcon(g.kind, gCx, gCy, 11, stroke)}
+        <text class="nf-label" x="${gCx}" y="${gCy + gR + LABEL_OFFSET_Y}" text-anchor="middle" style="font-size:11px">${shownLabel}</text>
+        <text class="nf-sub"   x="${gCx}" y="${gCy + gR + SUB_OFFSET_Y}" text-anchor="middle" style="font-size:10.5px">${fmt(gRate, unit)}</text>
       </g>`)
     })
   })
@@ -957,6 +987,8 @@ function renderVertical(data: NetworkFlowData, labels: FlowLabels, unit: Network
 }
 
 // ─── React component ────────────────────────────────────────
+const FOLDED_KEY = "proxmenux-network-flow-folded"
+
 export function NetworkFlow({
   data, onNodeClick,
 }: {
@@ -976,6 +1008,15 @@ export function NetworkFlow({
     [t],
   )
   const ref = useRef<HTMLDivElement>(null)
+  // Folded or not is remembered by this browser, like the network unit.
+  const [folded, setFolded] = useState(false)
+  useEffect(() => {
+    try { setFolded(localStorage.getItem(FOLDED_KEY) === "1") } catch {}
+  }, [])
+  const toggleFolded = () => setFolded((current) => {
+    try { localStorage.setItem(FOLDED_KEY, current ? "0" : "1") } catch {}
+    return !current
+  })
   const [width, setWidth] = useState(1320)
   const [mode, setMode] = useState<"desktop" | "tablet" | "mobile">("desktop")
   const [networkUnit, setNetworkUnit] = useState<NetworkUnit>("Bytes")
@@ -991,7 +1032,7 @@ export function NetworkFlow({
     update()
     window.addEventListener("resize", update)
     return () => window.removeEventListener("resize", update)
-  }, [])
+  }, [folded])
 
   useEffect(() => {
     setNetworkUnit(getNetworkUnit())
@@ -1045,20 +1086,26 @@ export function NetworkFlow({
   }, [memoKey, labels])
 
   return (
-    <Card className="bg-card border-border">
-      <CardHeader>
-        <CardTitle className="text-foreground flex items-center text-base">
-          <Activity className="h-5 w-5 mr-2" />
-          {t("network.flow.title")}
-        </CardTitle>
+    <Card className="bg-card border-border overflow-hidden">
+      {/* The whole header, edge to edge, folds and unfolds the diagram. */}
+      <CardHeader className="p-0">
+        <button type="button" onClick={toggleFolded} aria-expanded={!folded}
+          className="flex w-full items-center gap-3 p-6 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+          <CardTitle className="text-foreground flex flex-1 items-center text-base">
+            <Activity className="h-5 w-5 mr-2" />
+            {t("network.flow.title")}
+          </CardTitle>
+          <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${folded ? "" : "rotate-180"}`} />
+        </button>
       </CardHeader>
+      {!folded && (
       <CardContent>
         <div ref={ref} className="nf-wrap">
           <style>{`
             .nf-wrap svg { width: 100%; display: block; }
             .nf-circle { fill: #0d0d0d; stroke-width: 2; }
-            .nf-label  { fill: var(--foreground); font-family: ui-monospace, "SF Mono", monospace; font-size: 12.5px; text-anchor: middle; dominant-baseline: middle; stroke: hsl(var(--card)); stroke-width: 8; paint-order: stroke; }
-            .nf-sub    { fill: var(--muted-foreground); font-family: ui-monospace, monospace; font-size: 12.5px; text-anchor: middle; dominant-baseline: middle; stroke: hsl(var(--card)); stroke-width: 8; paint-order: stroke; }
+            .nf-label  { fill: var(--foreground); font-family: ui-monospace, "SF Mono", monospace; font-size: 11px; text-anchor: middle; dominant-baseline: middle; stroke: hsl(var(--card)); stroke-width: 6; paint-order: stroke; }
+            .nf-sub    { fill: var(--muted-foreground); font-family: ui-monospace, monospace; font-size: 11px; text-anchor: middle; dominant-baseline: middle; stroke: hsl(var(--card)); stroke-width: 6; paint-order: stroke; }
             .nf-icon   { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
             .nf-link   { fill: none; stroke: #2a2a2a; stroke-linecap: round; stroke-linejoin: round; stroke-opacity: 0.55; }
             /* MODE: beam — comet-trail style. The visual is a
@@ -1194,6 +1241,7 @@ export function NetworkFlow({
           </div>
         </div>
       </CardContent>
+      )}
     </Card>
   )
 }
