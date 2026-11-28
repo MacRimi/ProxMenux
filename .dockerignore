@@ -1,0 +1,25 @@
+# Keep Docker build context small and avoid shadowing container layers
+.git
+.github
+.idea
+.vscode
+.cache
+
+# Pre-built AppImages and local build outputs
+AppImage/*.AppImage
+AppImage/*.sha256
+AppImage/dist
+AppImage/node_modules
+AppImage/.next
+AppImage/out
+
+# Docs site and OCI catalog trees unused by the Monitor AppImage build
+web
+oci
+
+# Python / editor caches
+**/__pycache__
+**/*.pyc
+*.log
+*.bak
+*.tmp

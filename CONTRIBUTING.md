@@ -808,6 +808,12 @@ bash AppImage/scripts/build_appimage.sh
 # → produces AppImage/dist/ProxMenux-<version>.AppImage
 ```
 
+Or build inside Docker without installing Node.js, Python, or AppImage tooling on your host:
+
+```bash
+docker build --output ./AppImage/dist .
+```
+
 The practical iteration cycle for most changes is: edit code → `build_appimage.sh` → deploy the resulting AppImage to a Proxmox test host → restart `proxmenux-monitor.service` → refresh the browser. Rebuild + deploy takes a few minutes on a normal host.
 
 For cosmetic UI-only iteration you can run the Next.js dev server directly:
