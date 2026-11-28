@@ -120,10 +120,10 @@
       "Pridajte robota do skupiny; ak to vyžadujú oprávnenia, nastavte ho ako správcu.",
       "Pošlite správu do skupiny.",
       "Otvorte <code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code>. V odpovedi JSON nájdite <code>chat.id</code>: skupiny majú záporné ID, superskupiny začínajú na <code>-100</code>.",
-      "Pri superskupine so zapnutými <em>Témami</em> zadajte požadovaný <code>message_thread_id</code> do voliteľného poľa <em>ID témy</em>."
+      "Pri superskupine so zapnutými <em>Témami</em> si zistite <code>message_thread_id</code> požadovanej témy. V poli <em>Predvolené ID témy (voliteľné)</em> nastavte tému pre kategórie bez vlastného ID. V režime úprav môžete zadať samostatné ID témy pre každú kategóriu notifikácií, napríklad Zálohy, Bezpečnosť alebo Úložiská."
     ],
-    "groupAlt": "Formulár Telegram s maskovaným tokenom, záporným ID superskupiny začínajúcim na -100 a ID témy 3",
-    "groupCaption": "Superskupina — ID začína na <code>-100…</code> a voliteľné <em>ID témy</em> vyberá konkrétne vlákno.",
+    "groupAlt": "Formulár Telegramu s maskovaným tokenom, záporným ID chatu začínajúcim na -100 a predvoleným ID témy 3",
+    "groupCaption": "ID chatu superskupiny začína na <code>-100…</code>. <em>Predvolené ID témy</em> určuje vlákno pre kategórie bez vlastného ID. V jednotlivých kategóriách môžete zadať iné ID témy.",
     "step3Title": "3 · Uložte a otestujte",
     "step3Body": "Vložte token a ID chatu, uložte a vyberte <em>Odoslať test</em>. Správa má prísť do sekundy. Pri chybe História uvedie dôvod, napríklad neplatný token, chýbajúce členstvo v skupine alebo blokovanie používateľom."
   },
@@ -226,7 +226,8 @@
     "togglesIntro": "Každý kanál nezávisle ovláda kategórie a udalosti. Vypnutá kategória potlačí svoje udalosti v danom kanáli. Jednotlivé prepínače platia v zapnutých kategóriách; globálny hlavný filter udalostí v odosielači nie je.",
     "togglesItems": [
       "<strong>Kategória podľa kanála.</strong> Vypnutie VM/CT potlačí <code>vm_start</code> a podobné udalosti. Ukladá sa ako <code>&lt;channel&gt;.events.&lt;group&gt;</code>.",
-      "<strong>Udalosť podľa kanála.</strong> V zapnutej kategórii možno <em>posielať <code>backup_complete</code> do Discord, nie do Telegram</em>. Ukladá sa ako <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>."
+      "<strong>Udalosť podľa kanála.</strong> V zapnutej kategórii možno <em>posielať <code>backup_complete</code> do Discord, nie do Telegram</em>. Ukladá sa ako <code>&lt;channel&gt;.event.&lt;event_type&gt;</code>.",
+      "<strong>ID témy Telegramu pre kategóriu.</strong> Pre každú zapnutú kategóriu môžete zadať vlastné ID témy (<code>telegram.topic_id.&lt;group&gt;</code>). Udalosti z tejto kategórie potom prídu do vybranej témy superskupiny. Ak pole necháte prázdne, použije sa <em>Predvolené ID témy</em> kanála."
     ],
     "togglesOutro": "Kategória ukazuje počet <em>zapnutých</em> / <em>všetkých</em> udalostí a prepínač celej skupiny, napríklad záloh <code>info</code> či aktualizácií, bez rozbalenia."
   },
