@@ -46,6 +46,7 @@ PYTHON_FILES = (
     "tests/test_fastfetch_config_generation.py",
     "tests/test_notification_active_payloads.py",
     "tests/test_security_health_notifications.py",
+    "AppImage/scripts/tests/test_apprise_rich_messages.py",
     "tests/test_email_digest_rows.py",
     "AppImage/scripts/tests/test_app_watch_copies.py",
     "AppImage/scripts/tests/test_catalog_architecture.py",

@@ -2167,6 +2167,27 @@ export function NotificationSettings() {
                           </a>.
                         </p>
                       </div>
+                      {/* Message format */}
+                      <div className="flex items-center justify-between py-1">
+                        <div>
+                          <Label className="text-xs font-medium">{t("settings.notifications.ui.richMessages")}</Label>
+                          <p className="text-[10px] text-muted-foreground">{t("settings.notifications.ui.richMessagesDescription")}</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={config.channels.apprise?.rich_format || false}
+                          disabled={!editMode}
+                          className={`relative w-9 h-[18px] shrink-0 rounded-full transition-colors ${
+                            !editMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                          } ${config.channels.apprise?.rich_format ? "bg-blue-600" : "bg-muted-foreground/20 border border-muted-foreground/40"}`}
+                          onClick={() => { if (editMode) updateChannel("apprise", "rich_format", !config.channels.apprise?.rich_format) }}
+                        >
+                          <span className={`absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                            config.channels.apprise?.rich_format ? "translate-x-[18px]" : "translate-x-0"
+                          }`} />
+                        </button>
+                      </div>
                       {renderChannelCategories("apprise")}
                       {renderQuietHours("apprise")}
                       {renderDailyDigest("apprise")}
