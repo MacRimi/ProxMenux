@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Wann er sich nicht über den Monitor entfernen lässt",
-            "body": "Der Monitor entfernt nur Container mit einer einzigen Root-Festplatte und ohne besondere Konfiguration. Er lehnt unter anderem einen laufenden, geschützten oder gesperrten Container ab, einen mit einem Mountpoint oder einer unbenutzten Festplatte, einen mit einem Host-Verzeichnis und einen mit USB-Geräten, einem Coral USB oder einer NVIDIA-GPU, die rohe LXC-Einstellungen hinzufügen. Der Grund wird im Dialog angezeigt, und diese Container werden über Proxmox entfernt. Ist der Entfernungsschutz der einzige Grund, bietet der Dialog <strong>Schutz deaktivieren…</strong> an und entfernt danach den Container."
+            "body": "Der Monitor entfernt nur Container mit einer einzigen Root-Festplatte und ohne besondere Konfiguration. Er lehnt unter anderem einen laufenden, geschützten oder gesperrten Container ab, einen mit einem Mountpoint oder einer unbenutzten Festplatte, einen mit einem Host-Verzeichnis und einen mit USB-Geräten, einem Coral USB oder einer NVIDIA-GPU, die rohe LXC-Einstellungen hinzufügen. Der Dialog zeigt den Grund an. Container, die der Monitor nicht entfernen kann, werden über die Proxmox-Oberfläche entfernt. Ist der Entfernungsschutz das einzige Hindernis, <strong>Schutz deaktivieren…</strong> wählen und die Änderung bestätigen. Der Monitor prüft den Container erneut; lässt er sich entfernen, seine ID eingeben und LXC entfernen wählen."
           }
         }
       ]

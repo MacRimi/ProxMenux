@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Quando não pode ser removido pelo Monitor",
-            "body": "O Monitor remove apenas contêineres com um único disco raiz e sem configuração especial. Ele recusa, entre outros, um contêiner em execução, protegido ou bloqueado, um com ponto de montagem ou disco não utilizado, um com diretório do host, e um com dispositivos USB, um Coral USB ou uma GPU NVIDIA, que adicionam configurações LXC brutas. O motivo é exibido no diálogo, e esses contêineres são removidos pelo Proxmox. Quando o único motivo é a proteção contra remoção, o diálogo oferece <strong>Desativar proteção…</strong> e depois remove o contêiner."
+            "body": "O Monitor remove apenas contêineres com um único disco raiz e sem configuração especial. Ele recusa, entre outros, um contêiner em execução, protegido ou bloqueado, um com ponto de montagem ou disco não utilizado, um com diretório do host, e um com dispositivos USB, um Coral USB ou uma GPU NVIDIA, que adicionam configurações LXC brutas. O diálogo mostra o motivo. Os contêineres que o Monitor não consegue remover são removidos pela interface do Proxmox. Se a proteção contra remoção for o único impedimento, escolha <strong>Desativar proteção…</strong> e confirme a alteração. O Monitor verifica o contêiner novamente e, se ele puder ser removido, digite o ID e escolha Remover LXC."
           }
         }
       ]

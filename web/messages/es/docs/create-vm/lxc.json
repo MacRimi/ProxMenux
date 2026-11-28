@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "Cuándo no se puede eliminar desde el Monitor",
-            "body": "El Monitor solo elimina contenedores con un único disco raíz y sin configuración especial. Rechaza, entre otros, un contenedor en ejecución, protegido o bloqueado, uno con un punto de montaje o un disco sin usar, uno con un directorio del host, y uno con dispositivos USB, un Coral USB o una GPU NVIDIA, que añaden ajustes LXC en bruto. El motivo se muestra en el diálogo, y esos contenedores se eliminan desde Proxmox. Cuando el único motivo es la protección contra eliminación, el diálogo ofrece <strong>Desactivar la protección…</strong> y después elimina el contenedor."
+            "body": "El Monitor solo elimina contenedores con un único disco raíz y sin configuración especial. Rechaza, entre otros, un contenedor en ejecución, protegido o bloqueado, uno con un punto de montaje o un disco sin usar, uno con un directorio del host, y uno con dispositivos USB, un Coral USB o una GPU NVIDIA, que añaden ajustes LXC en bruto. El diálogo indica el motivo. Los contenedores que el Monitor no puede eliminar se eliminan desde la interfaz de Proxmox. Si el único impedimento es la protección contra eliminación, elige <strong>Desactivar la protección…</strong> y confirma el cambio. El Monitor vuelve a comprobar el contenedor y, si se puede eliminar, escribe su ID y pulsa Eliminar LXC."
           }
         }
       ]

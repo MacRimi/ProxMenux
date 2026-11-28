@@ -290,7 +290,7 @@
         {
           "calloutWarning": {
             "title": "När den inte kan tas bort från Monitor",
-            "body": "Monitor tar bara bort containrar med en enda rotdisk och utan särskild konfiguration. Den avvisar bland annat en container som körs, är skyddad eller låst, en med en monteringspunkt eller en oanvänd disk, en med en värdkatalog och en med USB-enheter, en Coral USB eller en NVIDIA-GPU, som lägger till råa LXC-inställningar. Orsaken visas i dialogrutan, och sådana containrar tas bort från Proxmox. När den enda orsaken är borttagningsskyddet erbjuder dialogrutan <strong>Inaktivera skydd…</strong> och tar sedan bort containern."
+            "body": "Monitor tar bara bort containrar med en enda rotdisk och utan särskild konfiguration. Den avvisar bland annat en container som körs, är skyddad eller låst, en med en monteringspunkt eller en oanvänd disk, en med en värdkatalog och en med USB-enheter, en Coral USB eller en NVIDIA-GPU, som lägger till råa LXC-inställningar. Dialogrutan visar orsaken. Containrar som Monitor inte kan ta bort tas bort i Proxmox-gränssnittet. Om borttagningsskyddet är det enda hindret väljer du <strong>Inaktivera skydd…</strong> och bekräftar ändringen. Monitor kontrollerar containern igen, och om den kan tas bort anger du dess ID och väljer Ta bort LXC."
           }
         }
       ]
