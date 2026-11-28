@@ -256,7 +256,7 @@
         {
           "calloutWarning": {
             "title": "When it cannot be removed from the Monitor",
-            "body": "The Monitor removes only containers with a single root disk and no special configuration. It refuses, among others, a running, protected or locked container, one with a mount point or an unused disk, one with a host directory, and one with USB devices, a Coral USB or an NVIDIA GPU, which add raw LXC settings. The dialog shows the reason. Use the Proxmox interface to remove containers that the Monitor cannot remove. If removal protection is the only blocker, choose <strong>Disable protection…</strong> and confirm the change. The Monitor checks the container again. If it is eligible for removal, enter its ID and choose <strong>Remove LXC</strong>."
+            "body": "The Monitor removes only containers with a single root disk and no special configuration. It refuses, among others, a running, protected or locked container, one with a mount point or an unused disk, one with a host directory, and one with USB devices, a Coral USB or an NVIDIA GPU, which add raw LXC settings. The dialog shows the reason. Use the Proxmox interface to remove containers that the Monitor cannot remove. If removal protection is the only blocker, choose <strong>Disable protection…</strong> and confirm the change. The Monitor checks the container again. If it is eligible for removal, enter its ID and choose Remove LXC."
           }
         }
       ]
