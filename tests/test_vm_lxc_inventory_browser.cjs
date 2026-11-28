@@ -640,8 +640,8 @@ async function run() {
         searchCenter: center(search)
       };
     })()`)
-    assert.deepEqual(layout.order, ["Všetky typy", "LXC", "VM"])
-    assert.ok(layout.leftToRight && layout.buttonCenters.length === 10)
+    assert.deepEqual(layout.order, ["Všetky typy", "LXC", "OCI", "VM"])
+    assert.ok(layout.leftToRight && layout.buttonCenters.length === 11)
     const centers = tablet ? layout.buttonCenters : [...layout.buttonCenters, layout.searchCenter]
     assert.ok(Math.max(...centers) - Math.min(...centers) < 2, `Toolbar wrapped at ${width}: ${JSON.stringify(layout)}`)
     if (tablet) assert.ok(layout.searchAbove && layout.searchFullWidth && layout.actionsLast && layout.rightEdge < 1)
@@ -654,8 +654,8 @@ async function run() {
       const rect = button.getBoundingClientRect();
       return {label:button.textContent.trim(), height:rect.height, insideViewport:rect.left>=0 && rect.right<=innerWidth};
     })`)
-    assert.equal(controls.length, 7)
-    assert.deepEqual(controls.slice(0, 3).map(control => control.label), ["Všetky typy", "LXC", "VM"])
+    assert.equal(controls.length, 8)
+    assert.deepEqual(controls.slice(0, 4).map(control => control.label), ["Všetky typy", "LXC", "OCI", "VM"])
     assert.ok(controls.every(control => control.insideViewport && control.height === controls[0].height))
     const layout = await evaluate(`(() => {
       const visible = (e) => e.getClientRects().length > 0;
